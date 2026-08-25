@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "empee3"
 include(":app")
 include(":core:common")
+include(":core:designsystem")
