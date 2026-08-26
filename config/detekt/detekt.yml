@@ -1,0 +1,8 @@
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+
+style:
+  MagicNumber:
+    ignoreAnnotated: ['Composable']
+    excludes: ['**/ui/theme/Color.kt', '**/test/**', '**/androidTest/**']
