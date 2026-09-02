@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.timber)
     implementation(libs.hilt.android)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.serialization.json)
     ksp(libs.hilt.android.compiler)
     implementation(project(":core:common"))
     testImplementation(libs.junit)
