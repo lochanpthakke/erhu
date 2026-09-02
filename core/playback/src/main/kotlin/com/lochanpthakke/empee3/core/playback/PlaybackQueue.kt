@@ -17,7 +17,10 @@ internal class PlaybackQueue(
         player.addMediaItem(insertIndex, mediaItem)
     }
 
-    fun reorder(from: Int, to: Int) {
+    fun reorder(
+        from: Int,
+        to: Int,
+    ) {
         player.moveMediaItem(from, to)
     }
 

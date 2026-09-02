@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -20,11 +22,15 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
-
-    testImplementation(libs.junit)
     implementation(project(":core:model"))
+
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+
+    testImplementation(libs.junit)
 }
