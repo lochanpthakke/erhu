@@ -23,4 +23,5 @@ dependencies {
 
     testImplementation(libs.junit)
     implementation(project(":core:model"))
+    implementation(libs.kotlinx.coroutines.core)
 }
