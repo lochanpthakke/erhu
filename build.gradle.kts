@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.hilt.android) apply false
+    alias(libs.plugins.ksp) apply false
 }
 
 subprojects {
