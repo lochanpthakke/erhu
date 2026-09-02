@@ -24,4 +24,7 @@ dependencies {
     testImplementation(libs.junit)
     implementation(project(":core:model"))
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
 }
