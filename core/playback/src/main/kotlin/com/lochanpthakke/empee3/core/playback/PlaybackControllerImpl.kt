@@ -8,6 +8,7 @@ import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.playback.focus.AudioFocusManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -25,6 +26,7 @@ class PlaybackControllerImpl
         private val player: Player,
         private val dispatcherProvider: DispatcherProvider,
         private val logger: Logger,
+        private val audioFocusManager: AudioFocusManager,
     ) : PlaybackController {
         private val scope = CoroutineScope(dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
@@ -43,6 +45,9 @@ class PlaybackControllerImpl
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     updateStatus()
+                    if (playbackState == Player.STATE_ENDED) {
+                        audioFocusManager.abandonFocus()
+                    }
                 }
 
                 override fun onMediaItemTransition(
@@ -104,7 +109,11 @@ class PlaybackControllerImpl
         }
 
         override fun play() {
-            player.play()
+            if (audioFocusManager.requestFocus()) {
+                player.play()
+            } else {
+                logger.w(TAG, "Audio focus request denied — not starting playback")
+            }
         }
 
         override fun pause() {
@@ -146,6 +155,10 @@ class PlaybackControllerImpl
 
         override fun addToQueue(song: Song) {
             queue.addToQueue(song.toMediaItem())
+        }
+
+        override fun setVolume(volume: Float) {
+            player.volume = volume
         }
 
         override fun reorder(

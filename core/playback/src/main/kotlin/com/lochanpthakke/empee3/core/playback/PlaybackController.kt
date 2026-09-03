@@ -5,6 +5,7 @@ import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.StateFlow
 
+@Suppress("TooManyFunctions")
 interface PlaybackController {
     val playbackState: StateFlow<PlaybackState>
 
@@ -28,6 +29,8 @@ interface PlaybackController {
     fun playNext(song: Song)
 
     fun addToQueue(song: Song)
+
+    fun setVolume(volume: Float)
 
     fun reorder(
         from: Int,
