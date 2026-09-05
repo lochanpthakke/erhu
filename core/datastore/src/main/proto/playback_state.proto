@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_package = "com.lochanpthakke.empee3.core.datastore.proto";
+option java_multiple_files = true;
+
+message PlaybackStateProto {
+  repeated int64 queue_song_ids = 1;
+  int32 current_index = 2;
+  int64 position_ms = 3;
+  bool shuffle_mode_enabled = 4;
+  RepeatModeProto repeat_mode = 5;
+}
+
+enum RepeatModeProto {
+  REPEAT_MODE_OFF = 0;
+  REPEAT_MODE_ONE = 1;
+  REPEAT_MODE_ALL = 2;
+}
