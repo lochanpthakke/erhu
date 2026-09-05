@@ -1,6 +1,8 @@
 package com.lochanpthakke.empee3.core.datastore
 
+import com.lochanpthakke.empee3.core.datastore.proto.PlaybackStateProto
 import com.lochanpthakke.empee3.core.datastore.proto.RepeatModeProto
+import com.lochanpthakke.empee3.core.model.PersistedPlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 
 fun RepeatMode.toProto(): RepeatModeProto =
@@ -17,3 +19,22 @@ fun RepeatModeProto.toDomain(): RepeatMode =
         RepeatModeProto.REPEAT_MODE_ALL -> RepeatMode.ALL
         RepeatModeProto.UNRECOGNIZED -> RepeatMode.OFF
     }
+
+fun PersistedPlaybackState.toProto(): PlaybackStateProto =
+    PlaybackStateProto
+        .newBuilder()
+        .addAllQueueSongIds(queueSongIds)
+        .setCurrentIndex(currentIndex)
+        .setPositionMs(positionMs)
+        .setShuffleModeEnabled(shuffleModeEnabled)
+        .setRepeatMode(repeatMode.toProto())
+        .build()
+
+fun PlaybackStateProto.toDomain(): PersistedPlaybackState =
+    PersistedPlaybackState(
+        queueSongIds = queueSongIdsList,
+        currentIndex = currentIndex,
+        positionMs = positionMs,
+        shuffleModeEnabled = shuffleModeEnabled,
+        repeatMode = repeatMode.toDomain(),
+    )
