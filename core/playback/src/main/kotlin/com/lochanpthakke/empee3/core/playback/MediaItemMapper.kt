@@ -14,20 +14,23 @@ internal fun Song.toMediaItem(): MediaItem {
         Bundle().apply {
             putLong(EXTRA_DURATION_MS, durationMs)
         }
-    val metadata =
+    val metadataBuilder =
         MediaMetadata
             .Builder()
             .setTitle(title)
             .setArtist(artist)
             .setAlbumTitle(album)
             .setExtras(extras)
-            .build()
+
+    artworkData?.let { data ->
+        metadataBuilder.setArtworkData(data, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+    }
 
     return MediaItem
         .Builder()
         .setMediaId(id.toString())
         .setUri(uri)
-        .setMediaMetadata(metadata)
+        .setMediaMetadata(metadataBuilder.build())
         .build()
 }
 
@@ -40,6 +43,7 @@ internal fun MediaItem.toSong(): Song {
         album = metadata.albumTitle?.toString().orEmpty(),
         durationMs = metadata.extras?.getLong(EXTRA_DURATION_MS) ?: 0L,
         uri = localConfiguration?.uri?.toString().orEmpty(),
+        artworkData = metadata.artworkData,
     )
 }
 
