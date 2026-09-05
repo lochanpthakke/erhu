@@ -3,6 +3,8 @@ package com.lochanpthakke.empee3.core.datastore.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStoreFile
+import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistence
+import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.PlaybackStateProtoSerializer
 import com.lochanpthakke.empee3.core.datastore.proto.PlaybackStateProto
 import dagger.Module
@@ -20,6 +22,9 @@ private const val PLAYBACK_STATE_DATASTORE_FILE_NAME = "playback_state.pb"
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
+    // Exception to project-wide DispatcherProvider convention: DataStoreFactory
+    // requires a CoroutineScope matching the DataStore's own singleton lifetime,
+    // not a general-purpose testable scope. Hardcoded per Deliverable #6 decision.
     @Provides
     @Singleton
     fun providePlaybackStateDataStore(
@@ -32,4 +37,9 @@ object DataStoreModule {
             produceFile = { context.dataStoreFile(PLAYBACK_STATE_DATASTORE_FILE_NAME) },
         )
     }
+
+    @Provides
+    @Singleton
+    fun providePlaybackStatePersistence(dataStore: DataStore<PlaybackStateProto>): PlaybackStatePersistence =
+        PlaybackStatePersistenceImpl(dataStore)
 }
