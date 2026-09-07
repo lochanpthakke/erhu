@@ -1,12 +1,22 @@
+@file:OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.lochanpthakke.empee3.core.playback.service
 
 import android.content.IntentFilter
 import android.media.AudioManager
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionError
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.playback.PlaybackController
+import com.lochanpthakke.empee3.core.playback.browse.BrowseTree
 import com.lochanpthakke.empee3.core.playback.receiver.NoisyAudioReceiver
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -58,11 +68,77 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
-        // Intentionally empty. MediaLibrarySession.Callback's browse methods
-        // (onGetLibraryRoot, onGetChildren, onSearch, etc.) have default
-        // implementations that return RESULT_ERROR_NOT_SUPPORTED — that's fine
-        // here. This step only needs the session bound to the shared Player so
-        // MediaController-based playback commands (play/pause/skip/seek) work.
-        // Full Android Auto browse tree is Deliverable #9.
+        // Deliverable #9 — structural browse tree. All category nodes return
+        // empty children until Phase 3 (Room + MediaStore) supplies real data
+        // via SongLookup. Pagination params (page/pageSize) are accepted but
+        // ignored for now since every list is empty or trivially small —
+        // real paging (Paging3) lands with Phase 3's Library Layer.
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            Futures.immediateFuture(
+                LibraryResult.ofItem(BrowseTree.getRoot(), params),
+            )
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
+            val children =
+                BrowseTree.getChildren(parentId)
+                    ?: return Futures.immediateFuture(
+                        LibraryResult.ofError(SessionError.ERROR_BAD_VALUE),
+                    )
+            return Futures.immediateFuture(
+                LibraryResult.ofItemList(ImmutableList.copyOf(children), params),
+            )
+        }
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String,
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            val item =
+                BrowseTree.getItem(mediaId)
+                    ?: return Futures.immediateFuture(
+                        LibraryResult.ofError(SessionError.ERROR_BAD_VALUE),
+                    )
+            return Futures.immediateFuture(LibraryResult.ofItem(item, null))
+        }
+
+        override fun onSearch(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<Void>> {
+            // No SongLookup implementation exists yet (Phase 3). Report zero
+            // results rather than RESULT_ERROR_NOT_SUPPORTED — some Auto
+            // clients treat "not supported" as a reason to hide search
+            // entirely, whereas "zero results" keeps the search UI available
+            // for when real data lands.
+            session.notifySearchResultChanged(browser, query, 0, params)
+            return Futures.immediateFuture(LibraryResult.ofVoid(params))
+        }
+
+        override fun onGetSearchResult(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            page: Int,
+            pageSize: Int,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
+            Futures.immediateFuture(
+                LibraryResult.ofItemList(ImmutableList.of(), params),
+            )
     }
 }

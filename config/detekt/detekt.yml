@@ -6,3 +6,10 @@ style:
   MagicNumber:
     ignoreAnnotated: ['Composable']
     excludes: ['**/ui/theme/Color.kt', '**/test/**', '**/androidTest/**']
+
+complexity:
+  TooManyFunctions:
+    thresholdInClasses: 12
+    thresholdInInterfaces: 12
+    thresholdInObjects: 12
+    thresholdInEnums: 12
