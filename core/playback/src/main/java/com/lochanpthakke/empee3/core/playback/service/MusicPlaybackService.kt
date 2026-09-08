@@ -1,4 +1,3 @@
-@file:OptIn(androidx.media3.common.util.UnstableApi::class)
 
 package com.lochanpthakke.empee3.core.playback.service
 
@@ -22,6 +21,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
+@UnstableApi
 class MusicPlaybackService : MediaLibraryService() {
     @Inject
     lateinit var player: Player

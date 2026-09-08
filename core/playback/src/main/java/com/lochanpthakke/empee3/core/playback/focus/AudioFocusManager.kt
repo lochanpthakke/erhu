@@ -1,3 +1,4 @@
+
 package com.lochanpthakke.empee3.core.playback.focus
 
 import android.content.Context
@@ -5,59 +6,49 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import com.lochanpthakke.empee3.core.common.logging.Logger
-import com.lochanpthakke.empee3.core.playback.PlaybackController
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "AudioFocusManager"
-private const val DUCK_VOLUME = 0.2f
-private const val FULL_VOLUME = 1.0f
 
 @Singleton
 class AudioFocusManager
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-        private val playbackController: PlaybackController,
         private val logger: Logger,
     ) {
         private val audioManager: AudioManager =
             context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        // Option A: this flag is the single source of truth for "should I resume
-        // on regain". Only ever set true right before a TRANSIENT-cause pause,
-        // and consumed (reset to false) on regain or on permanent loss.
-        private var resumeOnFocusGain = false
+        private var listener: AudioFocusListener? = null
+
+        fun setListener(listener: AudioFocusListener) {
+            this.listener = listener
+        }
 
         private val focusChangeListener =
             AudioManager.OnAudioFocusChangeListener { focusChange ->
                 when (focusChange) {
                     AudioManager.AUDIOFOCUS_LOSS -> {
                         logger.d(TAG, "AUDIOFOCUS_LOSS - pausing, no auto-resume")
-                        resumeOnFocusGain = false
-                        playbackController.pause()
+                        listener?.onFocusLost()
                     }
 
                     AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                         logger.d(TAG, "AUDIOFOCUS_LOSS_TRANSIENT - pausing, will auto-resume")
-                        resumeOnFocusGain = playbackController.playbackState.value.status ==
-                            com.lochanpthakke.empee3.core.model.PlaybackStatus.PLAYING
-                        playbackController.pause()
+                        listener?.onFocusLostTransient()
                     }
 
                     AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                         logger.d(TAG, "AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK - ducking volume")
-                        playbackController.setVolume(DUCK_VOLUME)
+                        listener?.onFocusLostTransientCanDuck()
                     }
 
                     AudioManager.AUDIOFOCUS_GAIN -> {
-                        logger.d(TAG, "AUDIOFOCUS_GAIN - restoring volume, resume=$resumeOnFocusGain")
-                        playbackController.setVolume(FULL_VOLUME)
-                        if (resumeOnFocusGain) {
-                            resumeOnFocusGain = false
-                            playbackController.play()
-                        }
+                        logger.d(TAG, "AUDIOFOCUS_GAIN - restoring volume")
+                        listener?.onFocusGained()
                     }
                 }
             }
@@ -91,6 +82,5 @@ class AudioFocusManager
                 logger.d(TAG, "abandonFocus()")
             }
             focusRequest = null
-            resumeOnFocusGain = false
         }
     }

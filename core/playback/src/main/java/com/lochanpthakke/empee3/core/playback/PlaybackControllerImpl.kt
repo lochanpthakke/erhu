@@ -1,3 +1,4 @@
+
 package com.lochanpthakke.empee3.core.playback
 
 import androidx.media3.common.MediaItem
@@ -8,6 +9,7 @@ import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.playback.focus.AudioFocusListener
 import com.lochanpthakke.empee3.core.playback.focus.AudioFocusManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -27,7 +29,8 @@ class PlaybackControllerImpl
         private val dispatcherProvider: DispatcherProvider,
         private val logger: Logger,
         private val audioFocusManager: AudioFocusManager,
-    ) : PlaybackController {
+    ) : PlaybackController,
+        AudioFocusListener {
         private val scope = CoroutineScope(dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
 
@@ -35,6 +38,7 @@ class PlaybackControllerImpl
         override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
         private var positionPollJob: Job? = null
+        private var resumeAfterFocusGain = false
 
         private val playerListener =
             object : Player.Listener {
@@ -77,6 +81,31 @@ class PlaybackControllerImpl
 
         init {
             player.addListener(playerListener)
+            audioFocusManager.setListener(this)
+        }
+
+        override fun onFocusLost() {
+            resumeAfterFocusGain = false
+            pause()
+        }
+
+        override fun onFocusLostTransient() {
+            resumeAfterFocusGain =
+                playbackState.value.status == PlaybackStatus.PLAYING
+            pause()
+        }
+
+        override fun onFocusLostTransientCanDuck() {
+            setVolume(DUCK_VOLUME)
+        }
+
+        override fun onFocusGained() {
+            setVolume(FULL_VOLUME)
+
+            if (resumeAfterFocusGain) {
+                resumeAfterFocusGain = false
+                player.play()
+            }
         }
 
         private fun updateStatus() {
@@ -171,5 +200,7 @@ class PlaybackControllerImpl
         companion object {
             private const val TAG = "PlaybackController"
             private const val POSITION_POLL_INTERVAL_MS = 150L
+            private const val DUCK_VOLUME = 0.2f
+            private const val FULL_VOLUME = 1.0f
         }
     }
