@@ -8,6 +8,9 @@ style:
     excludes: ['**/ui/theme/Color.kt', '**/test/**', '**/androidTest/**']
 
 complexity:
+  LongParameterList:
+    functionThreshold: 10
+    constructorThreshold: 25
   TooManyFunctions:
     thresholdInClasses: 12
     thresholdInInterfaces: 12
