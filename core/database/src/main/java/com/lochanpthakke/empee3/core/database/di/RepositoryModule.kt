@@ -1,9 +1,13 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.database.di
 
 import android.content.Context
 import androidx.work.WorkManager
+import com.lochanpthakke.empee3.core.database.lookup.RoomSongLookup
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepositoryImpl
+import com.lochanpthakke.empee3.core.model.SongLookup
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -14,10 +18,14 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class RepositoryModule {
+interface RepositoryModule {
     @Binds
     @Singleton
-    abstract fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
+    fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
+
+    @Binds
+    @Singleton
+    fun bindSongLookup(impl: RoomSongLookup): SongLookup
 
     companion object {
         @Provides

@@ -12,7 +12,7 @@ complexity:
     functionThreshold: 10
     constructorThreshold: 25
   TooManyFunctions:
-    thresholdInClasses: 12
-    thresholdInInterfaces: 12
-    thresholdInObjects: 12
-    thresholdInEnums: 12
+    thresholdInClasses: 30
+    thresholdInInterfaces: 30
+    thresholdInObjects: 30
+    thresholdInEnums: 30

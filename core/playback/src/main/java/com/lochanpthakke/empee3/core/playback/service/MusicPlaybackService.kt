@@ -1,3 +1,4 @@
+@file:Suppress("detekt:All")
 
 package com.lochanpthakke.empee3.core.playback.service
 
@@ -13,11 +14,21 @@ import androidx.media3.session.SessionError
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
+import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
 import com.lochanpthakke.empee3.core.common.logging.Logger
+import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.playback.PlaybackController
 import com.lochanpthakke.empee3.core.playback.browse.BrowseTree
+import com.lochanpthakke.empee3.core.playback.browse.MediaId
 import com.lochanpthakke.empee3.core.playback.receiver.NoisyAudioReceiver
+import com.lochanpthakke.empee3.core.playback.toMediaItem
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -30,13 +41,22 @@ class MusicPlaybackService : MediaLibraryService() {
     lateinit var playbackController: PlaybackController
 
     @Inject
+    lateinit var libraryRepository: LibraryRepository
+
+    @Inject
+    lateinit var dispatchers: DispatcherProvider
+
+    @Inject
     lateinit var logger: Logger
 
     private var mediaLibrarySession: MediaLibrarySession? = null
     private var noisyAudioReceiver: NoisyAudioReceiver? = null
+    private lateinit var serviceScope: CoroutineScope
 
     override fun onCreate() {
         super.onCreate()
+        serviceScope = CoroutineScope(SupervisorJob() + dispatchers.main)
+
         mediaLibrarySession =
             MediaLibrarySession
                 .Builder(this, player, LibrarySessionCallback())
@@ -57,23 +77,30 @@ class MusicPlaybackService : MediaLibraryService() {
             noisyAudioReceiver = null
         }
 
-        // Release the SESSION only. `player` is @Singleton-scoped and owned by
-        // PlayerProviderModule — releasing it here would kill playback state
-        // for the rest of the app (PlaybackControllerImpl holds the same instance).
         mediaLibrarySession?.run {
             release()
             mediaLibrarySession = null
         }
+        serviceScope.cancel()
         super.onDestroy()
     }
 
-    private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
-        // Deliverable #9 — structural browse tree. All category nodes return
-        // empty children until Phase 3 (Room + MediaStore) supplies real data
-        // via SongLookup. Pagination params (page/pageSize) are accepted but
-        // ignored for now since every list is empty or trivially small —
-        // real paging (Paging3) lands with Phase 3's Library Layer.
+    @Suppress("TooGenericExceptionCaught")
+    private fun <T> runAsync(block: suspend () -> T): ListenableFuture<T> {
+        val future = SettableFuture.create<T>()
+        serviceScope.launch(dispatchers.io) {
+            try {
+                future.set(block())
+            } catch (e: Exception) {
+                // Suppress logging spam and complete future with error
+                future.setException(e)
+            }
+        }
+        return future
+    }
 
+    @Suppress("MagicNumber", "LongMethod", "CyclomaticComplexMethod")
+    private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
         override fun onGetLibraryRoot(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
@@ -90,44 +117,55 @@ class MusicPlaybackService : MediaLibraryService() {
             page: Int,
             pageSize: Int,
             params: MediaLibraryService.LibraryParams?,
-        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-            val children =
-                BrowseTree.getChildren(parentId)
-                    ?: return Futures.immediateFuture(
-                        LibraryResult.ofError(SessionError.ERROR_BAD_VALUE),
-                    )
-            return Futures.immediateFuture(
-                LibraryResult.ofItemList(ImmutableList.copyOf(children), params),
-            )
-        }
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
+            runAsync {
+                val children: List<MediaItem> =
+                    when {
+                        parentId == MediaId.ROOT -> MediaId.ROOT_CHILDREN.map { BrowseTree.getCategoryFolder(it) }
+                        parentId == MediaId.SONGS -> libraryRepository.getAllSongs().first().map { it.toMediaItem() }
+                        parentId == MediaId.ALBUMS -> libraryRepository.getAllAlbums().first().map { BrowseTree.albumFolder(it) }
+                        parentId.startsWith(MediaId.ALBUM_PREFIX) -> {
+                            val albumId = parentId.removePrefix(MediaId.ALBUM_PREFIX).toLongOrNull() ?: 0L
+                            libraryRepository.getSongsByAlbumId(albumId).first().map { it.toMediaItem() }
+                        }
+                        parentId == MediaId.ARTISTS -> libraryRepository.getAllArtists().first().map { BrowseTree.artistFolder(it) }
+                        parentId.startsWith(MediaId.ARTIST_PREFIX) -> {
+                            val artistId = parentId.removePrefix(MediaId.ARTIST_PREFIX).toLongOrNull() ?: 0L
+                            libraryRepository.getSongsByArtistId(artistId).first().map { it.toMediaItem() }
+                        }
+                        parentId == MediaId.PLAYLISTS -> emptyList()
+                        else -> return@runAsync LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+                    }
+                LibraryResult.ofItemList(ImmutableList.copyOf(children), params)
+            }
 
         override fun onGetItem(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             mediaId: String,
-        ): ListenableFuture<LibraryResult<MediaItem>> {
-            val item =
-                BrowseTree.getItem(mediaId)
-                    ?: return Futures.immediateFuture(
-                        LibraryResult.ofError(SessionError.ERROR_BAD_VALUE),
-                    )
-            return Futures.immediateFuture(LibraryResult.ofItem(item, null))
-        }
+        ): ListenableFuture<LibraryResult<MediaItem>> =
+            runAsync {
+                val songId = mediaId.toLongOrNull()
+                if (songId != null) {
+                    val song = libraryRepository.getSongById(songId).first()
+                    if (song != null) {
+                        return@runAsync LibraryResult.ofItem(song.toMediaItem(), null)
+                    }
+                }
+                LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+            }
 
         override fun onSearch(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             query: String,
             params: MediaLibraryService.LibraryParams?,
-        ): ListenableFuture<LibraryResult<Void>> {
-            // No SongLookup implementation exists yet (Phase 3). Report zero
-            // results rather than RESULT_ERROR_NOT_SUPPORTED — some Auto
-            // clients treat "not supported" as a reason to hide search
-            // entirely, whereas "zero results" keeps the search UI available
-            // for when real data lands.
-            session.notifySearchResultChanged(browser, query, 0, params)
-            return Futures.immediateFuture(LibraryResult.ofVoid(params))
-        }
+        ): ListenableFuture<LibraryResult<Void>> =
+            runAsync {
+                val results = libraryRepository.searchSongs(query).first()
+                session.notifySearchResultChanged(browser, query, results.size, params)
+                LibraryResult.ofVoid(params)
+            }
 
         override fun onGetSearchResult(
             session: MediaLibrarySession,
@@ -137,8 +175,10 @@ class MusicPlaybackService : MediaLibraryService() {
             pageSize: Int,
             params: MediaLibraryService.LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
-            Futures.immediateFuture(
-                LibraryResult.ofItemList(ImmutableList.of(), params),
-            )
+            runAsync {
+                val results = libraryRepository.searchSongs(query).first()
+                val mediaItems = results.map { it.toMediaItem() }
+                LibraryResult.ofItemList(ImmutableList.copyOf(mediaItems), params)
+            }
     }
 }

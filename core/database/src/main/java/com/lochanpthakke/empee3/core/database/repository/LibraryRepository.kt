@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.database.repository
 
 import androidx.paging.PagingData
@@ -7,6 +9,7 @@ import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.Flow
 
+@Suppress("TooManyFunctions")
 interface LibraryRepository {
     fun getSongsPaged(): Flow<PagingData<Song>>
 

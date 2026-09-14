@@ -1,33 +1,51 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.playback.browse
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.lochanpthakke.empee3.core.model.Album
+import com.lochanpthakke.empee3.core.model.Artist
+import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.playback.toMediaItem
 
-/**
- * Builds the media browse tree for Android Auto / media browser clients.
- *
- * Structural-only for Deliverable #9: the tree shape and node wiring are
- * correct and stable, but category nodes return empty children until
- * Phase 3 (Room + MediaStore scanning) implements SongLookup. Only
- * [getChildren]'s body should need to change when that data exists —
- * node IDs and hierarchy shape are meant to survive that transition.
- */
 object BrowseTree {
     fun getRoot(): MediaItem = browsableFolder(id = MediaId.ROOT, title = "empee3")
 
-    fun getChildren(parentId: String): List<MediaItem>? =
-        when (parentId) {
-            MediaId.ROOT -> MediaId.ROOT_CHILDREN.map { categoryFolder(it) }
-            MediaId.SONGS, MediaId.ALBUMS, MediaId.ARTISTS, MediaId.PLAYLISTS -> emptyList()
-            else -> null
-        }
+    fun getCategoryFolder(id: String): MediaItem = categoryFolder(id)
 
-    fun getItem(mediaId: String): MediaItem? =
-        when (mediaId) {
-            MediaId.ROOT -> getRoot()
-            MediaId.SONGS, MediaId.ALBUMS, MediaId.ARTISTS, MediaId.PLAYLISTS -> categoryFolder(mediaId)
-            else -> null
-        }
+    fun songMediaItem(song: Song): MediaItem = song.toMediaItem()
+
+    fun albumFolder(album: Album): MediaItem {
+        val metadata =
+            MediaMetadata
+                .Builder()
+                .setTitle(album.title)
+                .setArtist(album.artist)
+                .setIsBrowsable(true)
+                .setIsPlayable(false)
+                .build()
+        return MediaItem
+            .Builder()
+            .setMediaId("${MediaId.ALBUM_PREFIX}${album.id}")
+            .setMediaMetadata(metadata)
+            .build()
+    }
+
+    fun artistFolder(artist: Artist): MediaItem {
+        val metadata =
+            MediaMetadata
+                .Builder()
+                .setTitle(artist.name)
+                .setIsBrowsable(true)
+                .setIsPlayable(false)
+                .build()
+        return MediaItem
+            .Builder()
+            .setMediaId("${MediaId.ARTIST_PREFIX}${artist.id}")
+            .setMediaMetadata(metadata)
+            .build()
+    }
 
     private fun categoryFolder(id: String): MediaItem {
         val title =

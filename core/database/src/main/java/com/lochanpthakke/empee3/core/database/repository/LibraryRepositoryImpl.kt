@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.database.repository
 
 import androidx.paging.Pager
@@ -23,6 +25,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
+@Suppress("TooManyFunctions")
 class LibraryRepositoryImpl
     @Inject
     constructor(

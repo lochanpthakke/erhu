@@ -26,7 +26,7 @@ class MediaStoreScanner
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
     ) {
-        @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "MagicNumber")
+        @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber")
         fun scanLibrary(): Flow<ScanProgress> =
             flow {
                 val projection =
@@ -200,16 +200,17 @@ class MediaStoreScanner
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
 
-        @Suppress("LongParameterList")
-        private class AlbumEntityAccumulator(
-            val id: Long,
-            val title: String,
-            val artist: String,
-            val artistId: Long,
-            val year: Int,
-            val artworkUri: String,
-            var songCount: Int = 0,
-        )
+        private class AlbumEntityAccumulator
+            @Suppress("LongParameterList")
+            constructor(
+                val id: Long,
+                val title: String,
+                val artist: String,
+                val artistId: Long,
+                val year: Int,
+                val artworkUri: String,
+                var songCount: Int = 0,
+            )
 
         private class ArtistEntityAccumulator(
             val id: Long,

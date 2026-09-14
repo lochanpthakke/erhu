@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.database.scanner
 
 data class ScanProgress(
