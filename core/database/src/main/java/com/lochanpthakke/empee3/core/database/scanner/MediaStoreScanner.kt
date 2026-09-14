@@ -26,7 +26,7 @@ class MediaStoreScanner
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
     ) {
-        @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber")
+        @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength")
         fun scanLibrary(): Flow<ScanProgress> =
             flow {
                 val projection =
@@ -44,7 +44,8 @@ class MediaStoreScanner
                         MediaStore.Audio.Media.DATE_MODIFIED,
                     )
 
-                val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 10000"
+                val selection =
+                    "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 10000"
                 val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
                 val songs = mutableListOf<SongEntity>()
