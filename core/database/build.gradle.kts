@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":core:common"))
     api(project(":core:model"))
 
+    implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.androidx.room.runtime)
@@ -33,8 +34,13 @@ dependencies {
 
     implementation(libs.androidx.paging.common)
 
+    implementation(libs.jaudiotagger)
+    implementation(libs.androidx.work.runtime.ktx)
+
     implementation(libs.hilt.android)
+    implementation(libs.androidx.hilt.work)
     ksp(libs.hilt.android.compiler)
+    ksp(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
 }
