@@ -1,0 +1,15 @@
+package com.lochanpthakke.empee3.core.model
+
+interface MetadataProvider {
+    val providerName: String
+
+    suspend fun searchTrack(
+        title: String,
+        artist: String?,
+    ): List<MetadataCandidate>
+
+    suspend fun fetchAlbumArt(
+        albumTitle: String,
+        artist: String?,
+    ): String?
+}

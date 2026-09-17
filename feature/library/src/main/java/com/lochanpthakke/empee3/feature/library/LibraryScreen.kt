@@ -1,6 +1,9 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,9 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,8 +34,10 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +54,7 @@ import com.lochanpthakke.empee3.core.model.Song
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")
 fun LibraryScreen(
     viewModel: LibraryViewModel,
     modifier: Modifier = Modifier,
@@ -53,8 +62,10 @@ fun LibraryScreen(
     val songs = viewModel.songsPaged.collectAsLazyPagingItems()
     val albums = viewModel.albumsPaged.collectAsLazyPagingItems()
     val artists = viewModel.artistsPaged.collectAsLazyPagingItems()
+    val candidates by viewModel.metadataCandidates.collectAsState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var songForFixTags by remember { mutableStateOf<Song?>(null) }
     val tabs = listOf("Songs", "Albums", "Artists")
 
     Scaffold(
@@ -90,11 +101,31 @@ fun LibraryScreen(
             }
 
             when (selectedTabIndex) {
-                0 -> SongsTab(songs = songs, onSongClick = { viewModel.playSong(it) })
+                0 ->
+                    SongsTab(
+                        songs = songs,
+                        onSongClick = { viewModel.playSong(it) },
+                        onFixTagsClick = { song ->
+                            songForFixTags = song
+                            viewModel.searchMetadataForSong(song)
+                        },
+                    )
                 1 -> AlbumsTab(albums = albums, onAlbumClick = { viewModel.playAlbum(it) })
                 2 -> ArtistsTab(artists = artists, onArtistClick = { viewModel.playArtist(it) })
             }
         }
+    }
+
+    songForFixTags?.let { song ->
+        FixTagsDialog(
+            song = song,
+            candidates = candidates,
+            onDismiss = { songForFixTags = null },
+            onSaveTags = { title, artist, album, year, genre ->
+                viewModel.writeTags(song, title, artist, album, year, genre)
+                songForFixTags = null
+            },
+        )
     }
 }
 
@@ -102,6 +133,7 @@ fun LibraryScreen(
 private fun SongsTab(
     songs: LazyPagingItems<Song>,
     onSongClick: (Song) -> Unit,
+    onFixTagsClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (songs.itemCount == 0) {
@@ -117,7 +149,11 @@ private fun SongsTab(
             ) { index ->
                 val song = songs[index]
                 if (song != null) {
-                    SongItem(song = song, onClick = { onSongClick(song) })
+                    SongItem(
+                        song = song,
+                        onClick = { onSongClick(song) },
+                        onFixTagsClick = { onFixTagsClick(song) },
+                    )
                 }
             }
         }
@@ -181,8 +217,11 @@ private fun ArtistsTab(
 private fun SongItem(
     song: Song,
     onClick: () -> Unit,
+    onFixTagsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Card(
         modifier =
             modifier
@@ -191,30 +230,60 @@ private fun SongItem(
                 .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = song.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Row {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "• ${song.album}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Row {
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "• ${song.album}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Song Options",
+                    )
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Fix Tags / Metadata") },
+                        onClick = {
+                            menuExpanded = false
+                            onFixTagsClick()
+                        },
+                    )
+                }
             }
         }
     }
