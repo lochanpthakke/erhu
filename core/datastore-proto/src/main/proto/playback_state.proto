@@ -9,6 +9,13 @@ message PlaybackStateProto {
   int64 position_ms = 3;
   bool shuffle_mode_enabled = 4;
   RepeatModeProto repeat_mode = 5;
+  string app_theme_id = 6;
+  string widget_theme_id = 7;
+  bool is_dark_mode = 8;
+  string library_layout_mode = 9;
+  string last_verified_stable_theme_id = 10;
+  string last_verified_stable_checksum = 11;
+  bool theme_rollback_flag = 12;
 }
 
 enum RepeatModeProto {
