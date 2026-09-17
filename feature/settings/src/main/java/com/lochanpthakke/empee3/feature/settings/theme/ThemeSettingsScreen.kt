@@ -42,6 +42,7 @@ import com.lochanpthakke.empee3.core.designsystem.theme.BuiltInThemes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")
 fun ThemeSettingsScreen(
     viewModel: ThemeViewModel,
     modifier: Modifier = Modifier,
@@ -56,16 +57,17 @@ fun ThemeSettingsScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val fileLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            val inputStream = context.contentResolver.openInputStream(it)
-            if (inputStream != null) {
-                viewModel.importPackage(inputStream)
+    val fileLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            uri?.let {
+                val inputStream = context.contentResolver.openInputStream(it)
+                if (inputStream != null) {
+                    viewModel.importPackage(inputStream)
+                }
             }
         }
-    }
 
     LaunchedEffect(importMessage) {
         importMessage?.let {
@@ -86,11 +88,12 @@ fun ThemeSettingsScreen(
         modifier = modifier,
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
         ) {
             Text(
                 text = "App Theme & Skin",
@@ -104,7 +107,7 @@ fun ThemeSettingsScreen(
                     title = theme.name,
                     subtitle = "Built-in ${if (theme.isDark) "Dark" else "Light"} Theme",
                     isSelected = currentAppSkin == null && currentAppTheme.id == theme.id,
-                    onClick = { viewModel.selectAppTheme(theme.id) }
+                    onClick = { viewModel.selectAppTheme(theme.id) },
                 )
             }
 
@@ -113,7 +116,7 @@ fun ThemeSettingsScreen(
                     title = skin.name,
                     subtitle = "3D VST Studio Skin",
                     isSelected = currentAppSkin?.id == skin.id,
-                    onClick = { viewModel.selectAppTheme(skin.id) }
+                    onClick = { viewModel.selectAppTheme(skin.id) },
                 )
             }
 
@@ -131,7 +134,7 @@ fun ThemeSettingsScreen(
                     title = theme.name,
                     subtitle = "Widget Theme",
                     isSelected = currentWidgetTheme.id == theme.id,
-                    onClick = { viewModel.selectWidgetTheme(theme.id) }
+                    onClick = { viewModel.selectWidgetTheme(theme.id) },
                 )
             }
 
@@ -144,12 +147,16 @@ fun ThemeSettingsScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            listOf("GRID" to "2-Column Grid", "LIST" to "Single-Column List", "DRAWER" to "Side Navigation Drawer").forEach { (mode, label) ->
+            listOf(
+                "GRID" to "2-Column Grid",
+                "LIST" to "Single-Column List",
+                "DRAWER" to "Side Navigation Drawer",
+            ).forEach { (mode, label) ->
                 ThemeCard(
                     title = label,
                     subtitle = "Layout View Preference",
                     isSelected = libraryLayout == mode,
-                    onClick = { viewModel.selectLibraryLayout(mode) }
+                    onClick = { viewModel.selectLibraryLayout(mode) },
                 )
             }
 
@@ -175,18 +182,21 @@ private fun ThemeCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-        )
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .clickable(onClick = onClick),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {

@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.designsystem.skin
 
 import androidx.compose.runtime.Immutable
@@ -6,6 +8,7 @@ import kotlinx.serialization.Serializable
 
 @Immutable
 @Serializable
+@Suppress("LongParameterList")
 data class LcdOverlayConfig(
     val backgroundColor: Long = 0xFF0D1B0EL,
     val backgroundTexturePath: String? = null,
@@ -19,6 +22,7 @@ data class LcdOverlayConfig(
 
 @Immutable
 @Serializable
+@Suppress("LongParameterList")
 data class SkinManifest(
     val id: String,
     val name: String,

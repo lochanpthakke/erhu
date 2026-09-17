@@ -28,11 +28,13 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:sound"))
     implementation(project(":core:playback"))
+    implementation(project(":core:datastore"))
     implementation(project(":core:designsystem"))
 
     implementation(libs.androidx.media3.common)
 
     implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.ui)

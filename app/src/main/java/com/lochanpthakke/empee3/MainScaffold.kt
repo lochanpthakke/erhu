@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,10 +40,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
 import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
+import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
+import com.lochanpthakke.empee3.feature.settings.theme.ThemeSettingsScreen
+import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
 import com.lochanpthakke.empee3.navigation.Library
 import com.lochanpthakke.empee3.navigation.NowPlaying
 import com.lochanpthakke.empee3.navigation.Settings
@@ -50,72 +55,86 @@ import com.lochanpthakke.empee3.navigation.Settings
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 fun MainScaffold() {
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
+    val themeViewModel: ThemeViewModel = hiltViewModel()
+    val currentTheme by themeViewModel.appTheme.collectAsState()
+    val currentSkin by themeViewModel.appSkin.collectAsState()
+    val isRollbackActive by themeViewModel.isRollbackActive.collectAsState()
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.LibraryMusic, contentDescription = "Library") },
-                    label = { Text("Library") },
-                    selected = currentDestination?.route?.contains("Library") == true,
-                    onClick = {
-                        navController.navigate(Library) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+    if (isRollbackActive) {
+        ThemeRollbackDialog(onDismiss = { themeViewModel.acknowledgeRollback() })
+    }
+
+    EmPee3Theme(
+        themeManifest = currentTheme,
+        skinManifest = currentSkin,
+    ) {
+        val navController = rememberNavController()
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentDestination = navBackStackEntry?.destination
+
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.LibraryMusic, contentDescription = "Library") },
+                        label = { Text("Library") },
+                        selected = currentDestination?.route?.contains("Library") == true,
+                        onClick = {
+                            navController.navigate(Library) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.PlayCircle, contentDescription = "Now Playing") },
-                    label = { Text("Now Playing") },
-                    selected = currentDestination?.route?.contains("NowPlaying") == true,
-                    onClick = {
-                        navController.navigate(NowPlaying) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        },
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.PlayCircle, contentDescription = "Now Playing") },
+                        label = { Text("Now Playing") },
+                        selected = currentDestination?.route?.contains("NowPlaying") == true,
+                        onClick = {
+                            navController.navigate(NowPlaying) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Equalizer, contentDescription = "Equalizer") },
-                    label = { Text("Equalizer") },
-                    selected = currentDestination?.route?.contains("Settings") == true,
-                    onClick = {
-                        navController.navigate(Settings) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        },
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Equalizer, contentDescription = "Equalizer") },
+                        label = { Text("Equalizer") },
+                        selected = currentDestination?.route?.contains("Settings") == true,
+                        onClick = {
+                            navController.navigate(Settings) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                )
-            }
-        },
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Library,
-            modifier = Modifier.padding(innerPadding),
-        ) {
-            composable<Library> {
-                LibraryRoute()
-            }
-            composable<NowPlaying> {
-                NowPlayingPlaceholder()
-            }
-            composable<Settings> {
-                val soundViewModel: SoundViewModel = hiltViewModel()
-                SoundSettingsScreen(viewModel = soundViewModel)
+                        },
+                    )
+                }
+            },
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Library,
+                modifier = Modifier.padding(innerPadding),
+            ) {
+                composable<Library> {
+                    LibraryRoute()
+                }
+                composable<NowPlaying> {
+                    ThemeSettingsScreen(viewModel = themeViewModel)
+                }
+                composable<Settings> {
+                    val soundViewModel: SoundViewModel = hiltViewModel()
+                    SoundSettingsScreen(viewModel = soundViewModel)
+                }
             }
         }
     }
@@ -195,9 +214,4 @@ private fun PermissionRequestView(
             }
         }
     }
-}
-
-@Composable
-private fun NowPlayingPlaceholder() {
-    Text("Now Playing — TODO")
 }

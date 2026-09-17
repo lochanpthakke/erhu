@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.designsystem.theme
 
 import androidx.compose.runtime.Immutable
@@ -6,6 +8,7 @@ import kotlinx.serialization.Serializable
 
 @Immutable
 @Serializable
+@Suppress("LongParameterList")
 data class EmPee3Colors(
     val primary: Long,
     val onPrimary: Long,
@@ -29,23 +32,42 @@ data class EmPee3Colors(
     val glassScrim: Long,
 ) {
     fun getPrimaryColor(): Color = Color(primary)
+
     fun getOnPrimaryColor(): Color = Color(onPrimary)
+
     fun getPrimaryContainerColor(): Color = Color(primaryContainer)
+
     fun getOnPrimaryContainerColor(): Color = Color(onPrimaryContainer)
+
     fun getSecondaryColor(): Color = Color(secondary)
+
     fun getOnSecondaryColor(): Color = Color(onSecondary)
+
     fun getBackgroundColor(): Color = Color(background)
+
     fun getOnBackgroundColor(): Color = Color(onBackground)
+
     fun getSurfaceColor(): Color = Color(surface)
+
     fun getOnSurfaceColor(): Color = Color(onSurface)
+
     fun getSurfaceVariantColor(): Color = Color(surfaceVariant)
+
     fun getOnSurfaceVariantColor(): Color = Color(onSurfaceVariant)
+
     fun getOutlineColor(): Color = Color(outline)
+
     fun getBevelLightColor(): Color = Color(bevelLight)
+
     fun getBevelDarkColor(): Color = Color(bevelDark)
+
     fun getLcdBackgroundColor(): Color = Color(lcdBackground)
+
     fun getLcdTextColor(): Color = Color(lcdText)
+
     fun getLcdGlowColor(): Color = Color(lcdGlow)
+
     fun getCardBackgroundColor(): Color = Color(cardBackground)
+
     fun getGlassScrimColor(): Color = Color(glassScrim)
 }

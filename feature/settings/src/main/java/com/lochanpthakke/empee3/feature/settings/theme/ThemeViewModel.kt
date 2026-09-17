@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository
-import com.lochanpthakke.empee3.core.designsystem.importer.ImportedThemeResult
 import com.lochanpthakke.empee3.core.designsystem.skin.SkinManifest
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,65 +15,66 @@ import java.io.InputStream
 import javax.inject.Inject
 
 @HiltViewModel
-class ThemeViewModel @Inject constructor(
-    private val themeRepository: ThemeRepository,
-) : ViewModel() {
+class ThemeViewModel
+    @Inject
+    constructor(
+        private val themeRepository: ThemeRepository,
+    ) : ViewModel() {
+        val appTheme: StateFlow<ThemeManifest> = themeRepository.appThemeState
+        val appSkin: StateFlow<SkinManifest?> = themeRepository.appSkinState
+        val widgetTheme: StateFlow<ThemeManifest> = themeRepository.widgetThemeState
+        val widgetSkin: StateFlow<SkinManifest?> = themeRepository.widgetSkinState
+        val libraryLayout: StateFlow<String> = themeRepository.libraryLayoutMode
+        val isRollbackActive: StateFlow<Boolean> = themeRepository.isRollbackFlagActive
 
-    val appTheme: StateFlow<ThemeManifest> = themeRepository.appThemeState
-    val appSkin: StateFlow<SkinManifest?> = themeRepository.appSkinState
-    val widgetTheme: StateFlow<ThemeManifest> = themeRepository.widgetThemeState
-    val widgetSkin: StateFlow<SkinManifest?> = themeRepository.widgetSkinState
-    val libraryLayout: StateFlow<String> = themeRepository.libraryLayoutMode
-    val isRollbackActive: StateFlow<Boolean> = themeRepository.isRollbackFlagActive
+        private val _importMessage = MutableStateFlow<String?>(null)
+        val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
 
-    private val _importMessage = MutableStateFlow<String?>(null)
-    val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
-
-    fun selectAppTheme(themeId: String) {
-        viewModelScope.launch {
-            themeRepository.setAppTheme(themeId)
+        fun selectAppTheme(themeId: String) {
+            viewModelScope.launch {
+                themeRepository.setAppTheme(themeId)
+            }
         }
-    }
 
-    fun selectWidgetTheme(themeId: String) {
-        viewModelScope.launch {
-            themeRepository.setWidgetTheme(themeId)
+        fun selectWidgetTheme(themeId: String) {
+            viewModelScope.launch {
+                themeRepository.setWidgetTheme(themeId)
+            }
         }
-    }
 
-    fun selectLibraryLayout(mode: String) {
-        viewModelScope.launch {
-            themeRepository.setLibraryLayoutMode(mode)
+        fun selectLibraryLayout(mode: String) {
+            viewModelScope.launch {
+                themeRepository.setLibraryLayoutMode(mode)
+            }
         }
-    }
 
-    fun importPackage(inputStream: InputStream) {
-        viewModelScope.launch {
-            val result = themeRepository.importPackage(inputStream)
-            when (result) {
-                is AppResult.Success -> {
-                    val data = result.data
-                    _importMessage.value = "Successfully imported '${data.name}'!"
-                    if (data.isSkin) {
-                        themeRepository.setAppTheme(data.themeId)
-                    } else {
-                        themeRepository.setAppTheme(data.themeId)
+        fun importPackage(inputStream: InputStream) {
+            viewModelScope.launch {
+                val result = themeRepository.importPackage(inputStream)
+                when (result) {
+                    is AppResult.Success -> {
+                        val data = result.data
+                        _importMessage.value = "Successfully imported '${data.name}'!"
+                        if (data.isSkin) {
+                            themeRepository.setAppTheme(data.themeId)
+                        } else {
+                            themeRepository.setAppTheme(data.themeId)
+                        }
                     }
-                }
-                is AppResult.Error -> {
-                    _importMessage.value = "Import failed: ${result.error.message}"
+                    is AppResult.Error -> {
+                        _importMessage.value = "Import failed: ${result.error.message}"
+                    }
                 }
             }
         }
-    }
 
-    fun clearImportMessage() {
-        _importMessage.value = null
-    }
+        fun clearImportMessage() {
+            _importMessage.value = null
+        }
 
-    fun acknowledgeRollback() {
-        viewModelScope.launch {
-            themeRepository.acknowledgeRollback()
+        fun acknowledgeRollback() {
+            viewModelScope.launch {
+                themeRepository.acknowledgeRollback()
+            }
         }
     }
-}

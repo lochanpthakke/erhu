@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.designsystem.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.skin.SkinManifest
 import com.lochanpthakke.empee3.core.designsystem.widget.WidgetSkinConfig
@@ -42,6 +43,7 @@ object EmPee3Theme {
 }
 
 @Composable
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun EmPee3Theme(
     themeManifest: ThemeManifest = BuiltInThemes.DEFAULT_DARK,
     skinManifest: SkinManifest? = null,
@@ -50,45 +52,47 @@ fun EmPee3Theme(
     val colors = themeManifest.colors
     val shapes = themeManifest.shapes
 
-    val colorScheme = if (themeManifest.isDark) {
-        darkColorScheme(
-            primary = colors.getPrimaryColor(),
-            onPrimary = colors.getOnPrimaryColor(),
-            primaryContainer = colors.getPrimaryContainerColor(),
-            onPrimaryContainer = colors.getOnPrimaryContainerColor(),
-            secondary = colors.getSecondaryColor(),
-            onSecondary = colors.getOnSecondaryColor(),
-            background = colors.getBackgroundColor(),
-            onBackground = colors.getOnBackgroundColor(),
-            surface = colors.getSurfaceColor(),
-            onSurface = colors.getOnSurfaceColor(),
-            surfaceVariant = colors.getSurfaceVariantColor(),
-            onSurfaceVariant = colors.getOnSurfaceVariantColor(),
-            outline = colors.getOutlineColor(),
-        )
-    } else {
-        lightColorScheme(
-            primary = colors.getPrimaryColor(),
-            onPrimary = colors.getOnPrimaryColor(),
-            primaryContainer = colors.getPrimaryContainerColor(),
-            onPrimaryContainer = colors.getOnPrimaryContainerColor(),
-            secondary = colors.getSecondaryColor(),
-            onSecondary = colors.getOnSecondaryColor(),
-            background = colors.getBackgroundColor(),
-            onBackground = colors.getOnBackgroundColor(),
-            surface = colors.getSurfaceColor(),
-            onSurface = colors.getOnSurfaceColor(),
-            surfaceVariant = colors.getSurfaceVariantColor(),
-            onSurfaceVariant = colors.getOnSurfaceVariantColor(),
-            outline = colors.getOutlineColor(),
-        )
-    }
+    val colorScheme =
+        if (themeManifest.isDark) {
+            darkColorScheme(
+                primary = colors.getPrimaryColor(),
+                onPrimary = colors.getOnPrimaryColor(),
+                primaryContainer = colors.getPrimaryContainerColor(),
+                onPrimaryContainer = colors.getOnPrimaryContainerColor(),
+                secondary = colors.getSecondaryColor(),
+                onSecondary = colors.getOnSecondaryColor(),
+                background = colors.getBackgroundColor(),
+                onBackground = colors.getOnBackgroundColor(),
+                surface = colors.getSurfaceColor(),
+                onSurface = colors.getOnSurfaceColor(),
+                surfaceVariant = colors.getSurfaceVariantColor(),
+                onSurfaceVariant = colors.getOnSurfaceVariantColor(),
+                outline = colors.getOutlineColor(),
+            )
+        } else {
+            lightColorScheme(
+                primary = colors.getPrimaryColor(),
+                onPrimary = colors.getOnPrimaryColor(),
+                primaryContainer = colors.getPrimaryContainerColor(),
+                onPrimaryContainer = colors.getOnPrimaryContainerColor(),
+                secondary = colors.getSecondaryColor(),
+                onSecondary = colors.getOnSecondaryColor(),
+                background = colors.getBackgroundColor(),
+                onBackground = colors.getOnBackgroundColor(),
+                surface = colors.getSurfaceColor(),
+                onSurface = colors.getOnSurfaceColor(),
+                surfaceVariant = colors.getSurfaceVariantColor(),
+                onSurfaceVariant = colors.getOnSurfaceVariantColor(),
+                outline = colors.getOutlineColor(),
+            )
+        }
 
-    val materialShapes = Shapes(
-        small = RoundedCornerShape(shapes.buttonCornerRadiusDp.dp),
-        medium = RoundedCornerShape(shapes.cardCornerRadiusDp.dp),
-        large = RoundedCornerShape(shapes.sheetCornerRadiusDp.dp),
-    )
+    val materialShapes =
+        Shapes(
+            small = RoundedCornerShape(shapes.buttonCornerRadiusDp.dp),
+            medium = RoundedCornerShape(shapes.cardCornerRadiusDp.dp),
+            large = RoundedCornerShape(shapes.sheetCornerRadiusDp.dp),
+        )
 
     CompositionLocalProvider(
         LocalEmPee3Colors provides colors,

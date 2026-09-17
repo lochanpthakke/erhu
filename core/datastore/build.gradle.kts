@@ -6,9 +6,7 @@ plugins {
 
 android {
     namespace = "com.lochanpthakke.empee3.core.datastore"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -24,6 +22,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:model"))
     implementation(project(":core:datastore-proto"))
+    api(project(":core:designsystem"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.datastore)

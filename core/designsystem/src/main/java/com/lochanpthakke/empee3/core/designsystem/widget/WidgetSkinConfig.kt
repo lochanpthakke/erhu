@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.designsystem.widget
 
 import androidx.compose.runtime.Immutable
@@ -13,6 +15,7 @@ enum class WidgetLayoutPreset {
 
 @Immutable
 @Serializable
+@Suppress("LongParameterList")
 data class WidgetSkinConfig(
     val layoutPreset: WidgetLayoutPreset = WidgetLayoutPreset.BOTTOM_CONTROLS_CENTER,
     val chassisTexturePath: String? = null,

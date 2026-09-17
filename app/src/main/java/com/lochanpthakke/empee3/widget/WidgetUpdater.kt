@@ -34,11 +34,16 @@ class WidgetUpdater
     constructor(
         @ApplicationContext private val context: Context,
         private val playbackController: PlaybackController,
+        private val themeRepository: com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
         fun start() {
             playbackController.playbackState
+                .onEach { updateAllWidgetInstances() }
+                .launchIn(scope)
+
+            themeRepository.widgetThemeState
                 .onEach { updateAllWidgetInstances() }
                 .launchIn(scope)
         }

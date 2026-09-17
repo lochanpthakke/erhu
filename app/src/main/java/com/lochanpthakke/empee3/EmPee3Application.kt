@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.lochanpthakke.empee3.app.theme.CrashThemeHandler
 import com.lochanpthakke.empee3.widget.WidgetUpdater
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -18,6 +19,9 @@ class EmPee3Application :
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
+    @Inject
+    lateinit var crashThemeHandler: CrashThemeHandler
+
     override val workManagerConfiguration: Configuration
         get() =
             Configuration
@@ -30,6 +34,7 @@ class EmPee3Application :
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
+        crashThemeHandler.install()
         widgetUpdater.start()
     }
 }

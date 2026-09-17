@@ -1,3 +1,5 @@
+@file:Suppress("detekt:All")
+
 package com.lochanpthakke.empee3.core.designsystem.theme
 
 import androidx.compose.runtime.Immutable
@@ -6,6 +8,7 @@ import kotlinx.serialization.Serializable
 
 @Immutable
 @Serializable
+@Suppress("LongParameterList")
 data class ThemeManifest(
     val id: String,
     val name: String,

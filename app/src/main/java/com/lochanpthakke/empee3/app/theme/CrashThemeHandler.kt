@@ -10,34 +10,38 @@ import javax.inject.Singleton
 
 @Singleton
 @Suppress("TooGenericExceptionCaught")
-class CrashThemeHandler @Inject constructor(
-    private val themeRepository: ThemeRepository,
-    private val logger: Logger,
-) : Thread.UncaughtExceptionHandler {
+class CrashThemeHandler
+    @Inject
+    constructor(
+        private val themeRepository: ThemeRepository,
+        private val logger: Logger,
+    ) : Thread.UncaughtExceptionHandler {
+        private var defaultHandler: Thread.UncaughtExceptionHandler? = null
+        private val scope = CoroutineScope(Dispatchers.IO)
 
-    private var defaultHandler: Thread.UncaughtExceptionHandler? = null
-    private val scope = CoroutineScope(Dispatchers.IO)
+        fun install() {
+            defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+            Thread.setDefaultUncaughtExceptionHandler(this)
+            logger.i(TAG, "CrashThemeHandler installed successfully")
+        }
 
-    fun install() {
-        defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
-        Thread.setDefaultUncaughtExceptionHandler(this)
-        logger.i(TAG, "CrashThemeHandler installed successfully")
-    }
-
-    override fun uncaughtException(thread: Thread, throwable: Throwable) {
-        logger.e(TAG, "Uncaught exception detected: ${throwable.message}", throwable)
-        scope.launch {
-            try {
-                themeRepository.triggerRollback("Crash detected: ${throwable.message}")
-            } catch (e: Exception) {
-                logger.e(TAG, "Failed to trigger theme rollback during crash", e)
-            } finally {
-                defaultHandler?.uncaughtException(thread, throwable)
+        override fun uncaughtException(
+            thread: Thread,
+            throwable: Throwable,
+        ) {
+            logger.e(TAG, "Uncaught exception detected: ${throwable.message}", throwable)
+            scope.launch {
+                try {
+                    themeRepository.triggerRollback("Crash detected: ${throwable.message}")
+                } catch (e: Exception) {
+                    logger.e(TAG, "Failed to trigger theme rollback during crash", e)
+                } finally {
+                    defaultHandler?.uncaughtException(thread, throwable)
+                }
             }
         }
-    }
 
-    companion object {
-        private const val TAG = "CrashThemeHandler"
+        companion object {
+            private const val TAG = "CrashThemeHandler"
+        }
     }
-}

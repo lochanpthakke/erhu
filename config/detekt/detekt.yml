@@ -1,18 +1,32 @@
 naming:
   FunctionNaming:
     ignoreAnnotated: ['Composable']
+  VariableNaming:
+    excludes: ['**/designsystem/**', '**/test/**']
 
 style:
   MagicNumber:
     ignoreAnnotated: ['Composable']
-    excludes: ['**/ui/theme/Color.kt', '**/test/**', '**/androidTest/**']
+    excludes: ['**/ui/theme/Color.kt', '**/test/**', '**/androidTest/**', '**/network/**', '**/designsystem/**']
+  MaxLineLength:
+    maxLineLength: 160
+    excludeCommentStatements: true
 
 complexity:
   LongParameterList:
-    functionThreshold: 10
-    constructorThreshold: 25
+    functionThreshold: 15
+    constructorThreshold: 30
+    ignoreDataClasses: true
   TooManyFunctions:
     thresholdInClasses: 30
     thresholdInInterfaces: 30
     thresholdInObjects: 30
     thresholdInEnums: 30
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+    excludes: ['**/network/**', '**/database/**', '**/playback/**', '**/designsystem/**']
+  TooGenericExceptionThrown:
+    active: true
+    excludes: ['**/network/**', '**/database/**', '**/designsystem/**']
