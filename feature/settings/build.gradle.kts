@@ -30,6 +30,7 @@ dependencies {
     implementation(project(":core:playback"))
     implementation(project(":core:datastore"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:network"))
 
     implementation(libs.androidx.media3.common)
 

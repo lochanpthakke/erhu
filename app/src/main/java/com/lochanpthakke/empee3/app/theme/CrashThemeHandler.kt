@@ -1,7 +1,10 @@
 package com.lochanpthakke.empee3.app.theme
 
+import android.content.Context
+import com.lochanpthakke.empee3.core.common.logging.LocalCrashLogger
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -13,6 +16,7 @@ import javax.inject.Singleton
 class CrashThemeHandler
     @Inject
     constructor(
+        @ApplicationContext private val context: Context,
         private val themeRepository: ThemeRepository,
         private val logger: Logger,
     ) : Thread.UncaughtExceptionHandler {
@@ -30,6 +34,12 @@ class CrashThemeHandler
             throwable: Throwable,
         ) {
             logger.e(TAG, "Uncaught exception detected: ${throwable.message}", throwable)
+            try {
+                LocalCrashLogger(context).logCrash(throwable)
+            } catch (e: Exception) {
+                logger.e(TAG, "Failed to write local crash log", e)
+            }
+
             scope.launch {
                 try {
                     themeRepository.triggerRollback("Crash detected: ${throwable.message}")

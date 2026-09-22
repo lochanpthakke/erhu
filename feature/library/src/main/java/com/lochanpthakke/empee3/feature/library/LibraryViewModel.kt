@@ -27,7 +27,7 @@ class LibraryViewModel
     @Inject
     constructor(
         private val libraryRepository: LibraryRepository,
-        private val playbackRepository: PlaybackRepository,
+        val playbackRepository: PlaybackRepository,
         private val metadataRepository: MetadataRepository,
     ) : ViewModel() {
         val songsPaged: Flow<PagingData<Song>> =

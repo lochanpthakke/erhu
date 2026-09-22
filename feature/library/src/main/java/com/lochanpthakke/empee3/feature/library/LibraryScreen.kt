@@ -18,8 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -28,11 +32,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -57,6 +63,7 @@ import com.lochanpthakke.empee3.core.model.Song
 @Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")
 fun LibraryScreen(
     viewModel: LibraryViewModel,
+    onOpenDrawer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val songs = viewModel.songsPaged.collectAsLazyPagingItems()
@@ -66,17 +73,27 @@ fun LibraryScreen(
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
-    val tabs = listOf("Songs", "Albums", "Artists")
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    val tabs = listOf("Play Now", "Tracks", "Favorites", "Albums", "Artists", "Genres")
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Music Library") },
-                actions = {
-                    IconButton(onClick = { viewModel.triggerScan() }) {
+                title = { Text("Library") },
+                navigationIcon = {
+                    IconButton(onClick = onOpenDrawer) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Scan Library",
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Open Navigation Drawer",
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* Open Search */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search Library",
                         )
                     }
                 },
@@ -84,34 +101,57 @@ fun LibraryScreen(
         },
         modifier = modifier,
     ) { innerPadding ->
-        Column(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                viewModel.triggerScan()
+                isRefreshing = false
+            },
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
         ) {
-            TabRow(selectedTabIndex = selectedTabIndex) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(title) },
-                    )
+            Column(modifier = Modifier.fillMaxSize()) {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    edgePadding = 16.dp,
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(title) },
+                        )
+                    }
                 }
-            }
 
-            when (selectedTabIndex) {
-                0 ->
-                    SongsTab(
-                        songs = songs,
-                        onSongClick = { viewModel.playSong(it) },
-                        onFixTagsClick = { song ->
-                            songForFixTags = song
-                            viewModel.searchMetadataForSong(song)
-                        },
-                    )
-                1 -> AlbumsTab(albums = albums, onAlbumClick = { viewModel.playAlbum(it) })
-                2 -> ArtistsTab(artists = artists, onArtistClick = { viewModel.playArtist(it) })
+                when (selectedTabIndex) {
+                    0 -> PlayNowTab(songs = songs, albums = albums, artists = artists)
+                    1 ->
+                        SongsTab(
+                            songs = songs,
+                            onSongClick = { viewModel.playSong(it) },
+                            onFixTagsClick = { song ->
+                                songForFixTags = song
+                                viewModel.searchMetadataForSong(song)
+                            },
+                        )
+                    2 ->
+                        SongsTab(
+                            songs = songs,
+                            onSongClick = { viewModel.playSong(it) },
+                            onFixTagsClick = { song ->
+                                songForFixTags = song
+                                viewModel.searchMetadataForSong(song)
+                            },
+                        )
+                    3 -> AlbumsTab(albums = albums, onAlbumClick = { viewModel.playAlbum(it) })
+                    4 -> ArtistsTab(artists = artists, onArtistClick = { viewModel.playArtist(it) })
+                    5 ->
+                        EmptyLibraryView(message = "Genres will automatically group here as tracks are scanned.")
+                }
             }
         }
     }
@@ -130,6 +170,156 @@ fun LibraryScreen(
 }
 
 @Composable
+private fun PlayNowTab(
+    songs: LazyPagingItems<Song>,
+    albums: LazyPagingItems<Album>,
+    artists: LazyPagingItems<Artist>,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+    ) {
+        item {
+            SectionHeader(title = "Popular Artists")
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {},
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("PLAY")
+                }
+                OutlinedButton(
+                    onClick = {},
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(imageVector = Icons.Default.Shuffle, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("SHUFFLE PLAY")
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        item {
+            SectionHeader(title = "Popular Albums")
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = {},
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("PLAY")
+                }
+                OutlinedButton(
+                    onClick = {},
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(imageVector = Icons.Default.Shuffle, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("SHUFFLE PLAY")
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        item {
+            SectionHeader(title = "Favourites Smart Playlist")
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Liked Songs Playlist",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Your auto-generated favorites collection",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {}) { Text("PLAY") }
+                        OutlinedButton(onClick = {}) { Text("SHUFFLE PLAY") }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        item {
+            SectionHeader(title = "Most Played")
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        item {
+            SectionHeader(title = "Never Played")
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        item {
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "All-Time Listening Stats",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Total Tracks: ${songs.itemCount} • Total Albums: ${albums.itemCount} • Total Artists: ${artists.itemCount}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Played this month: 0 hrs • All-Time: 0 hrs",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+    )
+}
+
+@Composable
 private fun SongsTab(
     songs: LazyPagingItems<Song>,
     onSongClick: (Song) -> Unit,
@@ -137,7 +327,7 @@ private fun SongsTab(
     modifier: Modifier = Modifier,
 ) {
     if (songs.itemCount == 0) {
-        EmptyLibraryView(message = "No songs found. Tap refresh to scan local storage.")
+        EmptyLibraryView(message = "No songs found. Drag down to refresh and scan local storage.")
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
@@ -167,7 +357,7 @@ private fun AlbumsTab(
     modifier: Modifier = Modifier,
 ) {
     if (albums.itemCount == 0) {
-        EmptyLibraryView(message = "No albums found. Tap refresh to scan local storage.")
+        EmptyLibraryView(message = "No albums found. Drag down to refresh and scan local storage.")
     } else {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -194,7 +384,7 @@ private fun ArtistsTab(
     modifier: Modifier = Modifier,
 ) {
     if (artists.itemCount == 0) {
-        EmptyLibraryView(message = "No artists found. Tap refresh to scan local storage.")
+        EmptyLibraryView(message = "No artists found. Drag down to refresh and scan local storage.")
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),

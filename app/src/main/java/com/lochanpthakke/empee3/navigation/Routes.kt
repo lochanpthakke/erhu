@@ -9,4 +9,18 @@ object Library
 object NowPlaying
 
 @Serializable
-object Settings
+object Playlists
+
+@Serializable
+object Equalizer
+
+@Serializable
+object MetadataEditor
+
+@Serializable
+object ArtworkManager
+
+@Serializable
+data class Settings(
+    val category: String? = null,
+)

@@ -16,4 +16,10 @@ interface MetadataModule {
     @Binds
     @Singleton
     fun bindMetadataRepository(impl: MetadataRepositoryImpl): MetadataRepository
+
+    @Binds
+    @Singleton
+    fun bindUpdateCheckerRepository(
+        impl: com.lochanpthakke.empee3.core.network.repository.UpdateCheckerRepositoryImpl,
+    ): com.lochanpthakke.empee3.core.network.repository.UpdateCheckerRepository
 }

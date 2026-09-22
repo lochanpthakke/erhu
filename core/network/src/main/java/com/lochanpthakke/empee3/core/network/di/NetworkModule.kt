@@ -108,4 +108,20 @@ object NetworkModule {
             .build()
             .create(LrclibApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideGitHubUpdateApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.GitHubUpdateApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://api.github.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.GitHubUpdateApi::class.java)
+    }
 }
