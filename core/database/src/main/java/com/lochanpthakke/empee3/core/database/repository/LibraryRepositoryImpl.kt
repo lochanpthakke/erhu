@@ -41,6 +41,13 @@ class LibraryRepositoryImpl
                 pagingData.map { entity -> entity.toDomainModel() }
             }
 
+        override fun getFavoriteSongsPaged(): Flow<PagingData<Song>> =
+            Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE)) {
+                songDao.getFavoriteSongsPaged()
+            }.flow.map { pagingData ->
+                pagingData.map { entity -> entity.toDomainModel() }
+            }
+
         override fun getAllSongs(): Flow<List<Song>> =
             songDao.getAllSongs().map { list ->
                 list.map { it.toDomainModel() }
@@ -95,12 +102,20 @@ class LibraryRepositoryImpl
                 list.map { it.toDomainModel() }
             }
 
+        override suspend fun toggleFavorite(songId: Long): AppResult<Unit> =
+            appResultOf {
+                val song = songDao.getSongById(songId)
+                if (song != null) {
+                    songDao.setFavorite(songId, !song.isFavorite)
+                }
+            }
+
         override suspend fun triggerLibraryScan(): AppResult<Unit> =
             appResultOf {
                 val workRequest = OneTimeWorkRequestBuilder<LibraryScanWorker>().build()
                 workManager.enqueueUniqueWork(
                     LibraryScanWorker.WORK_NAME,
-                    ExistingWorkPolicy.KEEP,
+                    ExistingWorkPolicy.REPLACE,
                     workRequest,
                 )
             }

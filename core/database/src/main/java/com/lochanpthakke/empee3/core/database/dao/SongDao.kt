@@ -18,6 +18,18 @@ interface SongDao {
     @Query("SELECT * FROM songs ORDER BY title ASC")
     fun getSongsPaged(): PagingSource<Int, SongEntity>
 
+    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title ASC")
+    fun getFavoriteSongsPaged(): PagingSource<Int, SongEntity>
+
+    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title ASC")
+    fun getFavoriteSongs(): Flow<List<SongEntity>>
+
+    @Query("UPDATE songs SET is_favorite = :isFavorite WHERE id = :id")
+    suspend fun setFavorite(
+        id: Long,
+        isFavorite: Boolean,
+    ): Int
+
     @Query("SELECT * FROM songs WHERE id = :id LIMIT 1")
     suspend fun getSongById(id: Long): SongEntity?
 

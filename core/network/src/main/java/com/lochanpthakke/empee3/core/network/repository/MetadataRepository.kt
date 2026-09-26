@@ -20,6 +20,13 @@ interface MetadataRepository {
         sourceProvider: String = "ALL",
     ): AppResult<List<MetadataCandidate>>
 
+    suspend fun searchAndScoreTrack(
+        title: String,
+        artist: String?,
+        durationMs: Long? = null,
+        sourceProvider: String = "ALL",
+    ): AppResult<List<MetadataCandidate>>
+
     suspend fun fetchAlbumArt(
         albumTitle: String,
         artist: String?,

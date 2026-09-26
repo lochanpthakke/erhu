@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
+import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
 import dagger.Module
@@ -27,7 +28,8 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).build()
+            ).fallbackToDestructiveMigration(true)
+            .build()
 
     @Provides
     fun provideSongDao(database: EmPee3Database): SongDao = database.songDao()
@@ -40,4 +42,7 @@ object DatabaseModule {
 
     @Provides
     fun providePlaylistDao(database: EmPee3Database): PlaylistDao = database.playlistDao()
+
+    @Provides
+    fun provideMetadataProcessingDao(database: EmPee3Database): MetadataProcessingDao = database.metadataProcessingDao()
 }

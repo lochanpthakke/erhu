@@ -250,6 +250,7 @@ fun MainScaffold() {
                         NowPlayingScreen(
                             playbackRepository = playbackRepository,
                             onBackClick = { navController.popBackStack() },
+                            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
                         )
                     }
                     composable<Playlists> {
@@ -260,9 +261,13 @@ fun MainScaffold() {
                     }
                     composable<MetadataEditor> {
                         MetadataEditorScreen(
+                            viewModel = libraryViewModel,
                             onOpenDrawer = openDrawer,
                             onNavigateToMetadataSettings = {
                                 navController.navigate(Settings(category = "metadata"))
+                            },
+                            onNavigateToLibrary = {
+                                navController.navigate(Library)
                             },
                         )
                     }

@@ -43,6 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
+import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import java.util.Locale
 
@@ -69,14 +71,17 @@ fun NowPlayingScreen(
     playbackRepository: PlaybackRepository,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onToggleFavorite: (Song) -> Unit = {},
 ) {
     val playbackState by playbackRepository.playbackState.collectAsState()
     val song = playbackState.currentSong
     val isPlaying = playbackState.status == PlaybackStatus.PLAYING
 
-    var isFavorite by remember { mutableStateOf(false) }
     var showLyricsOverlay by remember { mutableStateOf(false) }
     var showQueueOverlay by remember { mutableStateOf(false) }
+
+    var isDraggingSlider by remember { mutableStateOf(false) }
+    var dragPositionMs by remember { mutableFloatStateOf(0f) }
 
     Scaffold(
         topBar = {
@@ -120,6 +125,15 @@ fun NowPlayingScreen(
                     )
                 }
             } else {
+                val totalDurationMs =
+                    (if (playbackState.durationMs > 0) playbackState.durationMs else song.durationMs).coerceAtLeast(1L)
+                val displayPositionMs =
+                    if (isDraggingSlider) {
+                        dragPositionMs.toLong()
+                    } else {
+                        playbackState.positionMs
+                    }.coerceIn(0L, totalDurationMs)
+
                 Column(
                     modifier =
                         Modifier
@@ -179,9 +193,16 @@ fun NowPlayingScreen(
 
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Slider(
-                            value = playbackState.positionMs.toFloat(),
-                            onValueChange = { playbackRepository.seekTo(it.toLong()) },
-                            valueRange = 0f..(playbackState.durationMs.coerceAtLeast(1L)).toFloat(),
+                            value = displayPositionMs.toFloat(),
+                            onValueChange = {
+                                isDraggingSlider = true
+                                dragPositionMs = it
+                            },
+                            onValueChangeFinished = {
+                                playbackRepository.seekTo(dragPositionMs.toLong())
+                                isDraggingSlider = false
+                            },
+                            valueRange = 0f..totalDurationMs.toFloat(),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Row(
@@ -189,11 +210,11 @@ fun NowPlayingScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = formatMs(playbackState.positionMs),
+                                text = formatMs(displayPositionMs),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                             Text(
-                                text = formatMs(playbackState.durationMs),
+                                text = formatMs(totalDurationMs),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -269,11 +290,11 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        IconButton(onClick = { isFavorite = !isFavorite }) {
+                        IconButton(onClick = { onToggleFavorite(song) }) {
                             Icon(
-                                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "Favorite",
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             )
                         }
 

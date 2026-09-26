@@ -28,6 +28,15 @@ class PlaybackRepositoryImpl
 
         override fun pause() = playbackController.pause()
 
+        override fun playSong(song: Song) = playbackController.playSong(song)
+
+        override fun playSongs(songs: List<Song>) = playbackController.playSongs(songs)
+
+        override fun playSongsFromQueue(
+            songs: List<Song>,
+            startIndex: Int,
+        ) = playbackController.playSongsFromQueue(songs, startIndex)
+
         override fun seekTo(positionMs: Long) = playbackController.seekTo(positionMs)
 
         override fun skipNext() = playbackController.skipNext()

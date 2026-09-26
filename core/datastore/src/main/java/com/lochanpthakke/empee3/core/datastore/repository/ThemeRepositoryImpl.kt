@@ -30,13 +30,13 @@ class ThemeRepositoryImpl
     ) : ThemeRepository {
         private val scope = CoroutineScope(Dispatchers.IO)
 
-        private val _appThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.DEFAULT_DARK)
+        private val _appThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.CYBERPUNK_TECH)
         override val appThemeState: StateFlow<ThemeManifest> = _appThemeState.asStateFlow()
 
         private val _appSkinState = MutableStateFlow<SkinManifest?>(null)
         override val appSkinState: StateFlow<SkinManifest?> = _appSkinState.asStateFlow()
 
-        private val _widgetThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.DEFAULT_DARK)
+        private val _widgetThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.CYBERPUNK_TECH)
         override val widgetThemeState: StateFlow<ThemeManifest> = _widgetThemeState.asStateFlow()
 
         private val _widgetSkinState = MutableStateFlow<SkinManifest?>(null)
@@ -53,8 +53,8 @@ class ThemeRepositoryImpl
                 val proto = dataStore.data.first()
                 _libraryLayoutMode.value = proto.libraryLayoutMode.ifBlank { "GRID" }
                 _isRollbackFlagActive.value = proto.themeRollbackFlag
-                resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
-                resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
+                resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }, isApp = true)
+                resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }, isApp = false)
             }
         }
 
@@ -77,20 +77,20 @@ class ThemeRepositoryImpl
             val builtInSkin = BuiltInThemes.ALL_BUILT_IN_SKINS.find { it.id == id }
             if (builtInSkin != null) {
                 if (isApp) {
-                    _appThemeState.value = BuiltInThemes.DEFAULT_DARK
+                    _appThemeState.value = BuiltInThemes.CYBERPUNK_TECH
                     _appSkinState.value = builtInSkin
                 } else {
-                    _widgetThemeState.value = BuiltInThemes.DEFAULT_DARK
+                    _widgetThemeState.value = BuiltInThemes.CYBERPUNK_TECH
                     _widgetSkinState.value = builtInSkin
                 }
                 return
             }
 
             if (isApp) {
-                _appThemeState.value = BuiltInThemes.DEFAULT_DARK
+                _appThemeState.value = BuiltInThemes.CYBERPUNK_TECH
                 _appSkinState.value = null
             } else {
-                _widgetThemeState.value = BuiltInThemes.DEFAULT_DARK
+                _widgetThemeState.value = BuiltInThemes.CYBERPUNK_TECH
                 _widgetSkinState.value = null
             }
         }
@@ -142,7 +142,7 @@ class ThemeRepositoryImpl
                     dataStore.data
                         .first()
                         .lastVerifiedStableThemeId
-                        .ifBlank { BuiltInThemes.DEFAULT_DARK.id }
+                        .ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }
                 dataStore.updateData {
                     it
                         .toBuilder()

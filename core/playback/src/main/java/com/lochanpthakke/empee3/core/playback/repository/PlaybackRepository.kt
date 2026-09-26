@@ -23,6 +23,15 @@ interface PlaybackRepository {
 
     fun pause()
 
+    fun playSong(song: Song)
+
+    fun playSongs(songs: List<Song>)
+
+    fun playSongsFromQueue(
+        songs: List<Song>,
+        startIndex: Int,
+    )
+
     fun seekTo(positionMs: Long)
 
     fun skipNext()

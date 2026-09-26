@@ -2,6 +2,8 @@
 
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,13 +15,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shuffle
@@ -48,6 +55,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -67,13 +76,14 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
 ) {
     val songs = viewModel.songsPaged.collectAsLazyPagingItems()
+    val favoriteSongs = viewModel.favoriteSongsPaged.collectAsLazyPagingItems()
     val albums = viewModel.albumsPaged.collectAsLazyPagingItems()
     val artists = viewModel.artistsPaged.collectAsLazyPagingItems()
     val candidates by viewModel.metadataCandidates.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
 
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedTabIndex by remember { mutableIntStateOf(1) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
-    var isRefreshing by remember { mutableStateOf(false) }
 
     val tabs = listOf("Play Now", "Tracks", "Favorites", "Albums", "Artists", "Genres")
 
@@ -102,12 +112,8 @@ fun LibraryScreen(
         modifier = modifier,
     ) { innerPadding ->
         PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = {
-                isRefreshing = true
-                viewModel.triggerScan()
-                isRefreshing = false
-            },
+            isRefreshing = isScanning,
+            onRefresh = { viewModel.triggerScan() },
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -132,7 +138,10 @@ fun LibraryScreen(
                     1 ->
                         SongsTab(
                             songs = songs,
-                            onSongClick = { viewModel.playSong(it) },
+                            onSongClickAtIndex = { songList, index ->
+                                viewModel.playSongsFromQueue(songList, index)
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
                             onFixTagsClick = { song ->
                                 songForFixTags = song
                                 viewModel.searchMetadataForSong(song)
@@ -140,8 +149,12 @@ fun LibraryScreen(
                         )
                     2 ->
                         SongsTab(
-                            songs = songs,
-                            onSongClick = { viewModel.playSong(it) },
+                            songs = favoriteSongs,
+                            emptyMessage = "No favorite tracks added yet. Tap the heart icon on any song to add it to Favorites!",
+                            onSongClickAtIndex = { songList, index ->
+                                viewModel.playSongsFromQueue(songList, index)
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
                             onFixTagsClick = { song ->
                                 songForFixTags = song
                                 viewModel.searchMetadataForSong(song)
@@ -322,13 +335,24 @@ private fun SectionHeader(title: String) {
 @Composable
 private fun SongsTab(
     songs: LazyPagingItems<Song>,
-    onSongClick: (Song) -> Unit,
+    onSongClickAtIndex: (List<Song>, Int) -> Unit,
+    onToggleFavorite: (Song) -> Unit,
     onFixTagsClick: (Song) -> Unit,
     modifier: Modifier = Modifier,
+    emptyMessage: String = "No songs found. Drag down to refresh and scan local storage.",
 ) {
     if (songs.itemCount == 0) {
-        EmptyLibraryView(message = "No songs found. Drag down to refresh and scan local storage.")
+        EmptyLibraryView(message = emptyMessage)
     } else {
+        val songList =
+            remember(songs.itemCount) {
+                val list = mutableListOf<Song>()
+                for (i in 0 until songs.itemCount) {
+                    songs[i]?.let { list.add(it) }
+                }
+                list
+            }
+
         LazyColumn(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -341,7 +365,8 @@ private fun SongsTab(
                 if (song != null) {
                     SongItem(
                         song = song,
-                        onClick = { onSongClick(song) },
+                        onClick = { onSongClickAtIndex(songList, index) },
+                        onToggleFavorite = { onToggleFavorite(song) },
                         onFixTagsClick = { onFixTagsClick(song) },
                     )
                 }
@@ -407,6 +432,7 @@ private fun ArtistsTab(
 private fun SongItem(
     song: Song,
     onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
     onFixTagsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -428,54 +454,112 @@ private fun SongItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (song.artworkData != null && song.artworkData!!.isNotEmpty()) {
+                    val bitmap =
+                        android.graphics.BitmapFactory.decodeByteArray(
+                            song.artworkData,
+                            0,
+                            song.artworkData!!.size,
+                        )
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Song Artwork",
+                            modifier =
+                                Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                        )
+                    } else {
+                        FallbackSongArt()
+                    }
+                } else {
+                    FallbackSongArt()
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
                     Text(
-                        text = song.artist,
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = song.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "• ${song.album}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row {
+                        Text(
+                            text = song.artist,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "• ${song.album}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
 
-            Box {
-                IconButton(onClick = { menuExpanded = true }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onToggleFavorite) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Song Options",
+                        imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Toggle Favorite",
+                        tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Fix Tags / Metadata") },
-                        onClick = {
-                            menuExpanded = false
-                            onFixTagsClick()
-                        },
-                    )
+
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Song Options",
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Fix Tags / Metadata") },
+                            onClick = {
+                                menuExpanded = false
+                                onFixTagsClick()
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FallbackSongArt() {
+    Box(
+        modifier =
+            Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Default.MusicNote,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
     }
 }
 

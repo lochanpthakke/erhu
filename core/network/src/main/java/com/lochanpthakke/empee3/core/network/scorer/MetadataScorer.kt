@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.network.scorer
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -15,6 +16,8 @@ class MetadataScorer
             candidate: MetadataCandidate,
             targetTitle: String,
             targetArtist: String?,
+            targetDurationMs: Long? = null,
+            candidateDurationMs: Long? = null,
         ): MetadataCandidate {
             val titleSim =
                 jaroWinklerDistance(
@@ -29,11 +32,21 @@ class MetadataScorer
                         targetArtist.lowercase().trim(),
                     )
                 } else {
-                    0.8f
+                    titleSim
                 }
 
-            val totalScore = (titleSim * 0.6f) + (artistSim * 0.4f)
-            return candidate.copy(confidenceScore = totalScore)
+            var totalScore = (titleSim * 0.6f) + (artistSim * 0.4f)
+
+            if (targetDurationMs != null && targetDurationMs > 0 && candidateDurationMs != null && candidateDurationMs > 0) {
+                val deltaSec = abs(targetDurationMs - candidateDurationMs) / 1000
+                if (deltaSec > 30) {
+                    totalScore *= 0.7f
+                } else if (deltaSec > 15) {
+                    totalScore *= 0.9f
+                }
+            }
+
+            return candidate.copy(confidenceScore = totalScore.coerceIn(0.0f, 1.0f))
         }
 
         private fun jaroWinklerDistance(

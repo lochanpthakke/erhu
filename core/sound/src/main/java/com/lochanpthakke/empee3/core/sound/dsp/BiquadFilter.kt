@@ -69,6 +69,10 @@ class BiquadFilter {
 
     fun processSample(x: Float): Float {
         val y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        if (y.isNaN() || y.isInfinite()) {
+            resetState()
+            return x
+        }
         x2 = x1
         x1 = x
         y2 = y1

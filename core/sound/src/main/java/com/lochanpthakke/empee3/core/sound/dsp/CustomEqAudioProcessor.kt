@@ -2,9 +2,11 @@
 
 package com.lochanpthakke.empee3.core.sound.dsp
 
+import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,7 +64,11 @@ class CustomEqAudioProcessor
 
         override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
             updateFilterCoefficients(inputAudioFormat.sampleRate)
-            return inputAudioFormat
+            return AudioProcessor.AudioFormat(
+                inputAudioFormat.sampleRate,
+                inputAudioFormat.channelCount,
+                C.ENCODING_PCM_16BIT,
+            )
         }
 
         override fun queueInput(inputBuffer: ByteBuffer) {
@@ -80,13 +86,17 @@ class CustomEqAudioProcessor
             val channelCount = inputAudioFormat.channelCount
             val sampleRate = inputAudioFormat.sampleRate
 
-            if (sampleRate <= 0 || channelCount <= 0) {
+            if (sampleRate <= 0 || channelCount <= 0 || inputAudioFormat.encoding != C.ENCODING_PCM_16BIT) {
                 outputBuffer.put(inputBuffer)
                 outputBuffer.flip()
                 return
             }
 
-            while (inputBuffer.hasRemaining()) {
+            inputBuffer.order(ByteOrder.LITTLE_ENDIAN)
+            outputBuffer.order(ByteOrder.LITTLE_ENDIAN)
+
+            val bytesPerFrame = channelCount * 2
+            while (inputBuffer.remaining() >= bytesPerFrame) {
                 for (ch in 0 until channelCount) {
                     val sampleShort = inputBuffer.short
                     var sampleFloat = sampleShort / SHORT_MAX_FLOAT
@@ -105,6 +115,10 @@ class CustomEqAudioProcessor
                     val outShort = (clamped * SHORT_MAX_FLOAT).toInt().toShort()
                     outputBuffer.putShort(outShort)
                 }
+            }
+
+            if (inputBuffer.hasRemaining()) {
+                outputBuffer.put(inputBuffer)
             }
 
             outputBuffer.flip()

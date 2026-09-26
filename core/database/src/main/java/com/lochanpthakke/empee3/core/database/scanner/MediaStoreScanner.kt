@@ -2,6 +2,8 @@ package com.lochanpthakke.empee3.core.database.scanner
 
 import android.content.ContentUris
 import android.content.Context
+import android.media.MediaScannerConnection
+import android.os.Environment
 import android.provider.MediaStore
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
@@ -11,9 +13,11 @@ import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,6 +33,9 @@ class MediaStoreScanner
         @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength")
         fun scanLibrary(): Flow<ScanProgress> =
             flow {
+                triggerMediaScannerForStorage()
+                delay(SCAN_INDEXING_DELAY_MS)
+
                 val projection =
                     arrayOf(
                         MediaStore.Audio.Media._ID,
@@ -44,8 +51,7 @@ class MediaStoreScanner
                         MediaStore.Audio.Media.DATE_MODIFIED,
                     )
 
-                val selection =
-                    "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 10000"
+                val selection = "${MediaStore.Audio.Media.DURATION} >= 1000"
                 val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
                 val songs = mutableListOf<SongEntity>()
@@ -124,7 +130,6 @@ class MediaStoreScanner
                             )
                         songs.add(song)
 
-                        // Accumulate Album Entity
                         val albumAccumulator =
                             albumMap.getOrPut(albumId) {
                                 AlbumEntityAccumulator(
@@ -138,7 +143,6 @@ class MediaStoreScanner
                             }
                         albumAccumulator.songCount++
 
-                        // Accumulate Artist Entity
                         val artistAccumulator =
                             artistMap.getOrPut(artistId) {
                                 ArtistEntityAccumulator(
@@ -186,13 +190,11 @@ class MediaStoreScanner
                         )
                     }
 
-                // Write to Room
                 if (songs.isNotEmpty()) {
                     songDao.upsertAll(songs)
                     albumDao.upsertAll(albumEntities)
                     artistDao.upsertAll(artistEntities)
 
-                    // Clean up deleted items
                     songDao.deleteSongsNotIn(songs.map { it.id })
                     albumDao.deleteAlbumsNotIn(albumEntities.map { it.id })
                     artistDao.deleteArtistsNotIn(artistEntities.map { it.id })
@@ -200,6 +202,49 @@ class MediaStoreScanner
 
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
+
+        private fun triggerMediaScannerForStorage() {
+            try {
+                val pathsToScan = mutableListOf<String>()
+                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val musicDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
+
+                fun collectAudioFiles(dir: File) {
+                    if (!dir.exists() || !dir.isDirectory) return
+                    dir.listFiles()?.forEach { file ->
+                        if (file.isDirectory) {
+                            collectAudioFiles(file)
+                        } else if (file.isFile && isAudioFile(file.name)) {
+                            pathsToScan.add(file.absolutePath)
+                        }
+                    }
+                }
+
+                collectAudioFiles(downloadDir)
+                collectAudioFiles(musicDir)
+
+                if (pathsToScan.isNotEmpty()) {
+                    MediaScannerConnection.scanFile(
+                        context,
+                        pathsToScan.toTypedArray(),
+                        null,
+                        null,
+                    )
+                }
+            } catch (_: Exception) {
+                // Ignore fallback scan errors
+            }
+        }
+
+        private fun isAudioFile(name: String): Boolean {
+            val lower = name.lowercase()
+            return lower.endsWith(".mp3") ||
+                lower.endsWith(".flac") ||
+                lower.endsWith(".m4a") ||
+                lower.endsWith(".wav") ||
+                lower.endsWith(".aac") ||
+                lower.endsWith(".ogg")
+        }
 
         private class AlbumEntityAccumulator
             @Suppress("LongParameterList")
@@ -222,5 +267,6 @@ class MediaStoreScanner
 
         companion object {
             private const val EMISSION_BATCH_SIZE = 50
+            private const val SCAN_INDEXING_DELAY_MS = 800L
         }
     }

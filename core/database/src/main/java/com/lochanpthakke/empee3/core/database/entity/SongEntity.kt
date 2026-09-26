@@ -34,4 +34,6 @@ data class SongEntity(
     val discNumber: Int = 1,
     val composer: String? = null,
     val genre: String? = null,
+    @ColumnInfo(name = "is_favorite")
+    val isFavorite: Boolean = false,
 )

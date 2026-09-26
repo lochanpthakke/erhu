@@ -49,6 +49,13 @@ class MetadataRepositoryImpl
             title: String,
             artist: String?,
             sourceProvider: String,
+        ): AppResult<List<MetadataCandidate>> = searchAndScoreTrack(title, artist, null, sourceProvider)
+
+        override suspend fun searchAndScoreTrack(
+            title: String,
+            artist: String?,
+            durationMs: Long?,
+            sourceProvider: String,
         ): AppResult<List<MetadataCandidate>> =
             appResultOf {
                 withContext(Dispatchers.IO) {
@@ -75,7 +82,12 @@ class MetadataRepositoryImpl
                     val scoredCandidates =
                         allCandidates
                             .map { candidate ->
-                                scorer.scoreCandidate(candidate, title, artist)
+                                scorer.scoreCandidate(
+                                    candidate = candidate,
+                                    targetTitle = title,
+                                    targetArtist = artist,
+                                    targetDurationMs = durationMs,
+                                )
                             }.sortedByDescending { it.confidenceScore }
 
                     scoredCandidates

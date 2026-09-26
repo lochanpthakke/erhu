@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.Flow
 interface LibraryRepository {
     fun getSongsPaged(): Flow<PagingData<Song>>
 
+    fun getFavoriteSongsPaged(): Flow<PagingData<Song>>
+
     fun getAllSongs(): Flow<List<Song>>
 
     fun getSongById(id: Long): Flow<Song?>
@@ -32,6 +34,8 @@ interface LibraryRepository {
     fun getArtistsPaged(): Flow<PagingData<Artist>>
 
     fun searchSongs(query: String): Flow<List<Song>>
+
+    suspend fun toggleFavorite(songId: Long): AppResult<Unit>
 
     suspend fun triggerLibraryScan(): AppResult<Unit>
 }

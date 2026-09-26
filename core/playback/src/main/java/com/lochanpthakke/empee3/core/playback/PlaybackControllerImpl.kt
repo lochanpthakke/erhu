@@ -1,4 +1,3 @@
-
 package com.lochanpthakke.empee3.core.playback
 
 import androidx.media3.common.MediaItem
@@ -61,10 +60,13 @@ class PlaybackControllerImpl
                     if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
                         player.currentMediaItem?.let { queue.pushHistory(it) }
                     }
+                    val song = mediaItem?.toSong()
+                    val rawDuration = player.duration
+                    val validDuration = if (rawDuration > 0) rawDuration else song?.durationMs ?: 0L
                     _playbackState.update {
                         it.copy(
-                            currentSong = mediaItem?.toSong(),
-                            durationMs = player.duration.coerceAtLeast(0L),
+                            currentSong = song,
+                            durationMs = validDuration.coerceAtLeast(0L),
                             positionMs = 0L,
                         )
                     }
@@ -104,7 +106,7 @@ class PlaybackControllerImpl
 
             if (resumeAfterFocusGain) {
                 resumeAfterFocusGain = false
-                player.play()
+                play()
             }
         }
 
@@ -117,8 +119,17 @@ class PlaybackControllerImpl
                     player.isPlaying -> PlaybackStatus.PLAYING
                     else -> PlaybackStatus.PAUSED
                 }
-            _playbackState.update { it.copy(status = status) }
-            logger.d(TAG, "Playback status: $status")
+            val song = player.currentMediaItem?.toSong() ?: _playbackState.value.currentSong
+            val rawDuration = player.duration
+            val validDuration = if (rawDuration > 0) rawDuration else song?.durationMs ?: _playbackState.value.durationMs
+            _playbackState.update {
+                it.copy(
+                    status = status,
+                    currentSong = song,
+                    durationMs = validDuration.coerceAtLeast(0L),
+                )
+            }
+            logger.d(TAG, "Playback status: $status, duration: $validDuration")
         }
 
         private fun startPositionPolling() {
@@ -126,7 +137,16 @@ class PlaybackControllerImpl
             positionPollJob =
                 scope.launch {
                     while (true) {
-                        _playbackState.update { it.copy(positionMs = player.currentPosition) }
+                        val song = player.currentMediaItem?.toSong() ?: _playbackState.value.currentSong
+                        val rawDuration = player.duration
+                        val validDuration = if (rawDuration > 0) rawDuration else song?.durationMs ?: _playbackState.value.durationMs
+                        _playbackState.update {
+                            it.copy(
+                                positionMs = player.currentPosition.coerceAtLeast(0L),
+                                durationMs = validDuration.coerceAtLeast(0L),
+                                currentSong = song,
+                            )
+                        }
                         delay(POSITION_POLL_INTERVAL_MS)
                     }
                 }
@@ -139,6 +159,9 @@ class PlaybackControllerImpl
 
         override fun play() {
             if (audioFocusManager.requestFocus()) {
+                if (player.playbackState == Player.STATE_IDLE || player.playbackState == Player.STATE_ENDED) {
+                    player.prepare()
+                }
                 player.play()
             } else {
                 logger.w(TAG, "Audio focus request denied — not starting playback")
@@ -147,6 +170,33 @@ class PlaybackControllerImpl
 
         override fun pause() {
             player.pause()
+        }
+
+        override fun playSong(song: Song) {
+            player.setMediaItem(song.toMediaItem())
+            player.prepare()
+            play()
+        }
+
+        override fun playSongs(songs: List<Song>) {
+            if (songs.isEmpty()) return
+            player.setMediaItems(songs.map { it.toMediaItem() })
+            player.prepare()
+            play()
+        }
+
+        override fun playSongsFromQueue(
+            songs: List<Song>,
+            startIndex: Int,
+        ) {
+            if (songs.isEmpty()) return
+            player.setMediaItems(
+                songs.map { it.toMediaItem() },
+                startIndex.coerceIn(0, songs.lastIndex),
+                0L,
+            )
+            player.prepare()
+            play()
         }
 
         override fun seekTo(positionMs: Long) {

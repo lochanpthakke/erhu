@@ -13,6 +13,15 @@ interface PlaybackController {
 
     fun pause()
 
+    fun playSong(song: Song)
+
+    fun playSongs(songs: List<Song>)
+
+    fun playSongsFromQueue(
+        songs: List<Song>,
+        startIndex: Int,
+    )
+
     fun seekTo(positionMs: Long)
 
     fun skipNext()
@@ -23,9 +32,6 @@ interface PlaybackController {
 
     fun setRepeatMode(mode: RepeatMode)
 
-    // Queue ops — delegate to PlaybackQueue internally in the impl.
-    // PlaybackRepository calls these; PlaybackQueue itself stays private
-    // to PlaybackControllerImpl.
     fun playNext(song: Song)
 
     fun addToQueue(song: Song)

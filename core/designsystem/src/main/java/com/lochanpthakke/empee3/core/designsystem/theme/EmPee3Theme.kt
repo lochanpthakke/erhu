@@ -15,10 +15,10 @@ import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.skin.SkinManifest
 import com.lochanpthakke.empee3.core.designsystem.widget.WidgetSkinConfig
 
-val LocalEmPee3Colors = staticCompositionLocalOf { BuiltInThemes.DEFAULT_DARK.colors }
-val LocalEmPee3Shapes = staticCompositionLocalOf { BuiltInThemes.DEFAULT_DARK.shapes }
+val LocalEmPee3Colors = staticCompositionLocalOf { BuiltInThemes.CYBERPUNK_TECH.colors }
+val LocalEmPee3Shapes = staticCompositionLocalOf { BuiltInThemes.CYBERPUNK_TECH.shapes }
 val LocalEmPee3Skin = staticCompositionLocalOf<SkinManifest?> { null }
-val LocalEmPee3WidgetConfig = staticCompositionLocalOf { BuiltInThemes.DEFAULT_DARK.widgetConfig }
+val LocalEmPee3WidgetConfig = staticCompositionLocalOf { BuiltInThemes.CYBERPUNK_TECH.widgetConfig }
 
 object EmPee3Theme {
     val colors: EmPee3Colors
@@ -45,7 +45,7 @@ object EmPee3Theme {
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 fun EmPee3Theme(
-    themeManifest: ThemeManifest = BuiltInThemes.DEFAULT_DARK,
+    themeManifest: ThemeManifest = BuiltInThemes.CYBERPUNK_TECH,
     skinManifest: SkinManifest? = null,
     content: @Composable () -> Unit,
 ) {
