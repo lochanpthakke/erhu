@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
+import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
@@ -14,7 +16,10 @@ import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
+import com.lochanpthakke.empee3.core.network.tagger.EditableTags
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
+import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
+import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -138,6 +143,12 @@ class LibraryViewModel
                 .flatMapLatest { id -> id?.let { libraryRepository.observeEmbeddedLyrics(it) } ?: flowOf(null) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
+        private val _writeAccessRequest = MutableStateFlow<WriteAuthorization?>(null)
+
+        /** Non-null while a tag write waits for the user to grant write access. */
+        val writeAccessRequest: StateFlow<WriteAuthorization?> = _writeAccessRequest.asStateFlow()
+        private var pendingWrite: PendingWrite? = null
+
         private val _userMessage = MutableStateFlow<String?>(null)
         val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
@@ -248,67 +259,98 @@ class LibraryViewModel
             }
         }
 
-        @Suppress("MagicNumber", "NestedBlockDepth", "TooGenericExceptionCaught", "LongMethod")
+        /**
+         * Looks up matches for every pending track first, then writes all confident
+         * matches in one go, so Android 11+ shows a single write-access dialog for
+         * the whole batch instead of one per file.
+         */
+        @Suppress("MagicNumber", "NestedBlockDepth", "TooGenericExceptionCaught", "LongMethod", "CyclomaticComplexMethod")
         fun startFixingQueue() {
             if (_isFixingQueue.value) return
             viewModelScope.launch {
                 _isFixingQueue.value = true
                 val queue = _repairQueue.value.toMutableList()
-                var wroteAnyTags = false
+                val writes = mutableMapOf<Int, TagWriteRequest>()
 
                 for (i in queue.indices) {
                     val item = queue[i]
-                    if (item.status == "PENDING") {
-                        queue[i] = item.copy(status = "FIXING")
-                        _repairQueue.value = queue.toList()
+                    if (item.status != "PENDING") continue
+                    queue[i] = item.copy(status = "FIXING")
+                    _repairQueue.value = queue.toList()
+                    delay(REPAIR_DELAY_MS)
 
-                        delay(REPAIR_DELAY_MS)
-
-                        queue[i] =
-                            try {
-                                val searchRes =
-                                    metadataRepository
-                                        .searchTrack(
-                                            item.song.title,
-                                            item.song.artist,
-                                            "ALL",
-                                        ).getOrDefault(emptyList())
-                                val best = searchRes.firstOrNull()
-                                val filePath = libraryRepository.getSongFilePath(item.song.id)
-
-                                if (best != null && best.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
-                                    if (filePath == null) {
-                                        item.copy(status = "FAILED", failureReason = "FILE_NOT_FOUND")
-                                    } else {
-                                        val req =
-                                            TagWriteRequest(
-                                                filePath = filePath,
-                                                title = best.title,
-                                                artist = best.artist,
-                                                album = best.album,
-                                            )
-                                        when (val result = metadataRepository.writeTagsToFile(req)) {
-                                            is AppResult.Success -> {
-                                                wroteAnyTags = true
-                                                item.copy(status = "DONE")
-                                            }
-                                            is AppResult.Error -> item.copy(status = "FAILED", failureReason = result.error.message)
-                                        }
-                                    }
-                                } else if (best != null && best.confidenceScore >= UNCERTAIN_THRESHOLD) {
-                                    item.copy(status = "NEEDS_REVIEW")
-                                } else {
+                    queue[i] =
+                        try {
+                            val best =
+                                metadataRepository
+                                    .searchTrack(item.song.title, item.song.artist, "ALL")
+                                    .getOrDefault(emptyList())
+                                    .firstOrNull()
+                            val filePath = libraryRepository.getSongFilePath(item.song.id)
+                            when {
+                                best == null || best.confidenceScore < UNCERTAIN_THRESHOLD ->
                                     item.copy(status = "FAILED", failureReason = "NO_MATCH")
+                                best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> item.copy(status = "NEEDS_REVIEW")
+                                filePath == null -> item.copy(status = "FAILED", failureReason = "FILE_NOT_FOUND")
+                                else -> {
+                                    val request =
+                                        buildTagWriteRequest(
+                                            contentUri = item.song.uri,
+                                            filePath = filePath,
+                                            current = EditableTags(item.song.title, item.song.artist, item.song.album),
+                                            title = best.title,
+                                            artist = best.artist,
+                                            album = best.album,
+                                            year = 0,
+                                            genre = "",
+                                        )
+                                    if (request == null) {
+                                        item.copy(status = "DONE") // tags already match
+                                    } else {
+                                        writes[i] = request
+                                        item.copy(status = "FIXING")
+                                    }
                                 }
-                            } catch (e: Exception) {
-                                item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
                             }
-
-                        _repairQueue.value = queue.toList()
-                    }
+                        } catch (e: Exception) {
+                            item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
+                        }
+                    _repairQueue.value = queue.toList()
                 }
-                if (wroteAnyTags) libraryRepository.triggerLibraryScan()
-                _isFixingQueue.value = false
+
+                if (writes.isEmpty()) {
+                    _isFixingQueue.value = false
+                    return@launch
+                }
+
+                withWriteAccess(
+                    contentUris = writes.values.map { it.contentUri },
+                    onGranted = {
+                        var wroteAny = false
+                        for ((index, request) in writes) {
+                            val item = queue[index]
+                            queue[index] =
+                                when (val result = metadataRepository.writeTagsToFile(request)) {
+                                    is AppResult.Success -> {
+                                        wroteAny = true
+                                        ArtworkLoader.invalidate(request.contentUri)
+                                        item.copy(status = "DONE")
+                                    }
+                                    is AppResult.Error -> item.copy(status = "FAILED", failureReason = result.error.message)
+                                }
+                            _repairQueue.value = queue.toList()
+                        }
+                        if (wroteAny) libraryRepository.requestRescanAfterChange()
+                        _isFixingQueue.value = false
+                    },
+                    onDenied = {
+                        for (index in writes.keys) {
+                            queue[index] = queue[index].copy(status = "FAILED", failureReason = "Write access not granted")
+                        }
+                        _repairQueue.value = queue.toList()
+                        _isFixingQueue.value = false
+                    },
+                )
             }
         }
 
@@ -395,6 +437,11 @@ class LibraryViewModel
             }
         }
 
+        /**
+         * Writes the user's edits from the Fix Tags dialog. Only fields that differ
+         * from the current values are written; blank year/genre keep the file's values.
+         */
+        @Suppress("LongParameterList")
         fun writeTags(
             song: Song,
             title: String,
@@ -406,27 +453,85 @@ class LibraryViewModel
             viewModelScope.launch {
                 val filePath = libraryRepository.getSongFilePath(song.id)
                 if (filePath == null) {
-                    _userMessage.value = "Couldn't find the file for \"${song.title}\""
+                    _userMessage.value = "Couldn't find the file for \"${song.title}\". Pull to refresh the library and try again."
                     return@launch
                 }
                 val request =
-                    TagWriteRequest(
+                    buildTagWriteRequest(
+                        contentUri = song.uri,
                         filePath = filePath,
+                        current = EditableTags(song.title, song.artist, song.album),
                         title = title,
                         artist = artist,
                         album = album,
                         year = year,
                         genre = genre,
                     )
-                when (val result = metadataRepository.writeTagsToFile(request)) {
-                    is AppResult.Success -> {
-                        _userMessage.value = "Tags saved"
-                        libraryRepository.triggerLibraryScan()
-                    }
-                    is AppResult.Error -> _userMessage.value = "Couldn't write tags: ${result.error.message}"
+                if (request == null) {
+                    _userMessage.value = "Nothing changed"
+                    return@launch
                 }
+                withWriteAccess(
+                    contentUris = listOf(request.contentUri),
+                    onGranted = {
+                        when (val result = metadataRepository.writeTagsToFile(request)) {
+                            is AppResult.Success -> {
+                                ArtworkLoader.invalidate(request.contentUri)
+                                libraryRepository.requestRescanAfterChange()
+                                _userMessage.value = "Tags saved for \"${request.title ?: song.title}\""
+                            }
+                            is AppResult.Error -> _userMessage.value = tagWriteFailureMessage(result.error)
+                        }
+                    },
+                    onDenied = { _userMessage.value = "Tags not changed: empee3 wasn't allowed to modify the file." },
+                )
             }
         }
+
+        private fun tagWriteFailureMessage(error: AppError): String =
+            when (error) {
+                is AppError.WriteAccessRequired -> "Tags not changed: ${error.message}"
+                else -> "Couldn't write tags: ${error.message}"
+            }
+
+        /**
+         * Runs [onGranted] once the app may modify [contentUris]. If Android needs the
+         * user's consent first, the request is exposed through [writeAccessRequest]
+         * for the UI to launch; the outcome comes back via [onWriteAccessResult].
+         */
+        private suspend fun withWriteAccess(
+            contentUris: List<String>,
+            onGranted: suspend () -> Unit,
+            onDenied: suspend () -> Unit,
+            attempt: Int = 0,
+        ) {
+            val authorization = metadataRepository.checkTagWriteAccess(contentUris)
+            // Android 10 asks per file, so allow one round per file; after that just try
+            // the write and let it report a precise error instead of re-prompting forever.
+            if (authorization is WriteAuthorization.Granted || attempt > contentUris.size) {
+                onGranted()
+                return
+            }
+            pendingWrite =
+                PendingWrite(
+                    onGranted = { withWriteAccess(contentUris, onGranted, onDenied, attempt + 1) },
+                    onDenied = onDenied,
+                )
+            _writeAccessRequest.value = authorization
+        }
+
+        /** Called by the UI with the result of the system dialog / permission request. */
+        fun onWriteAccessResult(granted: Boolean) {
+            _writeAccessRequest.value = null
+            val pending = pendingWrite ?: return
+            pendingWrite = null
+            viewModelScope.launch { if (granted) pending.onGranted() else pending.onDenied() }
+        }
+
+        private class PendingWrite(
+            val onGranted: suspend () -> Unit,
+            val onDenied: suspend () -> Unit,
+        )
 
         companion object {
             private const val REPAIR_DELAY_MS = 600L

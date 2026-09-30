@@ -149,6 +149,7 @@ fun FixTagsDialog(
                         value = yearStr,
                         onValueChange = { yearStr = it },
                         label = { Text("Year") },
+                        placeholder = { Text("Keep") },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
@@ -157,10 +158,17 @@ fun FixTagsDialog(
                         value = genre,
                         onValueChange = { genre = it },
                         label = { Text("Genre") },
+                        placeholder = { Text("Keep") },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Empty fields keep the file's current value. Android may ask you to allow empee3 to modify the file.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {

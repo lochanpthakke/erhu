@@ -7,6 +7,7 @@ import com.lochanpthakke.empee3.core.model.LyricsResult
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.network.cleaner.CleanedFilename
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
+import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
 
 interface MetadataRepository {
     fun cleanFilename(
@@ -40,5 +41,9 @@ interface MetadataRepository {
         durationSec: Int? = null,
     ): AppResult<LyricsResult?>
 
+    /** Writes tags through the file's content URI; requires [checkTagWriteAccess] to be Granted. */
     suspend fun writeTagsToFile(request: TagWriteRequest): AppResult<Unit>
+
+    /** What the user must authorize before [writeTagsToFile] can modify these files. */
+    fun checkTagWriteAccess(contentUris: List<String>): WriteAuthorization
 }

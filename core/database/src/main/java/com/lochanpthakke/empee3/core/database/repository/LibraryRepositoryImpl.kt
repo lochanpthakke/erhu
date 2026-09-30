@@ -137,6 +137,15 @@ class LibraryRepositoryImpl
                 )
             }
 
+        override suspend fun requestRescanAfterChange(): AppResult<Unit> =
+            appResultOf {
+                workManager.get().enqueueUniqueWork(
+                    LibraryScanWorker.WORK_NAME,
+                    ExistingWorkPolicy.APPEND_OR_REPLACE,
+                    OneTimeWorkRequestBuilder<LibraryScanWorker>().build(),
+                )
+            }
+
         override fun observeIsScanning(): Flow<Boolean> =
             workManager
                 .get()

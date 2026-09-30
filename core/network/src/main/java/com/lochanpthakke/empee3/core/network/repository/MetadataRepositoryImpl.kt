@@ -14,7 +14,9 @@ import com.lochanpthakke.empee3.core.network.provider.LrclibProvider
 import com.lochanpthakke.empee3.core.network.provider.MusicBrainzProvider
 import com.lochanpthakke.empee3.core.network.scorer.MetadataScorer
 import com.lochanpthakke.empee3.core.network.tagger.JAudioTaggerWriter
+import com.lochanpthakke.empee3.core.network.tagger.TagWriteAccessChecker
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
+import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -34,6 +36,7 @@ class MetadataRepositoryImpl
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
+        private val tagWriteAccessChecker: TagWriteAccessChecker,
         private val logger: Logger,
     ) : MetadataRepository {
         private val providers: List<MetadataProvider> by lazy {
@@ -133,6 +136,8 @@ class MetadataRepositoryImpl
             }
 
         override suspend fun writeTagsToFile(request: TagWriteRequest): AppResult<Unit> = tagWriter.writeTags(request)
+
+        override fun checkTagWriteAccess(contentUris: List<String>): WriteAuthorization = tagWriteAccessChecker.check(contentUris)
 
         companion object {
             private const val TAG = "MetadataRepositoryImpl"

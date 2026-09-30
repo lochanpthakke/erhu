@@ -35,6 +35,15 @@ sealed class AppError(
         override val cause: Throwable? = null,
     ) : AppError(message, cause)
 
+    /**
+     * The OS refused to let the app modify a file it doesn't own. Recoverable:
+     * the user has to grant write access (system consent dialog / permission).
+     */
+    data class WriteAccessRequired(
+        override val message: String,
+        override val cause: Throwable? = null,
+    ) : AppError(message, cause)
+
     data class ValidationError(
         override val message: String,
     ) : AppError(message)

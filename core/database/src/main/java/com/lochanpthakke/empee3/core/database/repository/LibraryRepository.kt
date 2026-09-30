@@ -50,6 +50,13 @@ interface LibraryRepository {
 
     suspend fun triggerLibraryScan(): AppResult<Unit>
 
+    /**
+     * Rescans after the app itself changed files (e.g. tag edits). Unlike
+     * [triggerLibraryScan] it queues behind a scan already in progress, so the
+     * change is never missed because an older scan was running.
+     */
+    suspend fun requestRescanAfterChange(): AppResult<Unit>
+
     /** True while a library scan is queued or running. */
     fun observeIsScanning(): Flow<Boolean>
 }

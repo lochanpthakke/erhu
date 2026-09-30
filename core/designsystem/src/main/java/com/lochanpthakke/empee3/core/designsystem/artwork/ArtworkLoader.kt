@@ -33,6 +33,21 @@ object ArtworkLoader {
     /** Songs known to have no artwork, so lists don't retry them on every bind. */
     private val missCache = LruCache<String, Boolean>(MISS_CACHE_SIZE)
 
+    /** Drops cached artwork (and "no artwork" results) for a song whose file changed. */
+    fun invalidate(songUri: String) {
+        val prefix = "$songUri@"
+        bitmapCache
+            .snapshot()
+            .keys
+            .filter { it.startsWith(prefix) }
+            .forEach { bitmapCache.remove(it) }
+        missCache
+            .snapshot()
+            .keys
+            .filter { it.startsWith(prefix) }
+            .forEach { missCache.remove(it) }
+    }
+
     @Suppress("ReturnCount")
     suspend fun load(
         context: Context,

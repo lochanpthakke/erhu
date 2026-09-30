@@ -81,6 +81,7 @@ class ProcessSingleTrackUseCase
                 if (bestCandidate != null && bestCandidate.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
                     val writeRequest =
                         TagWriteRequest(
+                            contentUri = song.uri,
                             filePath = filePath,
                             title = bestCandidate.title,
                             artist = bestCandidate.artist,

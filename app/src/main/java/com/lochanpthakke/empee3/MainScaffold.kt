@@ -86,6 +86,7 @@ import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Playlists
 import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.ui.components.MiniPlayer
+import com.lochanpthakke.empee3.ui.components.WriteAccessRequestEffect
 import kotlinx.coroutines.launch
 import android.provider.Settings as AndroidSettings
 
@@ -121,6 +122,10 @@ fun MainScaffold() {
     if (isRollbackActive) {
         ThemeRollbackDialog(onDismiss = { themeViewModel.acknowledgeRollback() })
     }
+
+    // Tag edits from the library or the metadata editor may need write access first.
+    val writeAccessRequest by libraryViewModel.writeAccessRequest.collectAsState()
+    WriteAccessRequestEffect(request = writeAccessRequest, onResult = libraryViewModel::onWriteAccessResult)
 
     EmPee3Theme(
         themeManifest = currentTheme,
