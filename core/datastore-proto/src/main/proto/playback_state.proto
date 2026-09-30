@@ -16,6 +16,27 @@ message PlaybackStateProto {
   string last_verified_stable_theme_id = 10;
   string last_verified_stable_checksum = 11;
   bool theme_rollback_flag = 12;
+  // Absent until the user changes a sound setting; absence means "use defaults".
+  SoundSettingsProto sound_settings = 13;
+}
+
+message EqPresetProto {
+  string id = 1;
+  string name = 2;
+  repeated float band_gains = 3;
+}
+
+message SoundSettingsProto {
+  bool eq_enabled = 1;
+  repeated float band_gains = 2;
+  string active_preset_id = 3;
+  repeated EqPresetProto custom_presets = 4;
+  bool bass_boost_enabled = 5;
+  int32 bass_boost_strength = 6;
+  bool virtualizer_enabled = 7;
+  int32 virtualizer_strength = 8;
+  bool loudness_enabled = 9;
+  int32 loudness_gain_mb = 10;
 }
 
 enum RepeatModeProto {

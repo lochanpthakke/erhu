@@ -21,6 +21,7 @@ android {
 dependencies {
     implementation(project(":core:common"))
     api(project(":core:model"))
+    implementation(project(":core:datastore"))
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.media3.common)
@@ -29,4 +30,5 @@ dependencies {
     ksp(libs.hilt.android.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

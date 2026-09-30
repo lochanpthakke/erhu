@@ -6,6 +6,8 @@ import androidx.datastore.dataStoreFile
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistence
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.PlaybackStateProtoSerializer
+import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
+import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.proto.PlaybackStateProto
 import dagger.Module
 import dagger.Provides
@@ -42,4 +44,9 @@ object DataStoreModule {
     @Singleton
     fun providePlaybackStatePersistence(dataStore: DataStore<PlaybackStateProto>): PlaybackStatePersistence =
         PlaybackStatePersistenceImpl(dataStore)
+
+    @Provides
+    @Singleton
+    fun provideSoundSettingsPersistence(dataStore: DataStore<PlaybackStateProto>): SoundSettingsPersistence =
+        SoundSettingsPersistenceImpl(dataStore)
 }
