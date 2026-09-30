@@ -10,12 +10,17 @@ import com.lochanpthakke.empee3.core.model.Song
 
 private const val EXTRA_DURATION_MS = "duration_ms"
 private const val EXTRA_IS_FAVORITE = "is_favorite"
+private const val EXTRA_SONG_URI = "song_uri"
+
+/** Audio URI of the song, used to read its artwork for the notification. */
+internal fun Bundle.songUriFromExtras(): String? = getString(EXTRA_SONG_URI)?.takeIf { it.isNotBlank() }
 
 internal fun Song.toMediaItem(): MediaItem {
     val extras =
         Bundle().apply {
             putLong(EXTRA_DURATION_MS, durationMs)
             putBoolean(EXTRA_IS_FAVORITE, isFavorite)
+            putString(EXTRA_SONG_URI, uri)
         }
     val metadataBuilder =
         MediaMetadata

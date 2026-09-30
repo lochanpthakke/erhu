@@ -63,7 +63,10 @@ class MusicPlaybackService : MediaLibraryService() {
         super.onCreate()
         serviceScope = CoroutineScope(SupervisorJob() + dispatchers.main)
 
-        val builder = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
+        val builder =
+            MediaLibrarySession
+                .Builder(this, player, LibrarySessionCallback())
+                .setBitmapLoader(SongArtworkBitmapLoader(this))
         packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
             builder.setSessionActivity(

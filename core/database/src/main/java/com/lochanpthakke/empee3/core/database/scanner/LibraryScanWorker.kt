@@ -127,6 +127,6 @@ class LibraryScanWorker
             private const val CHANNEL_ID = "library_scan_channel"
 
             @Suppress("MagicNumber")
-            private const val NOTIFICATION_ID = 1001
+            private const val NOTIFICATION_ID = 3001 // 1001 is Media3's playback notification
         }
     }
