@@ -20,6 +20,7 @@ import com.lochanpthakke.empee3.core.database.scanner.LibraryScanWorker
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
+import dagger.Lazy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -34,7 +35,9 @@ class LibraryRepositoryImpl
         private val songDao: SongDao,
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
-        private val workManager: WorkManager,
+        // Lazy: this repository is created during Application injection (widget
+        // updater), before HiltWorkerFactory is ready for WorkManager's config.
+        private val workManager: Lazy<WorkManager>,
     ) : LibraryRepository {
         override fun getSongsPaged(): Flow<PagingData<Song>> =
             Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE)) {
@@ -127,7 +130,7 @@ class LibraryRepositoryImpl
                 val workRequest = OneTimeWorkRequestBuilder<LibraryScanWorker>().build()
                 // KEEP: a scan already queued/running will pick up the current state;
                 // REPLACE used to cancel it mid-way whenever the UI asked again.
-                workManager.enqueueUniqueWork(
+                workManager.get().enqueueUniqueWork(
                     LibraryScanWorker.WORK_NAME,
                     ExistingWorkPolicy.KEEP,
                     workRequest,
@@ -136,6 +139,7 @@ class LibraryRepositoryImpl
 
         override fun observeIsScanning(): Flow<Boolean> =
             workManager
+                .get()
                 .getWorkInfosForUniqueWorkFlow(LibraryScanWorker.WORK_NAME)
                 .map { infos -> infos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED } }
                 .distinctUntilChanged()
