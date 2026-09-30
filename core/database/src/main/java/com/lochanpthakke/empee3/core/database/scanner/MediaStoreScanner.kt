@@ -122,6 +122,12 @@ class MediaStoreScanner
                         val albumId = c.getLong(albumIdColumn)
                         val durationMs = c.getLong(durationColumn)
                         val filePath = c.getString(dataColumn) ?: ""
+                        if (isExcludedFromLibrary(filePath)) {
+                            // Excluded files are simply not "scanned", so the sync deletes
+                            // any that an older version had already imported.
+                            scannedCount++
+                            continue
+                        }
                         // MediaStore encodes disc as the thousands digit (e.g. 2005 = disc 2, track 5).
                         val trackNumber = c.getInt(trackColumn) % 1000
                         val year = c.getInt(yearColumn)

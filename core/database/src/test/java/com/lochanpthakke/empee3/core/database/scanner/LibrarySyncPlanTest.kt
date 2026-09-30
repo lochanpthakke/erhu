@@ -78,4 +78,19 @@ class LibrarySyncPlanTest {
         assertEquals(listOf(1L, 2L), second.upserts.map { it.id })
         assertTrue(second.deletedIds.isEmpty())
     }
+
+    @Test
+    fun whatsAppAudio_isExcluded() {
+        assertTrue(isExcludedFromLibrary("/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Audio/AUD-20231108-WA0001.opus"))
+        assertTrue(isExcludedFromLibrary("/storage/emulated/0/WhatsApp/Media/WhatsApp Voice Notes/202340/PTT-1.opus"))
+        assertTrue(isExcludedFromLibrary("/storage/emulated/0/Android/media/com.whatsapp.w4b/WhatsApp Business/Media/WhatsApp Business Audio/x.mp3"))
+    }
+
+    @Test
+    fun regularMusic_isNotExcluded() {
+        assertFalse(isExcludedFromLibrary("/storage/emulated/0/Music/Kanye West/BULLY/Beauty And The Beast.mp3"))
+        assertFalse(isExcludedFromLibrary("/storage/emulated/0/Download/whatsapp_song_cover.mp3"))
+        // Songs shared as documents are real music.
+        assertFalse(isExcludedFromLibrary("/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Documents/Children_Bootleg-1.mp3"))
+    }
 }

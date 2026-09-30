@@ -42,3 +42,19 @@ internal fun planLibrarySync(
     val deletedIds = existing.map { it.id }.filterNot { it in scannedIds }
     return LibrarySyncPlan(upserts = upserts, deletedIds = deletedIds)
 }
+
+private val EXCLUDED_PATH_SEGMENTS =
+    listOf(
+        // WhatsApp (and WhatsApp Business) voice notes and audio messages. "WhatsApp
+        // Documents" is deliberately kept: songs shared as files end up there.
+        "/whatsapp audio/",
+        "/whatsapp voice notes/",
+        "/whatsapp business audio/",
+        "/whatsapp business voice notes/",
+    )
+
+/** Chat voice notes / audio messages are not music and are kept out of the library. */
+internal fun isExcludedFromLibrary(filePath: String): Boolean {
+    val normalized = filePath.lowercase()
+    return EXCLUDED_PATH_SEGMENTS.any { normalized.contains(it) }
+}
