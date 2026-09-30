@@ -39,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
 import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
@@ -155,8 +157,9 @@ private fun MainSettingsList(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .glassPanel(MaterialTheme.shapes.medium, elevated = false)
                         .clickable { onSelectCategory(cat.id) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
             ) {
                 Row(
                     modifier =

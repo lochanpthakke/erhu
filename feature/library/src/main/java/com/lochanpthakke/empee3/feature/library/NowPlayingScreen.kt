@@ -47,6 +47,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -64,7 +65,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.artwork.GlassArtworkBackdrop
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
@@ -98,213 +102,232 @@ fun NowPlayingScreen(
 
     var isDraggingSlider by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(0f) }
+    val glass = EmPee3Glass.isActive
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Now Playing") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+    Box(modifier = modifier) {
+        GlassArtworkBackdrop(song = song)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
+                        ),
+                    title = { Text("Now Playing") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                            )
+                        }
+                    },
+                )
+            },
+        ) { innerPadding ->
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+            ) {
+                if (song == null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Nothing is playing. Pick a song from your library.",
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                     }
-                },
-            )
-        },
-        modifier = modifier,
-    ) { innerPadding ->
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-        ) {
-            if (song == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "Nothing is playing. Pick a song from your library.",
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-            } else {
-                val totalDurationMs =
-                    (if (playbackState.durationMs > 0) playbackState.durationMs else song.durationMs).coerceAtLeast(1L)
-                val displayPositionMs =
-                    if (isDraggingSlider) {
-                        dragPositionMs.toLong()
-                    } else {
-                        playbackState.positionMs
-                    }.coerceIn(0L, totalDurationMs)
+                } else {
+                    val totalDurationMs =
+                        (if (playbackState.durationMs > 0) playbackState.durationMs else song.durationMs).coerceAtLeast(1L)
+                    val displayPositionMs =
+                        if (isDraggingSlider) {
+                            dragPositionMs.toLong()
+                        } else {
+                            playbackState.positionMs
+                        }.coerceIn(0L, totalDurationMs)
 
-                Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    SongArtwork(
-                        song = song,
-                        contentDescription = "Album artwork",
+                    Column(
                         modifier =
                             Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(16.dp)),
-                    )
+                                .fillMaxSize()
+                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        SongArtwork(
+                            song = song,
+                            contentDescription = "Album artwork",
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .glassPanel(RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(16.dp)),
+                        )
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${song.artist} — ${song.album}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = song.title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${song.artist} — ${song.album}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
 
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Slider(
-                            value = displayPositionMs.toFloat(),
-                            onValueChange = {
-                                isDraggingSlider = true
-                                dragPositionMs = it
-                            },
-                            onValueChangeFinished = {
-                                playbackRepository.seekTo(dragPositionMs.toLong())
-                                isDraggingSlider = false
-                            },
-                            valueRange = 0f..totalDurationMs.toFloat(),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Slider(
+                                value = displayPositionMs.toFloat(),
+                                onValueChange = {
+                                    isDraggingSlider = true
+                                    dragPositionMs = it
+                                },
+                                onValueChangeFinished = {
+                                    playbackRepository.seekTo(dragPositionMs.toLong())
+                                    isDraggingSlider = false
+                                },
+                                valueRange = 0f..totalDurationMs.toFloat(),
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(text = formatMs(displayPositionMs), style = MaterialTheme.typography.bodySmall)
+                                if (playbackState.queue.size > 1) {
+                                    Text(
+                                        text = "${playbackState.currentIndex + 1} / ${playbackState.queue.size}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Text(text = formatMs(totalDurationMs), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .then(
+                                        if (glass) {
+                                            Modifier
+                                                .glassPanel(MaterialTheme.shapes.large)
+                                                .padding(vertical = 8.dp)
+                                        } else {
+                                            Modifier
+                                        },
+                                    ),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(text = formatMs(displayPositionMs), style = MaterialTheme.typography.bodySmall)
-                            if (playbackState.queue.size > 1) {
-                                Text(
-                                    text = "${playbackState.currentIndex + 1} / ${playbackState.queue.size}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ToggleIconButton(
+                                active = playbackState.shuffleModeEnabled,
+                                onClick = { playbackRepository.setShuffleModeEnabled(!playbackState.shuffleModeEnabled) },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shuffle,
+                                    contentDescription = if (playbackState.shuffleModeEnabled) "Shuffle on" else "Shuffle off",
                                 )
                             }
-                            Text(text = formatMs(totalDurationMs), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ToggleIconButton(
-                            active = playbackState.shuffleModeEnabled,
-                            onClick = { playbackRepository.setShuffleModeEnabled(!playbackState.shuffleModeEnabled) },
+                            IconButton(onClick = { playbackRepository.skipPrevious() }) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous",
+                                    modifier = Modifier.size(36.dp),
+                                )
+                            }
+
+                            FilledIconButton(
+                                onClick = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
+                                modifier = Modifier.size(64.dp),
+                                shape = CircleShape,
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    modifier = Modifier.size(40.dp),
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { playbackRepository.skipNext() },
+                                enabled = hasNext(playbackState),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Next",
+                                    modifier = Modifier.size(36.dp),
+                                )
+                            }
+
+                            ToggleIconButton(
+                                active = playbackState.repeatMode != RepeatMode.OFF,
+                                onClick = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        if (playbackState.repeatMode ==
+                                            RepeatMode.ONE
+                                        ) {
+                                            Icons.Default.RepeatOne
+                                        } else {
+                                            Icons.Default.Repeat
+                                        },
+                                    contentDescription =
+                                        when (playbackState.repeatMode) {
+                                            RepeatMode.OFF -> "Repeat off"
+                                            RepeatMode.ALL -> "Repeat all"
+                                            RepeatMode.ONE -> "Repeat one"
+                                        },
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Shuffle,
-                                contentDescription = if (playbackState.shuffleModeEnabled) "Shuffle on" else "Shuffle off",
-                            )
-                        }
-
-                        IconButton(onClick = { playbackRepository.skipPrevious() }) {
-                            Icon(
-                                imageVector = Icons.Default.SkipPrevious,
-                                contentDescription = "Previous",
-                                modifier = Modifier.size(36.dp),
-                            )
-                        }
-
-                        FilledIconButton(
-                            onClick = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
-                            modifier = Modifier.size(64.dp),
-                            shape = CircleShape,
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                modifier = Modifier.size(40.dp),
-                            )
-                        }
-
-                        IconButton(
-                            onClick = { playbackRepository.skipNext() },
-                            enabled = hasNext(playbackState),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SkipNext,
-                                contentDescription = "Next",
-                                modifier = Modifier.size(36.dp),
-                            )
-                        }
-
-                        ToggleIconButton(
-                            active = playbackState.repeatMode != RepeatMode.OFF,
-                            onClick = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
-                        ) {
-                            Icon(
-                                imageVector =
-                                    if (playbackState.repeatMode ==
-                                        RepeatMode.ONE
-                                    ) {
-                                        Icons.Default.RepeatOne
-                                    } else {
-                                        Icons.Default.Repeat
-                                    },
-                                contentDescription =
-                                    when (playbackState.repeatMode) {
-                                        RepeatMode.OFF -> "Repeat off"
-                                        RepeatMode.ALL -> "Repeat all"
-                                        RepeatMode.ONE -> "Repeat one"
-                                    },
-                            )
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { onToggleFavorite(song) }) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        IconButton(onClick = { showLyrics = true }) {
-                            Icon(imageVector = Icons.Default.Lyrics, contentDescription = "Lyrics")
-                        }
-                        IconButton(onClick = { showQueue = true }) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue")
-                        }
-                        IconButton(onClick = { onAddToPlaylist(song) }) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Add to playlist")
+                            IconButton(onClick = { onToggleFavorite(song) }) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
+                            IconButton(onClick = { showLyrics = true }) {
+                                Icon(imageVector = Icons.Default.Lyrics, contentDescription = "Lyrics")
+                            }
+                            IconButton(onClick = { showQueue = true }) {
+                                Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue")
+                            }
+                            IconButton(onClick = { onAddToPlaylist(song) }) {
+                                Icon(imageVector = Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Add to playlist")
+                            }
                         }
                     }
                 }
-            }
 
-            if (showLyrics && song != null) {
-                LyricsOverlay(lyrics = lyrics, onClose = { showLyrics = false })
+                if (showLyrics && song != null) {
+                    LyricsOverlay(lyrics = lyrics, onClose = { showLyrics = false })
+                }
             }
         }
     }

@@ -62,36 +62,13 @@ class ThemeRepositoryImpl
             id: String,
             isApp: Boolean,
         ) {
-            val builtInTheme = BuiltInThemes.ALL_BUILT_IN_THEMES.find { it.id == id }
-            if (builtInTheme != null) {
-                if (isApp) {
-                    _appThemeState.value = builtInTheme
-                    _appSkinState.value = null
-                } else {
-                    _widgetThemeState.value = builtInTheme
-                    _widgetSkinState.value = null
-                }
-                return
-            }
-
-            val builtInSkin = BuiltInThemes.ALL_BUILT_IN_SKINS.find { it.id == id }
-            if (builtInSkin != null) {
-                if (isApp) {
-                    _appThemeState.value = BuiltInThemes.CYBERPUNK_TECH
-                    _appSkinState.value = builtInSkin
-                } else {
-                    _widgetThemeState.value = BuiltInThemes.CYBERPUNK_TECH
-                    _widgetSkinState.value = builtInSkin
-                }
-                return
-            }
-
+            val resolved = BuiltInThemes.resolve(id)
             if (isApp) {
-                _appThemeState.value = BuiltInThemes.CYBERPUNK_TECH
-                _appSkinState.value = null
+                _appThemeState.value = resolved.theme
+                _appSkinState.value = resolved.skin
             } else {
-                _widgetThemeState.value = BuiltInThemes.CYBERPUNK_TECH
-                _widgetSkinState.value = null
+                _widgetThemeState.value = resolved.theme
+                _widgetSkinState.value = resolved.skin
             }
         }
 

@@ -20,4 +20,6 @@ data class ThemeManifest(
     val shapes: EmPee3Shapes = EmPee3Shapes(),
     val fontFilePath: String? = null,
     val widgetConfig: WidgetSkinConfig = WidgetSkinConfig(),
+    /** Present only for glassmorphism themes; null keeps the classic rendering. */
+    val glass: GlassTokens? = null,
 )

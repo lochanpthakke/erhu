@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -458,8 +460,9 @@ private fun AlbumItem(
             modifier
                 .padding(8.dp)
                 .fillMaxWidth()
+                .glassPanel(MaterialTheme.shapes.medium, elevated = false)
                 .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
@@ -497,8 +500,9 @@ private fun ArtistItem(
             modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
+                .glassPanel(MaterialTheme.shapes.medium, elevated = false)
                 .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(

@@ -32,6 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 
@@ -53,16 +56,19 @@ fun MiniPlayer(
         }
 
     val isPlaying = playbackState.status == PlaybackStatus.PLAYING
+    val glass = EmPee3Glass.isActive
+    val shape = if (glass) RoundedCornerShape(EmPee3Theme.shapes.miniPlayerCornerRadiusDp.dp) else RoundedCornerShape(12.dp)
 
     Card(
         modifier =
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp)
+                .glassPanel(shape, strong = true)
                 .clickable(onClick = onMiniPlayerClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (glass) 0.dp else 6.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             LinearProgressIndicator(
@@ -72,7 +78,7 @@ fun MiniPlayer(
                         .fillMaxWidth()
                         .height(3.dp),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                trackColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
             )
 
             Row(
