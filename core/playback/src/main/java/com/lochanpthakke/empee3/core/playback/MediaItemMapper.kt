@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.core.playback
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -8,11 +9,13 @@ import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
 
 private const val EXTRA_DURATION_MS = "duration_ms"
+private const val EXTRA_IS_FAVORITE = "is_favorite"
 
 internal fun Song.toMediaItem(): MediaItem {
     val extras =
         Bundle().apply {
             putLong(EXTRA_DURATION_MS, durationMs)
+            putBoolean(EXTRA_IS_FAVORITE, isFavorite)
         }
     val metadataBuilder =
         MediaMetadata
@@ -20,11 +23,12 @@ internal fun Song.toMediaItem(): MediaItem {
             .setTitle(title)
             .setArtist(artist)
             .setAlbumTitle(album)
+            .setIsBrowsable(false)
+            .setIsPlayable(true)
             .setExtras(extras)
 
-    artworkData?.let { data ->
-        metadataBuilder.setArtworkData(data, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
-    }
+    // Lets the media notification / lock screen load album art on demand.
+    artworkUri?.let { metadataBuilder.setArtworkUri(Uri.parse(it)) }
 
     return MediaItem
         .Builder()
@@ -34,16 +38,22 @@ internal fun Song.toMediaItem(): MediaItem {
         .build()
 }
 
-internal fun MediaItem.toSong(): Song {
+/**
+ * Maps a queue item back to a [Song]. Returns null for items that were not
+ * created by [toMediaItem] (non-numeric media IDs) instead of crashing.
+ */
+internal fun MediaItem.toSongOrNull(): Song? {
+    val id = mediaId.toLongOrNull() ?: return null
     val metadata = mediaMetadata
     return Song(
-        id = mediaId.toLong(),
+        id = id,
         title = metadata.title?.toString().orEmpty(),
         artist = metadata.artist?.toString().orEmpty(),
         album = metadata.albumTitle?.toString().orEmpty(),
         durationMs = metadata.extras?.getLong(EXTRA_DURATION_MS) ?: 0L,
         uri = localConfiguration?.uri?.toString().orEmpty(),
-        artworkData = metadata.artworkData,
+        artworkUri = metadata.artworkUri?.toString(),
+        isFavorite = metadata.extras?.getBoolean(EXTRA_IS_FAVORITE) ?: false,
     )
 }
 

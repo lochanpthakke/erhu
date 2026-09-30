@@ -38,6 +38,8 @@ interface PlaybackRepository {
 
     fun skipPrevious()
 
+    fun skipToQueueItem(index: Int)
+
     fun setShuffleModeEnabled(enabled: Boolean)
 
     fun setRepeatMode(repeatMode: RepeatMode)
@@ -47,6 +49,8 @@ interface PlaybackRepository {
     suspend fun playNext(song: Song): AppResult<Unit>
 
     suspend fun addToQueue(song: Song): AppResult<Unit>
+
+    suspend fun removeFromQueue(index: Int): AppResult<Unit>
 
     suspend fun reorder(
         from: Int,

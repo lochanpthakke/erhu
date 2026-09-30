@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.widget
 
+import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.playback.PlaybackController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -9,4 +10,6 @@ import dagger.hilt.components.SingletonComponent
 @InstallIn(SingletonComponent::class)
 interface PlaybackControllerEntryPoint {
     fun playbackController(): PlaybackController
+
+    fun libraryRepository(): LibraryRepository
 }

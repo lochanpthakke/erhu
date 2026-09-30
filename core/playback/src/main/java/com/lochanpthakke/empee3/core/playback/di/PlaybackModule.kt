@@ -1,6 +1,8 @@
 package com.lochanpthakke.empee3.core.playback.di
 
 import android.content.Context
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -42,7 +44,21 @@ object PlayerProviderModule {
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                         .build()
             }
-        return ExoPlayer.Builder(context, renderersFactory).build()
+        val musicAttributes =
+            AudioAttributes
+                .Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                .build()
+        // ExoPlayer owns audio focus (pause on loss, duck, resume after transient
+        // loss) and pauses when headphones/Bluetooth disconnect. This applies to
+        // every command source — app UI, notification, lock screen, widget.
+        return ExoPlayer
+            .Builder(context, renderersFactory)
+            .setAudioAttributes(musicAttributes, true)
+            .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
+            .build()
     }
 }
 

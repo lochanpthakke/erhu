@@ -17,6 +17,8 @@ interface LibraryRepository {
 
     fun getAllSongs(): Flow<List<Song>>
 
+    fun getFavoriteSongs(): Flow<List<Song>>
+
     fun getSongById(id: Long): Flow<Song?>
 
     fun getSongsByAlbumId(albumId: Long): Flow<List<Song>>
@@ -35,7 +37,19 @@ interface LibraryRepository {
 
     fun searchSongs(query: String): Flow<List<Song>>
 
+    /** Emits false when the song is not a favorite or no longer exists. */
+    fun observeIsFavorite(songId: Long): Flow<Boolean>
+
+    /** Lyrics embedded in the file's tags (read during scan enrichment), if any. */
+    fun observeEmbeddedLyrics(songId: Long): Flow<String?>
+
+    /** Absolute file path from MediaStore, needed by tag writers. */
+    suspend fun getSongFilePath(songId: Long): String?
+
     suspend fun toggleFavorite(songId: Long): AppResult<Unit>
 
     suspend fun triggerLibraryScan(): AppResult<Unit>
+
+    /** True while a library scan is queued or running. */
+    fun observeIsScanning(): Flow<Boolean>
 }

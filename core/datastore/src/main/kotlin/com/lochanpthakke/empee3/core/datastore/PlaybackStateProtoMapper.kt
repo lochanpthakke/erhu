@@ -20,9 +20,16 @@ fun RepeatModeProto.toDomain(): RepeatMode =
         RepeatModeProto.UNRECOGNIZED -> RepeatMode.OFF
     }
 
-fun PersistedPlaybackState.toProto(): PlaybackStateProto =
-    PlaybackStateProto
-        .newBuilder()
+fun PersistedPlaybackState.toProto(): PlaybackStateProto = applyTo(PlaybackStateProto.getDefaultInstance())
+
+/**
+ * Writes the playback fields into [existing] while keeping every other field
+ * (theme, layout, rollback flag…) that shares the same DataStore file.
+ */
+fun PersistedPlaybackState.applyTo(existing: PlaybackStateProto): PlaybackStateProto =
+    existing
+        .toBuilder()
+        .clearQueueSongIds()
         .addAllQueueSongIds(queueSongIds)
         .setCurrentIndex(currentIndex)
         .setPositionMs(positionMs)

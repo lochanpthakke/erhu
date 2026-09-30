@@ -12,17 +12,14 @@ interface ArtistDao {
     @Upsert
     suspend fun upsertAll(artists: List<ArtistEntity>)
 
-    @Query("SELECT * FROM artists ORDER BY name ASC")
+    @Query("SELECT * FROM artists ORDER BY name COLLATE NOCASE ASC")
     fun getAllArtists(): Flow<List<ArtistEntity>>
 
-    @Query("SELECT * FROM artists ORDER BY name ASC")
+    @Query("SELECT * FROM artists ORDER BY name COLLATE NOCASE ASC")
     fun getArtistsPaged(): PagingSource<Int, ArtistEntity>
 
     @Query("SELECT * FROM artists WHERE id = :id LIMIT 1")
     suspend fun getArtistById(id: Long): ArtistEntity?
-
-    @Query("DELETE FROM artists WHERE id NOT IN (:validIds)")
-    suspend fun deleteArtistsNotIn(validIds: List<Long>): Int
 
     @Query("DELETE FROM artists")
     suspend fun deleteAll(): Int

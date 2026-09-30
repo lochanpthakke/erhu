@@ -12,10 +12,10 @@ interface AlbumDao {
     @Upsert
     suspend fun upsertAll(albums: List<AlbumEntity>)
 
-    @Query("SELECT * FROM albums ORDER BY title ASC")
+    @Query("SELECT * FROM albums ORDER BY title COLLATE NOCASE ASC")
     fun getAllAlbums(): Flow<List<AlbumEntity>>
 
-    @Query("SELECT * FROM albums ORDER BY title ASC")
+    @Query("SELECT * FROM albums ORDER BY title COLLATE NOCASE ASC")
     fun getAlbumsPaged(): PagingSource<Int, AlbumEntity>
 
     @Query("SELECT * FROM albums WHERE id = :id LIMIT 1")
@@ -23,9 +23,6 @@ interface AlbumDao {
 
     @Query("SELECT * FROM albums WHERE artist_id = :artistId ORDER BY year DESC, title ASC")
     fun getAlbumsByArtistId(artistId: Long): Flow<List<AlbumEntity>>
-
-    @Query("DELETE FROM albums WHERE id NOT IN (:validIds)")
-    suspend fun deleteAlbumsNotIn(validIds: List<Long>): Int
 
     @Query("DELETE FROM albums")
     suspend fun deleteAll(): Int

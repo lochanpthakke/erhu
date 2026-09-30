@@ -1,9 +1,6 @@
 package com.lochanpthakke.empee3.ui.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
@@ -32,20 +28,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
+@Suppress("LongMethod")
 fun MiniPlayer(
     playbackRepository: PlaybackRepository,
     onMiniPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
-    showExtraSkipButtons: Boolean = true,
 ) {
     val playbackState by playbackRepository.playbackState.collectAsState()
     val song = playbackState.currentSong ?: return
@@ -87,28 +82,14 @@ fun MiniPlayer(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (song.artworkData != null && song.artworkData!!.isNotEmpty()) {
-                    val bitmap =
-                        android.graphics.BitmapFactory.decodeByteArray(
-                            song.artworkData,
-                            0,
-                            song.artworkData!!.size,
-                        )
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap.asImageBitmap(),
-                            contentDescription = "Album Artwork",
-                            modifier =
-                                Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                        )
-                    } else {
-                        FallbackArt()
-                    }
-                } else {
-                    FallbackArt()
-                }
+                SongArtwork(
+                    song = song,
+                    contentDescription = "Album artwork",
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -130,13 +111,11 @@ fun MiniPlayer(
                     )
                 }
 
-                if (showExtraSkipButtons) {
-                    IconButton(onClick = { playbackRepository.skipPrevious() }) {
-                        Icon(
-                            imageVector = Icons.Default.SkipPrevious,
-                            contentDescription = "Previous Track",
-                        )
-                    }
+                IconButton(onClick = { playbackRepository.skipPrevious() }) {
+                    Icon(
+                        imageVector = Icons.Default.SkipPrevious,
+                        contentDescription = "Previous track",
+                    )
                 }
 
                 IconButton(
@@ -154,33 +133,13 @@ fun MiniPlayer(
                     )
                 }
 
-                if (showExtraSkipButtons) {
-                    IconButton(onClick = { playbackRepository.skipNext() }) {
-                        Icon(
-                            imageVector = Icons.Default.SkipNext,
-                            contentDescription = "Next Track",
-                        )
-                    }
+                IconButton(onClick = { playbackRepository.skipNext() }) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "Next track",
+                    )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun FallbackArt() {
-    Box(
-        modifier =
-            Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
     }
 }

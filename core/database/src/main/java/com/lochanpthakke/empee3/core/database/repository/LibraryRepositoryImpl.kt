@@ -8,6 +8,7 @@ import androidx.paging.PagingData
 import androidx.paging.map
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
@@ -20,6 +21,7 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -53,10 +55,12 @@ class LibraryRepositoryImpl
                 list.map { it.toDomainModel() }
             }
 
-        override fun getSongById(id: Long): Flow<Song?> =
-            songDao.getAllSongs().map { list ->
-                list.find { it.id == id }?.toDomainModel()
+        override fun getFavoriteSongs(): Flow<List<Song>> =
+            songDao.getFavoriteSongs().map { list ->
+                list.map { it.toDomainModel() }
             }
+
+        override fun getSongById(id: Long): Flow<Song?> = songDao.observeSongById(id).map { it?.toDomainModel() }
 
         override fun getSongsByAlbumId(albumId: Long): Flow<List<Song>> =
             songDao.getSongsByAlbumId(albumId).map { list ->
@@ -98,9 +102,17 @@ class LibraryRepositoryImpl
             }
 
         override fun searchSongs(query: String): Flow<List<Song>> =
-            songDao.searchSongs(query).map { list ->
+            songDao.searchSongs(query.trim()).map { list ->
                 list.map { it.toDomainModel() }
             }
+
+        override fun observeIsFavorite(songId: Long): Flow<Boolean> =
+            songDao.observeSongById(songId).map { it?.isFavorite == true }.distinctUntilChanged()
+
+        override fun observeEmbeddedLyrics(songId: Long): Flow<String?> =
+            songDao.observeSongById(songId).map { it?.lyrics?.takeIf { lyrics -> lyrics.isNotBlank() } }.distinctUntilChanged()
+
+        override suspend fun getSongFilePath(songId: Long): String? = songDao.getSongById(songId)?.filePath?.takeIf { it.isNotBlank() }
 
         override suspend fun toggleFavorite(songId: Long): AppResult<Unit> =
             appResultOf {
@@ -113,12 +125,20 @@ class LibraryRepositoryImpl
         override suspend fun triggerLibraryScan(): AppResult<Unit> =
             appResultOf {
                 val workRequest = OneTimeWorkRequestBuilder<LibraryScanWorker>().build()
+                // KEEP: a scan already queued/running will pick up the current state;
+                // REPLACE used to cancel it mid-way whenever the UI asked again.
                 workManager.enqueueUniqueWork(
                     LibraryScanWorker.WORK_NAME,
-                    ExistingWorkPolicy.REPLACE,
+                    ExistingWorkPolicy.KEEP,
                     workRequest,
                 )
             }
+
+        override fun observeIsScanning(): Flow<Boolean> =
+            workManager
+                .getWorkInfosForUniqueWorkFlow(LibraryScanWorker.WORK_NAME)
+                .map { infos -> infos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED } }
+                .distinctUntilChanged()
 
         companion object {
             private const val DEFAULT_PAGE_SIZE = 30

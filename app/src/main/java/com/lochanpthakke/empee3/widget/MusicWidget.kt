@@ -2,13 +2,11 @@ package com.lochanpthakke.empee3.widget
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -20,7 +18,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
-import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
@@ -33,11 +30,12 @@ import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
 import com.lochanpthakke.empee3.R
+import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
-
-val favoriteToggleKey = booleanPreferencesKey("favorite_toggle_placeholder")
+import kotlinx.coroutines.flow.first
 
 private const val ALBUM_ART_SIZE_DP = 64
+private const val ALBUM_ART_SIZE_PX = 192
 private const val CONTROL_ICON_SIZE_DP = 32
 
 class MusicWidget : GlanceAppWidget() {
@@ -48,13 +46,18 @@ class MusicWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         val playbackState = context.playbackController().playbackState.value
+        val song = playbackState.currentSong
+        val isFavorite = song?.let { context.libraryRepository().observeIsFavorite(it.id).first() } ?: false
+        val artwork = song?.let { ArtworkLoader.load(context, it.uri, it.artworkUri, ALBUM_ART_SIZE_PX) }
 
         provideContent {
             WidgetContent(
-                title = playbackState.currentSong?.title ?: "Nothing playing",
-                artist = playbackState.currentSong?.artist.orEmpty(),
-                artworkData = playbackState.currentSong?.artworkData,
+                title = song?.title ?: "Nothing playing",
+                artist = song?.artist.orEmpty(),
+                artwork = artwork,
                 isPlaying = playbackState.status == PlaybackStatus.PLAYING,
+                isFavorite = isFavorite,
+                hasSong = song != null,
             )
         }
     }
@@ -63,11 +66,11 @@ class MusicWidget : GlanceAppWidget() {
     private fun WidgetContent(
         title: String,
         artist: String,
-        artworkData: ByteArray?,
+        artwork: Bitmap?,
         isPlaying: Boolean,
+        isFavorite: Boolean,
+        hasSong: Boolean,
     ) {
-        val isFavorite = currentState(key = favoriteToggleKey) ?: false
-
         Row(
             modifier = GlanceModifier.fillMaxSize().padding(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -112,28 +115,25 @@ class MusicWidget : GlanceAppWidget() {
                             android.R.drawable.btn_star_big_off
                         }
 
-                    Image(
-                        provider = ImageProvider(favoriteIconRes),
-                        contentDescription = "Toggle favorite",
-                        modifier =
-                            GlanceModifier
-                                .size(CONTROL_ICON_SIZE_DP.dp)
-                                .clickable(actionRunCallback<ToggleFavoriteAction>()),
-                    )
+                    if (hasSong) {
+                        Image(
+                            provider = ImageProvider(favoriteIconRes),
+                            contentDescription = "Toggle favorite",
+                            modifier =
+                                GlanceModifier
+                                    .size(CONTROL_ICON_SIZE_DP.dp)
+                                    .clickable(actionRunCallback<ToggleFavoriteAction>()),
+                        )
+                    }
                 }
             }
 
-            AlbumArt(artworkData = artworkData)
+            AlbumArt(bitmap = artwork)
         }
     }
 
     @Composable
-    private fun AlbumArt(artworkData: ByteArray?) {
-        val bitmap: Bitmap? =
-            artworkData?.let {
-                BitmapFactory.decodeByteArray(it, 0, it.size)
-            }
-
+    private fun AlbumArt(bitmap: Bitmap?) {
         if (bitmap != null) {
             Image(
                 provider = ImageProvider(bitmap),

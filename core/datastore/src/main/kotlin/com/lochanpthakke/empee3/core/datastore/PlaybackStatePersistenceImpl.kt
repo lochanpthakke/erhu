@@ -16,7 +16,8 @@ class PlaybackStatePersistenceImpl
     ) : PlaybackStatePersistence {
         override suspend fun save(state: PersistedPlaybackState): AppResult<Unit> =
             appResultOf {
-                dataStore.updateData { state.toProto() }
+                // Merge, don't replace: theme settings live in the same proto.
+                dataStore.updateData { current -> state.applyTo(current) }
                 Unit
             }
 

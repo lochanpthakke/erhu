@@ -13,17 +13,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -64,7 +59,6 @@ private data class SettingCategory(
 fun SettingsScreen(
     onOpenDrawer: () -> Unit,
     onNavigateToMetadataEditor: () -> Unit,
-    onNavigateToArtworkManager: () -> Unit,
     themeViewModel: ThemeViewModel,
     soundViewModel: SoundViewModel,
     diagnosticsViewModel: DiagnosticsViewModel,
@@ -76,30 +70,6 @@ fun SettingsScreen(
     val categories =
         listOf(
             SettingCategory(
-                "library",
-                "Library & Scanner",
-                "Auto-rescan, short tracks, blacklists & directory exclusions",
-                Icons.AutoMirrored.Filled.LibraryBooks,
-            ),
-            SettingCategory(
-                "interface",
-                "Interface & Layout",
-                "Category tabs, grid/list view styles & navigation rules",
-                Icons.Default.Menu,
-            ),
-            SettingCategory(
-                "nowplaying",
-                "Now Playing",
-                "Full cover vs carousel, dominant colors & title animation",
-                Icons.Default.PlayCircle,
-            ),
-            SettingCategory(
-                "miniplayer",
-                "Mini Player",
-                "Skip buttons, YouTube-style progress line & gestures",
-                Icons.Default.MusicNote,
-            ),
-            SettingCategory(
                 "themes",
                 "Themes & Appearance",
                 "Built-in themes, Custom Skins & dark mode customization",
@@ -108,20 +78,14 @@ fun SettingsScreen(
             SettingCategory(
                 "audio",
                 "Audio & Equalizer",
-                "8-band DSP equalizer, crossfade & Bluetooth auto-start",
+                "8-band equalizer, presets and audio effects",
                 Icons.Default.Equalizer,
             ),
             SettingCategory(
                 "metadata",
                 "Metadata & Artwork",
-                "Online providers, watermark stripper list & artwork quality",
+                "Open the metadata / tag editor",
                 Icons.Default.Tag,
-            ),
-            SettingCategory(
-                "widgets",
-                "Widgets",
-                "Home screen widget presets & layout options",
-                Icons.Default.Widgets,
             ),
             SettingCategory(
                 "diagnostics",
@@ -166,37 +130,11 @@ fun SettingsScreen(
         ) {
             when (activeCategory) {
                 null -> MainSettingsList(categories = categories, onSelectCategory = { activeCategory = it })
-                "library" ->
-                    GenericSettingsSubPage(
-                        "Library & Scanner Options",
-                        listOf("Auto-rescan on startup", "Hide short tracks (< 30s)", "Ignore .nomedia files"),
-                    )
-                "interface" ->
-                    GenericSettingsSubPage(
-                        "Interface Options",
-                        listOf("Hide category bar", "Move tabs to bottom", "Standard track view"),
-                    )
-                "nowplaying" ->
-                    GenericSettingsSubPage(
-                        "Now Playing Options",
-                        listOf("Use dominant artwork color", "Show position counter (325/3456)", "Marquee title animation"),
-                    )
-                "miniplayer" ->
-                    GenericSettingsSubPage(
-                        "Mini Player Options",
-                        listOf("Show prev / next skip buttons", "Enable YouTube-style top progress line", "Swipe gesture to skip"),
-                    )
                 "themes" -> ThemeSettingsScreen(viewModel = themeViewModel)
                 "audio" -> SoundSettingsScreen(viewModel = soundViewModel)
                 "metadata" ->
                     MetadataSettingsSubPage(
                         onNavigateToMetadataEditor = onNavigateToMetadataEditor,
-                        onNavigateToArtworkManager = onNavigateToArtworkManager,
-                    )
-                "widgets" ->
-                    GenericSettingsSubPage(
-                        "Widget Presets",
-                        listOf("CD Case preset", "Tape Cassette preset", "Stacked layout", "Compact row layout"),
                     )
                 "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel)
                 else -> MainSettingsList(categories = categories, onSelectCategory = { activeCategory = it })
@@ -257,53 +195,8 @@ private fun MainSettingsList(
 }
 
 @Composable
-private fun GenericSettingsSubPage(
-    title: String,
-    items: List<String>,
-) {
-    LazyColumn(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-    ) {
-        item {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
-        items(items) { item ->
-            var checked by remember { mutableStateOf(true) }
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = item,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                Switch(
-                    checked = checked,
-                    onCheckedChange = { checked = it },
-                )
-            }
-        }
-    }
-}
-
-@Composable
 @Suppress("LongMethod")
-private fun MetadataSettingsSubPage(
-    onNavigateToMetadataEditor: () -> Unit,
-    onNavigateToArtworkManager: () -> Unit,
-) {
+private fun MetadataSettingsSubPage(onNavigateToMetadataEditor: () -> Unit) {
     Column(
         modifier =
             Modifier
@@ -331,38 +224,13 @@ private fun MetadataSettingsSubPage(
             }
         }
 
-        Card(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .clickable(onClick = onNavigateToArtworkManager),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text("Launch Artwork Manager", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("Search high-res covers and embed album art", style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Online Metadata Providers", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        GenericSettingsSubPage(
-            "Metadata Options",
-            listOf(
-                "MusicBrainz Provider",
-                "Deezer Provider",
-                "Last.fm Provider",
-                "LRCLIB Provider",
-                "Auto-strip watermarks ([320kbps], pagalworld)",
-            ),
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text =
+                "Lookups use MusicBrainz, Deezer, Last.fm and LRCLIB. Tag writing needs write access to the file, " +
+                    "which Android may deny for files other apps created.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

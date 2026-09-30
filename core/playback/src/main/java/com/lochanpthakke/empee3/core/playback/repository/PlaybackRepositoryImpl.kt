@@ -43,6 +43,8 @@ class PlaybackRepositoryImpl
 
         override fun skipPrevious() = playbackController.skipPrevious()
 
+        override fun skipToQueueItem(index: Int) = playbackController.skipToQueueItem(index)
+
         override fun setShuffleModeEnabled(enabled: Boolean) = playbackController.setShuffleModeEnabled(enabled)
 
         override fun setRepeatMode(repeatMode: RepeatMode) = playbackController.setRepeatMode(repeatMode)
@@ -57,6 +59,11 @@ class PlaybackRepositoryImpl
         override suspend fun addToQueue(song: Song): AppResult<Unit> =
             appResultOf(mapError = { AppError.ValidationError(it.message ?: "Failed to add song to queue") }) {
                 playbackController.addToQueue(song)
+            }
+
+        override suspend fun removeFromQueue(index: Int): AppResult<Unit> =
+            appResultOf(mapError = { AppError.ValidationError(it.message ?: "Invalid queue index") }) {
+                playbackController.removeFromQueue(index)
             }
 
         override suspend fun reorder(

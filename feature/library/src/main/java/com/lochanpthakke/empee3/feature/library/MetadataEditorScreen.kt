@@ -2,7 +2,6 @@
 
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,10 +56,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -80,7 +79,7 @@ fun MetadataEditorScreen(
 
     val repairQueue by viewModel.repairQueue.collectAsState()
     val forceFixTags by viewModel.forceFixTags.collectAsState()
-    val isScanning by viewModel.isScanning.collectAsState()
+    val isScanning by viewModel.isFindingBadTracks.collectAsState()
     val isFixingQueue by viewModel.isFixingQueue.collectAsState()
 
     val searchResults by viewModel.searchResults.collectAsState()
@@ -195,7 +194,7 @@ fun MetadataEditorScreen(
             ) {
                 Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isScanning) "Scanning Storage..." else "Scan for Bad / Incomplete Tracks")
+                Text(if (isScanning) "Finding tracks..." else "Scan for Bad / Incomplete Tracks")
             }
 
             Row(
@@ -312,28 +311,13 @@ fun MetadataEditorScreen(
                                         modifier = Modifier.weight(1f),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        if (queueItem.song.artworkData != null && queueItem.song.artworkData!!.isNotEmpty()) {
-                                            val bitmap =
-                                                android.graphics.BitmapFactory.decodeByteArray(
-                                                    queueItem.song.artworkData,
-                                                    0,
-                                                    queueItem.song.artworkData!!.size,
-                                                )
-                                            if (bitmap != null) {
-                                                Image(
-                                                    bitmap = bitmap.asImageBitmap(),
-                                                    contentDescription = null,
-                                                    modifier =
-                                                        Modifier
-                                                            .size(40.dp)
-                                                            .clip(RoundedCornerShape(6.dp)),
-                                                )
-                                            } else {
-                                                FallbackQueueArt()
-                                            }
-                                        } else {
-                                            FallbackQueueArt()
-                                        }
+                                        SongArtwork(
+                                            song = queueItem.song,
+                                            modifier =
+                                                Modifier
+                                                    .size(40.dp)
+                                                    .clip(RoundedCornerShape(6.dp)),
+                                        )
 
                                         Spacer(modifier = Modifier.width(10.dp))
 
@@ -572,23 +556,5 @@ private fun TrackRow(
                 Text("Add")
             }
         }
-    }
-}
-
-@Composable
-private fun FallbackQueueArt() {
-    Box(
-        modifier =
-            Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
     }
 }

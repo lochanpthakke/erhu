@@ -5,9 +5,9 @@ import com.lochanpthakke.empee3.core.common.logging.LocalCrashLogger
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +21,6 @@ class CrashThemeHandler
         private val logger: Logger,
     ) : Thread.UncaughtExceptionHandler {
         private var defaultHandler: Thread.UncaughtExceptionHandler? = null
-        private val scope = CoroutineScope(Dispatchers.IO)
 
         fun install() {
             defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -40,18 +39,23 @@ class CrashThemeHandler
                 logger.e(TAG, "Failed to write local crash log", e)
             }
 
-            scope.launch {
-                try {
-                    themeRepository.triggerRollback("Crash detected: ${throwable.message}")
-                } catch (e: Exception) {
-                    logger.e(TAG, "Failed to trigger theme rollback during crash", e)
-                } finally {
-                    defaultHandler?.uncaughtException(thread, throwable)
+            // Block (briefly) instead of launching async: returning from here before the
+            // default handler runs leaves a dead main thread and a frozen, un-killed app.
+            try {
+                runBlocking(Dispatchers.IO) {
+                    withTimeoutOrNull(ROLLBACK_TIMEOUT_MS) {
+                        themeRepository.triggerRollback("Crash detected: ${throwable.message}")
+                    }
                 }
+            } catch (e: Exception) {
+                logger.e(TAG, "Failed to trigger theme rollback during crash", e)
+            } finally {
+                defaultHandler?.uncaughtException(thread, throwable)
             }
         }
 
         companion object {
             private const val TAG = "CrashThemeHandler"
+            private const val ROLLBACK_TIMEOUT_MS = 1_000L
         }
     }

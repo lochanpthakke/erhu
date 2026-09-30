@@ -28,6 +28,9 @@ interface PlaybackController {
 
     fun skipPrevious()
 
+    /** Jumps to [index] in the current queue (playback-list order). */
+    fun skipToQueueItem(index: Int)
+
     fun setShuffleModeEnabled(enabled: Boolean)
 
     fun setRepeatMode(mode: RepeatMode)
@@ -35,6 +38,8 @@ interface PlaybackController {
     fun playNext(song: Song)
 
     fun addToQueue(song: Song)
+
+    fun removeFromQueue(index: Int)
 
     fun setVolume(volume: Float)
 

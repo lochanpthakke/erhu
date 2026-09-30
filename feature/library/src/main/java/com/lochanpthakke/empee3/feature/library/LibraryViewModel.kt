@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.model.Album
@@ -11,15 +12,26 @@ import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
+import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
+import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,8 +41,15 @@ data class RepairQueueItem(
     val failureReason: String? = null,
 )
 
+/** Which library list a tapped song belongs to — that list becomes the play queue. */
+enum class SongSource {
+    ALL_SONGS,
+    FAVORITES,
+}
+
 @HiltViewModel
 @Suppress("TooManyFunctions")
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class LibraryViewModel
     @Inject
     constructor(
@@ -61,8 +80,14 @@ class LibraryViewModel
         private val _metadataCandidates = MutableStateFlow<List<MetadataCandidate>>(emptyList())
         val metadataCandidates: StateFlow<List<MetadataCandidate>> = _metadataCandidates.asStateFlow()
 
-        private val _isScanning = MutableStateFlow(false)
-        val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+        /** Reflects the real WorkManager scan state, not a fixed-length spinner. */
+        val isScanning: StateFlow<Boolean> =
+            libraryRepository
+                .observeIsScanning()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+        private val _isFindingBadTracks = MutableStateFlow(false)
+        val isFindingBadTracks: StateFlow<Boolean> = _isFindingBadTracks.asStateFlow()
 
         private val _repairQueue = MutableStateFlow<List<RepairQueueItem>>(emptyList())
         val repairQueue: StateFlow<List<RepairQueueItem>> = _repairQueue.asStateFlow()
@@ -70,6 +95,7 @@ class LibraryViewModel
         private val _forceFixTags = MutableStateFlow(false)
         val forceFixTags: StateFlow<Boolean> = _forceFixTags.asStateFlow()
 
+        // Metadata-editor search (tracks + albums + artists to enqueue for repair).
         private val _searchResults = MutableStateFlow<List<Song>>(emptyList())
         val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
 
@@ -82,8 +108,45 @@ class LibraryViewModel
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
 
+        // Library search (title / artist / album), live-updating with the database.
+        private val _librarySearchQuery = MutableStateFlow("")
+        val librarySearchQuery: StateFlow<String> = _librarySearchQuery.asStateFlow()
+
+        val librarySearchResults: StateFlow<List<Song>> =
+            _librarySearchQuery
+                .debounce(SEARCH_DEBOUNCE_MS)
+                .map { it.trim() }
+                .distinctUntilChanged()
+                .flatMapLatest { query ->
+                    if (query.isEmpty()) flowOf(emptyList()) else libraryRepository.searchSongs(query)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        private val currentSongId: Flow<Long?> =
+            playbackRepository.playbackState
+                .map { it.currentSong?.id }
+                .distinctUntilChanged()
+
+        /** Favorite state of the playing song, read from Room (the source of truth). */
+        val currentSongIsFavorite: StateFlow<Boolean> =
+            currentSongId
+                .flatMapLatest { id -> id?.let { libraryRepository.observeIsFavorite(it) } ?: flowOf(false) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+        /** Lyrics embedded in the playing file's tags, if any. */
+        val currentSongLyrics: StateFlow<String?> =
+            currentSongId
+                .flatMapLatest { id -> id?.let { libraryRepository.observeEmbeddedLyrics(it) } ?: flowOf(null) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+        private val _userMessage = MutableStateFlow<String?>(null)
+        val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
         init {
             triggerScan()
+        }
+
+        fun consumeUserMessage() {
+            _userMessage.value = null
         }
 
         fun setForceFixTags(enabled: Boolean) {
@@ -96,7 +159,7 @@ class LibraryViewModel
 
         fun scanForBadTracks() {
             viewModelScope.launch {
-                _isScanning.value = true
+                _isFindingBadTracks.value = true
                 val allSongs = libraryRepository.getAllSongs().first()
                 val force = _forceFixTags.value
                 val badTracks =
@@ -116,9 +179,7 @@ class LibraryViewModel
                         }
                     }
                 _repairQueue.value = badTracks.map { RepairQueueItem(song = it, status = "PENDING") }
-                libraryRepository.triggerLibraryScan()
-                delay(SCAN_INDICATOR_DELAY_MS)
-                _isScanning.value = false
+                _isFindingBadTracks.value = false
             }
         }
 
@@ -145,6 +206,10 @@ class LibraryViewModel
                         it.name.contains(query, ignoreCase = true)
                     }
             }
+        }
+
+        fun setLibrarySearchQuery(query: String) {
+            _librarySearchQuery.value = query
         }
 
         fun enqueueSongForRepair(song: Song) {
@@ -183,12 +248,13 @@ class LibraryViewModel
             }
         }
 
-        @Suppress("MagicNumber", "NestedBlockDepth", "TooGenericExceptionCaught")
+        @Suppress("MagicNumber", "NestedBlockDepth", "TooGenericExceptionCaught", "LongMethod")
         fun startFixingQueue() {
             if (_isFixingQueue.value) return
             viewModelScope.launch {
                 _isFixingQueue.value = true
                 val queue = _repairQueue.value.toMutableList()
+                var wroteAnyTags = false
 
                 for (i in queue.indices) {
                     val item = queue[i]
@@ -198,45 +264,75 @@ class LibraryViewModel
 
                         delay(REPAIR_DELAY_MS)
 
-                        try {
-                            val searchRes =
-                                metadataRepository
-                                    .searchTrack(
-                                        item.song.title,
-                                        item.song.artist,
-                                        "ALL",
-                                    ).getOrDefault(emptyList())
-                            val best = searchRes.firstOrNull()
+                        queue[i] =
+                            try {
+                                val searchRes =
+                                    metadataRepository
+                                        .searchTrack(
+                                            item.song.title,
+                                            item.song.artist,
+                                            "ALL",
+                                        ).getOrDefault(emptyList())
+                                val best = searchRes.firstOrNull()
+                                val filePath = libraryRepository.getSongFilePath(item.song.id)
 
-                            if (best != null && best.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
-                                val req =
-                                    TagWriteRequest(
-                                        filePath = item.song.uri.removePrefix("file://"),
-                                        title = best.title,
-                                        artist = best.artist,
-                                        album = best.album,
-                                    )
-                                metadataRepository.writeTagsToFile(req)
-                                queue[i] = item.copy(status = "DONE")
-                            } else if (best != null && best.confidenceScore >= UNCERTAIN_THRESHOLD) {
-                                queue[i] = item.copy(status = "NEEDS_REVIEW")
-                            } else {
-                                queue[i] = item.copy(status = "FAILED", failureReason = "NO_MATCH")
+                                if (best != null && best.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
+                                    if (filePath == null) {
+                                        item.copy(status = "FAILED", failureReason = "FILE_NOT_FOUND")
+                                    } else {
+                                        val req =
+                                            TagWriteRequest(
+                                                filePath = filePath,
+                                                title = best.title,
+                                                artist = best.artist,
+                                                album = best.album,
+                                            )
+                                        when (val result = metadataRepository.writeTagsToFile(req)) {
+                                            is AppResult.Success -> {
+                                                wroteAnyTags = true
+                                                item.copy(status = "DONE")
+                                            }
+                                            is AppResult.Error -> item.copy(status = "FAILED", failureReason = result.error.message)
+                                        }
+                                    }
+                                } else if (best != null && best.confidenceScore >= UNCERTAIN_THRESHOLD) {
+                                    item.copy(status = "NEEDS_REVIEW")
+                                } else {
+                                    item.copy(status = "FAILED", failureReason = "NO_MATCH")
+                                }
+                            } catch (e: Exception) {
+                                item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
                             }
-                        } catch (e: Throwable) {
-                            queue[i] = item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
-                        }
 
                         _repairQueue.value = queue.toList()
                     }
                 }
+                if (wroteAnyTags) libraryRepository.triggerLibraryScan()
                 _isFixingQueue.value = false
             }
         }
 
-        fun playSong(song: Song) {
+        /**
+         * Plays [song] with the whole list it was tapped in as the queue. The list
+         * is read from Room rather than from the paging snapshot, which only holds
+         * the pages loaded so far and would misalign the start index.
+         */
+        fun playFromLibrary(
+            song: Song,
+            source: SongSource,
+        ) {
             viewModelScope.launch {
-                playbackRepository.playSong(song)
+                val songs =
+                    when (source) {
+                        SongSource.ALL_SONGS -> libraryRepository.getAllSongs().first()
+                        SongSource.FAVORITES -> libraryRepository.getFavoriteSongs().first()
+                    }
+                val index = songs.indexOfFirst { it.id == song.id }
+                if (index >= 0) {
+                    playbackRepository.playSongsFromQueue(songs, index)
+                } else {
+                    playbackRepository.playSong(song)
+                }
             }
         }
 
@@ -245,6 +341,20 @@ class LibraryViewModel
             startIndex: Int,
         ) {
             playbackRepository.playSongsFromQueue(songs, startIndex)
+        }
+
+        fun playNext(song: Song) {
+            viewModelScope.launch {
+                playbackRepository.playNext(song)
+                _userMessage.value = "\"${song.title}\" will play next"
+            }
+        }
+
+        fun addToQueue(song: Song) {
+            viewModelScope.launch {
+                playbackRepository.addToQueue(song)
+                _userMessage.value = "Added \"${song.title}\" to queue"
+            }
         }
 
         fun toggleFavorite(song: Song) {
@@ -273,14 +383,12 @@ class LibraryViewModel
 
         fun triggerScan() {
             viewModelScope.launch {
-                _isScanning.value = true
                 libraryRepository.triggerLibraryScan()
-                delay(SCAN_INDICATOR_DELAY_MS)
-                _isScanning.value = false
             }
         }
 
         fun searchMetadataForSong(song: Song) {
+            _metadataCandidates.value = emptyList()
             viewModelScope.launch {
                 val result = metadataRepository.searchTrack(song.title, song.artist, "ALL")
                 _metadataCandidates.value = result.getOrDefault(emptyList())
@@ -296,24 +404,33 @@ class LibraryViewModel
             genre: String,
         ) {
             viewModelScope.launch {
+                val filePath = libraryRepository.getSongFilePath(song.id)
+                if (filePath == null) {
+                    _userMessage.value = "Couldn't find the file for \"${song.title}\""
+                    return@launch
+                }
                 val request =
                     TagWriteRequest(
-                        filePath = song.uri.removePrefix("file://"),
+                        filePath = filePath,
                         title = title,
                         artist = artist,
                         album = album,
                         year = year,
                         genre = genre,
                     )
-                metadataRepository.writeTagsToFile(request)
-                libraryRepository.triggerLibraryScan()
+                when (val result = metadataRepository.writeTagsToFile(request)) {
+                    is AppResult.Success -> {
+                        _userMessage.value = "Tags saved"
+                        libraryRepository.triggerLibraryScan()
+                    }
+                    is AppResult.Error -> _userMessage.value = "Couldn't write tags: ${result.error.message}"
+                }
             }
         }
 
         companion object {
-            private const val SCAN_INDICATOR_DELAY_MS = 1200L
             private const val REPAIR_DELAY_MS = 600L
-            private const val HIGH_CONFIDENCE_THRESHOLD = 0.85f
-            private const val UNCERTAIN_THRESHOLD = 0.60f
+            private const val SEARCH_DEBOUNCE_MS = 250L
+            private const val STOP_TIMEOUT_MS = 5_000L
         }
     }

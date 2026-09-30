@@ -34,6 +34,20 @@ class LibraryScanWorker
                 logger.w(TAG, "Failed to set foreground info: ${e.message}", e)
             }
 
+            return try {
+                runScan()
+                Result.success()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A failed scan leaves the previous library intact (scan writes are transactional).
+                logger.e(TAG, "Library scan failed: ${e.message}", e)
+                Result.failure()
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private suspend fun runScan() {
             mediaStoreScanner.scanLibrary().collect { progress ->
                 val title =
                     if (progress.currentSongTitle != null) {
@@ -55,8 +69,6 @@ class LibraryScanWorker
             }
 
             tagEnricher.enrichUnenrichedSongs()
-
-            return Result.success()
         }
 
         private fun createForegroundInfo(

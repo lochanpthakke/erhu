@@ -7,6 +7,8 @@ import androidx.work.WorkManager
 import com.lochanpthakke.empee3.core.database.lookup.RoomSongLookup
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepositoryImpl
+import com.lochanpthakke.empee3.core.database.repository.PlaylistRepository
+import com.lochanpthakke.empee3.core.database.repository.PlaylistRepositoryImpl
 import com.lochanpthakke.empee3.core.model.SongLookup
 import dagger.Binds
 import dagger.Module
@@ -26,6 +28,10 @@ interface RepositoryModule {
     @Binds
     @Singleton
     fun bindSongLookup(impl: RoomSongLookup): SongLookup
+
+    @Binds
+    @Singleton
+    fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
 
     companion object {
         @Provides

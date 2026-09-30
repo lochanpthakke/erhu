@@ -37,6 +37,8 @@ class MetadataBatchWorker
             val forceScan = inputData.getBoolean(KEY_FORCE_SCAN, false)
             val allSongEntities = songDao.getAllSongs().first()
             val allSongs = allSongEntities.map { it.toDomainModel() }
+            // Song.uri is a content:// URI; tag I/O needs the real file path.
+            val filePathById = allSongEntities.associate { it.id to it.filePath }
 
             if (allSongs.isEmpty()) {
                 return Result.success()
@@ -68,7 +70,7 @@ class MetadataBatchWorker
                     val entityResult =
                         processSingleTrackUseCase(
                             song = song,
-                            filePath = song.uri.removePrefix("file://"),
+                            filePath = filePathById[song.id].orEmpty(),
                             forceScan = forceScan,
                         )
 
@@ -108,7 +110,7 @@ class MetadataBatchWorker
                         val retryResult =
                             processSingleTrackUseCase(
                                 song = retrySong,
-                                filePath = retrySong.uri.removePrefix("file://"),
+                                filePath = filePathById[retrySong.id].orEmpty(),
                                 forceScan = true,
                             )
                         if (retryResult.status == ProcessingStatus.SUCCESS.name) {

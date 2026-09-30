@@ -8,20 +8,27 @@ import com.lochanpthakke.empee3.core.database.entity.SongEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+@Suppress("TooManyFunctions")
 interface SongDao {
     @Upsert
     suspend fun upsertAll(songs: List<SongEntity>)
 
-    @Query("SELECT * FROM songs ORDER BY title ASC")
+    @Query("SELECT * FROM songs ORDER BY title COLLATE NOCASE ASC")
     fun getAllSongs(): Flow<List<SongEntity>>
 
-    @Query("SELECT * FROM songs ORDER BY title ASC")
+    @Query("SELECT * FROM songs")
+    suspend fun getAllSongsOnce(): List<SongEntity>
+
+    @Query("SELECT id FROM songs")
+    suspend fun getAllSongIds(): List<Long>
+
+    @Query("SELECT * FROM songs ORDER BY title COLLATE NOCASE ASC")
     fun getSongsPaged(): PagingSource<Int, SongEntity>
 
-    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title ASC")
+    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
     fun getFavoriteSongsPaged(): PagingSource<Int, SongEntity>
 
-    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title ASC")
+    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
     fun getFavoriteSongs(): Flow<List<SongEntity>>
 
     @Query("UPDATE songs SET is_favorite = :isFavorite WHERE id = :id")
@@ -33,22 +40,25 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE id = :id LIMIT 1")
     suspend fun getSongById(id: Long): SongEntity?
 
+    @Query("SELECT * FROM songs WHERE id = :id LIMIT 1")
+    fun observeSongById(id: Long): Flow<SongEntity?>
+
     @Query("SELECT * FROM songs WHERE id IN (:ids)")
     suspend fun getSongsByIds(ids: List<Long>): List<SongEntity>
 
-    @Query("SELECT * FROM songs WHERE album_id = :albumId ORDER BY track_number ASC, title ASC")
+    @Query("SELECT * FROM songs WHERE album_id = :albumId ORDER BY disc_number ASC, track_number ASC, title COLLATE NOCASE ASC")
     fun getSongsByAlbumId(albumId: Long): Flow<List<SongEntity>>
 
-    @Query("SELECT * FROM songs WHERE artist_id = :artistId ORDER BY title ASC")
+    @Query("SELECT * FROM songs WHERE artist_id = :artistId ORDER BY title COLLATE NOCASE ASC")
     fun getSongsByArtistId(artistId: Long): Flow<List<SongEntity>>
 
     @Query(
         """
-        SELECT * FROM songs 
-        WHERE title LIKE '%' || :query || '%' 
-           OR artist LIKE '%' || :query || '%' 
-           OR album LIKE '%' || :query || '%' 
-        ORDER BY title ASC
+        SELECT * FROM songs
+        WHERE title LIKE '%' || :query || '%'
+           OR artist LIKE '%' || :query || '%'
+           OR album LIKE '%' || :query || '%'
+        ORDER BY title COLLATE NOCASE ASC
         """,
     )
     fun searchSongs(query: String): Flow<List<SongEntity>>
@@ -59,8 +69,8 @@ interface SongDao {
     @Suppress("LongParameterList")
     @Query(
         """
-        UPDATE songs 
-        SET lyrics = :lyrics, disc_number = :discNumber, composer = :composer, genre = :genre, is_enriched = 1 
+        UPDATE songs
+        SET lyrics = :lyrics, disc_number = :discNumber, composer = :composer, genre = :genre, is_enriched = 1
         WHERE id = :id
         """,
     )
@@ -72,8 +82,9 @@ interface SongDao {
         genre: String?,
     ): Int
 
-    @Query("DELETE FROM songs WHERE id NOT IN (:validIds)")
-    suspend fun deleteSongsNotIn(validIds: List<Long>): Int
+    /** Callers must chunk [ids]: SQLite limits bound variables (999 before API 30). */
+    @Query("DELETE FROM songs WHERE id IN (:ids)")
+    suspend fun deleteSongsByIds(ids: List<Long>): Int
 
     @Query("DELETE FROM songs")
     suspend fun deleteAll(): Int

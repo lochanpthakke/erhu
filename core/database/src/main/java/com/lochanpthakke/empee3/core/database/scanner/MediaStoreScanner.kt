@@ -1,10 +1,18 @@
 package com.lochanpthakke.empee3.core.database.scanner
 
+import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
+import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
+import androidx.room.withTransaction
+import com.lochanpthakke.empee3.core.common.logging.Logger
+import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
@@ -26,13 +34,23 @@ class MediaStoreScanner
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
+        private val database: EmPee3Database,
         private val songDao: SongDao,
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
+        private val logger: Logger,
     ) {
         @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength")
         fun scanLibrary(): Flow<ScanProgress> =
             flow {
+                // Without read access MediaStore returns an empty result, which would
+                // look like "every song was deleted" and wipe the library (and favorites).
+                if (!hasAudioPermission()) {
+                    logger.w(TAG, "Audio permission not granted — skipping scan, library left untouched")
+                    emit(ScanProgress(isComplete = true))
+                    return@flow
+                }
+
                 triggerMediaScannerForStorage()
                 delay(SCAN_INDEXING_DELAY_MS)
 
@@ -51,7 +69,7 @@ class MediaStoreScanner
                         MediaStore.Audio.Media.DATE_MODIFIED,
                     )
 
-                val selection = "${MediaStore.Audio.Media.DURATION} >= 1000"
+                val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 1000"
                 val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
                 val songs = mutableListOf<SongEntity>()
@@ -67,10 +85,17 @@ class MediaStoreScanner
                         sortOrder,
                     )
 
-                val totalCount = cursor?.count ?: 0
+                if (cursor == null) {
+                    // Query failure is not the same as "no music": keep the existing library.
+                    logger.w(TAG, "MediaStore query returned null — library left untouched")
+                    emit(ScanProgress(isComplete = true))
+                    return@flow
+                }
+
+                val totalCount = cursor.count
                 emit(ScanProgress(scannedCount = 0, totalCount = totalCount, isComplete = false))
 
-                cursor?.use { c ->
+                cursor.use { c ->
                     val idColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                     val titleColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                     val artistColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
@@ -87,14 +112,18 @@ class MediaStoreScanner
 
                     while (c.moveToNext()) {
                         val id = c.getLong(idColumn)
-                        val title = c.getString(titleColumn) ?: "Unknown Title"
-                        val artist = c.getString(artistColumn) ?: "Unknown Artist"
-                        val album = c.getString(albumColumn) ?: "Unknown Album"
+                        val title = c.getString(titleColumn)?.takeIf { it.isNotBlank() } ?: "Unknown Title"
+                        val artist =
+                            c
+                                .getString(artistColumn)
+                                ?.takeIf { it.isNotBlank() && it != MediaStore.UNKNOWN_STRING } ?: "Unknown Artist"
+                        val album = c.getString(albumColumn)?.takeIf { it.isNotBlank() } ?: "Unknown Album"
                         val artistId = c.getLong(artistIdColumn)
                         val albumId = c.getLong(albumIdColumn)
                         val durationMs = c.getLong(durationColumn)
                         val filePath = c.getString(dataColumn) ?: ""
-                        val trackNumber = c.getInt(trackColumn)
+                        // MediaStore encodes disc as the thousands digit (e.g. 2005 = disc 2, track 5).
+                        val trackNumber = c.getInt(trackColumn) % 1000
                         val year = c.getInt(yearColumn)
                         val dateModified = c.getLong(dateModifiedColumn)
 
@@ -105,12 +134,7 @@ class MediaStoreScanner
                                     id,
                                 ).toString()
 
-                        val artworkUri =
-                            ContentUris
-                                .withAppendedId(
-                                    android.net.Uri.parse("content://media/external/audio/albumart"),
-                                    albumId,
-                                ).toString()
+                        val artworkUri = ContentUris.withAppendedId(ALBUM_ART_BASE_URI, albumId).toString()
 
                         val song =
                             SongEntity(
@@ -190,19 +214,34 @@ class MediaStoreScanner
                         )
                     }
 
-                if (songs.isNotEmpty()) {
-                    songDao.upsertAll(songs)
-                    albumDao.upsertAll(albumEntities)
-                    artistDao.upsertAll(artistEntities)
-
-                    songDao.deleteSongsNotIn(songs.map { it.id })
-                    albumDao.deleteAlbumsNotIn(albumEntities.map { it.id })
-                    artistDao.deleteArtistsNotIn(artistEntities.map { it.id })
+                // One transaction: observers never see a half-applied scan, and an
+                // interrupted scan leaves the previous library intact.
+                database.withTransaction {
+                    val plan = planLibrarySync(scanned = songs, existing = songDao.getAllSongsOnce())
+                    plan.deletedIds.chunked(SQLITE_MAX_VARIABLES).forEach { songDao.deleteSongsByIds(it) }
+                    plan.upserts.chunked(SQLITE_MAX_VARIABLES).forEach { songDao.upsertAll(it) }
+                    // Albums and artists are derived entirely from songs; rebuild them.
+                    albumDao.deleteAll()
+                    artistDao.deleteAll()
+                    albumEntities.chunked(SQLITE_MAX_VARIABLES).forEach { albumDao.upsertAll(it) }
+                    artistEntities.chunked(SQLITE_MAX_VARIABLES).forEach { artistDao.upsertAll(it) }
+                    logger.i(TAG, "Scan applied: ${plan.upserts.size} songs, ${plan.deletedIds.size} removed")
                 }
 
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
 
+        private fun hasAudioPermission(): Boolean {
+            val permission =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Manifest.permission.READ_MEDIA_AUDIO
+                } else {
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                }
+            return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+
+        @Suppress("TooGenericExceptionCaught")
         private fun triggerMediaScannerForStorage() {
             try {
                 val pathsToScan = mutableListOf<String>()
@@ -231,8 +270,8 @@ class MediaStoreScanner
                         null,
                     )
                 }
-            } catch (_: Exception) {
-                // Ignore fallback scan errors
+            } catch (e: Exception) {
+                logger.d(TAG, "Fallback media scan skipped: ${e.message}", e)
             }
         }
 
@@ -266,7 +305,13 @@ class MediaStoreScanner
         )
 
         companion object {
+            private const val TAG = "MediaStoreScanner"
             private const val EMISSION_BATCH_SIZE = 50
             private const val SCAN_INDEXING_DELAY_MS = 800L
+
+            /** Stay well below SQLite's 999 bound-variable limit on API < 30. */
+            private const val SQLITE_MAX_VARIABLES = 500
+
+            private val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
         }
     }

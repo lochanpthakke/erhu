@@ -2,8 +2,8 @@
 
 package com.lochanpthakke.empee3.core.playback.service
 
-import android.content.IntentFilter
-import android.media.AudioManager
+import android.app.PendingIntent
+import android.content.Intent
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -21,7 +21,6 @@ import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.playback.PlaybackController
 import com.lochanpthakke.empee3.core.playback.browse.BrowseTree
 import com.lochanpthakke.empee3.core.playback.browse.MediaId
-import com.lochanpthakke.empee3.core.playback.receiver.NoisyAudioReceiver
 import com.lochanpthakke.empee3.core.playback.toMediaItem
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -31,12 +30,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Hosts the MediaLibrarySession around the app-wide ExoPlayer. Media3 turns
+ * this into a foreground service with a media notification while playing,
+ * which is what keeps playback alive in the background / on the lock screen.
+ * The app binds to it through [PlaybackServiceConnector].
+ */
 @AndroidEntryPoint
 @UnstableApi
 class MusicPlaybackService : MediaLibraryService() {
     @Inject
     lateinit var player: Player
 
+    // Injected so the controller (and its player listeners / state restore)
+    // exists even when the service is started by an external controller.
     @Inject
     lateinit var playbackController: PlaybackController
 
@@ -50,33 +57,32 @@ class MusicPlaybackService : MediaLibraryService() {
     lateinit var logger: Logger
 
     private var mediaLibrarySession: MediaLibrarySession? = null
-    private var noisyAudioReceiver: NoisyAudioReceiver? = null
     private lateinit var serviceScope: CoroutineScope
 
     override fun onCreate() {
         super.onCreate()
         serviceScope = CoroutineScope(SupervisorJob() + dispatchers.main)
 
-        mediaLibrarySession =
-            MediaLibrarySession
-                .Builder(this, player, LibrarySessionCallback())
-                .build()
-
-        noisyAudioReceiver = NoisyAudioReceiver(playbackController, logger)
-        registerReceiver(
-            noisyAudioReceiver,
-            IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
-        )
+        val builder = MediaLibrarySession.Builder(this, player, LibrarySessionCallback())
+        packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            builder.setSessionActivity(
+                PendingIntent.getActivity(
+                    this,
+                    0,
+                    launchIntent,
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                ),
+            )
+        }
+        mediaLibrarySession = builder.build()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
 
     override fun onDestroy() {
-        noisyAudioReceiver?.let {
-            unregisterReceiver(it)
-            noisyAudioReceiver = null
-        }
-
+        // The player is an app-wide singleton shared with PlaybackController, so
+        // only the session is released here — never the player itself.
         mediaLibrarySession?.run {
             release()
             mediaLibrarySession = null
@@ -92,7 +98,7 @@ class MusicPlaybackService : MediaLibraryService() {
             try {
                 future.set(block())
             } catch (e: Exception) {
-                // Suppress logging spam and complete future with error
+                logger.w("MusicPlaybackService", "Library browse request failed: ${e.message}", e)
                 future.setException(e)
             }
         }
@@ -153,6 +159,28 @@ class MusicPlaybackService : MediaLibraryService() {
                     }
                 }
                 LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+            }
+
+        /**
+         * Browse results handed to external controllers (Android Auto, etc.) carry
+         * no URI; resolve them against the library before they reach the player.
+         */
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: MutableList<MediaItem>,
+        ): ListenableFuture<MutableList<MediaItem>> =
+            runAsync {
+                mediaItems
+                    .mapNotNull { item ->
+                        if (item.localConfiguration != null) {
+                            item
+                        } else {
+                            item.mediaId.toLongOrNull()?.let { id ->
+                                libraryRepository.getSongById(id).first()?.toMediaItem()
+                            }
+                        }
+                    }.toMutableList()
             }
 
         override fun onSearch(
