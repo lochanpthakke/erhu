@@ -23,6 +23,9 @@ object Equalizer
 object MetadataEditor
 
 @Serializable
+object ArtworkManager
+
+@Serializable
 data class Settings(
     val category: String? = null,
 )

@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -46,11 +47,17 @@ data class RepairQueueItem(
     val failureReason: String? = null,
 )
 
-/** Which library list a tapped song belongs to — that list becomes the play queue. */
+/** Which library list a tapped song belongs to â€” that list becomes the play queue. */
 enum class SongSource {
     ALL_SONGS,
     FAVORITES,
 }
+
+data class ArtworkQueueItem(
+    val album: Album,
+    val status: String = "PENDING", // PENDING, SEARCHING, ARTWORK_FOUND, WRITING, COMPLETED, FAILED
+    val failureReason: String? = null,
+)
 
 @HiltViewModel
 @Suppress("TooManyFunctions")
@@ -85,10 +92,13 @@ class LibraryViewModel
         private val _metadataCandidates = MutableStateFlow<List<MetadataCandidate>>(emptyList())
         val metadataCandidates: StateFlow<List<MetadataCandidate>> = _metadataCandidates.asStateFlow()
 
-        /** Reflects the real WorkManager scan state, not a fixed-length spinner. */
+        private val _isScanningLocal = MutableStateFlow(false)
+
+        /** Reflects the real WorkManager scan state, combined with local scan indicators. */
         val isScanning: StateFlow<Boolean> =
             libraryRepository
                 .observeIsScanning()
+                .combine(_isScanningLocal) { libScan, localScan -> libScan || localScan }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
         private val _isFindingBadTracks = MutableStateFlow(false)
@@ -152,6 +162,21 @@ class LibraryViewModel
         private val _userMessage = MutableStateFlow<String?>(null)
         val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
+        private val _artworkQueue = MutableStateFlow<List<ArtworkQueueItem>>(emptyList())
+        val artworkQueue: StateFlow<List<ArtworkQueueItem>> = _artworkQueue.asStateFlow()
+
+        private val _artworkCandidates = MutableStateFlow<List<String>>(emptyList())
+        val artworkCandidates: StateFlow<List<String>> = _artworkCandidates.asStateFlow()
+
+        private val _selectedEnlargedArtworkUrl = MutableStateFlow<String?>(null)
+        val selectedEnlargedArtworkUrl: StateFlow<String?> = _selectedEnlargedArtworkUrl.asStateFlow()
+
+        private val _currentProcessingAlbum = MutableStateFlow<Album?>(null)
+        val currentProcessingAlbum: StateFlow<Album?> = _currentProcessingAlbum.asStateFlow()
+
+        private val _isSearchingArtwork = MutableStateFlow(false)
+        val isSearchingArtwork: StateFlow<Boolean> = _isSearchingArtwork.asStateFlow()
+
         init {
             triggerScan()
         }
@@ -166,6 +191,104 @@ class LibraryViewModel
 
         fun clearRepairQueue() {
             _repairQueue.value = emptyList()
+        }
+
+        fun enqueueAlbumForArtwork(album: Album) {
+            val currentQueue = _artworkQueue.value.toMutableList()
+            if (currentQueue.none { it.album.id == album.id }) {
+                currentQueue.add(ArtworkQueueItem(album = album, status = "PENDING"))
+                _artworkQueue.value = currentQueue
+            }
+        }
+
+        fun removeFromArtworkQueue(album: Album) {
+            val currentQueue = _artworkQueue.value.toMutableList()
+            currentQueue.removeAll { it.album.id == album.id }
+            _artworkQueue.value = currentQueue
+        }
+
+        fun clearArtworkQueue() {
+            _artworkQueue.value = emptyList()
+        }
+
+        fun scanForMissingCovers() {
+            viewModelScope.launch {
+                _isScanningLocal.value = true
+                val allAlbums = libraryRepository.getAllAlbums().first()
+                val missingCoverAlbums =
+                    allAlbums.filter { album ->
+                        album.artworkUri.isNullOrBlank()
+                    }
+                _artworkQueue.value = missingCoverAlbums.map { ArtworkQueueItem(album = it, status = "PENDING") }
+                delay(SCAN_INDICATOR_DELAY_MS)
+                _isScanningLocal.value = false
+            }
+        }
+
+        fun selectEnlargedArtwork(url: String?) {
+            _selectedEnlargedArtworkUrl.value = url
+        }
+
+        fun searchArtworkForAlbum(album: Album) {
+            viewModelScope.launch {
+                _isSearchingArtwork.value = true
+                _currentProcessingAlbum.value = album
+                val result = metadataRepository.fetchAlbumArtCandidates(album.title, album.artist, "ALL")
+                val artUrls = result.getOrDefault(emptyList())
+                _artworkCandidates.value = artUrls
+                _isSearchingArtwork.value = false
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught", "detekt:UnusedParameter")
+        fun applyArtworkToAlbum(
+            album: Album,
+            artworkUrl: String,
+        ) {
+            viewModelScope.launch {
+                _isSearchingArtwork.value = true
+                val queue = _artworkQueue.value.toMutableList()
+                val queueIndex = queue.indexOfFirst { it.album.id == album.id }
+                if (queueIndex != -1) {
+                    queue[queueIndex] = queue[queueIndex].copy(status = "WRITING")
+                    _artworkQueue.value = queue.toList()
+                }
+
+                try {
+                    val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
+                    for (song in albumSongs) {
+                        val req =
+                            TagWriteRequest(
+                                contentUri = song.uri,
+                                filePath = song.uri.removePrefix("file://"),
+                                title = song.title,
+                                artist = song.artist,
+                                album = song.album,
+                            )
+                        metadataRepository.writeTagsToFile(req)
+                    }
+
+                    if (queueIndex != -1) {
+                        queue[queueIndex] = queue[queueIndex].copy(status = "COMPLETED")
+                        _artworkQueue.value = queue.toList()
+                    }
+                    libraryRepository.triggerLibraryScan()
+                } catch (e: Throwable) {
+                    if (queueIndex != -1) {
+                        queue[queueIndex] =
+                            queue[queueIndex].copy(
+                                status = "FAILED",
+                                failureReason = e.message ?: "WRITE_ERROR",
+                            )
+                        _artworkQueue.value = queue.toList()
+                    }
+                } finally {
+                    _selectedEnlargedArtworkUrl.value = null
+                    _artworkCandidates.value = emptyList()
+                    _currentProcessingAlbum.value = null
+                    _isSearchingArtwork.value = false
+                }
+            }
         }
 
         fun scanForBadTracks() {
@@ -534,6 +657,7 @@ class LibraryViewModel
         )
 
         companion object {
+            private const val SCAN_INDICATOR_DELAY_MS = 1000L
             private const val REPAIR_DELAY_MS = 600L
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val STOP_TIMEOUT_MS = 5_000L

@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.network.repository
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
+import com.lochanpthakke.empee3.core.common.result.getOrDefault
 import com.lochanpthakke.empee3.core.model.LyricsResult
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataProvider
@@ -104,24 +105,23 @@ class MetadataRepositoryImpl
         ): AppResult<String?> =
             appResultOf {
                 withContext(Dispatchers.IO) {
-                    val selectedProviders =
-                        if (sourceProvider == "ALL") {
-                            providers
-                        } else {
-                            providers.filter { it.providerName.equals(sourceProvider, ignoreCase = true) }
-                        }
+                    val candidates = fetchAlbumArtCandidates(albumTitle, artist, sourceProvider).getOrDefault(emptyList())
+                    candidates.firstOrNull()
+                }
+            }
 
-                    for (provider in selectedProviders) {
-                        try {
-                            val artUrl = provider.fetchAlbumArt(albumTitle, artist)
-                            if (!artUrl.isNullOrBlank()) {
-                                return@withContext artUrl
-                            }
-                        } catch (e: Exception) {
-                            logger.d(TAG, "Album art fetch failed for ${provider.providerName}: ${e.message}")
-                        }
-                    }
-                    null
+        override suspend fun fetchAlbumArtCandidates(
+            albumTitle: String,
+            artist: String?,
+            sourceProvider: String,
+        ): AppResult<List<String>> =
+            appResultOf {
+                withContext(Dispatchers.IO) {
+                    val deezerList = deezerProvider.fetchAlbumArtList(albumTitle, artist)
+                    val trackCandidates = searchTrack(albumTitle, artist, sourceProvider).getOrDefault(emptyList())
+                    val candidateUrls = trackCandidates.mapNotNull { it.coverArtUrl }.filter { it.isNotBlank() }
+
+                    (deezerList + candidateUrls).distinct()
                 }
             }
 

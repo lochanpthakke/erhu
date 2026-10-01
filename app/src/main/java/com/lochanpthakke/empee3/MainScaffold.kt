@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -65,6 +66,7 @@ import androidx.navigation.toRoute
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
+import com.lochanpthakke.empee3.feature.library.ArtworkManagerScreen
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
 import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
@@ -78,6 +80,7 @@ import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
+import com.lochanpthakke.empee3.navigation.ArtworkManager
 import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
 import com.lochanpthakke.empee3.navigation.MetadataEditor
@@ -88,7 +91,6 @@ import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.ui.components.MiniPlayer
 import com.lochanpthakke.empee3.ui.components.WriteAccessRequestEffect
 import kotlinx.coroutines.launch
-import android.provider.Settings as AndroidSettings
 
 private class DrawerDestination(
     val label: String,
@@ -207,9 +209,11 @@ fun MainScaffold() {
                             onOpenDrawer = openDrawer,
                         )
                     }
+
                     composable<NowPlaying> {
                         val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
                         val lyrics by libraryViewModel.currentSongLyrics.collectAsState()
+
                         NowPlayingScreen(
                             playbackRepository = playbackRepository,
                             isFavorite = isFavorite,
@@ -219,6 +223,7 @@ fun MainScaffold() {
                             onAddToPlaylist = { songForPlaylist = it },
                         )
                     }
+
                     composable<Playlists> {
                         PlaylistsScreen(
                             viewModel = playlistsViewModel,
@@ -226,9 +231,11 @@ fun MainScaffold() {
                             onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
                         )
                     }
+
                     composable<PlaylistDetail> { entry ->
                         val route = entry.toRoute<PlaylistDetail>()
                         val playbackState by playbackRepository.playbackState.collectAsState()
+
                         PlaylistDetailScreen(
                             playlistId = route.playlistId,
                             viewModel = playlistsViewModel,
@@ -236,9 +243,11 @@ fun MainScaffold() {
                             onBackClick = { navController.popBackStack() },
                         )
                     }
+
                     composable<Equalizer> {
                         SoundSettingsScreen(viewModel = soundViewModel)
                     }
+
                     composable<MetadataEditor> {
                         MetadataEditorScreen(
                             viewModel = libraryViewModel,
@@ -251,8 +260,23 @@ fun MainScaffold() {
                             },
                         )
                     }
+
+                    composable<ArtworkManager> {
+                        ArtworkManagerScreen(
+                            viewModel = libraryViewModel,
+                            onOpenDrawer = openDrawer,
+                            onNavigateToMetadataSettings = {
+                                navController.navigate(Settings(category = "metadata"))
+                            },
+                            onNavigateToLibrary = {
+                                navController.navigate(Library)
+                            },
+                        )
+                    }
+
                     composable<Settings> { entry ->
                         val route = entry.toRoute<Settings>()
+
                         SettingsScreen(
                             onOpenDrawer = openDrawer,
                             onNavigateToMetadataEditor = {
@@ -317,10 +341,20 @@ private fun LibraryRoute(
     val context = LocalContext.current
     val permission = audioPermission()
 
-    fun isGranted() = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    fun isGranted() =
+        ContextCompat.checkSelfPermission(
+            context,
+            permission,
+        ) == PackageManager.PERMISSION_GRANTED
 
     var permissionState by rememberSaveable {
-        mutableStateOf(if (isGranted()) PermissionUiState.GRANTED else PermissionUiState.NOT_REQUESTED)
+        mutableStateOf(
+            if (isGranted()) {
+                PermissionUiState.GRANTED
+            } else {
+                PermissionUiState.NOT_REQUESTED
+            },
+        )
     }
 
     val launcher =
@@ -330,27 +364,40 @@ private fun LibraryRoute(
             permissionState =
                 when {
                     isGranted -> PermissionUiState.GRANTED
-                    context.findActivity()?.let { ActivityCompat.shouldShowRequestPermissionRationale(it, permission) } == true ->
-                        PermissionUiState.DENIED
+
+                    context.findActivity()?.let {
+                        ActivityCompat.shouldShowRequestPermissionRationale(
+                            it,
+                            permission,
+                        )
+                    } == true -> PermissionUiState.DENIED
+
                     // Android no longer shows the dialog: the user must go to system settings.
                     else -> PermissionUiState.PERMANENTLY_DENIED
                 }
-            if (isGranted) libraryViewModel.triggerScan()
+
+            if (isGranted) {
+                libraryViewModel.triggerScan()
+            }
         }
 
     LaunchedEffect(Unit) {
-        if (permissionState == PermissionUiState.NOT_REQUESTED) launcher.launch(permission)
+        if (permissionState == PermissionUiState.NOT_REQUESTED) {
+            launcher.launch(permission)
+        }
     }
 
     // Pick up a grant (or revoke) made in system settings while the app was in the background.
     LifecycleResumeEffect(Unit) {
         val granted = isGranted()
+
         if (granted && permissionState != PermissionUiState.GRANTED) {
             permissionState = PermissionUiState.GRANTED
             libraryViewModel.triggerScan()
         } else if (!granted && permissionState == PermissionUiState.GRANTED) {
             permissionState = PermissionUiState.DENIED
         }
+
         onPauseOrDispose {}
     }
 
@@ -366,8 +413,10 @@ private fun LibraryRoute(
             onRequestPermission = { launcher.launch(permission) },
             onOpenSettings = {
                 context.startActivity(
-                    Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    Intent(
+                        AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             },
         )
@@ -393,7 +442,9 @@ private fun PermissionRequestView(
                 text = "Music access needed",
                 style = MaterialTheme.typography.titleMedium,
             )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text =
                     if (permanentlyDenied) {
@@ -404,11 +455,17 @@ private fun PermissionRequestView(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
+
             Spacer(modifier = Modifier.height(16.dp))
+
             if (permanentlyDenied) {
-                Button(onClick = onOpenSettings) { Text("Open settings") }
+                Button(onClick = onOpenSettings) {
+                    Text("Open settings")
+                }
             } else {
-                Button(onClick = onRequestPermission) { Text("Grant permission") }
+                Button(onClick = onRequestPermission) {
+                    Text("Grant permission")
+                }
             }
         }
     }

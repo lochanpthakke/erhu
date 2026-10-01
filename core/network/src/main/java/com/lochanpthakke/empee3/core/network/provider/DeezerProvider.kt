@@ -51,21 +51,42 @@ class DeezerProvider
             albumTitle: String,
             artist: String?,
         ): String? {
-            val query =
-                if (!artist.isNullOrBlank()) {
+            val urls = fetchAlbumArtList(albumTitle, artist)
+            return urls.firstOrNull()
+        }
+
+        suspend fun fetchAlbumArtList(
+            albumTitle: String,
+            artist: String?,
+        ): List<String> {
+            val strictQuery =
+                if (!artist.isNullOrBlank() && artist != "Unknown Artist") {
                     "artist:\"$artist\" album:\"$albumTitle\""
                 } else {
-                    "album:\"$albumTitle\""
+                    albumTitle
                 }
 
-            return try {
-                val response = deezerApi.searchTrack(query)
-                val firstMatch = response.data.firstOrNull { it.album != null }
-                firstMatch?.album?.coverXl ?: firstMatch?.album?.coverBig ?: firstMatch?.album?.coverMedium
+            val urls = mutableListOf<String>()
+
+            try {
+                val response = deezerApi.searchTrack(strictQuery)
+                val coverUrls = response.data.mapNotNull { it.album?.coverXl ?: it.album?.coverBig ?: it.album?.coverMedium }
+                urls.addAll(coverUrls)
             } catch (e: Exception) {
                 logger.w(TAG, "Deezer album art fetch failed: ${e.message}", e)
-                null
             }
+
+            if (urls.isEmpty() && albumTitle.isNotBlank()) {
+                try {
+                    val fallbackResponse = deezerApi.searchTrack(albumTitle)
+                    val fallbackUrls = fallbackResponse.data.mapNotNull { it.album?.coverXl ?: it.album?.coverBig ?: it.album?.coverMedium }
+                    urls.addAll(fallbackUrls)
+                } catch (e: Exception) {
+                    logger.w(TAG, "Deezer fallback album art fetch failed: ${e.message}", e)
+                }
+            }
+
+            return urls.distinct()
         }
 
         companion object {

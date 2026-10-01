@@ -34,6 +34,12 @@ interface MetadataRepository {
         sourceProvider: String = "ALL",
     ): AppResult<String?>
 
+    suspend fun fetchAlbumArtCandidates(
+        albumTitle: String,
+        artist: String?,
+        sourceProvider: String = "ALL",
+    ): AppResult<List<String>>
+
     suspend fun fetchLyrics(
         title: String,
         artist: String,
