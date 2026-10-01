@@ -185,70 +185,6 @@ object BuiltInThemes {
                 ),
         )
 
-    /**
-     * Glassmorphism: deep indigo/teal gradient background with translucent,
-     * softly bordered panels. Uses [GlassTokens]; see Glass.kt for rendering.
-     */
-    val GLASSMORPHISM =
-        ThemeManifest(
-            id = "glassmorphism",
-            name = "Glassmorphism",
-            author = "empee3",
-            isDark = true,
-            colors =
-                EmPee3Colors(
-                    primary = 0xFFA99BFFL,
-                    onPrimary = 0xFF15103AL,
-                    primaryContainer = 0x597C5CFFL,
-                    onPrimaryContainer = 0xFFEDE9FFL,
-                    secondary = 0xFF6EE7D8L,
-                    onSecondary = 0xFF03302BL,
-                    background = 0xFF0B1026L,
-                    onBackground = 0xFFF3F4FFL,
-                    // Bars and full-screen overlays: frosted but readable.
-                    surface = 0xE0121835L,
-                    onSurface = 0xFFF3F4FFL,
-                    // Cards drawn with surfaceVariant become translucent glass.
-                    surfaceVariant = 0x1FFFFFFFL,
-                    onSurfaceVariant = 0xFFC6CAE8L,
-                    outline = 0x40FFFFFFL,
-                    bevelLight = 0x33FFFFFFL,
-                    bevelDark = 0x33000000L,
-                    lcdBackground = 0xFF0B1026L,
-                    lcdText = 0xFFA99BFFL,
-                    lcdGlow = 0x667C5CFFL,
-                    cardBackground = 0x1FFFFFFFL,
-                    glassScrim = 0x99070A1AL,
-                ),
-            shapes =
-                EmPee3Shapes(
-                    cardCornerRadiusDp = 24,
-                    buttonCornerRadiusDp = 28,
-                    sheetCornerRadiusDp = 32,
-                    miniPlayerCornerRadiusDp = 24,
-                    borderWidthDp = 1,
-                    isRetroBevelEnabled = false,
-                ),
-            widgetConfig =
-                WidgetSkinConfig(
-                    layoutPreset = WidgetLayoutPreset.BOTTOM_CONTROLS_CENTER,
-                ),
-            glass =
-                GlassTokens(
-                    backgroundGradient = listOf(0xFF0B1026L, 0xFF1A1547L, 0xFF0C2A3BL),
-                    glowPrimary = 0x4D7C5CFFL,
-                    glowSecondary = 0x3322D3EEL,
-                    panelFill = 0x1AFFFFFFL,
-                    panelFillStrong = 0xB3161C3DL,
-                    borderHighlight = 0x59FFFFFFL,
-                    borderShadow = 0x12FFFFFFL,
-                    borderWidthDp = 1,
-                    panelElevationDp = 6,
-                    artworkBlurRadiusDp = 40,
-                    artworkScrim = 0xA6070A1AL,
-                ),
-        )
-
     val RETRO_VST_SKIN =
         SkinManifest(
             id = "retro_vst_skin",
@@ -276,17 +212,36 @@ object BuiltInThemes {
                 ),
         )
 
-    val ALL_BUILT_IN_THEMES = listOf(DEFAULT_LIGHT, DEFAULT_DARK, FROSTED_GLASS, GLASSMORPHISM, CYBERPUNK_TECH)
+    val ALL_BUILT_IN_THEMES = listOf(DEFAULT_LIGHT, DEFAULT_DARK, FROSTED_GLASS, CYBERPUNK_TECH)
     val ALL_BUILT_IN_SKINS = listOf(RETRO_VST_SKIN)
 
     /** Theme used when a stored id is blank or unknown (the app's long-standing default). */
     val FALLBACK_THEME: ThemeManifest get() = CYBERPUNK_TECH
 
     /**
+     * App theme selection that follows the device's light/dark setting. It is not
+     * a palette of its own: it shows [DEFAULT_LIGHT] or [DEFAULT_DARK], chosen at
+     * runtime with [forSystemAppearance].
+     */
+    const val SYSTEM_DEFAULT_ID = "system_default"
+
+    /**
+     * Id of the removed Glassmorphism theme. Glass is now a separate Glass Effect
+     * setting; stored selections of this id are migrated to [SYSTEM_DEFAULT_ID].
+     */
+    const val LEGACY_GLASSMORPHISM_ID = "glassmorphism"
+
+    /** The theme System Default shows for the device's current appearance. */
+    fun forSystemAppearance(isSystemDark: Boolean): ThemeManifest = if (isSystemDark) DEFAULT_DARK else DEFAULT_LIGHT
+
+    /**
      * Resolves a persisted theme/skin id: a built-in theme, or a built-in skin
      * (rendered on top of the fallback theme), or the fallback theme.
+     * System Default (and the legacy Glassmorphism id) resolve to Default Dark here.
      */
     fun resolve(id: String): ResolvedTheme {
+        // Without a UI context (widget, rollback) the device appearance is unknown: use Dark.
+        if (id == SYSTEM_DEFAULT_ID || id == LEGACY_GLASSMORPHISM_ID) return ResolvedTheme(DEFAULT_DARK, null)
         ALL_BUILT_IN_THEMES.find { it.id == id }?.let { return ResolvedTheme(it, null) }
         ALL_BUILT_IN_SKINS.find { it.id == id }?.let { return ResolvedTheme(FALLBACK_THEME, it) }
         return ResolvedTheme(FALLBACK_THEME, null)

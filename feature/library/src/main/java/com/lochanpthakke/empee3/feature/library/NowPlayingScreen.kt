@@ -77,7 +77,10 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
+import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
+import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
@@ -117,9 +120,19 @@ fun NowPlayingScreen(
 
     // The backdrop sits behind the whole scaffold, so it also fills the area
     // behind the status and gesture bars.
+    // The artwork backdrop is what the glass controls frost.
+    val artworkBackdrop = rememberGlassBackdrop()
     Box(modifier = modifier.fillMaxSize()) {
-        GlassArtworkBackdrop(song = song)
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .glassBackdropSource(artworkBackdrop),
+        ) {
+            GlassArtworkBackdrop(song = song)
+        }
         AppScaffold(
+            contentBackdrop = artworkBackdrop,
             topBar = {
                 AppTopBar(
                     navigation = TopBarNavigation.Detail(onBackClick),
@@ -162,7 +175,7 @@ fun NowPlayingScreen(
                                         .widthIn(max = ArtworkSize.heroMax)
                                         .fillMaxWidth()
                                         .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                                        .glassPanel(Radius.largeShape)
+                                        .glassPanel(Radius.largeShape, backdrop = null)
                                         .clip(Radius.largeShape),
                             )
                         }
@@ -206,7 +219,7 @@ fun NowPlayingScreen(
                                     .then(
                                         if (glass) {
                                             Modifier
-                                                .glassPanel(MaterialTheme.shapes.large)
+                                                .glassPanel(MaterialTheme.shapes.large, level = GlassLevel.Strong)
                                                 .padding(vertical = Spacing.sm)
                                         } else {
                                             Modifier

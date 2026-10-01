@@ -33,6 +33,12 @@ class ThemeRepositoryImpl
         private val _appThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.CYBERPUNK_TECH)
         override val appThemeState: StateFlow<ThemeManifest> = _appThemeState.asStateFlow()
 
+        private val _appThemeId = MutableStateFlow(BuiltInThemes.CYBERPUNK_TECH.id)
+        override val appThemeId: StateFlow<String> = _appThemeId.asStateFlow()
+
+        private val _glassEffectEnabled = MutableStateFlow(false)
+        override val glassEffectEnabled: StateFlow<Boolean> = _glassEffectEnabled.asStateFlow()
+
         private val _appSkinState = MutableStateFlow<SkinManifest?>(null)
         override val appSkinState: StateFlow<SkinManifest?> = _appSkinState.asStateFlow()
 
@@ -50,7 +56,12 @@ class ThemeRepositoryImpl
 
         init {
             scope.launch {
-                val proto = dataStore.data.first()
+                var proto = dataStore.data.first()
+                proto.migratedThemeSelection()?.let { migrated ->
+                    dataStore.updateData { it.migratedThemeSelection() ?: it }
+                    proto = migrated
+                }
+                _glassEffectEnabled.value = proto.glassEffectEnabled
                 _libraryLayoutMode.value = proto.libraryLayoutMode.ifBlank { "GRID" }
                 _isRollbackFlagActive.value = proto.themeRollbackFlag
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }, isApp = true)
@@ -64,6 +75,7 @@ class ThemeRepositoryImpl
         ) {
             val resolved = BuiltInThemes.resolve(id)
             if (isApp) {
+                _appThemeId.value = id
                 _appThemeState.value = resolved.theme
                 _appSkinState.value = resolved.skin
             } else {
@@ -88,6 +100,12 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setLibraryLayoutMode(mode).build() }
                 _libraryLayoutMode.value = mode
+            }
+
+        override suspend fun setGlassEffectEnabled(enabled: Boolean): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setGlassEffectEnabled(enabled).build() }
+                _glassEffectEnabled.value = enabled
             }
 
         override suspend fun importPackage(inputStream: InputStream): AppResult<ImportedThemeResult> =

@@ -21,6 +21,8 @@ class ThemeViewModel
         private val themeRepository: ThemeRepository,
     ) : ViewModel() {
         val appTheme: StateFlow<ThemeManifest> = themeRepository.appThemeState
+        val appThemeId: StateFlow<String> = themeRepository.appThemeId
+        val glassEffectEnabled: StateFlow<Boolean> = themeRepository.glassEffectEnabled
         val appSkin: StateFlow<SkinManifest?> = themeRepository.appSkinState
         val widgetTheme: StateFlow<ThemeManifest> = themeRepository.widgetThemeState
         val widgetSkin: StateFlow<SkinManifest?> = themeRepository.widgetSkinState
@@ -39,6 +41,12 @@ class ThemeViewModel
         fun selectWidgetTheme(themeId: String) {
             viewModelScope.launch {
                 themeRepository.setWidgetTheme(themeId)
+            }
+        }
+
+        fun setGlassEffectEnabled(enabled: Boolean) {
+            viewModelScope.launch {
+                themeRepository.setGlassEffectEnabled(enabled)
             }
         }
 

@@ -3,10 +3,12 @@ package com.lochanpthakke.empee3.core.designsystem.component
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
@@ -14,6 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.GlassBackdrop
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
+import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
+import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 
 /**
  * Height of the app shell's bottom chrome (mini player + system navigation
@@ -72,22 +78,43 @@ fun AppScaffold(
     snackbarHost: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     containerColor: Color = MaterialTheme.colorScheme.background,
+    contentBackdrop: GlassBackdrop? = LocalGlassBackdrop.current,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val bottomChrome = LocalBottomChromeHeight.current
+    // Glass in this screen's bars frosts the screen's own content. Glass inside
+    // the content frosts [contentBackdrop] instead (inherited by default, usually
+    // none), so nothing ever samples the source it is drawn in.
+    val screenBackdrop = rememberGlassBackdrop()
     Scaffold(
         modifier = modifier,
-        topBar = topBar,
+        topBar = { CompositionLocalProvider(LocalGlassBackdrop provides screenBackdrop) { topBar() } },
         // A screen-specific bottom bar must sit above the shell's chrome, and its
         // own height then becomes the content's bottom padding.
         bottomBar =
             bottomBar?.let { bar ->
-                { Box(Modifier.padding(bottom = bottomChrome)) { bar() } }
+                {
+                    CompositionLocalProvider(LocalGlassBackdrop provides screenBackdrop) {
+                        Box(Modifier.padding(bottom = bottomChrome)) { bar() }
+                    }
+                }
             } ?: {},
         snackbarHost = snackbarHost,
         floatingActionButton = floatingActionButton,
         containerColor = containerColor,
         contentWindowInsets = WindowInsets(bottom = if (bottomBar == null) bottomChrome else 0.dp),
-        content = content,
-    )
+    ) { innerPadding ->
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .glassBackdropSource(screenBackdrop),
+        ) {
+            // Glass inside the content frosts [contentBackdrop] (e.g. Now Playing's
+            // artwork), never the content's own source.
+            CompositionLocalProvider(LocalGlassBackdrop provides contentBackdrop) {
+                content(innerPadding)
+            }
+        }
+    }
 }

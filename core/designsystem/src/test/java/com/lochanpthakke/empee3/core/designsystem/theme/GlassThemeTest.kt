@@ -2,7 +2,7 @@ package com.lochanpthakke.empee3.core.designsystem.theme
 
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -11,25 +11,26 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
+/**
+ * Glass is a material (the Glass Effect setting), not a theme: no built-in theme
+ * carries glass tokens, and the tokens derived for a theme keep its environment.
+ */
 class GlassThemeTest {
-    private val glassTheme = BuiltInThemes.GLASSMORPHISM
-    private val glass = glassTheme.glass!!
-
-    // ---- Selection / resolution (the ids are what the existing DataStore persists)
+    // ---- Theme list / resolution (the ids are what the existing DataStore persists)
 
     @Test
-    fun glassIsSelectable_asAnAdditionalBuiltInTheme() {
-        assertTrue(glassTheme in BuiltInThemes.ALL_BUILT_IN_THEMES)
-        // Nothing replaced: the original themes are all still offered.
+    fun glassmorphismIsNoLongerATheme_existingThemesRemain() {
+        assertFalse(BuiltInThemes.ALL_BUILT_IN_THEMES.any { it.id == BuiltInThemes.LEGACY_GLASSMORPHISM_ID })
         listOf("default_light", "default_dark", "frosted_glass", "cyberpunk_tech").forEach { id ->
             assertTrue(id, BuiltInThemes.ALL_BUILT_IN_THEMES.any { it.id == id })
         }
     }
 
     @Test
-    fun themeIds_areUnique() {
+    fun themeIds_areUnique_andDoNotCollideWithSystemDefault() {
         val ids = BuiltInThemes.ALL_BUILT_IN_THEMES.map { it.id } + BuiltInThemes.ALL_BUILT_IN_SKINS.map { it.id }
         assertEquals(ids.size, ids.toSet().size)
+        assertFalse(BuiltInThemes.SYSTEM_DEFAULT_ID in ids)
     }
 
     @Test
@@ -42,17 +43,20 @@ class GlassThemeTest {
     }
 
     @Test
-    fun switchingAwayFromGlassAndBack_restoresGlassTokens() {
-        assertNotNull(BuiltInThemes.resolve("glassmorphism").theme.glass)
-        assertNull(BuiltInThemes.resolve("default_dark").theme.glass)
-        assertNotNull(BuiltInThemes.resolve("glassmorphism").theme.glass)
+    fun noBuiltInThemeCarriesGlass_glassComesFromTheSetting() {
+        BuiltInThemes.ALL_BUILT_IN_THEMES.forEach { theme -> assertNull(theme.id, theme.glass) }
     }
 
     @Test
-    fun onlyTheGlassThemeRendersGlass_existingThemesAreUnchanged() {
-        BuiltInThemes.ALL_BUILT_IN_THEMES.filter { it.id != glassTheme.id }.forEach { theme ->
-            assertNull("${theme.id} must keep the classic rendering", theme.glass)
-        }
+    fun systemDefault_followsTheDeviceAppearance() {
+        assertSame(BuiltInThemes.DEFAULT_DARK, BuiltInThemes.forSystemAppearance(isSystemDark = true))
+        assertSame(BuiltInThemes.DEFAULT_LIGHT, BuiltInThemes.forSystemAppearance(isSystemDark = false))
+    }
+
+    @Test
+    fun systemDefaultAndLegacyGlassIds_resolveSafely_withoutAUiContext() {
+        assertSame(BuiltInThemes.DEFAULT_DARK, BuiltInThemes.resolve(BuiltInThemes.SYSTEM_DEFAULT_ID).theme)
+        assertSame(BuiltInThemes.DEFAULT_DARK, BuiltInThemes.resolve(BuiltInThemes.LEGACY_GLASSMORPHISM_ID).theme)
     }
 
     @Test
@@ -69,26 +73,41 @@ class GlassThemeTest {
         assertSame(skin, resolved.skin)
     }
 
+    // ---- Derived glass keeps the theme's environment
+
+    private fun derived(theme: ThemeManifest) = GlassTokens.derivedFrom(theme.colors, theme.isDark)
+
+    @Test
+    fun derivedGlass_keepsTheThemeBackground_withoutGlowsOrExtraColour() {
+        BuiltInThemes.ALL_BUILT_IN_THEMES.forEach { theme ->
+            val glass = derived(theme)
+            val opaqueBackground = theme.colors.background or 0xFF000000L
+            assertTrue(theme.id, glass.backgroundGradient.all { it == opaqueBackground })
+            assertEquals(theme.id, 0L, glass.glowPrimary ushr 24)
+            assertEquals(theme.id, 0L, glass.glowSecondary ushr 24)
+            // Floating panels are the theme's own surface colour, made translucent.
+            assertEquals(theme.id, theme.colors.surface and 0xFFFFFFL, glass.panelFillStrong and 0xFFFFFFL)
+            assertTrue(theme.id, (glass.panelFillStrong ushr 24) < 0xFF)
+        }
+    }
+
     // ---- Serialization (imported theme packages use the same ThemeManifest JSON)
 
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
-    fun themeJsonWithoutGlass_stillDecodes_asClassicTheme() {
-        val legacy = json.encodeToString(ThemeManifest.serializer(), BuiltInThemes.DEFAULT_DARK)
-        assertTrue(!legacy.contains("\"glass\""))
-        assertNull(json.decodeFromString(ThemeManifest.serializer(), legacy).glass)
+    fun themeJsonWithoutGlass_stillDecodes() {
+        val encoded = json.encodeToString(ThemeManifest.serializer(), BuiltInThemes.DEFAULT_DARK)
+        assertTrue(!encoded.contains("\"glass\""))
+        assertNull(json.decodeFromString(ThemeManifest.serializer(), encoded).glass)
     }
 
-    @Test
-    fun glassTheme_roundTripsThroughJson() {
-        val encoded = json.encodeToString(ThemeManifest.serializer(), glassTheme)
-        assertEquals(glassTheme, json.decodeFromString(ThemeManifest.serializer(), encoded))
-    }
+    // ---- Readability: text must stay legible on derived glass for every theme
 
-    // ---- Readability: text must stay legible on glass over every part of the gradient
-
-    private fun channel(c: Long, shift: Int) = ((c shr shift) and 0xFF) / 255.0
+    private fun channel(
+        c: Long,
+        shift: Int,
+    ) = ((c shr shift) and 0xFF) / 255.0
 
     private fun alpha(c: Long) = channel(c, 24)
 
@@ -118,31 +137,26 @@ class GlassThemeTest {
     }
 
     @Test
-    fun primaryText_meetsWcagAA_onGlassPanels_overTheWholeGradient() {
-        val text = rgb(glassTheme.colors.onSurface)
-        for (stop in glass.backgroundGradient) {
-            for (fill in listOf(glass.panelFill, glass.panelFillStrong, glassTheme.colors.surfaceVariant)) {
-                val ratio = contrast(text, composite(fill, stop))
-                assertTrue("onSurface on ${fill.toString(16)} over ${stop.toString(16)}: $ratio", ratio >= 4.5)
+    fun primaryText_meetsWcagAA_onDerivedGlassPanels_forEveryTheme() {
+        BuiltInThemes.ALL_BUILT_IN_THEMES.forEach { theme ->
+            val glass = derived(theme)
+            val background = glass.backgroundGradient.first()
+            val text = rgb(theme.colors.onSurface)
+            for (fill in listOf(glass.panelFill, glass.panelFillStrong)) {
+                val ratio = contrast(text, composite(fill, background))
+                assertTrue("${theme.id}: onSurface on ${fill.toString(16)}: $ratio", ratio >= 4.5)
             }
         }
     }
 
     @Test
-    fun secondaryText_andAccent_stayReadable() {
-        for (stop in glass.backgroundGradient) {
-            val panel = composite(glass.panelFill, stop)
-            val secondary = contrast(rgb(glassTheme.colors.onSurfaceVariant), panel)
-            val accent = contrast(rgb(glassTheme.colors.primary), panel)
-            assertTrue("onSurfaceVariant: $secondary", secondary >= 4.5)
-            assertTrue("primary accent: $accent", accent >= 3.0)
+    fun artworkBackdropScrim_keepsTextReadable_onWorstCaseArtwork() {
+        BuiltInThemes.ALL_BUILT_IN_THEMES.forEach { theme ->
+            val glass = derived(theme)
+            // Light text is hardest on white artwork, dark text on black artwork.
+            val worstCaseArtwork = if (theme.isDark) 0xFFFFFFFFL else 0xFF000000L
+            val ratio = contrast(rgb(theme.colors.onSurface), composite(glass.artworkScrim, worstCaseArtwork))
+            assertTrue("${theme.id}: text over scrimmed artwork: $ratio", ratio >= 3.0)
         }
-    }
-
-    @Test
-    fun artworkBackdropScrim_keepsTextReadable_evenOnWhiteArtwork() {
-        val worstCaseArtwork = 0xFFFFFFFFL
-        val ratio = contrast(rgb(glassTheme.colors.onSurface), composite(glass.artworkScrim, worstCaseArtwork))
-        assertTrue("text over scrimmed white artwork: $ratio", ratio >= 3.0)
     }
 }

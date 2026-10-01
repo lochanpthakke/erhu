@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -71,8 +73,15 @@ import androidx.navigation.toRoute
 import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHeight
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.theme.BuiltInThemes
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
+import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
+import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassChromeFade
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
+import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
@@ -132,7 +141,13 @@ fun MainScaffold() {
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
     val playbackRepository = libraryViewModel.playbackRepository
 
-    val currentTheme by themeViewModel.appTheme.collectAsState()
+    val selectedTheme by themeViewModel.appTheme.collectAsState()
+    val selectedThemeId by themeViewModel.appThemeId.collectAsState()
+    val glassEffectEnabled by themeViewModel.glassEffectEnabled.collectAsState()
+    // System Default follows the device's light/dark setting (re-read on configuration changes).
+    val isSystemDark = isSystemInDarkTheme()
+    val currentTheme =
+        if (selectedThemeId == BuiltInThemes.SYSTEM_DEFAULT_ID) BuiltInThemes.forSystemAppearance(isSystemDark) else selectedTheme
     val currentSkin by themeViewModel.appSkin.collectAsState()
     val isRollbackActive by themeViewModel.isRollbackActive.collectAsState()
 
@@ -147,6 +162,7 @@ fun MainScaffold() {
     EmPee3Theme(
         themeManifest = currentTheme,
         skinManifest = currentSkin,
+        glassEffectEnabled = glassEffectEnabled,
     ) {
         // Content is drawn behind transparent system bars, so their icon colour must
         // follow the app theme rather than the system's light/dark setting.
@@ -182,10 +198,24 @@ fun MainScaffold() {
 
         var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
+        // Glass backdrops: the screens frost under the bottom chrome; the whole
+        // shell frosts under the drawer.
+        val screensBackdrop = rememberGlassBackdrop()
+        val shellBackdrop = rememberGlassBackdrop()
+
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                ModalDrawerSheet {
+                ModalDrawerSheet(
+                    drawerContainerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier =
+                        Modifier.glassPanel(
+                            shape = DrawerDefaults.shape,
+                            level = GlassLevel.Strong,
+                            elevated = false,
+                            backdrop = shellBackdrop,
+                        ),
+                ) {
                     Column(
                         modifier =
                             Modifier
@@ -230,27 +260,30 @@ fun MainScaffold() {
             // measured height of that chrome is handed to screens. Screens draw edge
             // to edge (no padding here) and their top bars own the status bar.
             Scaffold(
+                modifier = Modifier.glassBackdropSource(shellBackdrop),
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
-                    // Stack: mini player, then (on Library) the section navigation, then the gesture area.
-                    Column(modifier = if (isOnNowPlaying) Modifier else Modifier.glassChromeFade()) {
-                        if (!isOnNowPlaying) {
-                            MiniPlayer(
-                                playbackRepository = playbackRepository,
-                                onMiniPlayerClick = {
-                                    navController.navigate(NowPlaying) { launchSingleTop = true }
-                                },
-                            )
+                    CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
+                        // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
+                        // Stack: mini player, then (on Library) the section navigation, then the gesture area.
+                        Column(modifier = if (isOnNowPlaying) Modifier else Modifier.glassChromeFade()) {
+                            if (!isOnNowPlaying) {
+                                MiniPlayer(
+                                    playbackRepository = playbackRepository,
+                                    onMiniPlayerClick = {
+                                        navController.navigate(NowPlaying) { launchSingleTop = true }
+                                    },
+                                )
+                            }
+                            if (isOnLibrary && isLibraryContentShown) {
+                                LibraryBottomControls(
+                                    selected = librarySection,
+                                    onSelect = { librarySection = it },
+                                    onSearch = { isLibrarySearchActive = true },
+                                )
+                            }
+                            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
                         }
-                        if (isOnLibrary && isLibraryContentShown) {
-                            LibraryBottomControls(
-                                selected = librarySection,
-                                onSelect = { librarySection = it },
-                                onSearch = { isLibrarySearchActive = true },
-                            )
-                        }
-                        Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
                     }
                 },
             ) { innerPadding ->
@@ -258,7 +291,10 @@ fun MainScaffold() {
                     NavHost(
                         navController = navController,
                         startDestination = Library,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .glassBackdropSource(screensBackdrop),
                     ) {
                         composable<Library> {
                             LibraryRoute(

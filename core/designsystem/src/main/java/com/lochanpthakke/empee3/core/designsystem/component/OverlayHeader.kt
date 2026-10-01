@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
@@ -14,12 +16,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
+
+/** Visible size of the round header button (Material icon-button container; touch target stays 48 dp). */
+private val HEADER_BUTTON_SIZE = 40.dp
 
 /** Scrim opacity behind the status bar: keeps the system icons legible over any content. */
 private const val SCRIM_TOP_ALPHA = 0.92f
@@ -64,18 +72,28 @@ fun OverlayHeader(
     ) {
         val colors =
             IconButtonDefaults.iconButtonColors(
-                containerColor = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surfaceVariant),
+                containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
                 contentColor = MaterialTheme.colorScheme.onSurface,
             )
-        when (navigation) {
-            is TopBarNavigation.TopLevel ->
-                IconButton(onClick = navigation.onOpenDrawer, colors = colors) {
-                    Icon(imageVector = Icons.Default.Menu, contentDescription = "Open navigation drawer")
-                }
-            is TopBarNavigation.Detail ->
-                IconButton(onClick = navigation.onBack, colors = colors) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
+        // Glass on: a frosted glass disc behind a transparent button. Glass off:
+        // the button's own surface-variant container, exactly as before.
+        Box(contentAlignment = Alignment.Center) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(HEADER_BUTTON_SIZE)
+                        .glassPanel(CircleShape, elevated = false),
+            )
+            when (navigation) {
+                is TopBarNavigation.TopLevel ->
+                    IconButton(onClick = navigation.onOpenDrawer, colors = colors) {
+                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Open navigation drawer")
+                    }
+                is TopBarNavigation.Detail ->
+                    IconButton(onClick = navigation.onBack, colors = colors) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+            }
         }
     }
 }
