@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -31,10 +30,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -70,10 +67,6 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
 
-private val TAB_HEIGHT = 48.dp
-
-private val LIBRARY_TABS = listOf("Tracks", "Favorites", "Albums", "Artists")
-
 /** Actions offered for a single song wherever it is listed. */
 private class SongActions(
     val onToggleFavorite: (Song) -> Unit,
@@ -89,6 +82,7 @@ private class SongActions(
 fun LibraryScreen(
     viewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
+    section: LibrarySection,
     onOpenDrawer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -103,7 +97,6 @@ fun LibraryScreen(
     // Only the playing song's id: position ticks must not recompose the library.
     val currentSongId by viewModel.currentSongId.collectAsState()
 
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
     var isSearchActive by rememberSaveable { mutableStateOf(false) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
@@ -130,6 +123,15 @@ fun LibraryScreen(
     }
     // Search is a mode of this screen: system Back leaves it (and clears the query).
     BackHandler(enabled = isSearchActive, onBack = closeSearch)
+
+    // Picking a section in the bottom navigation while searching leaves search.
+    var lastSection by rememberSaveable { mutableStateOf(section) }
+    LaunchedEffect(section) {
+        if (section != lastSection) {
+            lastSection = section
+            if (isSearchActive) closeSearch()
+        }
+    }
 
     AppScaffold(
         topBar = {
@@ -180,31 +182,10 @@ fun LibraryScreen(
                         .fillMaxSize()
                         .padding(scroll.container),
             ) {
+                // Sections are switched by LibraryNavigationBar in the shell's bottom chrome.
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Fixed tabs: all four fit, so the row never scrolls or re-centers.
-                    PrimaryTabRow(
-                        selectedTabIndex = selectedTabIndex,
-                        containerColor = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface),
-                    ) {
-                        LIBRARY_TABS.forEachIndexed { index, title ->
-                            Tab(
-                                selected = selectedTabIndex == index,
-                                onClick = { selectedTabIndex = index },
-                                modifier = Modifier.heightIn(min = TAB_HEIGHT),
-                            ) {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = Spacing.xs),
-                                )
-                            }
-                        }
-                    }
-
-                    when (selectedTabIndex) {
-                        0 ->
+                    when (section) {
+                        LibrarySection.TRACKS ->
                             SongsTab(
                                 songs = songs,
                                 currentSongId = currentSongId,
@@ -213,7 +194,7 @@ fun LibraryScreen(
                                 onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
                                 actions = actions,
                             )
-                        1 ->
+                        LibrarySection.FAVORITES ->
                             SongsTab(
                                 songs = favoriteSongs,
                                 currentSongId = currentSongId,
@@ -223,8 +204,13 @@ fun LibraryScreen(
                                 onSongClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
                                 actions = actions,
                             )
-                        2 -> AlbumsTab(albums = albums, bottomInset = scroll.contentBottom, onAlbumClick = { viewModel.playAlbum(it) })
-                        else ->
+                        LibrarySection.ALBUMS ->
+                            AlbumsTab(
+                                albums = albums,
+                                bottomInset = scroll.contentBottom,
+                                onAlbumClick = { viewModel.playAlbum(it) },
+                            )
+                        LibrarySection.ARTISTS ->
                             ArtistsTab(
                                 artists = artists,
                                 bottomInset = scroll.contentBottom,

@@ -72,7 +72,9 @@ import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.glassChromeFade
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
+import com.lochanpthakke.empee3.feature.library.LibraryNavigationBar
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
+import com.lochanpthakke.empee3.feature.library.LibrarySection
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
 import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
 import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
@@ -144,6 +146,14 @@ fun MainScaffold() {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         val isOnNowPlaying = currentDestination?.hasRoute(NowPlaying::class) == true
+        val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
+
+        // Library section lives here because its navigation is part of the shell's bottom chrome.
+        var librarySection by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
+        val context = LocalContext.current
+        var isLibraryContentShown by rememberSaveable {
+            mutableStateOf(ContextCompat.checkSelfPermission(context, audioPermission()) == PackageManager.PERMISSION_GRANTED)
+        }
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
@@ -201,7 +211,8 @@ fun MainScaffold() {
             Scaffold(
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    // Under glass, content scrolls beneath the player; the fade keeps it legible.
+                    // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
+                    // Stack: mini player, then (on Library) the section navigation, then the gesture area.
                     Column(modifier = if (isOnNowPlaying) Modifier else Modifier.glassChromeFade()) {
                         if (!isOnNowPlaying) {
                             MiniPlayer(
@@ -209,6 +220,12 @@ fun MainScaffold() {
                                 onMiniPlayerClick = {
                                     navController.navigate(NowPlaying) { launchSingleTop = true }
                                 },
+                            )
+                        }
+                        if (isOnLibrary && isLibraryContentShown) {
+                            LibraryNavigationBar(
+                                selected = librarySection,
+                                onSelect = { librarySection = it },
                             )
                         }
                         Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
@@ -225,7 +242,9 @@ fun MainScaffold() {
                             LibraryRoute(
                                 libraryViewModel = libraryViewModel,
                                 playlistsViewModel = playlistsViewModel,
+                                section = librarySection,
                                 onOpenDrawer = openDrawer,
+                                onContentShownChange = { isLibraryContentShown = it },
                             )
                         }
                         composable<NowPlaying> {
@@ -344,7 +363,9 @@ private fun Context.findActivity(): Activity? =
 private fun LibraryRoute(
     libraryViewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
+    section: LibrarySection,
     onOpenDrawer: () -> Unit,
+    onContentShownChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val permission = audioPermission()
@@ -386,10 +407,14 @@ private fun LibraryRoute(
         onPauseOrDispose {}
     }
 
+    // The section navigation is only shown over actual library content.
+    LaunchedEffect(permissionState) { onContentShownChange(permissionState == PermissionUiState.GRANTED) }
+
     if (permissionState == PermissionUiState.GRANTED) {
         LibraryScreen(
             viewModel = libraryViewModel,
             playlistsViewModel = playlistsViewModel,
+            section = section,
             onOpenDrawer = onOpenDrawer,
         )
     } else {

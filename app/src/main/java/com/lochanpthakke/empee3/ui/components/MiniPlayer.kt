@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -31,12 +30,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.BottomChrome
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
@@ -60,20 +59,20 @@ fun MiniPlayer(
 
     val isPlaying = playbackState.status == PlaybackStatus.PLAYING
     val glass = EmPee3Glass.isActive
-    val shape = if (glass) RoundedCornerShape(EmPee3Theme.shapes.miniPlayerCornerRadiusDp.dp) else Radius.mediumShape
+    val shape = BottomChrome.shape()
 
     Card(
         modifier =
             modifier
                 .fillMaxWidth()
-                // Floating card: a tighter outer margin than the screen gutter is intentional.
-                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+                // Floating card; shares margins and shape with the rest of the bottom chrome.
+                .padding(horizontal = BottomChrome.horizontalMargin, vertical = BottomChrome.gap)
                 // Glass: a borderless material layer over the content (tone + sheen, no stroke or shadow).
                 .glassPanel(shape, strong = true, elevated = false, outlined = false)
                 .clickable(onClick = onMiniPlayerClick),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (glass) 0.dp else 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (glass) 0.dp else BottomChrome.elevation),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             LinearProgressIndicator(
