@@ -92,13 +92,13 @@ class LibraryViewModel
         private val _metadataCandidates = MutableStateFlow<List<MetadataCandidate>>(emptyList())
         val metadataCandidates: StateFlow<List<MetadataCandidate>> = _metadataCandidates.asStateFlow()
 
-        private val _isScanningLocal = MutableStateFlow(false)
+        private val isScanningLocal = MutableStateFlow(false)
 
         /** Reflects the real WorkManager scan state, combined with local scan indicators. */
         val isScanning: StateFlow<Boolean> =
             libraryRepository
                 .observeIsScanning()
-                .combine(_isScanningLocal) { libScan, localScan -> libScan || localScan }
+                .combine(isScanningLocal) { libScan, localScan -> libScan || localScan }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
         private val _isFindingBadTracks = MutableStateFlow(false)
@@ -213,7 +213,7 @@ class LibraryViewModel
 
         fun scanForMissingCovers() {
             viewModelScope.launch {
-                _isScanningLocal.value = true
+                isScanningLocal.value = true
                 val allAlbums = libraryRepository.getAllAlbums().first()
                 val missingCoverAlbums =
                     allAlbums.filter { album ->
@@ -221,7 +221,7 @@ class LibraryViewModel
                     }
                 _artworkQueue.value = missingCoverAlbums.map { ArtworkQueueItem(album = it, status = "PENDING") }
                 delay(SCAN_INDICATOR_DELAY_MS)
-                _isScanningLocal.value = false
+                isScanningLocal.value = false
             }
         }
 

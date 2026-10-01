@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -91,6 +90,7 @@ import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.ui.components.MiniPlayer
 import com.lochanpthakke.empee3.ui.components.WriteAccessRequestEffect
 import kotlinx.coroutines.launch
+import android.provider.Settings as AndroidSettings
 
 private class DrawerDestination(
     val label: String,
