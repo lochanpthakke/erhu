@@ -126,10 +126,21 @@ class LibraryViewModel
                     if (query.isEmpty()) flowOf(emptyList()) else libraryRepository.searchSongs(query)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
-        private val currentSongId: Flow<Long?> =
+        /**
+         * Id of the playing song only. Screens that just highlight the current row
+         * observe this instead of the full playback state, so the position ticks
+         * (4x per second) do not recompose them.
+         */
+        val currentSongId: StateFlow<Long?> =
             playbackRepository.playbackState
                 .map { it.currentSong?.id }
                 .distinctUntilChanged()
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.Eagerly,
+                    playbackRepository.playbackState.value.currentSong
+                        ?.id,
+                )
 
         /** Favorite state of the playing song, read from Room (the source of truth). */
         val currentSongIsFavorite: StateFlow<Boolean> =

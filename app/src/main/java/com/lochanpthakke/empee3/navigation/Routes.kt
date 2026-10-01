@@ -23,6 +23,10 @@ object Equalizer
 object MetadataEditor
 
 @Serializable
-data class Settings(
-    val category: String? = null,
+object Settings
+
+/** A settings category pushed on top of [Settings], so Back returns to the list. */
+@Serializable
+data class SettingsCategory(
+    val categoryId: String,
 )

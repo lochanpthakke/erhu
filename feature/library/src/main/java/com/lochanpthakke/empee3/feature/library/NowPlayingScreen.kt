@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,15 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Close
@@ -43,15 +43,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -61,12 +58,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.GlassArtworkBackdrop
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.PlaybackState
@@ -93,35 +102,29 @@ fun NowPlayingScreen(
     onAddToPlaylist: (Song) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val playbackState by playbackRepository.playbackState.collectAsState()
+    // Stable state only; the position is read by PlaybackProgress alone, so the
+    // rest of this screen does not recompose four times per second.
+    val playbackState by playbackRepository.collectStablePlaybackState()
+    val position = playbackRepository.collectPlaybackPosition()
     val song = playbackState.currentSong
     val isPlaying = playbackState.status == PlaybackStatus.PLAYING
 
     var showLyrics by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
-
-    var isDraggingSlider by remember { mutableStateOf(false) }
-    var dragPositionMs by remember { mutableFloatStateOf(0f) }
     val glass = EmPee3Glass.isActive
 
-    Box(modifier = modifier) {
+    BackHandler(enabled = showLyrics) { showLyrics = false }
+
+    // The backdrop sits behind the whole scaffold, so it also fills the area
+    // behind the status and gesture bars.
+    Box(modifier = modifier.fillMaxSize()) {
         GlassArtworkBackdrop(song = song)
-        Scaffold(
+        AppScaffold(
             topBar = {
-                TopAppBar(
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
-                        ),
-                    title = { Text("Now Playing") },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                            )
-                        }
-                    },
+                AppTopBar(
+                    navigation = TopBarNavigation.Detail(onBackClick),
+                    title = "Now Playing",
+                    containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
                 )
             },
         ) { innerPadding ->
@@ -132,43 +135,37 @@ fun NowPlayingScreen(
                         .padding(innerPadding),
             ) {
                 if (song == null) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = "Nothing is playing. Pick a song from your library.",
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
+                    EmptyState(message = "Nothing is playing. Pick a song from your library.")
                 } else {
                     val totalDurationMs =
                         (if (playbackState.durationMs > 0) playbackState.durationMs else song.durationMs).coerceAtLeast(1L)
-                    val displayPositionMs =
-                        if (isDraggingSlider) {
-                            dragPositionMs.toLong()
-                        } else {
-                            playbackState.positionMs
-                        }.coerceIn(0L, totalDurationMs)
 
+                    // Header → artwork → metadata → progress → controls → actions with fixed
+                    // gaps; the artwork shrinks on short screens instead of the gaps growing.
                     Column(
                         modifier =
                             Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                                .padding(horizontal = Spacing.heroGutter, vertical = Spacing.lg),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.SpaceBetween,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
                     ) {
-                        SongArtwork(
-                            song = song,
-                            contentDescription = "Album artwork",
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .glassPanel(RoundedCornerShape(16.dp))
-                                    .clip(RoundedCornerShape(16.dp)),
-                        )
+                        Box(
+                            modifier = Modifier.weight(1f, fill = false),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            SongArtwork(
+                                song = song,
+                                contentDescription = "Album artwork",
+                                modifier =
+                                    Modifier
+                                        .widthIn(max = ArtworkSize.heroMax)
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f, matchHeightConstraintsFirst = true)
+                                        .glassPanel(Radius.largeShape)
+                                        .clip(Radius.largeShape),
+                            )
+                        }
 
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
@@ -179,7 +176,7 @@ fun NowPlayingScreen(
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.Center,
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(Spacing.xs))
                             Text(
                                 text = "${song.artist} — ${song.album}",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -190,35 +187,17 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Slider(
-                                value = displayPositionMs.toFloat(),
-                                onValueChange = {
-                                    isDraggingSlider = true
-                                    dragPositionMs = it
-                                },
-                                onValueChangeFinished = {
-                                    playbackRepository.seekTo(dragPositionMs.toLong())
-                                    isDraggingSlider = false
-                                },
-                                valueRange = 0f..totalDurationMs.toFloat(),
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(text = formatMs(displayPositionMs), style = MaterialTheme.typography.bodySmall)
+                        PlaybackProgress(
+                            position = position,
+                            totalDurationMs = totalDurationMs,
+                            queueLabel =
                                 if (playbackState.queue.size > 1) {
-                                    Text(
-                                        text = "${playbackState.currentIndex + 1} / ${playbackState.queue.size}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Text(text = formatMs(totalDurationMs), style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
+                                    "${playbackState.currentIndex + 1} / ${playbackState.queue.size}"
+                                } else {
+                                    null
+                                },
+                            onSeek = { playbackRepository.seekTo(it) },
+                        )
 
                         Row(
                             modifier =
@@ -228,7 +207,7 @@ fun NowPlayingScreen(
                                         if (glass) {
                                             Modifier
                                                 .glassPanel(MaterialTheme.shapes.large)
-                                                .padding(vertical = 8.dp)
+                                                .padding(vertical = Spacing.sm)
                                         } else {
                                             Modifier
                                         },
@@ -250,19 +229,19 @@ fun NowPlayingScreen(
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
                                     contentDescription = "Previous",
-                                    modifier = Modifier.size(36.dp),
+                                    modifier = Modifier.size(IconSize.large),
                                 )
                             }
 
                             FilledIconButton(
                                 onClick = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
-                                modifier = Modifier.size(64.dp),
+                                modifier = Modifier.size(ComponentSize.primaryButton),
                                 shape = CircleShape,
                             ) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (isPlaying) "Pause" else "Play",
-                                    modifier = Modifier.size(40.dp),
+                                    modifier = Modifier.size(IconSize.hero),
                                 )
                             }
 
@@ -273,7 +252,7 @@ fun NowPlayingScreen(
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
                                     contentDescription = "Next",
-                                    modifier = Modifier.size(36.dp),
+                                    modifier = Modifier.size(IconSize.large),
                                 )
                             }
 
@@ -283,9 +262,7 @@ fun NowPlayingScreen(
                             ) {
                                 Icon(
                                     imageVector =
-                                        if (playbackState.repeatMode ==
-                                            RepeatMode.ONE
-                                        ) {
+                                        if (playbackState.repeatMode == RepeatMode.ONE) {
                                             Icons.Default.RepeatOne
                                         } else {
                                             Icons.Default.Repeat
@@ -341,6 +318,55 @@ fun NowPlayingScreen(
     }
 }
 
+/**
+ * Seek bar with elapsed / total time. The only part of Now Playing that reads
+ * the playback position, so position ticks recompose just this composable.
+ */
+@Composable
+private fun PlaybackProgress(
+    position: State<Long>,
+    totalDurationMs: Long,
+    queueLabel: String?,
+    onSeek: (Long) -> Unit,
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragPositionMs by remember { mutableFloatStateOf(0f) }
+    val displayPositionMs = (if (isDragging) dragPositionMs.toLong() else position.value).coerceIn(0L, totalDurationMs)
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Slider(
+            value = displayPositionMs.toFloat(),
+            onValueChange = {
+                isDragging = true
+                dragPositionMs = it
+            },
+            onValueChangeFinished = {
+                onSeek(dragPositionMs.toLong())
+                isDragging = false
+            },
+            valueRange = 0f..totalDurationMs.toFloat(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Seek" },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = formatMs(displayPositionMs), style = TextStyles.metadata)
+            if (queueLabel != null) {
+                Text(
+                    text = queueLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(text = formatMs(totalDurationMs), style = TextStyles.metadata)
+        }
+    }
+}
+
 @Composable
 private fun ToggleIconButton(
     active: Boolean,
@@ -383,7 +409,7 @@ private fun LyricsOverlay(
             Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(24.dp),
+                .padding(Spacing.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -392,7 +418,7 @@ private fun LyricsOverlay(
                 Icon(imageVector = Icons.Default.Close, contentDescription = "Close lyrics")
             }
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.lg))
         Text(
             text = lyrics ?: "This file has no embedded lyrics.",
             style = MaterialTheme.typography.bodyLarge,
@@ -425,12 +451,12 @@ private fun QueueSheet(
         Text(
             text = "Queue (${queue.size})",
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         )
         if (queue.isEmpty()) {
             Text(
                 text = "The queue is empty.",
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(Spacing.lg),
             )
         } else {
             LazyColumn(state = listState) {
@@ -460,7 +486,7 @@ private fun QueueSheet(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.xl))
     }
 }
 

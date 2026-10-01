@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -41,6 +42,15 @@ object EmPee3Glass {
     @Composable
     @ReadOnlyComposable
     fun containerColor(default: Color): Color = if (LocalGlassTokens.current != null) Color.Transparent else default
+
+    /**
+     * Fill for chrome that sits over the background (top bar, tab row): a light
+     * material tint under a glass theme, so the background continues behind the
+     * header instead of being replaced by an opaque block; [default] otherwise.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun chromeColor(default: Color): Color = LocalGlassTokens.current?.let { Color(it.panelFill) } ?: default
 }
 
 private const val SHEEN_ALPHA = 0.06f
@@ -50,6 +60,9 @@ private const val SHEEN_ALPHA = 0.06f
  * light-to-faint gradient border and a soft shadow. Pure draw operations — no
  * blur and no animation — so it is cheap enough for lists.
  *
+ * [outlined] = false gives a borderless material layer whose edge comes only
+ * from tonal separation and the sheen (used for floating chrome).
+ *
  * Returns the receiver unchanged when the active theme has no glass tokens.
  */
 @Composable
@@ -57,6 +70,7 @@ fun Modifier.glassPanel(
     shape: Shape,
     strong: Boolean = false,
     elevated: Boolean = true,
+    outlined: Boolean = true,
 ): Modifier {
     val glass = LocalGlassTokens.current ?: return this
     val fill = glass.panelFillColor(strong)
@@ -80,11 +94,47 @@ fun Modifier.glassPanel(
         } else {
             Modifier
         }
-    return this
-        .then(shadowModifier)
-        .clip(shape)
-        .background(fillBrush, shape)
-        .border(glass.borderWidthDp.dp, borderBrush, shape)
+    val base =
+        this
+            .then(shadowModifier)
+            .clip(shape)
+            .background(fillBrush, shape)
+    return if (outlined) base.border(glass.borderWidthDp.dp, borderBrush, shape) else base
+}
+
+private const val CHROME_FADE_EXTENT_DP = 40
+private const val CHROME_FADE_EDGE_ALPHA = 0.9f
+private const val CHROME_FADE_BOTTOM_ALPHA = 0.97f
+
+/**
+ * Behind floating bottom chrome (the mini player): content that scrolls
+ * underneath fades progressively into the background, starting a little above
+ * the chrome. Together with the translucent player this reads as a material
+ * layer over the content while keeping its text legible — without a backdrop
+ * blur, which Compose cannot apply to content behind a component.
+ *
+ * Draws outside its own bounds (upwards) and only under a glass theme.
+ */
+@Composable
+fun Modifier.glassChromeFade(): Modifier {
+    val glass = LocalGlassTokens.current ?: return this
+    val base = remember(glass) { Color(glass.backgroundGradient.last()) }
+    return drawBehind {
+        val extent = CHROME_FADE_EXTENT_DP.dp.toPx()
+        val total = size.height + extent
+        drawRect(
+            brush =
+                Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    extent / total to base.copy(alpha = CHROME_FADE_EDGE_ALPHA),
+                    1f to base.copy(alpha = CHROME_FADE_BOTTOM_ALPHA),
+                    startY = -extent,
+                    endY = size.height,
+                ),
+            topLeft = Offset(0f, -extent),
+            size = Size(size.width, total),
+        )
+    }
 }
 
 /** Slightly brighter version of a translucent fill, for the top of the sheen gradient. */

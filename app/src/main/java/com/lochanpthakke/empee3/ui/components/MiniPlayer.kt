@@ -23,7 +23,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,11 +31,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
+import com.lochanpthakke.empee3.feature.library.collectPlaybackPosition
+import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 
 @Composable
 @Suppress("LongMethod")
@@ -45,26 +50,26 @@ fun MiniPlayer(
     onMiniPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val playbackState by playbackRepository.playbackState.collectAsState()
+    // Stable state drives composition; the position is only read inside the
+    // progress lambda (draw phase), so position ticks redraw the bar without
+    // recomposing the mini player.
+    val playbackState by playbackRepository.collectStablePlaybackState()
+    val position = playbackRepository.collectPlaybackPosition()
     val song = playbackState.currentSong ?: return
-
-    val progress =
-        if (playbackState.durationMs > 0) {
-            (playbackState.positionMs.toFloat() / playbackState.durationMs.toFloat()).coerceIn(0f, 1f)
-        } else {
-            0f
-        }
+    val durationMs = playbackState.durationMs
 
     val isPlaying = playbackState.status == PlaybackStatus.PLAYING
     val glass = EmPee3Glass.isActive
-    val shape = if (glass) RoundedCornerShape(EmPee3Theme.shapes.miniPlayerCornerRadiusDp.dp) else RoundedCornerShape(12.dp)
+    val shape = if (glass) RoundedCornerShape(EmPee3Theme.shapes.miniPlayerCornerRadiusDp.dp) else Radius.mediumShape
 
     Card(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-                .glassPanel(shape, strong = true)
+                // Floating card: a tighter outer margin than the screen gutter is intentional.
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xs)
+                // Glass: a borderless material layer over the content (tone + sheen, no stroke or shadow).
+                .glassPanel(shape, strong = true, elevated = false, outlined = false)
                 .clickable(onClick = onMiniPlayerClick),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
@@ -72,11 +77,13 @@ fun MiniPlayer(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             LinearProgressIndicator(
-                progress = { progress },
+                progress = {
+                    if (durationMs > 0) (position.value.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+                },
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(3.dp),
+                        .height(ComponentSize.miniProgress),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
             )
@@ -85,7 +92,7 @@ fun MiniPlayer(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SongArtwork(
@@ -93,11 +100,11 @@ fun MiniPlayer(
                     contentDescription = "Album artwork",
                     modifier =
                         Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .size(ArtworkSize.miniPlayer)
+                            .clip(Radius.smallShape),
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(

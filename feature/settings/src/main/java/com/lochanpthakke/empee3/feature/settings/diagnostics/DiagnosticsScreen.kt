@@ -26,9 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,14 +35,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.common.logging.CrashLogEntry
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Suppress("LongMethod")
 fun DiagnosticsScreen(
     viewModel: DiagnosticsViewModel,
+    title: String,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -52,14 +55,15 @@ fun DiagnosticsScreen(
     val latestRelease by viewModel.latestRelease.collectAsState()
     val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
 
-    Scaffold(
+    AppScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Diagnostics & Crash Logs") },
+            AppTopBar(
+                navigation = TopBarNavigation.Detail(onBack),
+                title = title,
                 actions = {
                     if (crashLogs.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearLogs() }) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear Logs")
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear crash logs")
                         }
                     }
                 },
@@ -72,25 +76,25 @@ fun DiagnosticsScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp),
+                    .padding(Spacing.lg),
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Spacing.lg)) {
                     Text(
                         text = "App Update Checker",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = "Current Version: 1.0.0 (GitHub Release Monthly Auto-Check)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
 
                     if (latestRelease != null) {
                         Text(
@@ -99,13 +103,13 @@ fun DiagnosticsScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
                             text = latestRelease?.body ?: "",
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 3,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.sm))
                         Button(
                             onClick = {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(latestRelease?.htmlUrl))
@@ -120,21 +124,21 @@ fun DiagnosticsScreen(
                             enabled = !isCheckingUpdate,
                         ) {
                             Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(Spacing.sm))
                             Text(if (isCheckingUpdate) "Checking GitHub..." else "Check for Updates Now")
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
             Text(
                 text = "Local Crash Log History",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             if (crashLogs.isEmpty()) {
                 Box(
@@ -150,7 +154,7 @@ fun DiagnosticsScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     items(crashLogs) { entry ->
                         CrashLogCard(
@@ -174,7 +178,7 @@ private fun CrashLogCard(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -189,7 +193,7 @@ private fun CrashLogCard(
                     Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy Stack Trace")
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
                 text = entry.content,
                 style = MaterialTheme.typography.bodySmall,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,12 +30,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +44,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.SectionHeader
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
@@ -55,6 +61,8 @@ import kotlin.math.roundToInt
 @Suppress("MagicNumber", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
 fun SoundSettingsScreen(
     viewModel: SoundViewModel,
+    title: String,
+    navigation: TopBarNavigation,
     modifier: Modifier = Modifier,
 ) {
     val soundSettings by viewModel.soundSettings.collectAsState()
@@ -62,15 +70,16 @@ fun SoundSettingsScreen(
 
     var showSaveDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
+    AppScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Sound & Equalizer") },
+            AppTopBar(
+                navigation = navigation,
+                title = title,
                 actions = {
                     IconButton(onClick = { viewModel.resetToFlat() }) {
                         Icon(
                             imageVector = Icons.Default.RestartAlt,
-                            contentDescription = "Reset to Flat",
+                            contentDescription = "Reset equalizer to flat",
                         )
                     }
                 },
@@ -78,13 +87,15 @@ fun SoundSettingsScreen(
         },
         modifier = modifier,
     ) { innerPadding ->
+        val scroll = innerPadding.forScrollingContent()
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(scroll.container)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(Spacing.screenGutter)
+                    .padding(bottom = scroll.contentBottom),
         ) {
             // EQ Toggle Switch
             Card(
@@ -95,7 +106,7 @@ fun SoundSettingsScreen(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(Spacing.lg),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -111,7 +122,7 @@ fun SoundSettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             // Ableton EQ8-style Canvas curve visualizer
             Eq8CurveCanvas(
@@ -119,7 +130,7 @@ fun SoundSettingsScreen(
                 customEqAudioProcessor = viewModel.customEqAudioProcessor,
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             // Preset Selector Dropdown
             PresetSelectorRow(
@@ -129,15 +140,11 @@ fun SoundSettingsScreen(
                 onDeleteCustomClick = { viewModel.deleteCustomPreset(it) },
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.lg))
 
             // 8 Band Sliders
-            Text(
-                text = "Equalizer Bands",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            SectionHeader(text = "Equalizer Bands")
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             for (i in 0 until CustomEqAudioProcessor.BAND_COUNT) {
                 val freqLabel = formatFrequency(CustomEqAudioProcessor.BAND_FREQUENCIES[i])
@@ -154,16 +161,12 @@ fun SoundSettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
             // Audio Effects Section
             if (capabilities.isBassBoostSupported || capabilities.isVirtualizerSupported || capabilities.isLoudnessEnhancerSupported) {
-                Text(
-                    text = "Audio Effects",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                SectionHeader(text = "Audio Effects")
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 if (capabilities.isBassBoostSupported) {
                     EffectSliderRow(
@@ -277,7 +280,7 @@ private fun PresetSelectorRow(
             }
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(Spacing.md))
 
         IconButton(onClick = onSaveCustomClick) {
             Icon(
@@ -298,7 +301,7 @@ private fun BandGainSlider(
     onGainChanged: (Float) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -315,8 +318,9 @@ private fun BandGainSlider(
         )
         Text(
             text = "${if (gainDb > 0) "+" else ""}${String.format("%.1f", gainDb)} dB",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.width(60.dp),
+            style = TextStyles.metadata,
+            maxLines = 1,
+            modifier = Modifier.widthIn(min = 60.dp),
         )
     }
 }
@@ -332,10 +336,10 @@ private fun EffectSliderRow(
     onValueChange: (Float) -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(Spacing.md)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

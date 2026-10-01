@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -42,10 +40,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,6 +56,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -99,26 +101,14 @@ fun MetadataEditorScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Metadata Editor") },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Open Drawer",
-                        )
-                    }
-                },
-            )
-        },
+    AppScaffold(
+        topBar = { AppTopBar(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Metadata Editor") },
         bottomBar = {
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(Spacing.screenGutter),
                 contentAlignment = Alignment.Center,
             ) {
                 Button(
@@ -129,7 +119,7 @@ fun MetadataEditorScreen(
                         imageVector = Icons.Default.Settings,
                         contentDescription = null,
                     )
-                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Metadata & Artwork Settings")
                 }
             }
@@ -141,9 +131,9 @@ fun MetadataEditorScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = Spacing.screenGutter),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             OutlinedTextField(
                 value = searchQuery,
@@ -156,7 +146,7 @@ fun MetadataEditorScreen(
                 leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             if (searchQuery.isNotBlank()) {
                 Text(
@@ -165,7 +155,7 @@ fun MetadataEditorScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
 
                 LazyColumn(
                     modifier =
@@ -184,7 +174,7 @@ fun MetadataEditorScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Spacing.md))
             }
 
             Button(
@@ -193,7 +183,7 @@ fun MetadataEditorScreen(
                 enabled = !isScanning && !isFixingQueue,
             ) {
                 Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Spacing.sm))
                 Text(if (isScanning) "Finding tracks..." else "Scan for Bad / Incomplete Tracks")
             }
 
@@ -208,14 +198,14 @@ fun MetadataEditorScreen(
                     checked = forceFixTags,
                     onCheckedChange = { viewModel.setForceFixTags(it) },
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
                     text = "Force Fix Tags (Re-evaluate already fixed files)",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -230,7 +220,7 @@ fun MetadataEditorScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
 
             LinearProgressIndicator(
                 progress = { progressFloat },
@@ -240,7 +230,7 @@ fun MetadataEditorScreen(
                         .height(6.dp),
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             if (isQueueComplete) {
                 Button(
@@ -251,7 +241,7 @@ fun MetadataEditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Finish Repair & Return to Library")
                 }
             } else {
@@ -261,12 +251,12 @@ fun MetadataEditorScreen(
                     enabled = !isFixingQueue && repairQueue.any { it.status == "PENDING" },
                 ) {
                     Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     Text(if (isFixingQueue) "Fixing Tags in Progress..." else "Start Fixing Queue / Fix Tags")
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             if (repairQueue.isEmpty()) {
                 Box(
@@ -286,7 +276,7 @@ fun MetadataEditorScreen(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = Spacing.xs),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         ) {
                             Column(modifier = Modifier.fillMaxWidth()) {
@@ -303,7 +293,7 @@ fun MetadataEditorScreen(
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
-                                            .padding(12.dp),
+                                            .padding(Spacing.md),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
@@ -315,8 +305,8 @@ fun MetadataEditorScreen(
                                             song = queueItem.song,
                                             modifier =
                                                 Modifier
-                                                    .size(40.dp)
-                                                    .clip(RoundedCornerShape(6.dp)),
+                                                    .size(ArtworkSize.compact)
+                                                    .clip(Radius.smallShape),
                                         )
 
                                         Spacer(modifier = Modifier.width(10.dp))
@@ -374,7 +364,7 @@ fun MetadataEditorScreen(
                                                 )
                                         }
 
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Spacer(modifier = Modifier.width(Spacing.sm))
 
                                         IconButton(
                                             onClick = {
@@ -401,11 +391,11 @@ fun MetadataEditorScreen(
                 Column {
                     Text("✓ $doneCount tracks fixed successfully", fontWeight = FontWeight.Bold)
                     if (reviewCount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                         Text("🔍 $reviewCount tracks need manual review")
                     }
                     if (failedCount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                         Text("❌ $failedCount tracks failed")
                     }
                 }
@@ -446,7 +436,7 @@ private fun ArtistSquareRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -454,7 +444,7 @@ private fun ArtistSquareRow(
                 Box(
                     modifier =
                         Modifier
-                            .size(40.dp)
+                            .size(ArtworkSize.compact)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center,
@@ -469,7 +459,7 @@ private fun ArtistSquareRow(
             }
             OutlinedButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Artist")
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text("Add")
             }
         }
@@ -492,7 +482,7 @@ private fun AlbumSquareRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -500,8 +490,8 @@ private fun AlbumSquareRow(
                 Box(
                     modifier =
                         Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(4.dp))
+                            .size(ArtworkSize.compact)
+                            .clip(Radius.smallShape)
                             .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -519,7 +509,7 @@ private fun AlbumSquareRow(
             }
             OutlinedButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Album")
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text("Add")
             }
         }
@@ -542,7 +532,7 @@ private fun TrackRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -552,7 +542,7 @@ private fun TrackRow(
             }
             OutlinedButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Track")
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text("Add")
             }
         }

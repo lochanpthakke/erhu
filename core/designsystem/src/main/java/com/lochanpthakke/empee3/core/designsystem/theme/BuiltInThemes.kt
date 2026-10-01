@@ -239,7 +239,7 @@ object BuiltInThemes {
                     glowPrimary = 0x4D7C5CFFL,
                     glowSecondary = 0x3322D3EEL,
                     panelFill = 0x1AFFFFFFL,
-                    panelFillStrong = 0xCC161C3DL,
+                    panelFillStrong = 0xB3161C3DL,
                     borderHighlight = 0x59FFFFFFL,
                     borderShadow = 0x12FFFFFFL,
                     borderWidthDp = 1,

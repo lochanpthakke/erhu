@@ -2,8 +2,8 @@ package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,11 +13,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Shuffle
@@ -29,12 +27,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,9 +40,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.model.Playlist
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,17 +64,8 @@ fun PlaylistsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     UserMessageEffect(viewModel.userMessage, snackbarHostState, viewModel::consumeUserMessage)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Playlists") },
-                navigationIcon = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
-                    }
-                },
-            )
-        },
+    AppScaffold(
+        topBar = { AppTopBar(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Playlists") },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "New playlist")
@@ -84,26 +75,18 @@ fun PlaylistsScreen(
         modifier = modifier,
     ) { innerPadding ->
         if (playlists.isEmpty()) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No playlists yet. Tap + to create one, or use \"Add to playlist\" on any song.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
-            }
+            EmptyState(
+                message = "No playlists yet. Tap + to create one, or use \"Add to playlist\" on any song.",
+                modifier = Modifier.padding(innerPadding),
+            )
         } else {
+            val scroll = innerPadding.forScrollingContent()
             LazyColumn(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(innerPadding),
+                        .padding(scroll.container),
+                contentPadding = PaddingValues(bottom = scroll.contentBottom),
             ) {
                 itemsIndexed(playlists, key = { _, playlist -> playlist.id }) { _, playlist ->
                     Row(
@@ -111,7 +94,7 @@ fun PlaylistsScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .clickable { onOpenPlaylist(playlist.id) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = Spacing.screenGutter, vertical = Spacing.md),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
@@ -119,12 +102,12 @@ fun PlaylistsScreen(
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(Spacing.lg))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(playlist.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(playlist.name, style = TextStyles.itemTitle)
                             Text(
                                 text = "${playlist.songCount} songs",
-                                style = MaterialTheme.typography.bodySmall,
+                                style = TextStyles.itemSubtitle,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -178,31 +161,23 @@ fun PlaylistDetailScreen(
     val playlist by viewModel.openPlaylist.collectAsState()
     val songs by viewModel.openPlaylistSongs.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(playlist?.name ?: "Playlist") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-            )
-        },
+    AppScaffold(
+        topBar = { AppTopBar(navigation = TopBarNavigation.Detail(onBackClick), title = playlist?.name ?: "Playlist") },
         modifier = modifier,
     ) { innerPadding ->
+        val scroll = innerPadding.forScrollingContent()
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
+                    .padding(scroll.container),
         ) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(Spacing.screenGutter),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Button(
                     onClick = { viewModel.playOpenPlaylist() },
@@ -210,7 +185,7 @@ fun PlaylistDetailScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(Spacing.xs))
                     Text("Play")
                 }
                 OutlinedButton(
@@ -219,27 +194,21 @@ fun PlaylistDetailScreen(
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(imageVector = Icons.Default.Shuffle, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(Spacing.xs))
                     Text("Shuffle")
                 }
             }
 
             if (songs.isEmpty()) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "This playlist is empty. Add songs from the library's song menu.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                EmptyState(
+                    message = "This playlist is empty. Add songs from the library's song menu.",
+                    modifier = Modifier.padding(bottom = scroll.contentBottom),
+                )
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = scroll.contentBottom),
+                ) {
                     itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                         SongRow(
                             song = song,
