@@ -17,6 +17,11 @@ object TextStyles {
         @Composable @ReadOnlyComposable
         get() = MaterialTheme.typography.titleLarge
 
+    /** Large title in a page header (album page). */
+    val pageTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+
     /** Headings above groups of content ("Equalizer Bands", settings sections). */
     val sectionTitle: TextStyle
         @Composable @ReadOnlyComposable

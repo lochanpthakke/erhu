@@ -57,13 +57,13 @@ class PlaylistsViewModel
 
         fun createPlaylist(
             name: String,
-            thenAddSong: Song? = null,
+            thenAddSongs: List<Song> = emptyList(),
         ) {
             viewModelScope.launch {
                 when (val result = playlistRepository.createPlaylist(name)) {
                     is AppResult.Success -> {
-                        if (thenAddSong != null) {
-                            addSongToPlaylist(result.data, name.trim(), thenAddSong)
+                        if (thenAddSongs.isNotEmpty()) {
+                            addSongsToPlaylist(result.data, name.trim(), thenAddSongs)
                         } else {
                             _userMessage.value = "Created \"${name.trim()}\""
                         }
@@ -82,23 +82,34 @@ class PlaylistsViewModel
             }
         }
 
-        fun addSongToPlaylist(
+        fun addSongsToPlaylist(
             playlist: Playlist,
-            song: Song,
+            songs: List<Song>,
         ) {
-            viewModelScope.launch { addSongToPlaylist(playlist.id, playlist.name, song) }
+            viewModelScope.launch { addSongsToPlaylist(playlist.id, playlist.name, songs) }
         }
 
-        private suspend fun addSongToPlaylist(
+        /** Appends [songs] in order; songs already in the playlist are skipped by the repository. */
+        private suspend fun addSongsToPlaylist(
             playlistId: Long,
             playlistName: String,
-            song: Song,
+            songs: List<Song>,
         ) {
-            _userMessage.value =
+            var added = 0
+            for (song in songs) {
                 when (val result = playlistRepository.addSong(playlistId, song.id)) {
-                    is AppResult.Success ->
-                        if (result.data) "Added to \"$playlistName\"" else "Already in \"$playlistName\""
-                    is AppResult.Error -> result.error.message
+                    is AppResult.Success -> if (result.data) added++
+                    is AppResult.Error -> {
+                        _userMessage.value = result.error.message
+                        return
+                    }
+                }
+            }
+            _userMessage.value =
+                when {
+                    added == 0 -> "Already in \"$playlistName\""
+                    songs.size == 1 -> "Added to \"$playlistName\""
+                    else -> "Added ${countLabel(added, "song")} to \"$playlistName\""
                 }
         }
 

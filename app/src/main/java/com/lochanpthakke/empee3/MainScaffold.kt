@@ -40,6 +40,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,10 +52,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -70,9 +73,11 @@ import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.glassChromeFade
+import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
-import com.lochanpthakke.empee3.feature.library.LibraryNavigationBar
+import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
+import com.lochanpthakke.empee3.feature.library.LibraryBottomControls
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
 import com.lochanpthakke.empee3.feature.library.LibrarySection
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
@@ -88,6 +93,7 @@ import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
+import com.lochanpthakke.empee3.navigation.AlbumDetail
 import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
 import com.lochanpthakke.empee3.navigation.MetadataEditor
@@ -142,6 +148,19 @@ fun MainScaffold() {
         themeManifest = currentTheme,
         skinManifest = currentSkin,
     ) {
+        // Content is drawn behind transparent system bars, so their icon colour must
+        // follow the app theme rather than the system's light/dark setting.
+        val view = LocalView.current
+        val isDarkTheme = currentTheme.isDark
+        SideEffect {
+            view.context.findActivity()?.window?.let { window ->
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !isDarkTheme
+                    isAppearanceLightNavigationBars = !isDarkTheme
+                }
+            }
+        }
+
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
@@ -150,6 +169,8 @@ fun MainScaffold() {
 
         // Library section lives here because its navigation is part of the shell's bottom chrome.
         var librarySection by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
+        // Search is opened from the bottom controls, so its on/off state lives here too.
+        var isLibrarySearchActive by rememberSaveable { mutableStateOf(false) }
         val context = LocalContext.current
         var isLibraryContentShown by rememberSaveable {
             mutableStateOf(ContextCompat.checkSelfPermission(context, audioPermission()) == PackageManager.PERMISSION_GRANTED)
@@ -223,9 +244,10 @@ fun MainScaffold() {
                             )
                         }
                         if (isOnLibrary && isLibraryContentShown) {
-                            LibraryNavigationBar(
+                            LibraryBottomControls(
                                 selected = librarySection,
                                 onSelect = { librarySection = it },
+                                onSearch = { isLibrarySearchActive = true },
                             )
                         }
                         Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
@@ -245,6 +267,18 @@ fun MainScaffold() {
                                 section = librarySection,
                                 onOpenDrawer = openDrawer,
                                 onContentShownChange = { isLibraryContentShown = it },
+                                onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                isSearchActive = isLibrarySearchActive,
+                                onSearchActiveChange = { isLibrarySearchActive = it },
+                            )
+                        }
+                        composable<AlbumDetail> { entry ->
+                            val route = entry.toRoute<AlbumDetail>()
+                            AlbumDetailScreen(
+                                albumId = route.albumId,
+                                viewModel = libraryViewModel,
+                                playlistsViewModel = playlistsViewModel,
+                                onBack = { navController.popBackStack() },
                             )
                         }
                         composable<NowPlaying> {
@@ -366,6 +400,9 @@ private fun LibraryRoute(
     section: LibrarySection,
     onOpenDrawer: () -> Unit,
     onContentShownChange: (Boolean) -> Unit,
+    onOpenAlbum: (Album) -> Unit,
+    isSearchActive: Boolean,
+    onSearchActiveChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val permission = audioPermission()
@@ -416,6 +453,9 @@ private fun LibraryRoute(
             playlistsViewModel = playlistsViewModel,
             section = section,
             onOpenDrawer = onOpenDrawer,
+            onOpenAlbum = onOpenAlbum,
+            isSearchActive = isSearchActive,
+            onSearchActiveChange = onSearchActiveChange,
         )
     } else {
         PermissionRequestView(

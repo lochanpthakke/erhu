@@ -72,6 +72,9 @@ object ComponentSize {
     /** Primary round play/pause button. */
     val primaryButton = 64.dp
 
+    /** Width of a square-ish action that sits beside a bottom-chrome surface (library search). */
+    val chromeAction = 56.dp
+
     /** Height of the playback progress line in the mini player. */
     val miniProgress = 3.dp
 }

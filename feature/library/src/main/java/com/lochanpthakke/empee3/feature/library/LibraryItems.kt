@@ -190,7 +190,8 @@ private fun ArtistMonogram(name: String) {
     }
 }
 
-private fun countLabel(
+/** "1 song", "3 songs". */
+internal fun countLabel(
     count: Int,
     noun: String,
 ): String = if (count == 1) "1 $noun" else "$count ${noun}s"

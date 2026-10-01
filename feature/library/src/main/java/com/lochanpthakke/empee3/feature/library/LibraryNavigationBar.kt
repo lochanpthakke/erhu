@@ -33,9 +33,9 @@ import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 private const val SELECTED_PILL_ALPHA = 0.16f
 
 /**
- * Floating, icon-first navigation between the library sections. It is the
- * lowest layer of the shell's bottom chrome, directly under the mini player,
- * and shares its shape, margins and material (borderless glass under a glass
+ * Floating, icon-first navigation between the library sections. Placed by
+ * [LibraryBottomControls] in the lowest layer of the shell's bottom chrome,
+ * directly under the mini player, and shares its shape and material (borderless glass under a glass
  * theme, the theme's surface card otherwise).
  */
 @Composable
@@ -50,7 +50,6 @@ fun LibraryNavigationBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(start = BottomChrome.horizontalMargin, end = BottomChrome.horizontalMargin, bottom = Spacing.sm)
                 .glassPanel(shape, strong = true, elevated = false, outlined = false),
         shape = shape,
         color = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),

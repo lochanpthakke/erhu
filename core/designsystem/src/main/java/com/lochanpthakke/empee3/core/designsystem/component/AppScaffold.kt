@@ -29,6 +29,8 @@ data class ScrollingPadding(
     val container: PaddingValues,
     /** Extra bottom content padding inside the scroll container. */
     val contentBottom: Dp,
+    /** Extra top content padding inside the scroll container (overlay header). */
+    val contentTop: Dp = 0.dp,
 )
 
 /**
@@ -39,12 +41,18 @@ data class ScrollingPadding(
  * at the top edge of the chrome.
  */
 @Composable
-fun PaddingValues.forScrollingContent(): ScrollingPadding =
-    if (EmPee3Glass.isActive) {
-        ScrollingPadding(container = PaddingValues(top = calculateTopPadding()), contentBottom = calculateBottomPadding())
-    } else {
-        ScrollingPadding(container = this, contentBottom = 0.dp)
-    }
+fun PaddingValues.forScrollingContent(topOverlay: Boolean = false): ScrollingPadding {
+    val top = calculateTopPadding()
+    val bottom = calculateBottomPadding()
+    val glass = EmPee3Glass.isActive
+    // topOverlay: the top bar is an OverlayHeader, so content scrolls underneath it
+    // in every theme; its height becomes content padding (first item fully visible).
+    return ScrollingPadding(
+        container = PaddingValues(top = if (topOverlay) 0.dp else top, bottom = if (glass) 0.dp else bottom),
+        contentBottom = if (glass) bottom else 0.dp,
+        contentTop = if (topOverlay) top else 0.dp,
+    )
+}
 
 /**
  * Screen-level scaffold. Inset ownership:

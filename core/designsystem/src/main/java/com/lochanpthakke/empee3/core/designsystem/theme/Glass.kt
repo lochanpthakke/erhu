@@ -51,6 +51,15 @@ object EmPee3Glass {
     @Composable
     @ReadOnlyComposable
     fun chromeColor(default: Color): Color = LocalGlassTokens.current?.let { Color(it.panelFill) } ?: default
+
+    /**
+     * Colour of the environment behind content near the top of the screen: the
+     * top of the glass background gradient under a glass theme, [default]
+     * (normally the theme background) otherwise. Used for header scrims.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun backdropColor(default: Color): Color = LocalGlassTokens.current?.let { Color(it.backgroundGradient.first()) } ?: default
 }
 
 private const val SHEEN_ALPHA = 0.06f

@@ -425,6 +425,26 @@ class LibraryViewModel
             }
         }
 
+        /** The album, or null once it is gone from the library (e.g. after a rescan). */
+        fun observeAlbum(albumId: Long): Flow<Album?> = libraryRepository.getAlbumById(albumId)
+
+        /** The album's songs in album order (disc, track, title). */
+        fun observeAlbumSongs(albumId: Long): Flow<List<Song>> = libraryRepository.getSongsByAlbumId(albumId)
+
+        /** Plays [songs] in their order from the first track, with shuffle turned off. */
+        fun playInOrder(songs: List<Song>) {
+            if (songs.isEmpty()) return
+            playbackRepository.setShuffleModeEnabled(false)
+            playbackRepository.playSongsFromQueue(songs, 0)
+        }
+
+        /** Plays [songs] shuffled: the same shuffle mode the playlists use. */
+        fun playShuffled(songs: List<Song>) {
+            if (songs.isEmpty()) return
+            playbackRepository.setShuffleModeEnabled(true)
+            playbackRepository.playSongsFromQueue(songs, songs.indices.random())
+        }
+
         fun playArtist(artist: Artist) {
             viewModelScope.launch {
                 val songs = libraryRepository.getSongsByArtistId(artist.id).first()

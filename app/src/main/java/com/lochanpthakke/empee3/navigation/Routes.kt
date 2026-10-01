@@ -16,6 +16,12 @@ data class PlaylistDetail(
     val playlistId: Long,
 )
 
+/** An album's detail page, opened from the library's album grid. */
+@Serializable
+data class AlbumDetail(
+    val albumId: Long,
+)
+
 @Serializable
 object Equalizer
 
