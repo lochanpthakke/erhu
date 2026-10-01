@@ -57,8 +57,11 @@ object ArtworkSize {
     /** Mini player thumbnail. */
     val miniPlayer = 44.dp
 
-    /** Minimum cell width for artwork grids (album grid in a later phase). */
-    val gridMin = 160.dp
+    /**
+     * Minimum cell width for artwork grids. Two columns on a ~360 dp phone,
+     * more on wider screens.
+     */
+    val gridMin = 140.dp
 
     /** Upper bound for full-width hero artwork on large screens. */
     val heroMax = 480.dp

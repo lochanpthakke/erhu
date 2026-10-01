@@ -3,15 +3,14 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,8 +21,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,10 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -60,9 +55,9 @@ import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -191,6 +186,7 @@ fun LibraryScreen(
                                 currentSongId = currentSongId,
                                 isScanning = isScanning,
                                 bottomInset = scroll.contentBottom,
+                                emptyIcon = LibrarySection.TRACKS.icon,
                                 onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
                                 actions = actions,
                             )
@@ -200,6 +196,7 @@ fun LibraryScreen(
                                 currentSongId = currentSongId,
                                 isScanning = false,
                                 bottomInset = scroll.contentBottom,
+                                emptyIcon = LibrarySection.FAVORITES.icon,
                                 emptyMessage = "No favorites yet. Tap the heart on any song to add it here.",
                                 onSongClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
                                 actions = actions,
@@ -317,12 +314,14 @@ private fun SongsTab(
     onSongClick: (Song) -> Unit,
     actions: SongActions,
     bottomInset: Dp,
+    emptyIcon: ImageVector,
     modifier: Modifier = Modifier,
     emptyMessage: String = "No songs found. Pull down to rescan your device.",
 ) {
     if (songs.itemCount == 0) {
         EmptyState(
             message = if (isScanning) "Scanning your music…" else emptyMessage,
+            icon = emptyIcon,
             modifier = Modifier.padding(bottom = bottomInset),
         )
     } else {
@@ -356,17 +355,24 @@ private fun LibrarySongRow(
     actions: SongActions,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    SongRow(song = song, onClick = onClick, isHighlighted = isCurrent) {
+    TrackRow(song = song, isCurrent = isCurrent, onClick = onClick) {
+        // Smaller glyphs inside full-size touch targets: the title stays the strongest element.
         IconButton(onClick = { actions.onToggleFavorite(song) }) {
             Icon(
                 imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (song.isFavorite) "Remove from favorites" else "Add to favorites",
                 tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(IconSize.small),
             )
         }
         Box {
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Song options")
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Song options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(IconSize.small),
+                )
             }
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 DropdownMenuItem(
@@ -412,19 +418,22 @@ private fun AlbumsTab(
     if (albums.itemCount == 0) {
         EmptyState(
             message = "No albums found. Pull down to rescan your device.",
+            icon = LibrarySection.ALBUMS.icon,
             modifier = Modifier.padding(bottom = bottomInset),
         )
     } else {
-        // Cards carry an sm margin of their own, so sm here gives the standard gutter.
+        // Column count follows the available width (2 on a typical phone).
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
             modifier = modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
             contentPadding =
                 PaddingValues(
-                    start = Spacing.screenGutter - Spacing.sm,
-                    end = Spacing.screenGutter - Spacing.sm,
+                    start = Spacing.screenGutter,
+                    end = Spacing.screenGutter,
                     top = Spacing.sm,
-                    bottom = Spacing.sm + bottomInset,
+                    bottom = Spacing.lg + bottomInset,
                 ),
         ) {
             items(
@@ -433,7 +442,7 @@ private fun AlbumsTab(
             ) { index ->
                 val album = albums[index]
                 if (album != null) {
-                    AlbumItem(album = album, onClick = { onAlbumClick(album) })
+                    AlbumTile(album = album, onClick = { onAlbumClick(album) })
                 }
             }
         }
@@ -450,18 +459,13 @@ private fun ArtistsTab(
     if (artists.itemCount == 0) {
         EmptyState(
             message = "No artists found. Pull down to rescan your device.",
+            icon = LibrarySection.ARTISTS.icon,
             modifier = Modifier.padding(bottom = bottomInset),
         )
     } else {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
-            contentPadding =
-                PaddingValues(
-                    start = Spacing.screenGutter,
-                    end = Spacing.screenGutter,
-                    top = Spacing.sm,
-                    bottom = Spacing.sm + bottomInset,
-                ),
+            contentPadding = listContentPadding(bottomInset),
         ) {
             items(
                 count = artists.itemCount,
@@ -469,82 +473,9 @@ private fun ArtistsTab(
             ) { index ->
                 val artist = artists[index]
                 if (artist != null) {
-                    ArtistItem(artist = artist, onClick = { onArtistClick(artist) })
+                    ArtistRow(artist = artist, onClick = { onArtistClick(artist) })
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AlbumItem(
-    album: Album,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier =
-            modifier
-                .padding(Spacing.sm)
-                .fillMaxWidth()
-                .glassPanel(MaterialTheme.shapes.medium, elevated = false)
-                .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Text(
-                text = album.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(Spacing.xs))
-            Text(
-                text = album.artist,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${album.songCount} songs • tap to play",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ArtistItem(
-    artist: Artist,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .padding(vertical = Spacing.xs)
-                .glassPanel(MaterialTheme.shapes.medium, elevated = false)
-                .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Text(
-                text = artist.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "${artist.songCount} songs • ${artist.albumCount} albums • tap to play",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

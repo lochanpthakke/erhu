@@ -32,6 +32,26 @@ object TextStyles {
         @Composable @ReadOnlyComposable
         get() = MaterialTheme.typography.bodySmall
 
+    /** Title line of a library list row (tracks, artists): semibold, lighter than [itemTitle]. */
+    val listTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+
+    /** Secondary line of a library list row; one step larger than [itemSubtitle] for legibility. */
+    val listSubtitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = MaterialTheme.typography.bodyMedium
+
+    /** Title under artwork in a grid tile (albums). */
+    val tileTitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
+
+    /** Secondary line under a grid tile title. */
+    val tileSubtitle: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = MaterialTheme.typography.bodySmall
+
     /** Small factual values (timestamps, counts, dB values). */
     val metadata: TextStyle
         @Composable @ReadOnlyComposable
