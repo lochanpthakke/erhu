@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.SectionHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
@@ -94,6 +94,7 @@ fun SoundSettingsScreen(
                     .fillMaxSize()
                     .padding(scroll.container)
                     .verticalScroll(rememberScrollState())
+                    .padding(top = scroll.contentTop)
                     .padding(Spacing.screenGutter)
                     .padding(bottom = scroll.contentBottom),
         ) {
@@ -365,7 +366,7 @@ private fun SavePresetDialog(
 ) {
     var presetName by remember { mutableStateOf("") }
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Save Custom Preset") },
         text = {

@@ -3,8 +3,9 @@ package com.lochanpthakke.empee3.feature.library
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -26,17 +28,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.BottomChrome
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import kotlin.math.abs
 import kotlin.math.roundToInt
+
+/** Selected icon scale: a small lift, not a pop. */
+private const val SELECTED_ICON_SCALE = 1.08f
 
 /** Tonal strength of the selection surface without glass: a tint, not a filled block. */
 private const val SELECTED_PILL_ALPHA = 0.16f
@@ -47,10 +56,6 @@ private const val SELECTED_PILL_ALPHA = 0.16f
  */
 private val INDICATOR_WIDTH = IconSize.standard + Spacing.lg * 2
 private val INDICATOR_HEIGHT = IconSize.standard + Spacing.xs * 2
-
-/** Indicator spring: quick and settled, with only a hint of overshoot. */
-private const val INDICATOR_DAMPING = 0.8f
-private const val INDICATOR_STIFFNESS = 420f
 
 /**
  * Liquid feel while moving: the indicator stretches along its motion in
@@ -72,11 +77,25 @@ private const val SQUASH_RATIO = 0.4f
  * and drawing the indicator, so the animation never recomposes the bar.
  */
 @Composable
+@Suppress("LongMethod")
 fun LibraryNavigationBar(
     selected: LibrarySection,
     onSelect: (LibrarySection) -> Unit,
     modifier: Modifier = Modifier,
+    searching: Boolean = false,
+    compact: () -> Float = { 0f },
+    onExpand: () -> Unit = {},
 ) {
+    // Compact (scrolled library): the sections fade out and the current one's icon
+    // remains as a single button that brings the sections back.
+    val isCompact by remember { derivedStateOf { compact() > COMPACT_SWITCH } }
+    // While searching no section is current: the indicator fades out (it keeps its
+    // place, so it comes back where it was) and every label goes quiet.
+    val indicatorAlpha by animateFloatAsState(
+        targetValue = if (searching) 0f else 1f,
+        animationSpec = Motion.fade(),
+        label = "libraryNavIndicatorAlpha",
+    )
     val glass = EmPee3Glass.isActive
     val shape = BottomChrome.shape()
     val sections = LibrarySection.entries
@@ -88,7 +107,7 @@ fun LibraryNavigationBar(
     LaunchedEffect(selectedIndex) {
         indicatorPosition.animateTo(
             targetValue = selectedIndex.toFloat(),
-            animationSpec = spring(dampingRatio = INDICATOR_DAMPING, stiffness = INDICATOR_STIFFNESS),
+            animationSpec = Motion.standard(),
         )
     }
 
@@ -112,24 +131,73 @@ fun LibraryNavigationBar(
                 position = indicatorPosition,
                 count = sections.size,
                 glass = glass,
-                modifier = Modifier.matchParentSize(),
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = indicatorAlpha * expandedAlpha(compact()) },
             )
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .graphicsLayer { alpha = expandedAlpha(compact()) }
                         .selectableGroup(),
             ) {
                 sections.forEach { section ->
                     LibraryNavigationItem(
                         section = section,
-                        selected = section == selected,
+                        selected = section == selected && !searching,
                         onClick = { onSelect(section) },
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
+            CompactSectionButton(
+                section = selected,
+                enabled = isCompact,
+                onClick = onExpand,
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = compactAlpha(compact()) },
+            )
         }
+    }
+}
+
+/** Past this compactness the bar acts as the single "sections" button. */
+private const val COMPACT_SWITCH = 0.5f
+
+/** Sections fade out over the first half of compacting, the compact icon in over the second. */
+private fun expandedAlpha(compact: Float): Float = (1f - compact * 2f).coerceIn(0f, 1f)
+
+private fun compactAlpha(compact: Float): Float = (compact * 2f - 1f).coerceIn(0f, 1f)
+
+/** The compact bar: the current section's icon; tapping it expands the chrome again. */
+@Composable
+private fun CompactSectionButton(
+    section: LibrarySection,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            if (enabled) {
+                modifier
+                    .clickable(interactionSource = null, indication = null, onClick = onClick)
+                    .semantics { contentDescription = "Show library sections" }
+            } else {
+                modifier.clearAndSetSemantics { }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = section.selectedIcon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(IconSize.standard),
+        )
     }
 }
 
@@ -192,7 +260,14 @@ private fun LibraryNavigationItem(
 ) {
     val contentColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = Motion.fade(),
         label = "libraryNavContent",
+    )
+    // The selected icon lifts very slightly as the indicator arrives.
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) SELECTED_ICON_SCALE else 1f,
+        animationSpec = Motion.snappy(),
+        label = "libraryNavIcon",
     )
 
     // The whole column is the touch target (at least 48 dp tall). No press
@@ -219,7 +294,13 @@ private fun LibraryNavigationItem(
                 imageVector = if (selected) section.selectedIcon else section.icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(IconSize.standard),
+                modifier =
+                    Modifier
+                        .size(IconSize.standard)
+                        .graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        },
             )
         }
         Text(

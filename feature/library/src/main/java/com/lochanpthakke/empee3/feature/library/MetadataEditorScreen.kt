@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -384,7 +384,7 @@ fun MetadataEditorScreen(
     }
 
     if (showCompletionDialog) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showCompletionDialog = false },
             title = { Text("Metadata Repair Complete") },
             text = {

@@ -127,14 +127,79 @@ class LibraryViewModel
         private val _librarySearchQuery = MutableStateFlow("")
         val librarySearchQuery: StateFlow<String> = _librarySearchQuery.asStateFlow()
 
-        val librarySearchResults: StateFlow<List<Song>> =
+        private val settledSearchQuery =
             _librarySearchQuery
                 .debounce(SEARCH_DEBOUNCE_MS)
                 .map { it.trim() }
                 .distinctUntilChanged()
+
+        val librarySearchResults: StateFlow<List<Song>> =
+            settledSearchQuery
                 .flatMapLatest { query ->
                     if (query.isEmpty()) flowOf(emptyList()) else libraryRepository.searchSongs(query)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        /** Library search: albums whose title or artist matches, from the local album list. */
+        val librarySearchAlbums: StateFlow<List<Album>> =
+            settledSearchQuery
+                .flatMapLatest { query ->
+                    if (query.isEmpty()) {
+                        flowOf(emptyList())
+                    } else {
+                        libraryRepository.getAllAlbums().map { albums ->
+                            albums
+                                .filter { it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true) }
+                                .take(SEARCH_SECTION_LIMIT)
+                        }
+                    }
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        /** Library search: artists whose name matches, from the local artist list. */
+        val librarySearchArtists: StateFlow<List<Artist>> =
+            settledSearchQuery
+                .flatMapLatest { query ->
+                    if (query.isEmpty()) {
+                        flowOf(emptyList())
+                    } else {
+                        libraryRepository.getAllArtists().map { artists ->
+                            artists.filter { it.name.contains(query, ignoreCase = true) }.take(SEARCH_SECTION_LIMIT)
+                        }
+                    }
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        /**
+         * One representative cover per artist (artist id -> artwork uri), local
+         * data only. Preferred: the artwork of the artist's album with the most
+         * songs. Otherwise (e.g. their albums are credited to a combined album
+         * artist): the most common artwork among the artist's own songs. Artists
+         * with neither are absent and get a monogram.
+         */
+        val artistArtwork: StateFlow<Map<Long, String>> =
+            combine(
+                libraryRepository.getAllArtists(),
+                libraryRepository.getAllAlbums(),
+                libraryRepository.getAllSongs(),
+            ) { artists, albums, songs ->
+                val byAlbum =
+                    albums
+                        .filter { !it.artworkUri.isNullOrBlank() }
+                        .groupBy { it.artistId }
+                        .mapValues { (_, artistAlbums) -> artistAlbums.maxBy { it.songCount }.artworkUri.orEmpty() }
+                val bySongs =
+                    songs
+                        .filter { !it.artworkUri.isNullOrBlank() }
+                        .groupBy { it.artist }
+                        .mapValues { (_, artistSongs) ->
+                            artistSongs
+                                .groupingBy { it.artworkUri.orEmpty() }
+                                .eachCount()
+                                .maxBy { it.value }
+                                .key
+                        }
+                artists
+                    .mapNotNull { artist -> (byAlbum[artist.id] ?: bySongs[artist.name])?.let { artist.id to it } }
+                    .toMap()
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
 
         /**
          * Id of the playing song only. Screens that just highlight the current row
@@ -691,6 +756,7 @@ class LibraryViewModel
             private const val SCAN_INDICATOR_DELAY_MS = 1000L
             private const val REPAIR_DELAY_MS = 600L
             private const val SEARCH_DEBOUNCE_MS = 250L
+            private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L
         }
     }

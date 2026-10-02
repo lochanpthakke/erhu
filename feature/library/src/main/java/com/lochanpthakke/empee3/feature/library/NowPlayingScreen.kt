@@ -69,13 +69,16 @@ import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.pressScale
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
@@ -137,6 +140,7 @@ fun NowPlayingScreen(
                 AppTopBar(
                     navigation = TopBarNavigation.Detail(onBackClick),
                     title = "Now Playing",
+                    glass = false,
                     containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
                 )
             },
@@ -163,15 +167,19 @@ fun NowPlayingScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
                     ) {
-                        Box(
+                        AnimatedTrack(
+                            song = song,
+                            index = playbackState.currentIndex,
+                            shuffle = playbackState.shuffleModeEnabled,
                             modifier = Modifier.weight(1f, fill = false),
                             contentAlignment = Alignment.Center,
-                        ) {
+                        ) { track ->
                             SongArtwork(
-                                song = song,
+                                song = track,
                                 contentDescription = "Album artwork",
                                 modifier =
                                     Modifier
+                                        .sharedArtwork(nowPlayingArtworkKey(track.id))
                                         .widthIn(max = ArtworkSize.heroMax)
                                         .fillMaxWidth()
                                         .aspectRatio(1f, matchHeightConstraintsFirst = true)
@@ -180,24 +188,31 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = song.title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.xs))
-                            Text(
-                                text = "${song.artist} — ${song.album}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                            )
+                        AnimatedTrack(
+                            song = song,
+                            index = playbackState.currentIndex,
+                            shuffle = playbackState.shuffleModeEnabled,
+                            contentAlignment = Alignment.Center,
+                        ) { track ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = track.title,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.xs))
+                                Text(
+                                    text = "${track.artist} — ${track.album}",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
 
                         PlaybackProgress(
@@ -219,7 +234,7 @@ fun NowPlayingScreen(
                                     .then(
                                         if (glass) {
                                             Modifier
-                                                .glassPanel(MaterialTheme.shapes.large, level = GlassLevel.Strong)
+                                                .glassPanel(Radius.pillShape, level = GlassLevel.Strong)
                                                 .padding(vertical = Spacing.sm)
                                         } else {
                                             Modifier
@@ -238,7 +253,7 @@ fun NowPlayingScreen(
                                 )
                             }
 
-                            IconButton(onClick = { playbackRepository.skipPrevious() }) {
+                            PressIconButton(onClick = { playbackRepository.skipPrevious() }) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
                                     contentDescription = "Previous",
@@ -246,19 +261,26 @@ fun NowPlayingScreen(
                                 )
                             }
 
+                            val playInteraction = rememberInteraction()
                             FilledIconButton(
                                 onClick = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
-                                modifier = Modifier.size(ComponentSize.primaryButton),
+                                modifier =
+                                    Modifier
+                                        .size(ComponentSize.primaryButton)
+                                        .pressScale(playInteraction),
                                 shape = CircleShape,
+                                interactionSource = playInteraction,
                             ) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = if (isPlaying) "Pause" else "Play",
-                                    modifier = Modifier.size(IconSize.hero),
-                                )
+                                SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = if (isPlaying) "Pause" else "Play",
+                                        modifier = Modifier.size(IconSize.hero),
+                                    )
+                                }
                             }
 
-                            IconButton(
+                            PressIconButton(
                                 onClick = { playbackRepository.skipNext() },
                                 enabled = hasNext(playbackState),
                             ) {
@@ -273,20 +295,25 @@ fun NowPlayingScreen(
                                 active = playbackState.repeatMode != RepeatMode.OFF,
                                 onClick = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
                             ) {
-                                Icon(
-                                    imageVector =
-                                        if (playbackState.repeatMode == RepeatMode.ONE) {
-                                            Icons.Default.RepeatOne
-                                        } else {
-                                            Icons.Default.Repeat
-                                        },
-                                    contentDescription =
-                                        when (playbackState.repeatMode) {
-                                            RepeatMode.OFF -> "Repeat off"
-                                            RepeatMode.ALL -> "Repeat all"
-                                            RepeatMode.ONE -> "Repeat one"
-                                        },
-                                )
+                                SwapIcon(
+                                    if (playbackState.repeatMode ==
+                                        RepeatMode.ONE
+                                    ) {
+                                        Icons.Default.RepeatOne
+                                    } else {
+                                        Icons.Default.Repeat
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = it,
+                                        contentDescription =
+                                            when (playbackState.repeatMode) {
+                                                RepeatMode.OFF -> "Repeat off"
+                                                RepeatMode.ALL -> "Repeat all"
+                                                RepeatMode.ONE -> "Repeat one"
+                                            },
+                                    )
+                                }
                             }
                         }
 
@@ -295,20 +322,27 @@ fun NowPlayingScreen(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            IconButton(onClick = { onToggleFavorite(song) }) {
-                                Icon(
-                                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                )
+                            PressIconButton(onClick = { onToggleFavorite(song) }) {
+                                val heartColor =
+                                    animatedStateColor(
+                                        if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        label = "favoriteTint",
+                                    )
+                                SwapIcon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder) {
+                                    Icon(
+                                        imageVector = it,
+                                        contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                        tint = heartColor,
+                                    )
+                                }
                             }
-                            IconButton(onClick = { showLyrics = true }) {
+                            PressIconButton(onClick = { showLyrics = true }) {
                                 Icon(imageVector = Icons.Default.Lyrics, contentDescription = "Lyrics")
                             }
-                            IconButton(onClick = { showQueue = true }) {
+                            PressIconButton(onClick = { showQueue = true }) {
                                 Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue")
                             }
-                            IconButton(onClick = { onAddToPlaylist(song) }) {
+                            PressIconButton(onClick = { onAddToPlaylist(song) }) {
                                 Icon(imageVector = Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Add to playlist")
                             }
                         }
@@ -386,26 +420,26 @@ private fun ToggleIconButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
+    // On/off is a colour change that fades, never a jump.
+    val background =
+        animatedStateColor(
+            if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0f),
+            label = "toggleBackground",
+        )
+    val foreground =
+        animatedStateColor(
+            if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = INACTIVE_ALPHA),
+            label = "toggleForeground",
+        )
+    PressIconButton(onClick = onClick) {
         Box(
             modifier =
-                if (active) {
-                    Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .padding(6.dp)
-                } else {
-                    Modifier.padding(6.dp)
-                },
+                Modifier
+                    .clip(CircleShape)
+                    .background(background)
+                    .padding(6.dp),
         ) {
-            CompositionLocalProvider(
-                LocalContentColor provides
-                    if (active) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = INACTIVE_ALPHA)
-                    },
-            ) {
+            CompositionLocalProvider(LocalContentColor provides foreground) {
                 content()
             }
         }

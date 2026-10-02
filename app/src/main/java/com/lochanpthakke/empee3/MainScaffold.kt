@@ -10,6 +10,12 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +79,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHeight
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.LocalSharedTransitionScope
+import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
+import com.lochanpthakke.empee3.core.designsystem.foundation.ProvideMotionScope
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.BuiltInThemes
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
@@ -87,7 +97,7 @@ import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
 import com.lochanpthakke.empee3.feature.library.ArtworkManagerScreen
-import com.lochanpthakke.empee3.feature.library.LibraryBottomControls
+import com.lochanpthakke.empee3.feature.library.LibraryBottomChrome
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
 import com.lochanpthakke.empee3.feature.library.LibrarySection
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
@@ -96,6 +106,7 @@ import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
+import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
 import com.lochanpthakke.empee3.feature.settings.SettingsCategoryScreen
 import com.lochanpthakke.empee3.feature.settings.SettingsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
@@ -113,6 +124,10 @@ import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Playlists
 import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.navigation.SettingsCategory
+import com.lochanpthakke.empee3.navigation.navEnter
+import com.lochanpthakke.empee3.navigation.navExit
+import com.lochanpthakke.empee3.navigation.navPopEnter
+import com.lochanpthakke.empee3.navigation.navPopExit
 import com.lochanpthakke.empee3.ui.components.MiniPlayer
 import com.lochanpthakke.empee3.ui.components.WriteAccessRequestEffect
 import kotlinx.coroutines.launch
@@ -189,6 +204,9 @@ fun MainScaffold() {
         var librarySection by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
         // Search is opened from the bottom controls, so its on/off state lives here too.
         var isLibrarySearchActive by rememberSaveable { mutableStateOf(false) }
+        // Library scrolling compacts the bottom chrome; switching section or searching restores it.
+        val libraryChrome = rememberLibraryChromeState()
+        LaunchedEffect(librarySection, isLibrarySearchActive) { libraryChrome.expand() }
         val context = LocalContext.current
         var isLibraryContentShown by rememberSaveable {
             mutableStateOf(ContextCompat.checkSelfPermission(context, audioPermission()) == PackageManager.PERMISSION_GRANTED)
@@ -261,142 +279,185 @@ fun MainScaffold() {
             // mini player plus a spacer for the gesture/navigation bar, and the
             // measured height of that chrome is handed to screens. Screens draw edge
             // to edge (no padding here) and their top bars own the status bar.
-            Scaffold(
-                modifier = Modifier.glassBackdropSource(shellBackdrop),
-                contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                bottomBar = {
-                    CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
-                        // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
-                        // Stack: mini player, then (on Library) the section navigation, then the gesture area.
-                        Column(modifier = if (isOnNowPlaying) Modifier else Modifier.glassChromeFade()) {
-                            if (!isOnNowPlaying) {
-                                MiniPlayer(
-                                    playbackRepository = playbackRepository,
-                                    onMiniPlayerClick = {
-                                        navController.navigate(NowPlaying) { launchSingleTop = true }
-                                    },
-                                )
+            SharedTransitionLayout {
+                CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                    Scaffold(
+                        modifier = Modifier.glassBackdropSource(shellBackdrop),
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                        bottomBar = {
+                            CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
+                                // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
+                                // Stack: mini player, then (on Library) the section navigation, then the gesture area.
+                                Column(modifier = if (isOnNowPlaying) Modifier else Modifier.glassChromeFade()) {
+                                    // Mini player + (on the Library) sections and search, as one chrome
+                                    // that compacts while the library scrolls.
+                                    LibraryBottomChrome(
+                                        state = libraryChrome,
+                                        showNavigation = isOnLibrary && isLibraryContentShown,
+                                        selected = librarySection,
+                                        onSelect = { librarySection = it },
+                                        onSearch = { isLibrarySearchActive = true },
+                                        onExpand = { scope.launch { libraryChrome.expand() } },
+                                        searching = isLibrarySearchActive,
+                                        miniPlayer = { compact ->
+                                            // Visibility is animated so the artwork can travel into Now Playing.
+                                            AnimatedVisibility(
+                                                visible = !isOnNowPlaying,
+                                                enter = fadeIn(Motion.fade(Motion.DURATION_MEDIUM)) + expandVertically(Motion.standard()),
+                                                exit = fadeOut(Motion.fade(Motion.DURATION_SHORT)) + shrinkVertically(Motion.standard()),
+                                            ) {
+                                                ProvideMotionScope(this) {
+                                                    MiniPlayer(
+                                                        playbackRepository = playbackRepository,
+                                                        onMiniPlayerClick = {
+                                                            navController.navigate(NowPlaying) { launchSingleTop = true }
+                                                        },
+                                                        compact = compact,
+                                                    )
+                                                }
+                                            }
+                                        },
+                                    )
+                                    Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+                                }
                             }
-                            if (isOnLibrary && isLibraryContentShown) {
-                                LibraryBottomControls(
-                                    selected = librarySection,
-                                    onSelect = { librarySection = it },
-                                    onSearch = { isLibrarySearchActive = true },
-                                )
+                        },
+                    ) { innerPadding ->
+                        CompositionLocalProvider(LocalBottomChromeHeight provides innerPadding.calculateBottomPadding()) {
+                            NavHost(
+                                navController = navController,
+                                startDestination = Library,
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize()
+                                        .glassBackdropSource(screensBackdrop),
+                                enterTransition = { navEnter(targetState.destination) },
+                                exitTransition = { navExit(targetState.destination) },
+                                popEnterTransition = { navPopEnter(initialState.destination) },
+                                popExitTransition = { navPopExit(initialState.destination) },
+                            ) {
+                                composable<Library> {
+                                    ProvideMotionScope(this) {
+                                        LibraryRoute(
+                                            libraryViewModel = libraryViewModel,
+                                            playlistsViewModel = playlistsViewModel,
+                                            section = librarySection,
+                                            onOpenDrawer = openDrawer,
+                                            onContentShownChange = { isLibraryContentShown = it },
+                                            onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                            isSearchActive = isLibrarySearchActive,
+                                            onSearchActiveChange = { isLibrarySearchActive = it },
+                                            chromeScroll = libraryChrome.connection,
+                                        )
+                                    }
+                                }
+                                composable<AlbumDetail> { entry ->
+                                    ProvideMotionScope(this) {
+                                        val route = entry.toRoute<AlbumDetail>()
+                                        AlbumDetailScreen(
+                                            albumId = route.albumId,
+                                            viewModel = libraryViewModel,
+                                            playlistsViewModel = playlistsViewModel,
+                                            onBack = { navController.popBackStack() },
+                                        )
+                                    }
+                                }
+                                composable<NowPlaying> {
+                                    ProvideMotionScope(this) {
+                                        val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
+                                        val lyrics by libraryViewModel.currentSongLyrics.collectAsState()
+                                        NowPlayingScreen(
+                                            playbackRepository = playbackRepository,
+                                            isFavorite = isFavorite,
+                                            lyrics = lyrics,
+                                            onBackClick = { navController.popBackStack() },
+                                            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
+                                            onAddToPlaylist = { songForPlaylist = it },
+                                        )
+                                    }
+                                }
+                                composable<Playlists> {
+                                    ProvideMotionScope(this) {
+                                        PlaylistsScreen(
+                                            viewModel = playlistsViewModel,
+                                            onOpenDrawer = openDrawer,
+                                            onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
+                                        )
+                                    }
+                                }
+                                composable<PlaylistDetail> { entry ->
+                                    ProvideMotionScope(this) {
+                                        val route = entry.toRoute<PlaylistDetail>()
+                                        val currentSongId by libraryViewModel.currentSongId.collectAsState()
+                                        PlaylistDetailScreen(
+                                            playlistId = route.playlistId,
+                                            viewModel = playlistsViewModel,
+                                            currentSongId = currentSongId,
+                                            onBackClick = { navController.popBackStack() },
+                                        )
+                                    }
+                                }
+                                composable<Equalizer> {
+                                    ProvideMotionScope(this) {
+                                        SoundSettingsScreen(
+                                            viewModel = soundViewModel,
+                                            title = "Equalizer",
+                                            navigation = TopBarNavigation.TopLevel(openDrawer),
+                                        )
+                                    }
+                                }
+                                composable<MetadataEditor> {
+                                    ProvideMotionScope(this) {
+                                        MetadataEditorScreen(
+                                            viewModel = libraryViewModel,
+                                            onOpenDrawer = openDrawer,
+                                            onNavigateToMetadataSettings = {
+                                                navController.navigate(SettingsCategory("metadata"))
+                                            },
+                                            onNavigateToLibrary = {
+                                                navController.navigateTopLevel(Library)
+                                            },
+                                        )
+                                    }
+                                }
+                                composable<ArtworkManager> {
+                                    ProvideMotionScope(this) {
+                                        ArtworkManagerScreen(
+                                            viewModel = libraryViewModel,
+                                            onOpenDrawer = openDrawer,
+                                            onNavigateToMetadataSettings = {
+                                                navController.navigate(SettingsCategory("metadata"))
+                                            },
+                                            onNavigateToLibrary = {
+                                                navController.navigate(Library)
+                                            },
+                                        )
+                                    }
+                                }
+                                composable<Settings> {
+                                    ProvideMotionScope(this) {
+                                        SettingsScreen(
+                                            onOpenDrawer = openDrawer,
+                                            onOpenCategory = { navController.navigate(SettingsCategory(it)) },
+                                        )
+                                    }
+                                }
+                                composable<SettingsCategory> { entry ->
+                                    ProvideMotionScope(this) {
+                                        val route = entry.toRoute<SettingsCategory>()
+                                        SettingsCategoryScreen(
+                                            categoryId = route.categoryId,
+                                            onBack = { navController.popBackStack() },
+                                            onNavigateToMetadataEditor = {
+                                                navController.navigate(MetadataEditor)
+                                            },
+                                            themeViewModel = themeViewModel,
+                                            soundViewModel = soundViewModel,
+                                            diagnosticsViewModel = diagnosticsViewModel,
+                                        )
+                                    }
+                                }
                             }
-                            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
-                        }
-                    }
-                },
-            ) { innerPadding ->
-                CompositionLocalProvider(LocalBottomChromeHeight provides innerPadding.calculateBottomPadding()) {
-                    NavHost(
-                        navController = navController,
-                        startDestination = Library,
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .glassBackdropSource(screensBackdrop),
-                    ) {
-                        composable<Library> {
-                            LibraryRoute(
-                                libraryViewModel = libraryViewModel,
-                                playlistsViewModel = playlistsViewModel,
-                                section = librarySection,
-                                onOpenDrawer = openDrawer,
-                                onContentShownChange = { isLibraryContentShown = it },
-                                onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
-                                isSearchActive = isLibrarySearchActive,
-                                onSearchActiveChange = { isLibrarySearchActive = it },
-                            )
-                        }
-                        composable<AlbumDetail> { entry ->
-                            val route = entry.toRoute<AlbumDetail>()
-                            AlbumDetailScreen(
-                                albumId = route.albumId,
-                                viewModel = libraryViewModel,
-                                playlistsViewModel = playlistsViewModel,
-                                onBack = { navController.popBackStack() },
-                            )
-                        }
-                        composable<NowPlaying> {
-                            val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
-                            val lyrics by libraryViewModel.currentSongLyrics.collectAsState()
-                            NowPlayingScreen(
-                                playbackRepository = playbackRepository,
-                                isFavorite = isFavorite,
-                                lyrics = lyrics,
-                                onBackClick = { navController.popBackStack() },
-                                onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
-                                onAddToPlaylist = { songForPlaylist = it },
-                            )
-                        }
-                        composable<Playlists> {
-                            PlaylistsScreen(
-                                viewModel = playlistsViewModel,
-                                onOpenDrawer = openDrawer,
-                                onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                            )
-                        }
-                        composable<PlaylistDetail> { entry ->
-                            val route = entry.toRoute<PlaylistDetail>()
-                            val currentSongId by libraryViewModel.currentSongId.collectAsState()
-                            PlaylistDetailScreen(
-                                playlistId = route.playlistId,
-                                viewModel = playlistsViewModel,
-                                currentSongId = currentSongId,
-                                onBackClick = { navController.popBackStack() },
-                            )
-                        }
-                        composable<Equalizer> {
-                            SoundSettingsScreen(
-                                viewModel = soundViewModel,
-                                title = "Equalizer",
-                                navigation = TopBarNavigation.TopLevel(openDrawer),
-                            )
-                        }
-                        composable<MetadataEditor> {
-                            MetadataEditorScreen(
-                                viewModel = libraryViewModel,
-                                onOpenDrawer = openDrawer,
-                                onNavigateToMetadataSettings = {
-                                    navController.navigate(SettingsCategory("metadata"))
-                                },
-                                onNavigateToLibrary = {
-                                    navController.navigateTopLevel(Library)
-                                },
-                            )
-                        }
-                        composable<ArtworkManager> {
-                            ArtworkManagerScreen(
-                                viewModel = libraryViewModel,
-                                onOpenDrawer = openDrawer,
-                                onNavigateToMetadataSettings = {
-                                    navController.navigate(SettingsCategory("metadata"))
-                                },
-                                onNavigateToLibrary = {
-                                    navController.navigate(Library)
-                                },
-                            )
-                        }
-                        composable<Settings> {
-                            SettingsScreen(
-                                onOpenDrawer = openDrawer,
-                                onOpenCategory = { navController.navigate(SettingsCategory(it)) },
-                            )
-                        }
-                        composable<SettingsCategory> { entry ->
-                            val route = entry.toRoute<SettingsCategory>()
-                            SettingsCategoryScreen(
-                                categoryId = route.categoryId,
-                                onBack = { navController.popBackStack() },
-                                onNavigateToMetadataEditor = {
-                                    navController.navigate(MetadataEditor)
-                                },
-                                themeViewModel = themeViewModel,
-                                soundViewModel = soundViewModel,
-                                diagnosticsViewModel = diagnosticsViewModel,
-                            )
                         }
                     }
                 }
@@ -453,6 +514,7 @@ private fun LibraryRoute(
     onOpenAlbum: (Album) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
+    chromeScroll: NestedScrollConnection,
 ) {
     val context = LocalContext.current
     val permission = audioPermission()
@@ -529,6 +591,7 @@ private fun LibraryRoute(
             onOpenAlbum = onOpenAlbum,
             isSearchActive = isSearchActive,
             onSearchActiveChange = onSearchActiveChange,
+            chromeScroll = chromeScroll,
         )
     } else {
         PermissionRequestView(

@@ -100,6 +100,7 @@ fun ThemeSettingsScreen(
                     .fillMaxSize()
                     .padding(scroll.container)
                     .verticalScroll(rememberScrollState())
+                    .padding(top = scroll.contentTop)
                     .padding(Spacing.lg)
                     .padding(bottom = scroll.contentBottom),
         ) {

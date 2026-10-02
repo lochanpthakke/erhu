@@ -1,6 +1,5 @@
 package com.lochanpthakke.empee3.core.designsystem.artwork
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -39,7 +38,7 @@ fun AlbumArtwork(
         val context = LocalContext.current
         val iconSize = maxWidth / PLACEHOLDER_ICON_FRACTION
         val sizePx = with(LocalDensity.current) { maxWidth.roundToPx() }.coerceAtLeast(1)
-        val bitmap by produceState<Bitmap?>(initialValue = null, artworkUri, sizePx) {
+        val bitmap by produceState(initialValue = artworkUri?.let(ArtworkLoader::peek), artworkUri, sizePx) {
             value = artworkUri?.let { ArtworkLoader.load(context, it, it, sizePx) }
         }
         val loaded = bitmap

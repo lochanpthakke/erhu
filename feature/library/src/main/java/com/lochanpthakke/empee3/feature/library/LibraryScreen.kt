@@ -8,15 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
@@ -29,8 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -44,17 +39,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
-import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
@@ -87,15 +79,19 @@ fun LibraryScreen(
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    chromeScroll: NestedScrollConnection? = null,
 ) {
     val songs = viewModel.songsPaged.collectAsLazyPagingItems()
     val favoriteSongs = viewModel.favoriteSongsPaged.collectAsLazyPagingItems()
     val albums = viewModel.albumsPaged.collectAsLazyPagingItems()
     val artists = viewModel.artistsPaged.collectAsLazyPagingItems()
+    val artistArtwork by viewModel.artistArtwork.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
     val searchQuery by viewModel.librarySearchQuery.collectAsState()
     val searchResults by viewModel.librarySearchResults.collectAsState()
+    val searchArtists by viewModel.librarySearchArtists.collectAsState()
+    val searchAlbums by viewModel.librarySearchAlbums.collectAsState()
     // Only the playing song's id: position ticks must not recompose the library.
     val currentSongId by viewModel.currentSongId.collectAsState()
 
@@ -137,7 +133,7 @@ fun LibraryScreen(
     AppScaffold(
         topBar = {
             if (isSearchActive) {
-                SearchTopBar(
+                SearchHeader(
                     query = searchQuery,
                     onQueryChange = viewModel::setLibrarySearchQuery,
                     onClose = closeSearch,
@@ -151,14 +147,21 @@ fun LibraryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { innerPadding ->
-        val scroll = innerPadding.forScrollingContent(topOverlay = !isSearchActive)
+        // Both headers float over the content (no opaque bar), so content scrolls under them.
+        val scroll = innerPadding.forScrollingContent(topOverlay = true)
         if (isSearchActive) {
-            SearchResults(
+            SearchContent(
                 query = searchQuery,
-                results = searchResults,
+                songs = searchResults,
+                artists = searchArtists,
+                albums = searchAlbums,
+                artistArtwork = artistArtwork,
                 currentSongId = currentSongId,
                 onSongClick = { index -> viewModel.playSongsFromQueue(searchResults, index) },
+                onArtistClick = { viewModel.playArtist(it) },
+                onAlbumClick = onOpenAlbum,
                 actions = actions,
+                topInset = scroll.contentTop,
                 bottomInset = scroll.contentBottom,
                 modifier =
                     Modifier
@@ -174,7 +177,8 @@ fun LibraryScreen(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .padding(scroll.container),
+                        .padding(scroll.container)
+                        .then(if (chromeScroll != null) Modifier.nestedScroll(chromeScroll) else Modifier),
                 // The list starts below the overlay header, so the indicator does too.
                 indicator = {
                     PullToRefreshDefaults.Indicator(
@@ -223,6 +227,7 @@ fun LibraryScreen(
                         LibrarySection.ARTISTS ->
                             ArtistsTab(
                                 artists = artists,
+                                artwork = artistArtwork,
                                 topInset = scroll.contentTop,
                                 bottomInset = scroll.contentBottom,
                                 onArtistClick = { viewModel.playArtist(it) },
@@ -251,72 +256,6 @@ fun LibraryScreen(
             viewModel = playlistsViewModel,
             onDismiss = { songForPlaylist = null },
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SearchTopBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    onClose: () -> Unit,
-) {
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    AppTopBar(
-        navigation = TopBarNavigation.Detail(onBack = onClose),
-        title = {
-            TextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("Songs, artists or albums") },
-                singleLine = true,
-                colors =
-                    TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                    ),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequester),
-            )
-        },
-        actions = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun SearchResults(
-    query: String,
-    results: List<Song>,
-    currentSongId: Long?,
-    onSongClick: (Int) -> Unit,
-    actions: SongActions,
-    bottomInset: Dp,
-    modifier: Modifier = Modifier,
-) {
-    when {
-        query.isBlank() ->
-            EmptyState(message = "Search your library by title, artist or album.", modifier = modifier.padding(bottom = bottomInset))
-        results.isEmpty() -> EmptyState(message = "No songs match \"$query\".", modifier = modifier.padding(bottom = bottomInset))
-        else ->
-            LazyColumn(modifier = modifier, contentPadding = listContentPadding(0.dp, bottomInset)) {
-                itemsIndexed(results, key = { _, song -> song.id }) { index, song ->
-                    LibrarySongRow(
-                        song = song,
-                        isCurrent = song.id == currentSongId,
-                        onClick = { onSongClick(index) },
-                        actions = actions,
-                    )
-                }
-            }
     }
 }
 
@@ -369,9 +308,10 @@ internal fun LibrarySongRow(
     isCurrent: Boolean,
     onClick: () -> Unit,
     actions: SongActions,
+    modifier: Modifier = Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    TrackRow(song = song, isCurrent = isCurrent, onClick = onClick) {
+    TrackRow(song = song, isCurrent = isCurrent, onClick = onClick, modifier = modifier) {
         // Smaller glyphs inside full-size touch targets: the title stays the strongest element.
         IconButton(onClick = { actions.onToggleFavorite(song) }) {
             Icon(
@@ -469,6 +409,7 @@ private fun AlbumsTab(
 @Composable
 private fun ArtistsTab(
     artists: LazyPagingItems<Artist>,
+    artwork: Map<Long, String>,
     topInset: Dp,
     bottomInset: Dp,
     onArtistClick: (Artist) -> Unit,
@@ -481,9 +422,19 @@ private fun ArtistsTab(
             modifier = Modifier.padding(top = topInset, bottom = bottomInset),
         )
     } else {
-        LazyColumn(
+        // Same artwork-first grid as Albums.
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
             modifier = modifier.fillMaxSize(),
-            contentPadding = listContentPadding(topInset, bottomInset),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+            contentPadding =
+                PaddingValues(
+                    start = Spacing.screenGutter,
+                    end = Spacing.screenGutter,
+                    top = Spacing.sm + topInset,
+                    bottom = Spacing.lg + bottomInset,
+                ),
         ) {
             items(
                 count = artists.itemCount,
@@ -491,7 +442,7 @@ private fun ArtistsTab(
             ) { index ->
                 val artist = artists[index]
                 if (artist != null) {
-                    ArtistRow(artist = artist, onClick = { onArtistClick(artist) })
+                    ArtistTile(artist = artist, artworkUri = artwork[artist.id], onClick = { onArtistClick(artist) })
                 }
             }
         }

@@ -17,15 +17,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.CacheDrawScope
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -85,99 +87,103 @@ object EmPee3Glass {
 
 private const val SHEEN_ALPHA = 0.06f
 
-/** Saturation of the blurred backdrop: keeps colours alive through the frost. */
-private const val FROST_SATURATION = 1.15f
+/** Saturation of the blurred backdrop: colours stay alive through the frost without turning loud. */
+private const val FROST_SATURATION = 1.2f
 
-/** Where the specular light fades out and the edge shade starts (fractions of the height). */
-private const val SPECULAR_END = 0.45f
-private const val SHADE_START = 0.6f
+/** Upper light band: where it fades out (fraction of the height). */
+private const val SPECULAR_END = 0.5f
 
-/** Rim strength for borderless surfaces: a hint of edge, not an outline. */
-private const val SOFT_RIM_FRACTION = 0.6f
+/** Lower shade: where it starts (fraction of the height). */
+private const val SHADE_START = 0.55f
 
 /**
- * Internal material levels; not a user setting. They only change how much of
- * the frosted backdrop shows through ([blurredFillScale] scales the panel fill
- * when a blurred backdrop is drawn underneath it).
+ * Lens edge: light catches the top-start edge and, faintly, the opposite
+ * bottom-end edge, like the rim of a thick piece of glass. Fractions of the
+ * highlight colour along the diagonal.
+ */
+private const val RIM_MID_FRACTION = 0.08f
+private const val RIM_FAR_FRACTION = 0.35f
+
+/** Soft corner highlight: radius as a share of the larger side, strength as a share of the specular colour. */
+private const val CORNER_LIGHT_RADIUS = 0.9f
+private const val CORNER_LIGHT_FRACTION = 0.6f
+
+/** Bar edge (full-width top bars): a faint hairline along the bottom instead of a rim and shade. */
+private const val BAR_HAIRLINE_FRACTION = 0.4f
+
+/**
+ * Internal material levels; not a user setting. Strength is expressed through
+ * the material, not opacity: how much light and shade the surface carries and
+ * whether it floats with a soft shadow. [frostedFillScale] scales the panel fill
+ * when something blurred is underneath.
  */
 enum class GlassLevel(
-    internal val blurredFillScale: Float,
+    internal val frostedFillScale: Float,
+    internal val lightScale: Float,
+    internal val shadeScale: Float,
+    internal val floats: Boolean,
 ) {
-    /** Header buttons, search, secondary floating controls. */
-    Standard(0.55f),
+    /** Content-level surfaces (settings cards): a hint of material, no depth. */
+    Minimal(frostedFillScale = 0.5f, lightScale = 0.5f, shadeScale = 0.3f, floats = false),
 
-    /** Mini player, library navigation. */
-    Floating(0.62f),
+    /** Top bars, search, selected indicators. */
+    Medium(frostedFillScale = 0.55f, lightScale = 0.8f, shadeScale = 0.6f, floats = false),
 
-    /** Major controls and the drawer: more separation from busy backgrounds. */
-    Strong(0.85f),
+    /** Mini player, library navigation, floating buttons, Now Playing controls, drawer. */
+    Strong(frostedFillScale = 0.62f, lightScale = 1f, shadeScale = 1f, floats = true),
 }
 
 /**
- * The shared glass material. Layers, bottom to top, all clipped to [shape]:
+ * The shared glass material. Layers, bottom to top:
  *
- * 1. the [backdrop] behind the surface, blurred and slightly saturated
+ * 0. (Strong) a soft floating shadow, drawn only outside the shape so it never
+ *    darkens the glass itself;
+ * 1. the [backdrop] behind the surface, blurred and gently saturated
  *    (Android 12+ with a [GlassBackdrop]; skipped otherwise);
- * 2. a translucent fill in the theme's own panel colour (lighter when frosted);
- * 3. a soft specular light on the upper part;
+ * 2. a translucent fill in the theme's own panel colour (lighter when frosted),
+ *    or [fill] when given (a solid surface that still wants the material's light);
+ * 3. light: a soft upper band plus a corner highlight at the top-start;
  * 4. a shade on the lower part, for depth;
- * 5. a thin rim: a gradient outline, or (when not [outlined]) a faint top edge.
+ * 5. the edge: a lens rim along the diagonal ([outlined] = false: a softer one),
+ *    or for a full-width [bar] only a faint hairline along the bottom.
  *
  * Without a backdrop or below Android 12 it is the same material minus the
  * blur, with the panel fill at full strength. Pure draw operations plus, when
  * frosted, one small graphics layer per surface; content is not recomposed.
  *
+ * [windowFrosted]: the platform already blurs behind this surface (a dialog
+ * window with cross-window blur), so no in-window frost is drawn.
+ *
  * Returns the receiver unchanged when the Glass Effect is off.
  */
 @Composable
+@Suppress("LongParameterList")
 fun Modifier.glassPanel(
     shape: Shape,
     strong: Boolean = false,
     elevated: Boolean = true,
     outlined: Boolean = true,
-    level: GlassLevel = if (strong) GlassLevel.Floating else GlassLevel.Standard,
+    level: GlassLevel = if (strong) GlassLevel.Strong else GlassLevel.Medium,
     backdrop: GlassBackdrop? = LocalGlassBackdrop.current,
+    windowFrosted: Boolean = false,
+    bar: Boolean = false,
+    fill: Color? = null,
 ): Modifier {
     val glass = LocalGlassTokens.current ?: return this
-    val frost = backdrop?.takeIf { isBackdropBlurSupported }
+    val frost = backdrop?.takeIf { isBackdropBlurSupported && !windowFrosted }
     val position = remember { GlassPosition() }
-    val panel = glass.panelFillColor(level != GlassLevel.Standard)
-    val fill = if (frost != null) panel.copy(alpha = panel.alpha * level.blurredFillScale) else panel
-    val shadowModifier =
-        if (elevated) {
-            Modifier.shadow(
-                elevation = glass.panelElevationDp.dp,
-                shape = shape,
-                clip = false,
-                ambientColor = Color.Black.copy(alpha = 0.35f),
-                spotColor = Color.Black.copy(alpha = 0.35f),
-            )
-        } else {
-            Modifier
-        }
+    val surfaceFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted)
+    val shadowModifier = Modifier.glassElevation(elevated, shape, glass)
+    val floatShadow = Modifier.glassFloatShadow(enabled = level.floats && !bar, shape = shape, color = Color(glass.floatShadow))
     val tracked = if (frost != null) Modifier.onGloballyPositioned { position.offset = it.positionInRoot() } else Modifier
     return this
         .then(shadowModifier)
+        .then(floatShadow)
         .then(tracked)
         .clip(shape)
         .drawWithCache {
             val outline = shape.createOutline(size, layoutDirection, this)
-            val fillBrush = Brush.verticalGradient(listOf(fill.compositeSheen(), fill))
-            val specular =
-                Brush.verticalGradient(0f to Color(glass.specular), SPECULAR_END to Color.Transparent)
-            val shade = Brush.verticalGradient(SHADE_START to Color.Transparent, 1f to Color(glass.edgeShade))
-            val highlight = Color(glass.borderHighlight)
-            val rim =
-                if (outlined) {
-                    Brush.verticalGradient(listOf(highlight, Color(glass.borderShadow)))
-                } else {
-                    Brush.verticalGradient(
-                        listOf(highlight.copy(alpha = highlight.alpha * SOFT_RIM_FRACTION), Color.Transparent),
-                    )
-                }
-            // The stroke is centred on the outline and the surface is clipped: double it.
-            val rimStroke = Stroke(width = glass.borderWidthDp.dp.toPx() * 2)
-
+            val layers = glassLayers(glass, level, surfaceFill, outlined, bar)
             val environment = Color(glass.backgroundGradient.first())
             val frostRadius = glass.frostRadiusDp.dp.toPx()
             val frostLayer =
@@ -193,13 +199,96 @@ fun Modifier.glassPanel(
                 if (frostLayer != null && frost != null) {
                     drawFrost(frost, frostLayer, position.offset, margin, environment)
                 }
-                drawRect(fillBrush)
-                drawRect(specular)
-                drawRect(shade)
-                drawOutline(outline, rim, style = rimStroke)
+                drawGlassLayers(layers, outline, bar)
             }
         }
 }
+
+/** Panel fill for [level]; lighter whenever something blurred is underneath (our frost or the window's). */
+private fun GlassTokens.surfaceFill(
+    level: GlassLevel,
+    frosted: Boolean,
+): Color {
+    val panel = panelFillColor(level == GlassLevel.Strong)
+    return if (frosted) panel.copy(alpha = panel.alpha * level.frostedFillScale) else panel
+}
+
+/** The non-backdrop layers of one glass surface, resolved for its size. */
+private class GlassLayers(
+    val fill: Brush,
+    val upperLight: Brush,
+    val cornerLight: Brush,
+    val shade: Brush,
+    val edge: Brush,
+    val edgeWidthPx: Float,
+)
+
+private fun CacheDrawScope.glassLayers(
+    glass: GlassTokens,
+    level: GlassLevel,
+    fill: Color,
+    outlined: Boolean,
+    bar: Boolean,
+): GlassLayers {
+    val light = Color(glass.specular)
+    val highlight = Color(glass.borderHighlight)
+    val edge =
+        when {
+            bar -> SolidColor(highlight.copy(alpha = highlight.alpha * BAR_HAIRLINE_FRACTION))
+            else -> {
+                val strength = if (outlined) 1f else SOFT_RIM_FRACTION
+                Brush.linearGradient(
+                    0f to highlight.copy(alpha = highlight.alpha * strength),
+                    0.5f to highlight.copy(alpha = highlight.alpha * strength * RIM_MID_FRACTION),
+                    1f to highlight.copy(alpha = highlight.alpha * strength * RIM_FAR_FRACTION),
+                    start = Offset.Zero,
+                    end = Offset(size.width, size.height),
+                )
+            }
+        }
+    return GlassLayers(
+        fill = Brush.verticalGradient(listOf(fill.compositeSheen(), fill)),
+        upperLight =
+            Brush.verticalGradient(
+                0f to light.copy(alpha = light.alpha * level.lightScale),
+                SPECULAR_END to Color.Transparent,
+            ),
+        cornerLight =
+            Brush.radialGradient(
+                listOf(light.copy(alpha = light.alpha * level.lightScale * CORNER_LIGHT_FRACTION), Color.Transparent),
+                center = Offset.Zero,
+                radius = maxOf(size.width, size.height) * CORNER_LIGHT_RADIUS,
+            ),
+        shade =
+            Brush.verticalGradient(
+                SHADE_START to Color.Transparent,
+                1f to Color(glass.edgeShade).let { it.copy(alpha = it.alpha * if (bar) 0f else level.shadeScale) },
+            ),
+        edge = edge,
+        // The stroke is centred on the outline and the surface is clipped: double it.
+        edgeWidthPx = glass.borderWidthDp.dp.toPx() * 2,
+    )
+}
+
+private fun DrawScope.drawGlassLayers(
+    layers: GlassLayers,
+    outline: Outline,
+    bar: Boolean,
+) {
+    drawRect(layers.fill)
+    drawRect(layers.upperLight)
+    drawRect(layers.cornerLight)
+    drawRect(layers.shade)
+    if (bar) {
+        val hairline = layers.edgeWidthPx / 2
+        drawRect(layers.edge, topLeft = Offset(0f, size.height - hairline), size = Size(size.width, hairline))
+    } else {
+        drawOutline(outline, layers.edge, style = Stroke(width = layers.edgeWidthPx))
+    }
+}
+
+/** Rim strength for borderless surfaces: a hint of edge, not an outline. */
+private const val SOFT_RIM_FRACTION = 0.6f
 
 /**
  * Draws the blurred backdrop region behind a glass surface at [surfaceOffset]
@@ -248,6 +337,10 @@ private const val CHROME_FADE_EXTENT_DP = 40
 private const val CHROME_FADE_EDGE_ALPHA = 0.9f
 private const val CHROME_FADE_BOTTOM_ALPHA = 0.97f
 
+/** With real frost the chrome itself separates from the content: only a breath of fade remains. */
+private const val FROSTED_FADE_EDGE_ALPHA = 0.35f
+private const val FROSTED_FADE_BOTTOM_ALPHA = 0.55f
+
 /**
  * Behind floating bottom chrome (the mini player): content that scrolls
  * underneath fades progressively into the background, starting a little above
@@ -261,6 +354,8 @@ private const val CHROME_FADE_BOTTOM_ALPHA = 0.97f
 fun Modifier.glassChromeFade(): Modifier {
     val glass = LocalGlassTokens.current ?: return this
     val base = remember(glass) { Color(glass.backgroundGradient.last()) }
+    val edgeAlpha = if (isBackdropBlurSupported) FROSTED_FADE_EDGE_ALPHA else CHROME_FADE_EDGE_ALPHA
+    val bottomAlpha = if (isBackdropBlurSupported) FROSTED_FADE_BOTTOM_ALPHA else CHROME_FADE_BOTTOM_ALPHA
     return drawBehind {
         val extent = CHROME_FADE_EXTENT_DP.dp.toPx()
         val total = size.height + extent
@@ -268,8 +363,8 @@ fun Modifier.glassChromeFade(): Modifier {
             brush =
                 Brush.verticalGradient(
                     0f to Color.Transparent,
-                    extent / total to base.copy(alpha = CHROME_FADE_EDGE_ALPHA),
-                    1f to base.copy(alpha = CHROME_FADE_BOTTOM_ALPHA),
+                    extent / total to base.copy(alpha = edgeAlpha),
+                    1f to base.copy(alpha = bottomAlpha),
                     startY = -extent,
                     endY = size.height,
                 ),

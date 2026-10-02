@@ -21,6 +21,7 @@ object ArtworkLoader {
     private const val CACHE_SIZE_KB = 16 * 1024
     private const val MISS_CACHE_SIZE = 512
     private const val BYTES_PER_KB = 1024
+    private const val LATEST_CACHE_ENTRIES = 64
 
     private val bitmapCache =
         object : LruCache<String, Bitmap>(CACHE_SIZE_KB) {
@@ -30,11 +31,22 @@ object ArtworkLoader {
             ): Int = (value.byteCount / BYTES_PER_KB).coerceAtLeast(1)
         }
 
+    /**
+     * The most recently loaded bitmap per song, any size: a placeholder-free
+     * starting image when the same artwork appears at a new size (e.g. while it
+     * travels from the mini player into Now Playing).
+     */
+    private val latestBySong = LruCache<String, Bitmap>(LATEST_CACHE_ENTRIES)
+
+    /** Any already-loaded bitmap for [songUri], without loading anything. */
+    fun peek(songUri: String): Bitmap? = latestBySong.get(songUri)
+
     /** Songs known to have no artwork, so lists don't retry them on every bind. */
     private val missCache = LruCache<String, Boolean>(MISS_CACHE_SIZE)
 
     /** Drops cached artwork (and "no artwork" results) for a song whose file changed. */
     fun invalidate(songUri: String) {
+        latestBySong.remove(songUri)
         val prefix = "$songUri@"
         bitmapCache
             .snapshot()
@@ -57,7 +69,10 @@ object ArtworkLoader {
     ): Bitmap? {
         if (songUri.isBlank() || sizePx <= 0) return null
         val key = "$songUri@$sizePx"
-        bitmapCache.get(key)?.let { return it }
+        bitmapCache.get(key)?.let {
+            latestBySong.put(songUri, it)
+            return it
+        }
         if (missCache.get(key) != null) return null
 
         val bitmap =
@@ -66,7 +81,12 @@ object ArtworkLoader {
                     ?: albumArtUri?.let { loadFromStream(context, it, sizePx) }
                     ?: loadEmbeddedPicture(context, songUri, sizePx)
             }
-        if (bitmap != null) bitmapCache.put(key, bitmap) else missCache.put(key, true)
+        if (bitmap != null) {
+            bitmapCache.put(key, bitmap)
+            latestBySong.put(songUri, bitmap)
+        } else {
+            missCache.put(key, true)
+        }
         return bitmap
     }
 

@@ -39,6 +39,8 @@ data class GlassTokens(
     val specular: Long = 0x14FFFFFFL,
     /** Shade along the lower part of a glass surface, for depth without a drop shadow. */
     val edgeShade: Long = 0x1A000000L,
+    /** Soft shadow under floating (Strong) glass, drawn only outside the surface. */
+    val floatShadow: Long = 0x40000000L,
 ) {
     fun backgroundColors(): List<Color> = backgroundGradient.map(::Color)
 
@@ -77,6 +79,7 @@ data class GlassTokens(
                     artworkScrim = 0xA6000000L or backgroundRgb,
                     specular = 0x14FFFFFFL,
                     edgeShade = 0x26000000L,
+                    floatShadow = 0x59000000L,
                 )
             } else {
                 GlassTokens(
@@ -90,6 +93,7 @@ data class GlassTokens(
                     artworkScrim = 0x99000000L or backgroundRgb,
                     specular = 0x59FFFFFFL,
                     edgeShade = 0x0F000000L,
+                    floatShadow = 0x1F000000L,
                 )
             }
         }

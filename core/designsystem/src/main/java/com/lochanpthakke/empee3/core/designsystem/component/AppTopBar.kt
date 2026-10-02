@@ -14,13 +14,20 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.style.TextOverflow
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 
 /**
  * The one top bar used by every screen. It owns the status-bar inset (Material
  * TopAppBar default), which is why screens and the shell must not add it again.
+ *
+ * With the Glass Effect on and [glass] true, the bar is the shared glass
+ * material, frosting the screen content that scrolls underneath it
+ * ([AppScaffold] gives the top bar its screen's backdrop). [glass] = false keeps
+ * a plain [containerColor] (e.g. transparent over Now Playing's artwork).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,11 +36,17 @@ fun AppTopBar(
     title: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
-    containerColor: Color = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface),
+    glass: Boolean = true,
+    containerColor: Color =
+        if (glass) {
+            EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface)
+        } else {
+            EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface)
+        },
 ) {
     TopAppBar(
         title = title,
-        modifier = modifier,
+        modifier = if (glass) modifier.glassPanel(RectangleShape, elevated = false, outlined = false, bar = true) else modifier,
         navigationIcon = {
             when (navigation) {
                 is TopBarNavigation.TopLevel ->
@@ -58,13 +71,20 @@ fun AppTopBar(
     title: String,
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
-    containerColor: Color = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface),
+    glass: Boolean = true,
+    containerColor: Color =
+        if (glass) {
+            EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface)
+        } else {
+            EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface)
+        },
 ) {
     AppTopBar(
         navigation = navigation,
         title = { Text(text = title, style = TextStyles.screenTitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         modifier = modifier,
         actions = actions,
+        glass = glass,
         containerColor = containerColor,
     )
 }

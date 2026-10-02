@@ -1,13 +1,13 @@
 package com.lochanpthakke.empee3.feature.settings.theme
 
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 
 @Composable
 fun ThemeRollbackDialog(onDismiss: () -> Unit) {
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Theme Reverted for Stability") },
         text = {

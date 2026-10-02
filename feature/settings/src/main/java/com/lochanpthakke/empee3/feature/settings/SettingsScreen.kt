@@ -39,6 +39,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
@@ -97,6 +98,7 @@ fun SettingsScreen(
         MainSettingsList(
             categories = SETTING_CATEGORIES,
             onSelectCategory = onOpenCategory,
+            topInset = scroll.contentTop,
             bottomInset = scroll.contentBottom,
             modifier = Modifier.padding(scroll.container),
         )
@@ -143,12 +145,13 @@ fun SettingsCategoryScreen(
 private fun MainSettingsList(
     categories: List<SettingCategory>,
     onSelectCategory: (String) -> Unit,
+    topInset: Dp,
     bottomInset: Dp,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.sm + bottomInset),
+        contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.sm + bottomInset),
     ) {
         items(categories) { cat ->
             Card(
@@ -156,7 +159,7 @@ private fun MainSettingsList(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.screenGutter, vertical = 6.dp)
-                        .glassPanel(MaterialTheme.shapes.medium, elevated = false)
+                        .glassPanel(MaterialTheme.shapes.medium, elevated = false, level = GlassLevel.Minimal)
                         .clickable { onSelectCategory(cat.id) },
                 colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
             ) {

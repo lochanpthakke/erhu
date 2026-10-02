@@ -51,12 +51,14 @@ fun PaddingValues.forScrollingContent(topOverlay: Boolean = false): ScrollingPad
     val top = calculateTopPadding()
     val bottom = calculateBottomPadding()
     val glass = EmPee3Glass.isActive
-    // topOverlay: the top bar is an OverlayHeader, so content scrolls underneath it
-    // in every theme; its height becomes content padding (first item fully visible).
+    // Content scrolls underneath the top bar when it is an OverlayHeader (every
+    // theme) or a glass AppTopBar (glass on): the bar's height then becomes content
+    // padding, so the first item is still fully visible.
+    val underTop = topOverlay || glass
     return ScrollingPadding(
-        container = PaddingValues(top = if (topOverlay) 0.dp else top, bottom = if (glass) 0.dp else bottom),
+        container = PaddingValues(top = if (underTop) 0.dp else top, bottom = if (glass) 0.dp else bottom),
         contentBottom = if (glass) bottom else 0.dp,
-        contentTop = if (topOverlay) top else 0.dp,
+        contentTop = if (underTop) top else 0.dp,
     )
 }
 

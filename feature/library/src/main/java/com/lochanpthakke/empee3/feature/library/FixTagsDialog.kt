@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.Song
@@ -51,7 +51,7 @@ fun FixTagsDialog(
     val topCandidate = candidates.firstOrNull()
     val topScorePercent = topCandidate?.let { (it.confidenceScore * 100).roundToInt() } ?: 0
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Fix Tags & Metadata") },
         text = {

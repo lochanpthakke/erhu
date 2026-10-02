@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Song
 
@@ -56,7 +56,7 @@ fun AddToPlaylistDialog(
         return
     }
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add to playlist") },
         text = {
@@ -109,7 +109,7 @@ fun PlaylistNameDialog(
     onConfirm: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {

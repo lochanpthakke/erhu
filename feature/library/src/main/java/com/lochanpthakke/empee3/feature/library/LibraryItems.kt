@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
@@ -107,6 +109,7 @@ fun AlbumTile(
             contentDescription = null,
             modifier =
                 Modifier
+                    .sharedArtwork(albumArtworkKey(album.id))
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(Radius.mediumShape),
@@ -124,6 +127,67 @@ fun AlbumTile(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * An artist tile for the artwork grid, in the same language as [AlbumTile]:
+ * a square cover (the artist's representative album artwork, or a large
+ * monogram when there is none), the name, and song / album counts.
+ */
+@Composable
+fun ArtistTile(
+    artist: Artist,
+    artworkUri: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.clickable(onClick = onClick)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(Radius.mediumShape),
+        ) {
+            if (artworkUri != null) {
+                AlbumArtwork(artworkUri = artworkUri, contentDescription = null, modifier = Modifier.fillMaxSize())
+            } else {
+                ArtistMonogramCover(name = artist.name)
+            }
+        }
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        Text(
+            text = artist.name,
+            style = TextStyles.tileTitle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = countLabel(artist.songCount, "song") + META_SEPARATOR + countLabel(artist.albumCount, "album"),
+            style = TextStyles.tileSubtitle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Fallback cover for an artist without artwork: their initial, large and quiet. */
+@Composable
+private fun ArtistMonogramCover(name: String) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = name.firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "?",
+            style = MaterialTheme.typography.displayMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

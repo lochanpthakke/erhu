@@ -47,6 +47,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.combine
@@ -207,6 +208,7 @@ private fun AlbumHeader(
             contentDescription = "Album artwork",
             modifier =
                 Modifier
+                    .sharedArtwork(albumArtworkKey(album.id))
                     .widthIn(max = ArtworkSize.heroMax)
                     .fillMaxWidth(ARTWORK_WIDTH_FRACTION)
                     .aspectRatio(1f)

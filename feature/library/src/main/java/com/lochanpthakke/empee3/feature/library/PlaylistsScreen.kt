@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.Shuffle
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -43,6 +42,7 @@ import androidx.compose.ui.Modifier
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -86,7 +86,7 @@ fun PlaylistsScreen(
                     Modifier
                         .fillMaxSize()
                         .padding(scroll.container),
-                contentPadding = PaddingValues(bottom = scroll.contentBottom),
+                contentPadding = PaddingValues(top = scroll.contentTop, bottom = scroll.contentBottom),
             ) {
                 itemsIndexed(playlists, key = { _, playlist -> playlist.id }) { _, playlist ->
                     Row(
@@ -132,7 +132,7 @@ fun PlaylistsScreen(
     }
 
     playlistPendingDelete?.let { playlist ->
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { playlistPendingDelete = null },
             title = { Text("Delete playlist?") },
             text = { Text("\"${playlist.name}\" will be deleted. The songs stay in your library.") },
@@ -170,7 +170,9 @@ fun PlaylistDetailScreen(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(scroll.container),
+                    .padding(scroll.container)
+                    // The header row is not scrollable, so it simply starts below the bar.
+                    .padding(top = scroll.contentTop),
         ) {
             Row(
                 modifier =
