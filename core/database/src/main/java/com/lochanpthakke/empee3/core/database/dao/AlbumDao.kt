@@ -21,6 +21,9 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE id = :id LIMIT 1")
     suspend fun getAlbumById(id: Long): AlbumEntity?
 
+    @Query("SELECT * FROM albums WHERE id = :id LIMIT 1")
+    fun observeAlbumById(id: Long): Flow<AlbumEntity?>
+
     @Query("SELECT * FROM albums WHERE artist_id = :artistId ORDER BY year DESC, title ASC")
     fun getAlbumsByArtistId(artistId: Long): Flow<List<AlbumEntity>>
 

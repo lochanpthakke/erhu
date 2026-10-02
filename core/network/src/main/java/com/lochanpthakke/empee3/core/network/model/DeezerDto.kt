@@ -11,6 +11,11 @@ data class DeezerSearchResponse(
 )
 
 @Serializable
+data class DeezerArtistSearchResponse(
+    val data: List<DeezerArtistDto> = emptyList(),
+)
+
+@Serializable
 data class DeezerTrackDto(
     val id: Long,
     val title: String,
@@ -23,6 +28,14 @@ data class DeezerTrackDto(
 data class DeezerArtistDto(
     val id: Long,
     val name: String,
+    @SerialName("picture_small")
+    val pictureSmall: String? = null,
+    @SerialName("picture_medium")
+    val pictureMedium: String? = null,
+    @SerialName("picture_big")
+    val pictureBig: String? = null,
+    @SerialName("picture_xl")
+    val pictureXl: String? = null,
 )
 
 @Serializable

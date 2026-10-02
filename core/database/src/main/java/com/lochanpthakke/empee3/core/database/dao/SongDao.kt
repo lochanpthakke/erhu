@@ -49,8 +49,35 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE album_id = :albumId ORDER BY disc_number ASC, track_number ASC, title COLLATE NOCASE ASC")
     fun getSongsByAlbumId(albumId: Long): Flow<List<SongEntity>>
 
-    @Query("SELECT * FROM songs WHERE artist_id = :artistId ORDER BY title COLLATE NOCASE ASC")
+    @Query(
+        """
+        SELECT DISTINCT s.* FROM songs s
+        INNER JOIN song_artist_cross_ref ref ON s.id = ref.song_id
+        WHERE ref.artist_id = :artistId
+        ORDER BY s.disc_number ASC, s.track_number ASC, s.title COLLATE NOCASE ASC
+        """,
+    )
     fun getSongsByArtistId(artistId: Long): Flow<List<SongEntity>>
+
+    @Query(
+        """
+        SELECT DISTINCT s.* FROM songs s
+        INNER JOIN song_artist_cross_ref ref ON s.id = ref.song_id
+        WHERE ref.artist_id = :artistId AND ref.role = 'PRIMARY'
+        ORDER BY s.disc_number ASC, s.track_number ASC, s.title COLLATE NOCASE ASC
+        """,
+    )
+    fun getPrimarySongsByArtistId(artistId: Long): Flow<List<SongEntity>>
+
+    @Query(
+        """
+        SELECT DISTINCT s.* FROM songs s
+        INNER JOIN song_artist_cross_ref ref ON s.id = ref.song_id
+        WHERE ref.artist_id = :artistId AND ref.role = 'FEATURED'
+        ORDER BY s.disc_number ASC, s.track_number ASC, s.title COLLATE NOCASE ASC
+        """,
+    )
+    fun getFeaturedSongsByArtistId(artistId: Long): Flow<List<SongEntity>>
 
     @Query(
         """

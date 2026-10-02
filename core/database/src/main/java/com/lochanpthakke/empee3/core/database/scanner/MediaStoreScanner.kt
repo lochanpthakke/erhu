@@ -18,6 +18,8 @@ import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
 import com.lochanpthakke.empee3.core.database.entity.AlbumEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
+import com.lochanpthakke.empee3.core.database.entity.ArtistRole
+import com.lochanpthakke.empee3.core.database.entity.SongArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -54,8 +56,8 @@ class MediaStoreScanner
                 triggerMediaScannerForStorage()
                 delay(SCAN_INDEXING_DELAY_MS)
 
-                val projection =
-                    arrayOf(
+                val projectionList =
+                    mutableListOf(
                         MediaStore.Audio.Media._ID,
                         MediaStore.Audio.Media.TITLE,
                         MediaStore.Audio.Media.ARTIST,
@@ -68,11 +70,16 @@ class MediaStoreScanner
                         MediaStore.Audio.Media.YEAR,
                         MediaStore.Audio.Media.DATE_MODIFIED,
                     )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    projectionList.add(MediaStore.Audio.Media.ALBUM_ARTIST)
+                }
 
+                val projection = projectionList.toTypedArray()
                 val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 1000"
                 val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
                 val songs = mutableListOf<SongEntity>()
+                val crossRefs = mutableListOf<SongArtistCrossRefEntity>()
                 val albumMap = mutableMapOf<Long, AlbumEntityAccumulator>()
                 val artistMap = mutableMapOf<Long, ArtistEntityAccumulator>()
 
@@ -100,26 +107,31 @@ class MediaStoreScanner
                     val titleColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                     val artistColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
                     val albumColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-                    val artistIdColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID)
-                    val albumIdColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                    val rawAlbumIdColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
                     val durationColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                     val dataColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
                     val trackColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
                     val yearColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                     val dateModifiedColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
+                    val albumArtistColumn = c.getColumnIndex("album_artist")
 
                     var scannedCount = 0
 
                     while (c.moveToNext()) {
                         val id = c.getLong(idColumn)
                         val title = c.getString(titleColumn)?.takeIf { it.isNotBlank() } ?: "Unknown Title"
-                        val artist =
+                        val rawArtist =
                             c
                                 .getString(artistColumn)
                                 ?.takeIf { it.isNotBlank() && it != MediaStore.UNKNOWN_STRING } ?: "Unknown Artist"
                         val album = c.getString(albumColumn)?.takeIf { it.isNotBlank() } ?: "Unknown Album"
-                        val artistId = c.getLong(artistIdColumn)
-                        val albumId = c.getLong(albumIdColumn)
+                        val rawAlbumArtist =
+                            if (albumArtistColumn >= 0) {
+                                c.getString(albumArtistColumn)?.takeIf { it.isNotBlank() && it != MediaStore.UNKNOWN_STRING }
+                            } else {
+                                null
+                            }
+                        val rawAlbumId = c.getLong(rawAlbumIdColumn)
                         val durationMs = c.getLong(durationColumn)
                         val filePath = c.getString(dataColumn) ?: ""
                         if (isExcludedFromLibrary(filePath)) {
@@ -133,6 +145,40 @@ class MediaStoreScanner
                         val year = c.getInt(yearColumn)
                         val dateModified = c.getLong(dateModifiedColumn)
 
+                        val parsedArtists = ArtistParser.parse(rawArtist)
+                        val primaryArtist = parsedArtists.primaryArtists.first()
+
+                        // Industry-Standard Album Resolution:
+                        // 1. If explicit ALBUM_ARTIST tag exists, use it.
+                        // 2. Otherwise, check if an album with the same normalized title & matching primary artist exists in albumMap.
+                        // 3. Fallback: use track's primary artist.
+                        val normalizedTitle = ArtistParser.normalizeAlbumTitle(album)
+                        val primaryArtistIds = parsedArtists.primaryArtists.map { it.id }.toSet()
+
+                        val existingAlbumAcc =
+                            if (rawAlbumArtist == null) {
+                                albumMap.values.firstOrNull { acc ->
+                                    ArtistParser.normalizeAlbumTitle(acc.title) == normalizedTitle &&
+                                        acc.artistId in primaryArtistIds
+                                }
+                            } else {
+                                null
+                            }
+
+                        val albumArtistObj =
+                            when {
+                                rawAlbumArtist != null -> ArtistParser.createParsedArtist(rawAlbumArtist)
+                                existingAlbumAcc != null ->
+                                    ParsedArtist(
+                                        name = existingAlbumAcc.artist,
+                                        normalizedName = existingAlbumAcc.artist.lowercase(),
+                                        id = existingAlbumAcc.artistId,
+                                    )
+                                else -> primaryArtist
+                            }
+
+                        val computedAlbumId = existingAlbumAcc?.id ?: ArtistParser.generateAlbumId(album, albumArtistObj.id)
+
                         val contentUri =
                             ContentUris
                                 .withAppendedId(
@@ -140,16 +186,16 @@ class MediaStoreScanner
                                     id,
                                 ).toString()
 
-                        val artworkUri = ContentUris.withAppendedId(ALBUM_ART_BASE_URI, albumId).toString()
+                        val artworkUri = ContentUris.withAppendedId(ALBUM_ART_BASE_URI, rawAlbumId).toString()
 
                         val song =
                             SongEntity(
                                 id = id,
                                 title = title,
-                                artist = artist,
+                                artist = rawArtist,
                                 album = album,
-                                artistId = artistId,
-                                albumId = albumId,
+                                artistId = primaryArtist.id,
+                                albumId = computedAlbumId,
                                 durationMs = durationMs,
                                 uri = contentUri,
                                 filePath = filePath,
@@ -160,28 +206,51 @@ class MediaStoreScanner
                             )
                         songs.add(song)
 
+                        // Cross refs for primary and featured artists
+                        parsedArtists.primaryArtists.forEachIndexed { pos, artist ->
+                            crossRefs.add(
+                                SongArtistCrossRefEntity(
+                                    songId = id,
+                                    artistId = artist.id,
+                                    role = ArtistRole.PRIMARY,
+                                    position = pos,
+                                ),
+                            )
+                            val acc = artistMap.getOrPut(artist.id) { ArtistEntityAccumulator(artist.id, artist.name) }
+                            acc.songCount++
+                        }
+
+                        parsedArtists.featuredArtists.forEachIndexed { pos, artist ->
+                            crossRefs.add(
+                                SongArtistCrossRefEntity(
+                                    songId = id,
+                                    artistId = artist.id,
+                                    role = ArtistRole.FEATURED,
+                                    position = pos,
+                                ),
+                            )
+                            val acc = artistMap.getOrPut(artist.id) { ArtistEntityAccumulator(artist.id, artist.name) }
+                            acc.songCount++
+                        }
+
                         val albumAccumulator =
-                            albumMap.getOrPut(albumId) {
+                            albumMap.getOrPut(computedAlbumId) {
                                 AlbumEntityAccumulator(
-                                    id = albumId,
+                                    id = computedAlbumId,
                                     title = album,
-                                    artist = artist,
-                                    artistId = artistId,
+                                    artist = albumArtistObj.name,
+                                    artistId = albumArtistObj.id,
                                     year = year,
                                     artworkUri = artworkUri,
                                 )
                             }
                         albumAccumulator.songCount++
 
-                        val artistAccumulator =
-                            artistMap.getOrPut(artistId) {
-                                ArtistEntityAccumulator(
-                                    id = artistId,
-                                    name = artist,
-                                )
+                        val albumArtistAcc =
+                            artistMap.getOrPut(albumArtistObj.id) {
+                                ArtistEntityAccumulator(albumArtistObj.id, albumArtistObj.name)
                             }
-                        artistAccumulator.songCount++
-                        artistAccumulator.albumIds.add(albumId)
+                        albumArtistAcc.albumIds.add(computedAlbumId)
 
                         scannedCount++
                         if (scannedCount % EMISSION_BATCH_SIZE == 0 || scannedCount == totalCount) {
@@ -224,8 +293,15 @@ class MediaStoreScanner
                 // interrupted scan leaves the previous library intact.
                 database.withTransaction {
                     val plan = planLibrarySync(scanned = songs, existing = songDao.getAllSongsOnce())
-                    plan.deletedIds.chunked(SQLITE_MAX_VARIABLES).forEach { songDao.deleteSongsByIds(it) }
+                    plan.deletedIds.chunked(SQLITE_MAX_VARIABLES).forEach {
+                        songDao.deleteSongsByIds(it)
+                        database.songArtistCrossRefDao().deleteBySongIds(it)
+                    }
                     plan.upserts.chunked(SQLITE_MAX_VARIABLES).forEach { songDao.upsertAll(it) }
+
+                    database.songArtistCrossRefDao().deleteAll()
+                    crossRefs.chunked(SQLITE_MAX_VARIABLES).forEach { database.songArtistCrossRefDao().upsertAll(it) }
+
                     // Albums and artists are derived entirely from songs; rebuild them.
                     albumDao.deleteAll()
                     artistDao.deleteAll()

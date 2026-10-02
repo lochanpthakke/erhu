@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,9 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
+import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -54,6 +55,7 @@ fun TrackRow(
     isCurrent: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showTrackNumber: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     LibraryRow(
@@ -63,13 +65,26 @@ fun TrackRow(
         onClick = onClick,
         modifier = modifier,
         leading = {
-            SongArtwork(
-                song = song,
-                modifier =
-                    Modifier
-                        .size(ArtworkSize.list)
-                        .clip(Radius.smallShape),
-            )
+            if (showTrackNumber && song.trackNumber > 0) {
+                Box(
+                    modifier = Modifier.size(ArtworkSize.list),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = song.trackNumber.toString(),
+                        style = TextStyles.itemTitle,
+                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                SongArtwork(
+                    song = song,
+                    modifier =
+                        Modifier
+                            .size(ArtworkSize.list)
+                            .clip(Radius.smallShape),
+                )
+            }
         },
         trailing = trailing,
     )
@@ -132,8 +147,7 @@ fun AlbumTile(
 }
 
 /**
- * An artist tile for the artwork grid, in the same language as [AlbumTile]:
- * a square cover (the artist's representative album artwork, or a large
+ * An artist tile for the artwork grid: a circular artist picture (or a large
  * monogram when there is none), the name, and song / album counts.
  */
 @Composable
@@ -143,26 +157,25 @@ fun ArtistTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.clickable(onClick = onClick)) {
-        Box(
+    Column(
+        modifier = modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ArtistArtwork(
+            artworkUri = artworkUri,
+            artistName = artist.name,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(Radius.mediumShape),
-        ) {
-            if (artworkUri != null) {
-                AlbumArtwork(artworkUri = artworkUri, contentDescription = null, modifier = Modifier.fillMaxSize())
-            } else {
-                ArtistMonogramCover(name = artist.name)
-            }
-        }
+                    .aspectRatio(1f),
+        )
         Spacer(modifier = Modifier.height(Spacing.sm))
         Text(
             text = artist.name,
             style = TextStyles.tileTitle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
         )
         Text(
             text = countLabel(artist.songCount, "song") + META_SEPARATOR + countLabel(artist.albumCount, "album"),
@@ -170,24 +183,7 @@ fun ArtistTile(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** Fallback cover for an artist without artwork: their initial, large and quiet. */
-@Composable
-private fun ArtistMonogramCover(name: String) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = name.firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "?",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
     }
 }

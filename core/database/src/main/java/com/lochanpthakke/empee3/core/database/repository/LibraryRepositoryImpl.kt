@@ -75,8 +75,23 @@ class LibraryRepositoryImpl
                 list.map { it.toDomainModel() }
             }
 
+        override fun getPrimarySongsByArtistId(artistId: Long): Flow<List<Song>> =
+            songDao.getPrimarySongsByArtistId(artistId).map { list ->
+                list.map { it.toDomainModel() }
+            }
+
+        override fun getFeaturedSongsByArtistId(artistId: Long): Flow<List<Song>> =
+            songDao.getFeaturedSongsByArtistId(artistId).map { list ->
+                list.map { it.toDomainModel() }
+            }
+
         override fun getAllAlbums(): Flow<List<Album>> =
             albumDao.getAllAlbums().map { list ->
+                list.map { it.toDomainModel() }
+            }
+
+        override fun getAlbumsByArtistId(artistId: Long): Flow<List<Album>> =
+            albumDao.getAlbumsByArtistId(artistId).map { list ->
                 list.map { it.toDomainModel() }
             }
 
@@ -87,10 +102,7 @@ class LibraryRepositoryImpl
                 pagingData.map { entity -> entity.toDomainModel() }
             }
 
-        override fun getAlbumById(id: Long): Flow<Album?> =
-            albumDao.getAllAlbums().map { list ->
-                list.find { it.id == id }?.toDomainModel()
-            }
+        override fun getAlbumById(id: Long): Flow<Album?> = albumDao.observeAlbumById(id).map { it?.toDomainModel() }
 
         override fun getAllArtists(): Flow<List<Artist>> =
             artistDao.getAllArtists().map { list ->
@@ -103,6 +115,8 @@ class LibraryRepositoryImpl
             }.flow.map { pagingData ->
                 pagingData.map { entity -> entity.toDomainModel() }
             }
+
+        override fun getArtistById(id: Long): Flow<Artist?> = artistDao.observeArtistById(id).map { it?.toDomainModel() }
 
         override fun searchSongs(query: String): Flow<List<Song>> =
             songDao.searchSongs(query.trim()).map { list ->
@@ -152,6 +166,14 @@ class LibraryRepositoryImpl
                 .getWorkInfosForUniqueWorkFlow(LibraryScanWorker.WORK_NAME)
                 .map { infos -> infos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED } }
                 .distinctUntilChanged()
+
+        override suspend fun updateArtistArtwork(
+            artistId: Long,
+            artworkUri: String?,
+        ): AppResult<Unit> =
+            appResultOf {
+                artistDao.updateArtistArtwork(artistId, artworkUri)
+            }
 
         companion object {
             private const val DEFAULT_PAGE_SIZE = 30

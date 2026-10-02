@@ -13,4 +13,6 @@ data class ArtistEntity(
     val songCount: Int,
     @ColumnInfo(name = "album_count")
     val albumCount: Int,
+    @ColumnInfo(name = "artwork_uri")
+    val artworkUri: String? = null,
 )

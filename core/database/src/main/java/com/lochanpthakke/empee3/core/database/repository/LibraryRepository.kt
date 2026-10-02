@@ -25,7 +25,13 @@ interface LibraryRepository {
 
     fun getSongsByArtistId(artistId: Long): Flow<List<Song>>
 
+    fun getPrimarySongsByArtistId(artistId: Long): Flow<List<Song>>
+
+    fun getFeaturedSongsByArtistId(artistId: Long): Flow<List<Song>>
+
     fun getAllAlbums(): Flow<List<Album>>
+
+    fun getAlbumsByArtistId(artistId: Long): Flow<List<Album>>
 
     fun getAlbumsPaged(): Flow<PagingData<Album>>
 
@@ -34,6 +40,8 @@ interface LibraryRepository {
     fun getAllArtists(): Flow<List<Artist>>
 
     fun getArtistsPaged(): Flow<PagingData<Artist>>
+
+    fun getArtistById(id: Long): Flow<Artist?>
 
     fun searchSongs(query: String): Flow<List<Song>>
 
@@ -59,4 +67,9 @@ interface LibraryRepository {
 
     /** True while a library scan is queued or running. */
     fun observeIsScanning(): Flow<Boolean>
+
+    suspend fun updateArtistArtwork(
+        artistId: Long,
+        artworkUri: String?,
+    ): AppResult<Unit>
 }

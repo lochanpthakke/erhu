@@ -132,7 +132,14 @@ fun AlbumDetailScreen(
                     modifier = Modifier.padding(innerPadding),
                 )
             else -> {
-                val songs = data.songs
+                val songs =
+                    remember(data.songs) {
+                        data.songs.sortedWith(
+                            compareBy<Song> { it.discNumber }
+                                .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
+                        )
+                    }
                 val scroll = innerPadding.forScrollingContent(topOverlay = true)
                 LazyColumn(
                     modifier =
@@ -160,6 +167,7 @@ fun AlbumDetailScreen(
                                 isCurrent = song.id == currentSongId,
                                 onClick = { viewModel.playSongsFromQueue(songs, index) },
                                 actions = actions,
+                                showTrackNumber = true,
                             )
                         }
                     }

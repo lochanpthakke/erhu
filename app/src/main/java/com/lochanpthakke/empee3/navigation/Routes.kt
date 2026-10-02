@@ -22,6 +22,12 @@ data class AlbumDetail(
     val albumId: Long,
 )
 
+/** An artist's detail page, opened from the library's artist grid or search. */
+@Serializable
+data class ArtistDetail(
+    val artistId: Long,
+)
+
 @Serializable
 object Equalizer
 

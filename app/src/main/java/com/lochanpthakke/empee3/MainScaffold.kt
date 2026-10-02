@@ -93,9 +93,11 @@ import com.lochanpthakke.empee3.core.designsystem.theme.glassChromeFade
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.Album
+import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
+import com.lochanpthakke.empee3.feature.library.ArtistDetailScreen
 import com.lochanpthakke.empee3.feature.library.ArtworkManagerScreen
 import com.lochanpthakke.empee3.feature.library.LibraryBottomChrome
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
@@ -115,6 +117,7 @@ import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
 import com.lochanpthakke.empee3.navigation.AlbumDetail
+import com.lochanpthakke.empee3.navigation.ArtistDetail
 import com.lochanpthakke.empee3.navigation.ArtworkManager
 import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
@@ -345,6 +348,7 @@ fun MainScaffold() {
                                             onOpenDrawer = openDrawer,
                                             onContentShownChange = { isLibraryContentShown = it },
                                             onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                            onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                             isSearchActive = isLibrarySearchActive,
                                             onSearchActiveChange = { isLibrarySearchActive = it },
                                             chromeScroll = libraryChrome.connection,
@@ -359,6 +363,18 @@ fun MainScaffold() {
                                             viewModel = libraryViewModel,
                                             playlistsViewModel = playlistsViewModel,
                                             onBack = { navController.popBackStack() },
+                                        )
+                                    }
+                                }
+                                composable<ArtistDetail> { entry ->
+                                    ProvideMotionScope(this) {
+                                        val route = entry.toRoute<ArtistDetail>()
+                                        ArtistDetailScreen(
+                                            artistId = route.artistId,
+                                            viewModel = libraryViewModel,
+                                            playlistsViewModel = playlistsViewModel,
+                                            onBack = { navController.popBackStack() },
+                                            onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
                                         )
                                     }
                                 }
@@ -512,6 +528,7 @@ private fun LibraryRoute(
     onOpenDrawer: () -> Unit,
     onContentShownChange: (Boolean) -> Unit,
     onOpenAlbum: (Album) -> Unit,
+    onOpenArtist: (Artist) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     chromeScroll: NestedScrollConnection,
@@ -589,6 +606,7 @@ private fun LibraryRoute(
             section = section,
             onOpenDrawer = onOpenDrawer,
             onOpenAlbum = onOpenAlbum,
+            onOpenArtist = onOpenArtist,
             isSearchActive = isSearchActive,
             onSearchActiveChange = onSearchActiveChange,
             chromeScroll = chromeScroll,

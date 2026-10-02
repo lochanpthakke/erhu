@@ -9,4 +9,5 @@ fun ArtistEntity.toDomainModel(): Artist =
         name = name,
         songCount = songCount,
         albumCount = albumCount,
+        artworkUri = artworkUri,
     )

@@ -18,4 +18,6 @@ fun SongEntity.toDomainModel(): Song =
         uri = uri,
         artworkUri = artworkUri,
         isFavorite = isFavorite,
+        trackNumber = trackNumber,
+        discNumber = discNumber,
     )

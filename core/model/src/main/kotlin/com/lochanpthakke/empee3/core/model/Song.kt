@@ -17,4 +17,6 @@ data class Song(
     val uri: String,
     val artworkUri: String? = null,
     val isFavorite: Boolean = false,
+    val trackNumber: Int = 0,
+    val discNumber: Int = 1,
 )

@@ -22,6 +22,7 @@ import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
 import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
@@ -68,6 +69,7 @@ class LibraryViewModel
         private val libraryRepository: LibraryRepository,
         val playbackRepository: PlaybackRepository,
         private val metadataRepository: MetadataRepository,
+        private val deezerProvider: com.lochanpthakke.empee3.core.network.provider.DeezerProvider,
     ) : ViewModel() {
         val songsPaged: Flow<PagingData<Song>> =
             libraryRepository
@@ -168,38 +170,19 @@ class LibraryViewModel
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
         /**
-         * One representative cover per artist (artist id -> artwork uri), local
-         * data only. Preferred: the artwork of the artist's album with the most
-         * songs. Otherwise (e.g. their albums are credited to a combined album
-         * artist): the most common artwork among the artist's own songs. Artists
-         * with neither are absent and get a monogram.
+         * Artist profile artwork (artist id -> artwork uri), strictly loaded from
+         * official artist profile images (Deezer API). Album or track covers are
+         * NEVER used as artist profile pictures.
          */
         val artistArtwork: StateFlow<Map<Long, String>> =
-            combine(
-                libraryRepository.getAllArtists(),
-                libraryRepository.getAllAlbums(),
-                libraryRepository.getAllSongs(),
-            ) { artists, albums, songs ->
-                val byAlbum =
-                    albums
-                        .filter { !it.artworkUri.isNullOrBlank() }
-                        .groupBy { it.artistId }
-                        .mapValues { (_, artistAlbums) -> artistAlbums.maxBy { it.songCount }.artworkUri.orEmpty() }
-                val bySongs =
-                    songs
-                        .filter { !it.artworkUri.isNullOrBlank() }
-                        .groupBy { it.artist }
-                        .mapValues { (_, artistSongs) ->
-                            artistSongs
-                                .groupingBy { it.artworkUri.orEmpty() }
-                                .eachCount()
-                                .maxBy { it.value }
-                                .key
-                        }
-                artists
-                    .mapNotNull { artist -> (byAlbum[artist.id] ?: bySongs[artist.name])?.let { artist.id to it } }
-                    .toMap()
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+            libraryRepository
+                .getAllArtists()
+                .map { artists ->
+                    artists
+                        .mapNotNull { artist ->
+                            artist.artworkUri?.takeIf { it.isNotBlank() && it != "NONE" }?.let { artist.id to it }
+                        }.toMap()
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
 
         /**
          * Id of the playing song only. Screens that just highlight the current row
@@ -253,8 +236,24 @@ class LibraryViewModel
         private val _isSearchingArtwork = MutableStateFlow(false)
         val isSearchingArtwork: StateFlow<Boolean> = _isSearchingArtwork.asStateFlow()
 
+        private val resolvedArtistIds = mutableSetOf<Long>()
+
         init {
             triggerScan()
+            resolveArtistArtwork()
+        }
+
+        private fun resolveArtistArtwork() {
+            viewModelScope.launch(Dispatchers.IO) {
+                val artists = libraryRepository.getAllArtists().first()
+                val missing = artists.filter { it.artworkUri == null && it.id !in resolvedArtistIds }
+                for (artist in missing) {
+                    resolvedArtistIds.add(artist.id)
+                    val url = deezerProvider.fetchArtistArtwork(artist.name)
+                    val uriToSave = url ?: "NONE"
+                    libraryRepository.updateArtistArtwork(artist.id, uriToSave)
+                }
+            }
         }
 
         fun consumeUserMessage() {
@@ -618,6 +617,18 @@ class LibraryViewModel
 
         /** The album's songs in album order (disc, track, title). */
         fun observeAlbumSongs(albumId: Long): Flow<List<Song>> = libraryRepository.getSongsByAlbumId(albumId)
+
+        /** The artist, or null once it is gone from the library. */
+        fun observeArtist(artistId: Long): Flow<Artist?> = libraryRepository.getArtistById(artistId)
+
+        /** The artist's albums in reverse chronological order (newest year first). */
+        fun observeArtistAlbums(artistId: Long): Flow<List<Album>> = libraryRepository.getAlbumsByArtistId(artistId)
+
+        /** The artist's primary songs (where role = PRIMARY). */
+        fun observeArtistPrimarySongs(artistId: Long): Flow<List<Song>> = libraryRepository.getPrimarySongsByArtistId(artistId)
+
+        /** The artist's featured appearances (where role = FEATURED). */
+        fun observeArtistFeaturedSongs(artistId: Long): Flow<List<Song>> = libraryRepository.getFeaturedSongsByArtistId(artistId)
 
         /** Plays [songs] in their order from the first track, with shuffle turned off. */
         fun playInOrder(songs: List<Song>) {

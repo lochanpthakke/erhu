@@ -6,12 +6,14 @@ import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
+import com.lochanpthakke.empee3.core.database.dao.SongArtistCrossRefDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
 import com.lochanpthakke.empee3.core.database.entity.AlbumEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
 import com.lochanpthakke.empee3.core.database.entity.MetadataProcessingEntity
 import com.lochanpthakke.empee3.core.database.entity.PlaylistEntity
 import com.lochanpthakke.empee3.core.database.entity.PlaylistSongCrossRefEntity
+import com.lochanpthakke.empee3.core.database.entity.SongArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
 
 @Database(
@@ -22,8 +24,9 @@ import com.lochanpthakke.empee3.core.database.entity.SongEntity
         PlaylistEntity::class,
         PlaylistSongCrossRefEntity::class,
         MetadataProcessingEntity::class,
+        SongArtistCrossRefEntity::class,
     ],
-    version = 3,
+    version = 5,
     exportSchema = false,
 )
 abstract class EmPee3Database : RoomDatabase() {
@@ -36,4 +39,6 @@ abstract class EmPee3Database : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
 
     abstract fun metadataProcessingDao(): MetadataProcessingDao
+
+    abstract fun songArtistCrossRefDao(): SongArtistCrossRefDao
 }

@@ -76,6 +76,7 @@ fun LibraryScreen(
     section: LibrarySection,
     onOpenDrawer: () -> Unit,
     onOpenAlbum: (Album) -> Unit,
+    onOpenArtist: (Artist) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -139,9 +140,10 @@ fun LibraryScreen(
                     onClose = closeSearch,
                 )
             } else {
-                // No title or actions: the selected bottom section names the screen and
-                // search lives in the bottom controls. Content scrolls under this header.
-                OverlayHeader(navigation = TopBarNavigation.TopLevel(onOpenDrawer))
+                OverlayHeader(
+                    navigation = TopBarNavigation.TopLevel(onOpenDrawer),
+                    title = section.label,
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -158,7 +160,7 @@ fun LibraryScreen(
                 artistArtwork = artistArtwork,
                 currentSongId = currentSongId,
                 onSongClick = { index -> viewModel.playSongsFromQueue(searchResults, index) },
-                onArtistClick = { viewModel.playArtist(it) },
+                onArtistClick = onOpenArtist,
                 onAlbumClick = onOpenAlbum,
                 actions = actions,
                 topInset = scroll.contentTop,
@@ -230,7 +232,7 @@ fun LibraryScreen(
                                 artwork = artistArtwork,
                                 topInset = scroll.contentTop,
                                 bottomInset = scroll.contentBottom,
-                                onArtistClick = { viewModel.playArtist(it) },
+                                onArtistClick = onOpenArtist,
                             )
                     }
                 }
@@ -309,9 +311,16 @@ internal fun LibrarySongRow(
     onClick: () -> Unit,
     actions: SongActions,
     modifier: Modifier = Modifier,
+    showTrackNumber: Boolean = false,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    TrackRow(song = song, isCurrent = isCurrent, onClick = onClick, modifier = modifier) {
+    TrackRow(
+        song = song,
+        isCurrent = isCurrent,
+        onClick = onClick,
+        modifier = modifier,
+        showTrackNumber = showTrackNumber,
+    ) {
         // Smaller glyphs inside full-size touch targets: the title stays the strongest element.
         IconButton(onClick = { actions.onToggleFavorite(song) }) {
             Icon(

@@ -89,6 +89,23 @@ class DeezerProvider
             return urls.distinct()
         }
 
+        suspend fun fetchArtistArtwork(artistName: String): String? {
+            val trimmed = artistName.trim()
+            if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return null
+            return try {
+                val response = deezerApi.searchArtist("artist:\"$trimmed\"")
+                val match =
+                    response.data.firstOrNull { dto ->
+                        dto.name.trim().equals(trimmed, ignoreCase = true) ||
+                            dto.name.trim().contains(trimmed, ignoreCase = true)
+                    } ?: response.data.firstOrNull()
+                match?.pictureBig ?: match?.pictureXl ?: match?.pictureMedium
+            } catch (e: Exception) {
+                logger.w(TAG, "Deezer artist art fetch failed for $artistName: ${e.message}", e)
+                null
+            }
+        }
+
         companion object {
             private const val TAG = "DeezerProvider"
         }

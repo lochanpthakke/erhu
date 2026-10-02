@@ -21,6 +21,15 @@ interface ArtistDao {
     @Query("SELECT * FROM artists WHERE id = :id LIMIT 1")
     suspend fun getArtistById(id: Long): ArtistEntity?
 
+    @Query("SELECT * FROM artists WHERE id = :id LIMIT 1")
+    fun observeArtistById(id: Long): Flow<ArtistEntity?>
+
+    @Query("UPDATE artists SET artwork_uri = :artworkUri WHERE id = :id")
+    suspend fun updateArtistArtwork(
+        id: Long,
+        artworkUri: String?,
+    ): Int
+
     @Query("DELETE FROM artists")
     suspend fun deleteAll(): Int
 }
