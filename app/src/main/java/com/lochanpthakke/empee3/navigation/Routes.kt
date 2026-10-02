@@ -16,6 +16,12 @@ data class PlaylistDetail(
     val playlistId: Long,
 )
 
+/** An album's detail page, opened from the library's album grid. */
+@Serializable
+data class AlbumDetail(
+    val albumId: Long,
+)
+
 @Serializable
 object Equalizer
 
@@ -26,6 +32,10 @@ object MetadataEditor
 object ArtworkManager
 
 @Serializable
-data class Settings(
-    val category: String? = null,
+object Settings
+
+/** A settings category pushed on top of [Settings], so Back returns to the list. */
+@Serializable
+data class SettingsCategory(
+    val categoryId: String,
 )

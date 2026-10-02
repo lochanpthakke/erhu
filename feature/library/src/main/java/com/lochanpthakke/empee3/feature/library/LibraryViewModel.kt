@@ -136,10 +136,21 @@ class LibraryViewModel
                     if (query.isEmpty()) flowOf(emptyList()) else libraryRepository.searchSongs(query)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
-        private val currentSongId: Flow<Long?> =
+        /**
+         * Id of the playing song only. Screens that just highlight the current row
+         * observe this instead of the full playback state, so the position ticks
+         * (4x per second) do not recompose them.
+         */
+        val currentSongId: StateFlow<Long?> =
             playbackRepository.playbackState
                 .map { it.currentSong?.id }
                 .distinctUntilChanged()
+                .stateIn(
+                    viewModelScope,
+                    SharingStarted.Eagerly,
+                    playbackRepository.playbackState.value.currentSong
+                        ?.id,
+                )
 
         /** Favorite state of the playing song, read from Room (the source of truth). */
         val currentSongIsFavorite: StateFlow<Boolean> =
@@ -535,6 +546,26 @@ class LibraryViewModel
                     playbackRepository.playSongs(songs)
                 }
             }
+        }
+
+        /** The album, or null once it is gone from the library (e.g. after a rescan). */
+        fun observeAlbum(albumId: Long): Flow<Album?> = libraryRepository.getAlbumById(albumId)
+
+        /** The album's songs in album order (disc, track, title). */
+        fun observeAlbumSongs(albumId: Long): Flow<List<Song>> = libraryRepository.getSongsByAlbumId(albumId)
+
+        /** Plays [songs] in their order from the first track, with shuffle turned off. */
+        fun playInOrder(songs: List<Song>) {
+            if (songs.isEmpty()) return
+            playbackRepository.setShuffleModeEnabled(false)
+            playbackRepository.playSongsFromQueue(songs, 0)
+        }
+
+        /** Plays [songs] shuffled: the same shuffle mode the playlists use. */
+        fun playShuffled(songs: List<Song>) {
+            if (songs.isEmpty()) return
+            playbackRepository.setShuffleModeEnabled(true)
+            playbackRepository.playSongsFromQueue(songs, songs.indices.random())
         }
 
         fun playArtist(artist: Artist) {

@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.Song
 import kotlin.math.roundToInt
@@ -66,7 +67,7 @@ fun FixTagsDialog(
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
 
                     if (topScorePercent < 85 && topScorePercent > 0) {
                         Text(
@@ -74,7 +75,7 @@ fun FixTagsDialog(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                     }
 
                     candidates.take(3).forEach { candidate ->
@@ -97,14 +98,14 @@ fun FixTagsDialog(
                                 ),
                         ) {
                             Row(
-                                modifier = Modifier.padding(8.dp),
+                                modifier = Modifier.padding(Spacing.sm),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(candidate.title, fontWeight = FontWeight.Bold)
                                     Text("${candidate.artist} • ${candidate.album}", style = MaterialTheme.typography.bodySmall)
                                 }
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(Spacing.xs))
                                 Text(
                                     text = "$score% (${candidate.sourceName})",
                                     style = MaterialTheme.typography.labelSmall,
@@ -114,7 +115,7 @@ fun FixTagsDialog(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Spacing.md))
                 }
 
                 OutlinedTextField(
@@ -124,7 +125,7 @@ fun FixTagsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 OutlinedTextField(
                     value = artist,
@@ -133,7 +134,7 @@ fun FixTagsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 OutlinedTextField(
                     value = album,
@@ -142,7 +143,7 @@ fun FixTagsDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -153,7 +154,7 @@ fun FixTagsDialog(
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.sm))
                     OutlinedTextField(
                         value = genre,
                         onValueChange = { genre = it },
@@ -163,7 +164,7 @@ fun FixTagsDialog(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
                     text = "Empty fields keep the file's current value. Android may ask you to allow empee3 to modify the file.",
                     style = MaterialTheme.typography.bodySmall,

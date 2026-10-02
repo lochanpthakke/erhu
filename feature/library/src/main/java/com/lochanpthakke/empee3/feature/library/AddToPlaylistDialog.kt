@@ -21,12 +21,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Song
 
 /** Picks an existing playlist for [song], or creates a new one containing it. */
 @Composable
 fun AddToPlaylistDialog(
     song: Song,
+    viewModel: PlaylistsViewModel,
+    onDismiss: () -> Unit,
+) {
+    AddToPlaylistDialog(songs = listOf(song), viewModel = viewModel, onDismiss = onDismiss)
+}
+
+/** Adds all of [songs] (e.g. a whole album) to an existing or a new playlist. */
+@Composable
+fun AddToPlaylistDialog(
+    songs: List<Song>,
     viewModel: PlaylistsViewModel,
     onDismiss: () -> Unit,
 ) {
@@ -38,7 +49,7 @@ fun AddToPlaylistDialog(
             title = "New playlist",
             onDismiss = onDismiss,
             onConfirm = { name ->
-                viewModel.createPlaylist(name, thenAddSong = song)
+                viewModel.createPlaylist(name, thenAddSongs = songs)
                 onDismiss()
             },
         )
@@ -58,14 +69,14 @@ fun AddToPlaylistDialog(
                         Modifier
                             .fillMaxWidth()
                             .clickable { creating = true }
-                            .padding(vertical = 12.dp),
+                            .padding(vertical = Spacing.md),
                 )
                 HorizontalDivider()
                 if (playlists.isEmpty()) {
                     Text(
                         text = "You don't have any playlists yet.",
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 12.dp),
+                        modifier = Modifier.padding(vertical = Spacing.md),
                     )
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
@@ -77,9 +88,9 @@ fun AddToPlaylistDialog(
                                     Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            viewModel.addSongToPlaylist(playlist, song)
+                                            viewModel.addSongsToPlaylist(playlist, songs)
                                             onDismiss()
-                                        }.padding(vertical = 12.dp),
+                                        }.padding(vertical = Spacing.md),
                             )
                         }
                     }

@@ -11,6 +11,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ object EmPee3Theme {
 fun EmPee3Theme(
     themeManifest: ThemeManifest = BuiltInThemes.CYBERPUNK_TECH,
     skinManifest: SkinManifest? = null,
+    glassEffectEnabled: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colors = themeManifest.colors
@@ -89,10 +91,18 @@ fun EmPee3Theme(
             )
         }
 
-    // Glass themes only: the gradient backdrop shows through a transparent
-    // background, and container roles become frosted. Classic themes keep the
-    // exact scheme above.
-    val glass = themeManifest.glass
+    // Glass is a material on top of the theme, not part of it: with the Glass
+    // Effect on, floating surfaces become glass tinted by this theme's own
+    // environment, and container roles are frosted. Off, the exact scheme above.
+    // Skins draw their own chrome and are left alone.
+    val glass =
+        remember(themeManifest, skinManifest, glassEffectEnabled) {
+            if (glassEffectEnabled && skinManifest == null) {
+                themeManifest.glass ?: GlassTokens.derivedFrom(colors, themeManifest.isDark)
+            } else {
+                null
+            }
+        }
     val colorScheme = if (glass != null) baseColorScheme.withGlassContainers(glass) else baseColorScheme
 
     val materialShapes =

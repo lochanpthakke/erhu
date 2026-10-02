@@ -10,13 +10,17 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -24,6 +28,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,7 +40,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,11 +54,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -62,23 +70,40 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHeight
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.theme.BuiltInThemes
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
+import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
+import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
+import com.lochanpthakke.empee3.core.designsystem.theme.glassChromeFade
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
+import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
+import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
+import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
 import com.lochanpthakke.empee3.feature.library.ArtworkManagerScreen
+import com.lochanpthakke.empee3.feature.library.LibraryBottomControls
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
+import com.lochanpthakke.empee3.feature.library.LibrarySection
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
 import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
 import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
+import com.lochanpthakke.empee3.feature.settings.SettingsCategoryScreen
 import com.lochanpthakke.empee3.feature.settings.SettingsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
 import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
+import com.lochanpthakke.empee3.navigation.AlbumDetail
 import com.lochanpthakke.empee3.navigation.ArtworkManager
 import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
@@ -87,6 +112,7 @@ import com.lochanpthakke.empee3.navigation.NowPlaying
 import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Playlists
 import com.lochanpthakke.empee3.navigation.Settings
+import com.lochanpthakke.empee3.navigation.SettingsCategory
 import com.lochanpthakke.empee3.ui.components.MiniPlayer
 import com.lochanpthakke.empee3.ui.components.WriteAccessRequestEffect
 import kotlinx.coroutines.launch
@@ -104,7 +130,7 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Playlists", Icons.AutoMirrored.Filled.QueueMusic, Playlists),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
         DrawerDestination("Metadata Editor", Icons.Default.EditNote, MetadataEditor),
-        DrawerDestination("Settings", Icons.Default.Settings, Settings()),
+        DrawerDestination("Settings", Icons.Default.Settings, Settings),
     )
 
 @Composable
@@ -117,7 +143,13 @@ fun MainScaffold() {
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
     val playbackRepository = libraryViewModel.playbackRepository
 
-    val currentTheme by themeViewModel.appTheme.collectAsState()
+    val selectedTheme by themeViewModel.appTheme.collectAsState()
+    val selectedThemeId by themeViewModel.appThemeId.collectAsState()
+    val glassEffectEnabled by themeViewModel.glassEffectEnabled.collectAsState()
+    // System Default follows the device's light/dark setting (re-read on configuration changes).
+    val isSystemDark = isSystemInDarkTheme()
+    val currentTheme =
+        if (selectedThemeId == BuiltInThemes.SYSTEM_DEFAULT_ID) BuiltInThemes.forSystemAppearance(isSystemDark) else selectedTheme
     val currentSkin by themeViewModel.appSkin.collectAsState()
     val isRollbackActive by themeViewModel.isRollbackActive.collectAsState()
 
@@ -132,11 +164,35 @@ fun MainScaffold() {
     EmPee3Theme(
         themeManifest = currentTheme,
         skinManifest = currentSkin,
+        glassEffectEnabled = glassEffectEnabled,
     ) {
+        // Content is drawn behind transparent system bars, so their icon colour must
+        // follow the app theme rather than the system's light/dark setting.
+        val view = LocalView.current
+        val isDarkTheme = currentTheme.isDark
+        SideEffect {
+            view.context.findActivity()?.window?.let { window ->
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !isDarkTheme
+                    isAppearanceLightNavigationBars = !isDarkTheme
+                }
+            }
+        }
+
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         val isOnNowPlaying = currentDestination?.hasRoute(NowPlaying::class) == true
+        val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
+
+        // Library section lives here because its navigation is part of the shell's bottom chrome.
+        var librarySection by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
+        // Search is opened from the bottom controls, so its on/off state lives here too.
+        var isLibrarySearchActive by rememberSaveable { mutableStateOf(false) }
+        val context = LocalContext.current
+        var isLibraryContentShown by rememberSaveable {
+            mutableStateOf(ContextCompat.checkSelfPermission(context, audioPermission()) == PackageManager.PERMISSION_GRANTED)
+        }
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
@@ -144,15 +200,29 @@ fun MainScaffold() {
 
         var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
+        // Glass backdrops: the screens frost under the bottom chrome; the whole
+        // shell frosts under the drawer.
+        val screensBackdrop = rememberGlassBackdrop()
+        val shellBackdrop = rememberGlassBackdrop()
+
         ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
-                ModalDrawerSheet {
+                ModalDrawerSheet(
+                    drawerContainerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier =
+                        Modifier.glassPanel(
+                            shape = DrawerDefaults.shape,
+                            level = GlassLevel.Strong,
+                            elevated = false,
+                            backdrop = shellBackdrop,
+                        ),
+                ) {
                     Column(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .padding(24.dp),
+                                .padding(Spacing.xl),
                     ) {
                         Text(
                             text = "empee3",
@@ -160,7 +230,7 @@ fun MainScaffold() {
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
                             text = "Local Music Engine",
                             style = MaterialTheme.typography.bodySmall,
@@ -168,125 +238,166 @@ fun MainScaffold() {
                         )
                     }
                     HorizontalDivider()
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm))
 
                     DRAWER_DESTINATIONS.forEach { destination ->
                         NavigationDrawerItem(
                             icon = { Icon(destination.icon, contentDescription = null) },
                             label = { Text(destination.label) },
-                            selected = currentDestination?.hasRoute(destination.route::class) == true,
+                            selected =
+                                currentDestination?.hasRoute(destination.route::class) == true ||
+                                    (destination.route == Settings && currentDestination?.hasRoute(SettingsCategory::class) == true),
                             onClick = {
                                 scope.launch { drawerState.close() }
                                 navController.navigateTopLevel(destination.route)
                             },
-                            modifier = Modifier.padding(horizontal = 12.dp),
+                            modifier = Modifier.padding(horizontal = Spacing.md),
                         )
                     }
                 }
             },
         ) {
+            // Inset ownership: this shell owns the bottom edge. Its bottom bar is the
+            // mini player plus a spacer for the gesture/navigation bar, and the
+            // measured height of that chrome is handed to screens. Screens draw edge
+            // to edge (no padding here) and their top bars own the status bar.
             Scaffold(
+                modifier = Modifier.glassBackdropSource(shellBackdrop),
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    if (!isOnNowPlaying) {
-                        MiniPlayer(
-                            playbackRepository = playbackRepository,
-                            onMiniPlayerClick = {
-                                navController.navigate(NowPlaying) { launchSingleTop = true }
-                            },
-                        )
+                    CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
+                        // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
+                        // Stack: mini player, then (on Library) the section navigation, then the gesture area.
+                        Column(modifier = if (isOnNowPlaying) Modifier else Modifier.glassChromeFade()) {
+                            if (!isOnNowPlaying) {
+                                MiniPlayer(
+                                    playbackRepository = playbackRepository,
+                                    onMiniPlayerClick = {
+                                        navController.navigate(NowPlaying) { launchSingleTop = true }
+                                    },
+                                )
+                            }
+                            if (isOnLibrary && isLibraryContentShown) {
+                                LibraryBottomControls(
+                                    selected = librarySection,
+                                    onSelect = { librarySection = it },
+                                    onSearch = { isLibrarySearchActive = true },
+                                )
+                            }
+                            Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+                        }
                     }
                 },
             ) { innerPadding ->
-                NavHost(
-                    navController = navController,
-                    startDestination = Library,
-                    modifier = Modifier.padding(innerPadding),
-                ) {
-                    composable<Library> {
-                        LibraryRoute(
-                            libraryViewModel = libraryViewModel,
-                            playlistsViewModel = playlistsViewModel,
-                            onOpenDrawer = openDrawer,
-                        )
-                    }
-
-                    composable<NowPlaying> {
-                        val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
-                        val lyrics by libraryViewModel.currentSongLyrics.collectAsState()
-
-                        NowPlayingScreen(
-                            playbackRepository = playbackRepository,
-                            isFavorite = isFavorite,
-                            lyrics = lyrics,
-                            onBackClick = { navController.popBackStack() },
-                            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
-                            onAddToPlaylist = { songForPlaylist = it },
-                        )
-                    }
-
-                    composable<Playlists> {
-                        PlaylistsScreen(
-                            viewModel = playlistsViewModel,
-                            onOpenDrawer = openDrawer,
-                            onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                        )
-                    }
-
-                    composable<PlaylistDetail> { entry ->
-                        val route = entry.toRoute<PlaylistDetail>()
-                        val playbackState by playbackRepository.playbackState.collectAsState()
-
-                        PlaylistDetailScreen(
-                            playlistId = route.playlistId,
-                            viewModel = playlistsViewModel,
-                            currentSongId = playbackState.currentSong?.id,
-                            onBackClick = { navController.popBackStack() },
-                        )
-                    }
-
-                    composable<Equalizer> {
-                        SoundSettingsScreen(viewModel = soundViewModel)
-                    }
-
-                    composable<MetadataEditor> {
-                        MetadataEditorScreen(
-                            viewModel = libraryViewModel,
-                            onOpenDrawer = openDrawer,
-                            onNavigateToMetadataSettings = {
-                                navController.navigate(Settings(category = "metadata"))
-                            },
-                            onNavigateToLibrary = {
-                                navController.navigateTopLevel(Library)
-                            },
-                        )
-                    }
-
-                    composable<ArtworkManager> {
-                        ArtworkManagerScreen(
-                            viewModel = libraryViewModel,
-                            onOpenDrawer = openDrawer,
-                            onNavigateToMetadataSettings = {
-                                navController.navigate(Settings(category = "metadata"))
-                            },
-                            onNavigateToLibrary = {
-                                navController.navigate(Library)
-                            },
-                        )
-                    }
-
-                    composable<Settings> { entry ->
-                        val route = entry.toRoute<Settings>()
-
-                        SettingsScreen(
-                            onOpenDrawer = openDrawer,
-                            onNavigateToMetadataEditor = {
-                                navController.navigate(MetadataEditor)
-                            },
-                            themeViewModel = themeViewModel,
-                            soundViewModel = soundViewModel,
-                            diagnosticsViewModel = diagnosticsViewModel,
-                            initialCategory = route.category,
-                        )
+                CompositionLocalProvider(LocalBottomChromeHeight provides innerPadding.calculateBottomPadding()) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = Library,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .glassBackdropSource(screensBackdrop),
+                    ) {
+                        composable<Library> {
+                            LibraryRoute(
+                                libraryViewModel = libraryViewModel,
+                                playlistsViewModel = playlistsViewModel,
+                                section = librarySection,
+                                onOpenDrawer = openDrawer,
+                                onContentShownChange = { isLibraryContentShown = it },
+                                onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                isSearchActive = isLibrarySearchActive,
+                                onSearchActiveChange = { isLibrarySearchActive = it },
+                            )
+                        }
+                        composable<AlbumDetail> { entry ->
+                            val route = entry.toRoute<AlbumDetail>()
+                            AlbumDetailScreen(
+                                albumId = route.albumId,
+                                viewModel = libraryViewModel,
+                                playlistsViewModel = playlistsViewModel,
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                        composable<NowPlaying> {
+                            val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
+                            val lyrics by libraryViewModel.currentSongLyrics.collectAsState()
+                            NowPlayingScreen(
+                                playbackRepository = playbackRepository,
+                                isFavorite = isFavorite,
+                                lyrics = lyrics,
+                                onBackClick = { navController.popBackStack() },
+                                onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
+                                onAddToPlaylist = { songForPlaylist = it },
+                            )
+                        }
+                        composable<Playlists> {
+                            PlaylistsScreen(
+                                viewModel = playlistsViewModel,
+                                onOpenDrawer = openDrawer,
+                                onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
+                            )
+                        }
+                        composable<PlaylistDetail> { entry ->
+                            val route = entry.toRoute<PlaylistDetail>()
+                            val currentSongId by libraryViewModel.currentSongId.collectAsState()
+                            PlaylistDetailScreen(
+                                playlistId = route.playlistId,
+                                viewModel = playlistsViewModel,
+                                currentSongId = currentSongId,
+                                onBackClick = { navController.popBackStack() },
+                            )
+                        }
+                        composable<Equalizer> {
+                            SoundSettingsScreen(
+                                viewModel = soundViewModel,
+                                title = "Equalizer",
+                                navigation = TopBarNavigation.TopLevel(openDrawer),
+                            )
+                        }
+                        composable<MetadataEditor> {
+                            MetadataEditorScreen(
+                                viewModel = libraryViewModel,
+                                onOpenDrawer = openDrawer,
+                                onNavigateToMetadataSettings = {
+                                    navController.navigate(SettingsCategory("metadata"))
+                                },
+                                onNavigateToLibrary = {
+                                    navController.navigateTopLevel(Library)
+                                },
+                            )
+                        }
+                        composable<ArtworkManager> {
+                            ArtworkManagerScreen(
+                                viewModel = libraryViewModel,
+                                onOpenDrawer = openDrawer,
+                                onNavigateToMetadataSettings = {
+                                    navController.navigate(SettingsCategory("metadata"))
+                                },
+                                onNavigateToLibrary = {
+                                    navController.navigate(Library)
+                                },
+                            )
+                        }
+                        composable<Settings> {
+                            SettingsScreen(
+                                onOpenDrawer = openDrawer,
+                                onOpenCategory = { navController.navigate(SettingsCategory(it)) },
+                            )
+                        }
+                        composable<SettingsCategory> { entry ->
+                            val route = entry.toRoute<SettingsCategory>()
+                            SettingsCategoryScreen(
+                                categoryId = route.categoryId,
+                                onBack = { navController.popBackStack() },
+                                onNavigateToMetadataEditor = {
+                                    navController.navigate(MetadataEditor)
+                                },
+                                themeViewModel = themeViewModel,
+                                soundViewModel = soundViewModel,
+                                diagnosticsViewModel = diagnosticsViewModel,
+                            )
+                        }
                     }
                 }
             }
@@ -336,7 +447,12 @@ private fun Context.findActivity(): Activity? =
 private fun LibraryRoute(
     libraryViewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
+    section: LibrarySection,
     onOpenDrawer: () -> Unit,
+    onContentShownChange: (Boolean) -> Unit,
+    onOpenAlbum: (Album) -> Unit,
+    isSearchActive: Boolean,
+    onSearchActiveChange: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val permission = audioPermission()
@@ -401,11 +517,18 @@ private fun LibraryRoute(
         onPauseOrDispose {}
     }
 
+    // The section navigation is only shown over actual library content.
+    LaunchedEffect(permissionState) { onContentShownChange(permissionState == PermissionUiState.GRANTED) }
+
     if (permissionState == PermissionUiState.GRANTED) {
         LibraryScreen(
             viewModel = libraryViewModel,
             playlistsViewModel = playlistsViewModel,
+            section = section,
             onOpenDrawer = onOpenDrawer,
+            onOpenAlbum = onOpenAlbum,
+            isSearchActive = isSearchActive,
+            onSearchActiveChange = onSearchActiveChange,
         )
     } else {
         PermissionRequestView(
@@ -436,15 +559,13 @@ private fun PermissionRequestView(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
                 text = "Music access needed",
                 style = MaterialTheme.typography.titleMedium,
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
+            Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
                 text =
                     if (permanentlyDenied) {
@@ -455,9 +576,7 @@ private fun PermissionRequestView(
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
+            Spacer(modifier = Modifier.height(Spacing.lg))
             if (permanentlyDenied) {
                 Button(onClick = onOpenSettings) {
                     Text("Open settings")

@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.feature.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,33 +13,31 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Equalizer
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsScreen
@@ -55,93 +54,88 @@ private data class SettingCategory(
     val icon: ImageVector,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val SETTING_CATEGORIES =
+    listOf(
+        SettingCategory(
+            "themes",
+            "Themes & Appearance",
+            "Built-in themes, Custom Skins & dark mode customization",
+            Icons.Default.Palette,
+        ),
+        SettingCategory(
+            "audio",
+            "Audio & Equalizer",
+            "8-band equalizer, presets and audio effects",
+            Icons.Default.Equalizer,
+        ),
+        SettingCategory(
+            "metadata",
+            "Metadata & Artwork",
+            "Open the metadata / tag editor",
+            Icons.Default.Tag,
+        ),
+        SettingCategory(
+            "diagnostics",
+            "Diagnostics & About",
+            "Local crash log viewer, GitHub update checker & version info",
+            Icons.Default.BugReport,
+        ),
+    )
+
+/** Top-level Settings: the list of categories. Each category is its own route. */
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun SettingsScreen(
     onOpenDrawer: () -> Unit,
+    onOpenCategory: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppScaffold(
+        topBar = { AppTopBar(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Settings") },
+        modifier = modifier,
+    ) { innerPadding ->
+        val scroll = innerPadding.forScrollingContent()
+        MainSettingsList(
+            categories = SETTING_CATEGORIES,
+            onSelectCategory = onOpenCategory,
+            bottomInset = scroll.contentBottom,
+            modifier = Modifier.padding(scroll.container),
+        )
+    }
+}
+
+/**
+ * A settings category, pushed on top of [SettingsScreen] so system Back returns
+ * to the category list. Each page brings exactly one header.
+ */
+@Suppress("LongParameterList")
+@Composable
+fun SettingsCategoryScreen(
+    categoryId: String,
+    onBack: () -> Unit,
     onNavigateToMetadataEditor: () -> Unit,
     themeViewModel: ThemeViewModel,
     soundViewModel: SoundViewModel,
     diagnosticsViewModel: DiagnosticsViewModel,
-    modifier: Modifier = Modifier,
-    initialCategory: String? = null,
 ) {
-    var activeCategory by remember { mutableStateOf(initialCategory) }
-
-    val categories =
-        listOf(
-            SettingCategory(
-                "themes",
-                "Themes & Appearance",
-                "Built-in themes, Custom Skins & dark mode customization",
-                Icons.Default.Palette,
-            ),
-            SettingCategory(
-                "audio",
-                "Audio & Equalizer",
-                "8-band equalizer, presets and audio effects",
-                Icons.Default.Equalizer,
-            ),
-            SettingCategory(
-                "metadata",
-                "Metadata & Artwork",
-                "Open the metadata / tag editor",
-                Icons.Default.Tag,
-            ),
-            SettingCategory(
-                "diagnostics",
-                "Diagnostics & About",
-                "Local crash log viewer, GitHub update checker & version info",
-                Icons.Default.BugReport,
-            ),
-        )
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (activeCategory == null) {
-                            "Settings"
-                        } else {
-                            categories.find { it.id == activeCategory }?.title ?: "Settings"
-                        },
-                    )
-                },
-                navigationIcon = {
-                    if (activeCategory == null) {
-                        IconButton(onClick = onOpenDrawer) {
-                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
-                        }
-                    } else {
-                        IconButton(onClick = { activeCategory = null }) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    }
-                },
+    val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
+    when (categoryId) {
+        "themes" -> ThemeSettingsScreen(viewModel = themeViewModel, title = title, onBack = onBack)
+        "audio" ->
+            SoundSettingsScreen(
+                viewModel = soundViewModel,
+                title = title,
+                navigation = TopBarNavigation.Detail(onBack),
             )
-        },
-        modifier = modifier,
-    ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-        ) {
-            when (activeCategory) {
-                null -> MainSettingsList(categories = categories, onSelectCategory = { activeCategory = it })
-                "themes" -> ThemeSettingsScreen(viewModel = themeViewModel)
-                "audio" -> SoundSettingsScreen(viewModel = soundViewModel)
-                "metadata" ->
-                    MetadataSettingsSubPage(
-                        onNavigateToMetadataEditor = onNavigateToMetadataEditor,
-                    )
-                "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel)
-                else -> MainSettingsList(categories = categories, onSelectCategory = { activeCategory = it })
+        "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel, title = title, onBack = onBack)
+        else ->
+            AppScaffold(
+                topBar = { AppTopBar(navigation = TopBarNavigation.Detail(onBack), title = title) },
+            ) { innerPadding ->
+                MetadataSettingsSubPage(
+                    onNavigateToMetadataEditor = onNavigateToMetadataEditor,
+                    modifier = Modifier.padding(innerPadding),
+                )
             }
-        }
     }
 }
 
@@ -149,14 +143,19 @@ fun SettingsScreen(
 private fun MainSettingsList(
     categories: List<SettingCategory>,
     onSelectCategory: (String) -> Unit,
+    bottomInset: Dp,
+    modifier: Modifier = Modifier,
 ) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.sm + bottomInset),
+    ) {
         items(categories) { cat ->
             Card(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .padding(horizontal = Spacing.screenGutter, vertical = 6.dp)
                         .glassPanel(MaterialTheme.shapes.medium, elevated = false)
                         .clickable { onSelectCategory(cat.id) },
                 colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
@@ -165,7 +164,7 @@ private fun MainSettingsList(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(Spacing.lg),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -173,7 +172,7 @@ private fun MainSettingsList(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Spacing.lg))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = cat.title,
@@ -199,27 +198,30 @@ private fun MainSettingsList(
 
 @Composable
 @Suppress("LongMethod")
-private fun MetadataSettingsSubPage(onNavigateToMetadataEditor: () -> Unit) {
+private fun MetadataSettingsSubPage(
+    onNavigateToMetadataEditor: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(Spacing.screenGutter),
     ) {
         Card(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = Spacing.sm)
                     .clickable(onClick = onNavigateToMetadataEditor),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(Spacing.lg),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(Spacing.md))
                 Column {
                     Text("Launch Metadata Editor", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text("Edit ID3 tags and clean watermarks", style = MaterialTheme.typography.bodySmall)
@@ -227,7 +229,7 @@ private fun MetadataSettingsSubPage(onNavigateToMetadataEditor: () -> Unit) {
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.sm))
         Text(
             text =
                 "Lookups use MusicBrainz, Deezer, Last.fm and LRCLIB. Tag writing needs write access to the file, " +

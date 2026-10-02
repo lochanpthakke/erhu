@@ -18,6 +18,10 @@ message PlaybackStateProto {
   bool theme_rollback_flag = 12;
   // Absent until the user changes a sound setting; absence means "use defaults".
   SoundSettingsProto sound_settings = 13;
+  // 14 was used by an unreleased development build.
+  reserved 14;
+  // Glass material on floating surfaces, independent of the theme. Unset = off.
+  optional bool glass_effect_enabled = 15;
 }
 
 message EqPresetProto {

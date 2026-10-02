@@ -1,0 +1,70 @@
+package com.lochanpthakke.empee3.core.designsystem.component
+
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+
+/**
+ * The one top bar used by every screen. It owns the status-bar inset (Material
+ * TopAppBar default), which is why screens and the shell must not add it again.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppTopBar(
+    navigation: TopBarNavigation,
+    title: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
+    containerColor: Color = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface),
+) {
+    TopAppBar(
+        title = title,
+        modifier = modifier,
+        navigationIcon = {
+            when (navigation) {
+                is TopBarNavigation.TopLevel ->
+                    IconButton(onClick = navigation.onOpenDrawer) {
+                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Open navigation drawer")
+                    }
+                is TopBarNavigation.Detail ->
+                    IconButton(onClick = navigation.onBack) {
+                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+            }
+        },
+        actions = actions,
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = containerColor),
+    )
+}
+
+/** Convenience overload for the common plain-text title. */
+@Composable
+fun AppTopBar(
+    navigation: TopBarNavigation,
+    title: String,
+    modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
+    containerColor: Color = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surface),
+) {
+    AppTopBar(
+        navigation = navigation,
+        title = { Text(text = title, style = TextStyles.screenTitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        modifier = modifier,
+        actions = actions,
+        containerColor = containerColor,
+    )
+}
