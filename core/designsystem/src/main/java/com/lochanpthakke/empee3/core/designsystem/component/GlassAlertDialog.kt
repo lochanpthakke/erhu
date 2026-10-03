@@ -5,25 +5,21 @@ import android.os.Build
 import android.view.Window
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
-import androidx.compose.animation.core.Animatable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
-import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassTokens
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
@@ -53,16 +49,6 @@ fun GlassAlertDialog(
     val windowGlass = glassOn && rememberCrossWindowBlurEnabled()
     val shape = AlertDialogDefaults.shape
     val solidContainer = AlertDialogDefaults.containerColor
-    // Entrance: the dialog settles in from slightly smaller (scale + fade, Motion.standard).
-    val appear = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { appear.animateTo(1f, Motion.standard()) }
-    val entrance =
-        Modifier.graphicsLayer {
-            val scale = DIALOG_ENTER_SCALE + (1f - DIALOG_ENTER_SCALE) * appear.value
-            scaleX = scale
-            scaleY = scale
-            alpha = appear.value.coerceIn(0f, 1f)
-        }
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = {
@@ -75,7 +61,7 @@ fun GlassAlertDialog(
         modifier =
             when {
                 windowGlass ->
-                    modifier.then(entrance).glassPanel(
+                    modifier.glassPanel(
                         shape,
                         level = GlassLevel.Medium,
                         elevated = false,
@@ -83,11 +69,8 @@ fun GlassAlertDialog(
                         windowFrosted = true,
                     )
                 glassOn ->
-                    modifier
-                        .then(
-                            entrance,
-                        ).glassPanel(shape, level = GlassLevel.Medium, elevated = false, backdrop = null, fill = solidContainer)
-                else -> modifier.then(entrance)
+                    modifier.glassPanel(shape, level = GlassLevel.Medium, elevated = false, backdrop = null, fill = solidContainer)
+                else -> modifier
             },
         dismissButton = dismissButton,
         title = title,
@@ -96,9 +79,6 @@ fun GlassAlertDialog(
         containerColor = if (glassOn) Color.Transparent else solidContainer,
     )
 }
-
-/** Starting scale of a dialog's entrance. */
-private const val DIALOG_ENTER_SCALE = 0.92f
 
 /** Blur behind the dialog window (radius in dp), clipped to the dialog's corner radius. */
 private val DIALOG_BLUR_RADIUS = 24.dp

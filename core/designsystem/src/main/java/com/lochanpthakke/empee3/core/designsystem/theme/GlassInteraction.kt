@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
+import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 
 /** Pressed glass: a slight compression and a touch of light, instead of a ripple. */
 private const val PRESSED_SCALE = 0.97f
@@ -34,7 +35,7 @@ fun Modifier.glassPressEffect(
 ): Modifier {
     if (LocalGlassTokens.current == null) return this
     val pressed by interactionSource.collectIsPressedAsState()
-    val progress by animateFloatAsState(targetValue = if (pressed) 1f else 0f, label = "glassPress")
+    val progress by animateFloatAsState(targetValue = if (pressed) 1f else 0f, animationSpec = Motion.press(), label = "glassPress")
     return this
         .graphicsLayer {
             val scale = 1f - (1f - PRESSED_SCALE) * progress

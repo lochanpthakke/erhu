@@ -107,7 +107,7 @@ fun LibraryNavigationBar(
     LaunchedEffect(selectedIndex) {
         indicatorPosition.animateTo(
             targetValue = selectedIndex.toFloat(),
-            animationSpec = Motion.standard(),
+            animationSpec = Motion.selection(),
         )
     }
 
@@ -266,7 +266,7 @@ private fun LibraryNavigationItem(
     // The selected icon lifts very slightly as the indicator arrives.
     val iconScale by animateFloatAsState(
         targetValue = if (selected) SELECTED_ICON_SCALE else 1f,
-        animationSpec = Motion.snappy(),
+        animationSpec = Motion.press(),
         label = "libraryNavIcon",
     )
 

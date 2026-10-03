@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.util.lerp
@@ -48,17 +49,18 @@ fun LibraryBottomChrome(
     modifier: Modifier = Modifier,
 ) {
     val compact = { if (showNavigation) state.fraction else 0f }
+    val stepAside = Modifier.stepAsideForPlayer(LocalPlayerTransition.current)
     Layout(
         modifier = modifier.fillMaxWidth(),
         // Each slot is wrapped in a Box, so the layout always has exactly three
         // children even while a slot's content is hidden (it then measures 0 high).
         content = {
             Box { miniPlayer(compact) }
-            Box {
+            Box(modifier = stepAside) {
                 AnimatedVisibility(
                     visible = showNavigation,
-                    enter = fadeIn(Motion.fade(Motion.DURATION_MEDIUM)),
-                    exit = fadeOut(Motion.fade(Motion.DURATION_QUICK)),
+                    enter = fadeIn(Motion.fade(Motion.CONTENT)),
+                    exit = fadeOut(Motion.fade(Motion.MICRO)),
                 ) {
                     LibraryNavigationBar(
                         selected = selected,
@@ -69,11 +71,11 @@ fun LibraryBottomChrome(
                     )
                 }
             }
-            Box {
+            Box(modifier = stepAside) {
                 AnimatedVisibility(
                     visible = showNavigation,
-                    enter = fadeIn(Motion.fade(Motion.DURATION_MEDIUM)),
-                    exit = fadeOut(Motion.fade(Motion.DURATION_QUICK)),
+                    enter = fadeIn(Motion.fade(Motion.CONTENT)),
+                    exit = fadeOut(Motion.fade(Motion.MICRO)),
                 ) {
                     LibrarySearchButton(onClick = onSearch, active = searching)
                 }
@@ -95,7 +97,6 @@ fun LibraryBottomChrome(
         val mini = miniMeasurable.measure(Constraints.fixedWidth(lerp(width.toFloat(), miniCompactWidth.toFloat(), requested).roundToInt()))
         // Nothing playing: there is no mini player to bring into the row, so stay expanded.
         val c = if (mini.height > 0) requested else 0f
-        val miniC = c
         val navExpandedWidth = (width - 2 * margin - action - gap).coerceAtLeast(0)
         val nav = navMeasurable.measure(Constraints.fixedWidth(lerp(navExpandedWidth.toFloat(), action.toFloat(), c).roundToInt()))
         val hasNav = nav.height > 0
@@ -108,9 +109,20 @@ fun LibraryBottomChrome(
             // The mini player rises from above the row into the row, between the two buttons.
             val miniCompactY = mini.height + nav.height / 2 - mini.height / 2
             mini.placeRelative(
-                x = lerp(0f, (action + gap).toFloat(), miniC).roundToInt(),
-                y = lerp(0f, miniCompactY.toFloat(), miniC).roundToInt(),
+                x = lerp(0f, (action + gap).toFloat(), c).roundToInt(),
+                y = lerp(0f, miniCompactY.toFloat(), c).roundToInt(),
             )
         }
     }
 }
+
+/** The library controls fade over this part of the player expansion. */
+private const val CONTROLS_FADE_SPAN = 0.3f
+
+/** As the player expands, the library controls sink and fade: the player owns the screen. */
+private fun Modifier.stepAsideForPlayer(transition: PlayerTransitionState?): Modifier =
+    graphicsLayer {
+        val p = transition?.progress?.value ?: 0f
+        translationY = p * size.height
+        alpha = (1f - p / CONTROLS_FADE_SPAN).coerceIn(0f, 1f)
+    }

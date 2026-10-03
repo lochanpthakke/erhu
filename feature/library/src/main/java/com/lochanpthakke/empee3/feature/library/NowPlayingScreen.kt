@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,13 +52,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -78,7 +84,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
-import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
@@ -116,6 +121,30 @@ fun NowPlayingScreen(
     val isPlaying = playbackState.status == PlaybackStatus.PLAYING
 
     var showLyrics by remember { mutableStateOf(false) }
+    // The player is one object (PlayerTransitionState): dragging the artwork / title
+    // down collapses it into the mini player; sideways swipes change the track.
+    val transition = LocalPlayerTransition.current
+    val swipe = remember { Animatable(0f) }
+    // Set when a swipe throws the current track off screen; the track transition then
+    // only brings the new one in from that side (one continuous motion).
+    val swipeHandOff = remember { mutableIntStateOf(0) }
+    LaunchedEffect(song?.id) {
+        swipe.snapTo(0f)
+        swipeHandOff.intValue = 0
+    }
+    val latestState by rememberUpdatedState(playbackState)
+    val collapseDrag = if (transition != null) Modifier.playerDrag(transition, expandsUpward = false) else Modifier
+    val trackSwipe =
+        Modifier.trackSwipe(
+            swipeOffset = swipe,
+            onNext = { playbackRepository.skipNext() },
+            onPrevious = { playbackRepository.skipPrevious() },
+            canSkipNext = { hasNext(latestState) },
+            onSkipThrown = { swipeHandOff.intValue = it },
+            currentTrackId = { latestState.currentSong?.id },
+        )
+    val gestureRegion = collapseDrag.then(trackSwipe)
+    val followSwipe = Modifier.graphicsLayer { translationX = swipe.value }
     var showQueue by remember { mutableStateOf(false) }
     val glass = EmPee3Glass.isActive
 
@@ -171,7 +200,12 @@ fun NowPlayingScreen(
                             song = song,
                             index = playbackState.currentIndex,
                             shuffle = playbackState.shuffleModeEnabled,
-                            modifier = Modifier.weight(1f, fill = false),
+                            handOff = { swipeHandOff.intValue },
+                            modifier =
+                                Modifier
+                                    .weight(1f, fill = false)
+                                    .then(gestureRegion)
+                                    .then(followSwipe),
                             contentAlignment = Alignment.Center,
                         ) { track ->
                             SongArtwork(
@@ -179,7 +213,8 @@ fun NowPlayingScreen(
                                 contentDescription = "Album artwork",
                                 modifier =
                                     Modifier
-                                        .sharedArtwork(nowPlayingArtworkKey(track.id))
+                                        .onGloballyPositioned { transition?.heroArtworkBounds = it.boundsInRoot() }
+                                        .graphicsLayer { alpha = if (transition == null || transition.isSettledOpen) 1f else 0f }
                                         .widthIn(max = ArtworkSize.heroMax)
                                         .fillMaxWidth()
                                         .aspectRatio(1f, matchHeightConstraintsFirst = true)
@@ -192,6 +227,11 @@ fun NowPlayingScreen(
                             song = song,
                             index = playbackState.currentIndex,
                             shuffle = playbackState.shuffleModeEnabled,
+                            handOff = { swipeHandOff.intValue },
+                            modifier =
+                                Modifier
+                                    .then(gestureRegion)
+                                    .then(followSwipe),
                             contentAlignment = Alignment.Center,
                         ) { track ->
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -24,7 +24,7 @@ private const val PRESSED_SCALE = 0.88f
 
 /**
  * Press feedback by scale: the control dips slightly while pressed and springs
- * back on release (Motion.snappy). Works in every theme; only this composable's
+ * back on release (Motion.press). Works in every theme; only this composable's
  * layer is touched, nothing recomposes but the press state itself.
  */
 @Composable
@@ -35,7 +35,7 @@ fun Modifier.pressScale(
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) pressedScale else 1f,
-        animationSpec = Motion.snappy(),
+        animationSpec = Motion.press(),
         label = "pressScale",
     )
     return graphicsLayer {

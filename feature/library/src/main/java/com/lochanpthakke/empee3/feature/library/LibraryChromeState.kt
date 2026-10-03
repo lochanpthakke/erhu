@@ -64,12 +64,12 @@ class LibraryChromeState internal constructor(
     /** Animates to whichever state is nearer (interrupted by the next touch). */
     suspend fun settle() {
         val target = if (fraction > SETTLE_THRESHOLD) 1f else 0f
-        if (fraction != target) animate(fraction, target, animationSpec = Motion.gentle()) { value, _ -> fraction = value }
+        if (fraction != target) animate(fraction, target, animationSpec = Motion.settle()) { value, _ -> fraction = value }
     }
 
     /** Back to the expanded chrome (section change, search, tapping the compact button). */
     suspend fun expand() {
-        if (fraction != 0f) animate(fraction, 0f, animationSpec = Motion.gentle()) { value, _ -> fraction = value }
+        if (fraction != 0f) animate(fraction, 0f, animationSpec = Motion.settle()) { value, _ -> fraction = value }
     }
 }
 

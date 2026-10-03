@@ -146,8 +146,8 @@ internal fun SearchHeader(
             }
             AnimatedVisibility(
                 visible = query.isNotEmpty(),
-                enter = fadeIn(Motion.fade()) + scaleIn(Motion.snappy()),
-                exit = fadeOut(Motion.fade(Motion.DURATION_QUICK)) + scaleOut(Motion.fade(Motion.DURATION_QUICK)),
+                enter = fadeIn(Motion.fade()) + scaleIn(Motion.press()),
+                exit = fadeOut(Motion.fade(Motion.MICRO)) + scaleOut(Motion.fade(Motion.MICRO)),
             ) {
                 PressIconButton(onClick = { onQueryChange("") }) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
@@ -208,7 +208,7 @@ internal fun SearchContent(
                                         artist = artist,
                                         artworkUri = artistArtwork[artist.id],
                                         onClick = { onArtistClick(artist) },
-                                        modifier = Modifier.width(RESULT_TILE_WIDTH).animateItem(),
+                                        modifier = Modifier.width(RESULT_TILE_WIDTH),
                                     )
                                 }
                             }
@@ -221,7 +221,7 @@ internal fun SearchContent(
                                     AlbumTile(
                                         album = album,
                                         onClick = { onAlbumClick(album) },
-                                        modifier = Modifier.width(RESULT_TILE_WIDTH).animateItem(),
+                                        modifier = Modifier.width(RESULT_TILE_WIDTH),
                                     )
                                 }
                             }
@@ -235,7 +235,6 @@ internal fun SearchContent(
                                 isCurrent = song.id == currentSongId,
                                 onClick = { onSongClick(index) },
                                 actions = actions,
-                                modifier = Modifier.animateItem(),
                             )
                         }
                     }

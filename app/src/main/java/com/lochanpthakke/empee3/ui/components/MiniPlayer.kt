@@ -27,6 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,7 +41,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassIndication
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
@@ -46,10 +48,11 @@ import com.lochanpthakke.empee3.core.designsystem.theme.glassPressEffect
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import com.lochanpthakke.empee3.feature.library.AnimatedTrack
+import com.lochanpthakke.empee3.feature.library.LocalPlayerTransition
 import com.lochanpthakke.empee3.feature.library.SwapIcon
 import com.lochanpthakke.empee3.feature.library.collectPlaybackPosition
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
-import com.lochanpthakke.empee3.feature.library.nowPlayingArtworkKey
+import com.lochanpthakke.empee3.feature.library.playerDrag
 
 @Composable
 @Suppress("LongMethod")
@@ -71,6 +74,10 @@ fun MiniPlayer(
     val glass = EmPee3Glass.isActive
     val shape = BottomChrome.shape()
     val interactionSource = remember { MutableInteractionSource() }
+    // The collapsed representation of the player: it reports where it is (the
+    // expanding surface and the travelling artwork start here), fades as the
+    // surface grows over it, and can be dragged up to expand.
+    val transition = LocalPlayerTransition.current
 
     Card(
         modifier =
@@ -79,6 +86,11 @@ fun MiniPlayer(
                 // Floating card; shares margins and shape with the rest of the bottom chrome.
                 .padding(horizontal = BottomChrome.horizontalMargin, vertical = BottomChrome.gap)
                 // Glass: a borderless material layer over the content (tone + sheen, no stroke or shadow).
+                .onGloballyPositioned { coordinates -> transition?.miniBounds = coordinates.boundsInRoot() }
+                .graphicsLayer {
+                    val p = transition?.progress?.value ?: 0f
+                    alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
+                }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)
                 .glassPressEffect(interactionSource, shape)
                 .glassPanel(shape, strong = true, elevated = false, outlined = false)
                 .clickable(interactionSource = interactionSource, indication = glassIndication(), onClick = onMiniPlayerClick),
@@ -120,7 +132,7 @@ fun MiniPlayer(
                             contentDescription = "Album artwork",
                             modifier =
                                 Modifier
-                                    .sharedArtwork(nowPlayingArtworkKey(track.id))
+                                    .onGloballyPositioned { coordinates -> transition?.miniArtworkBounds = coordinates.boundsInRoot() }
                                     .size(ArtworkSize.miniPlayer)
                                     .clip(Radius.smallShape),
                         )
@@ -188,3 +200,6 @@ fun MiniPlayer(
         }
     }
 }
+
+/** The mini player fades out over this part of the expansion (the surface covers it). */
+private const val MINI_FADE_SPAN = 0.2f

@@ -6,9 +6,6 @@ import kotlinx.serialization.Serializable
 object Library
 
 @Serializable
-object NowPlaying
-
-@Serializable
 object Playlists
 
 @Serializable

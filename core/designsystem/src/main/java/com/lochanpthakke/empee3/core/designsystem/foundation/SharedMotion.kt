@@ -33,7 +33,7 @@ fun ProvideMotionScope(
 
 /** How shared artwork travels: the standard decelerating movement. */
 @OptIn(ExperimentalSharedTransitionApi::class)
-private val ArtworkBounds = BoundsTransform { _, _ -> tween(Motion.DURATION_LONG, easing = Motion.Decelerate) }
+private val ArtworkBounds = BoundsTransform { _, _ -> tween(Motion.HERO, easing = Motion.Decelerate) }
 
 /**
  * Marks this artwork as the shared element [key]: when one screen with the key
