@@ -6,4 +6,8 @@ data class Artist(
     val songCount: Int,
     val albumCount: Int,
     val artworkUri: String? = null,
+    /** Canonical identity key (lowercased, normalized name); empty for artists not built by the scanner. */
+    val artistKey: String = "",
+    /** The credit text could not be split or confirmed (e.g. "Tyler/ The Creator"); shown as written. */
+    val isUnresolved: Boolean = false,
 )

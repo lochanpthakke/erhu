@@ -7,12 +7,14 @@ import androidx.paging.cachedIn
 import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
+import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.network.provider.ArtistArtworkLookup
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
@@ -180,7 +182,7 @@ class LibraryViewModel
                 .map { artists ->
                     artists
                         .mapNotNull { artist ->
-                            artist.artworkUri?.takeIf { it.isNotBlank() && it != "NONE" }?.let { artist.id to it }
+                            artist.artworkUri?.takeIf(ArtistArtworkCache::hasArtwork)?.let { artist.id to it }
                         }.toMap()
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
 
@@ -246,12 +248,19 @@ class LibraryViewModel
         private fun resolveArtistArtwork() {
             viewModelScope.launch(Dispatchers.IO) {
                 val artists = libraryRepository.getAllArtists().first()
-                val missing = artists.filter { it.artworkUri == null && it.id !in resolvedArtistIds }
+                // Unresolved credits ("Tyler/ The Creator") are not one artist name, so no profile photo is looked up.
+                // A legacy "not found" from the old query is retried once (see ArtistArtworkCache).
+                val missing =
+                    artists.filter { ArtistArtworkCache.needsLookup(it.artworkUri) && !it.isUnresolved && it.id !in resolvedArtistIds }
                 for (artist in missing) {
                     resolvedArtistIds.add(artist.id)
-                    val url = deezerProvider.fetchArtistArtwork(artist.name)
-                    val uriToSave = url ?: "NONE"
-                    libraryRepository.updateArtistArtwork(artist.id, uriToSave)
+                    when (val result = deezerProvider.lookupArtistArtwork(artist.name)) {
+                        is ArtistArtworkLookup.Found -> libraryRepository.updateArtistArtwork(artist.id, result.url)
+                        ArtistArtworkLookup.NotFound -> libraryRepository.updateArtistArtwork(artist.id, ArtistArtworkCache.NOT_FOUND)
+                        // Offline or over the request quota: store nothing, the next launch tries again.
+                        ArtistArtworkLookup.Failed -> Unit
+                    }
+                    delay(ARTWORK_LOOKUP_SPACING_MS)
                 }
             }
         }
@@ -630,6 +639,13 @@ class LibraryViewModel
         /** The artist's featured appearances (where role = FEATURED). */
         fun observeArtistFeaturedSongs(artistId: Long): Flow<List<Song>> = libraryRepository.getFeaturedSongsByArtistId(artistId)
 
+        /** Tracks where this artist's exact name sits inside an unresolved credit (display only, never a credit). */
+        fun observeArtistUnverifiedSongs(artistId: Long): Flow<List<Song>> =
+            libraryRepository.getArtistById(artistId).flatMapLatest { artist ->
+                val key = artist?.artistKey.orEmpty()
+                if (key.isEmpty()) flowOf(emptyList()) else libraryRepository.getUnverifiedSongsByArtistKey(key)
+            }
+
         /** Plays [songs] in their order from the first track, with shuffle turned off. */
         fun playInOrder(songs: List<Song>) {
             if (songs.isEmpty()) return
@@ -769,5 +785,8 @@ class LibraryViewModel
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L
+
+            /** Deezer allows 50 requests per 5 s; keep the artwork lookups well under that. */
+            private const val ARTWORK_LOOKUP_SPACING_MS = 120L
         }
     }

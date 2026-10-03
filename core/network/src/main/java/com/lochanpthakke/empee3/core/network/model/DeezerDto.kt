@@ -13,6 +13,15 @@ data class DeezerSearchResponse(
 @Serializable
 data class DeezerArtistSearchResponse(
     val data: List<DeezerArtistDto> = emptyList(),
+    /** Set instead of [data] when the request failed, e.g. "Quota limit exceeded" (code 4). */
+    val error: DeezerErrorDto? = null,
+)
+
+@Serializable
+data class DeezerErrorDto(
+    val type: String? = null,
+    val message: String? = null,
+    val code: Int? = null,
 )
 
 @Serializable

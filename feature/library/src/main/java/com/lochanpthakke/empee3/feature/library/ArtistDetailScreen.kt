@@ -67,6 +67,7 @@ private class ArtistDetailData(
     val albums: List<Album>,
     val primarySongs: List<Song>,
     val featuredSongs: List<Song>,
+    val unverifiedSongs: List<Song>,
 )
 
 @Composable
@@ -85,6 +86,7 @@ fun ArtistDetailScreen(
             viewModel.observeArtistAlbums(artistId),
             viewModel.observeArtistPrimarySongs(artistId),
             viewModel.observeArtistFeaturedSongs(artistId),
+            viewModel.observeArtistUnverifiedSongs(artistId),
             ::ArtistDetailData,
         )
     }.collectAsState(initial = null)
@@ -196,6 +198,30 @@ fun ArtistDetailScreen(
                                 song = song,
                                 isCurrent = song.id == currentSongId,
                                 onClick = { viewModel.playSongsFromQueue(featuredSongs, index) },
+                                actions = actions,
+                            )
+                        }
+                    }
+
+                    if (data.unverifiedSongs.isNotEmpty()) {
+                        item(key = "unverified_header") {
+                            Text(
+                                text = "Also credited (unverified)",
+                                style = TextStyles.sectionTitle,
+                                modifier =
+                                    Modifier.padding(
+                                        start = Spacing.screenGutter,
+                                        end = Spacing.screenGutter,
+                                        top = Spacing.md,
+                                        bottom = Spacing.xs,
+                                    ),
+                            )
+                        }
+                        itemsIndexed(data.unverifiedSongs, key = { _, song -> "unverified_${song.id}" }) { index, song ->
+                            LibrarySongRow(
+                                song = song,
+                                isCurrent = song.id == currentSongId,
+                                onClick = { viewModel.playSongsFromQueue(data.unverifiedSongs, index) },
                                 actions = actions,
                             )
                         }

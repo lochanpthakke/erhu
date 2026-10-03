@@ -12,4 +12,5 @@ fun AlbumEntity.toDomainModel(): Album =
         songCount = songCount,
         year = year,
         artworkUri = artworkUri,
+        isCompilation = isCompilation,
     )

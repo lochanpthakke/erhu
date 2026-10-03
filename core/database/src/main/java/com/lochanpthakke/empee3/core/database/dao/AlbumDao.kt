@@ -24,7 +24,15 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE id = :id LIMIT 1")
     fun observeAlbumById(id: Long): Flow<AlbumEntity?>
 
-    @Query("SELECT * FROM albums WHERE artist_id = :artistId ORDER BY year DESC, title ASC")
+    /** Albums listed under this artist (album artist, or a core artist of a collaborative album). */
+    @Query(
+        """
+        SELECT a.* FROM albums a
+        INNER JOIN album_artist_cross_ref l ON l.album_id = a.id
+        WHERE l.artist_id = :artistId
+        ORDER BY a.year DESC, a.title ASC
+        """,
+    )
     fun getAlbumsByArtistId(artistId: Long): Flow<List<AlbumEntity>>
 
     @Query("DELETE FROM albums")

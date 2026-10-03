@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.database.scanner
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ContentUris
 import android.content.Context
 import android.content.pm.PackageManager
@@ -10,17 +11,11 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
-import androidx.room.withTransaction
 import com.lochanpthakke.empee3.core.common.logging.Logger
-import com.lochanpthakke.empee3.core.database.EmPee3Database
-import com.lochanpthakke.empee3.core.database.dao.AlbumDao
-import com.lochanpthakke.empee3.core.database.dao.ArtistDao
-import com.lochanpthakke.empee3.core.database.dao.SongDao
-import com.lochanpthakke.empee3.core.database.entity.AlbumEntity
-import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
-import com.lochanpthakke.empee3.core.database.entity.ArtistRole
-import com.lochanpthakke.empee3.core.database.entity.SongArtistCrossRefEntity
+import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
+import com.lochanpthakke.empee3.core.database.library.LibraryModelBuilder
+import com.lochanpthakke.empee3.core.database.library.RawTrack
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -36,10 +31,8 @@ class MediaStoreScanner
     @Inject
     constructor(
         @ApplicationContext private val context: Context,
-        private val database: EmPee3Database,
-        private val songDao: SongDao,
-        private val albumDao: AlbumDao,
-        private val artistDao: ArtistDao,
+        private val libraryModelDao: LibraryModelDao,
+        private val libraryWriter: LibraryWriter,
         private val logger: Logger,
     ) {
         @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength", "TooGenericExceptionCaught")
@@ -56,25 +49,7 @@ class MediaStoreScanner
                 triggerMediaScannerForStorage()
                 delay(SCAN_INDEXING_DELAY_MS)
 
-                val projectionList =
-                    mutableListOf(
-                        MediaStore.Audio.Media._ID,
-                        MediaStore.Audio.Media.TITLE,
-                        MediaStore.Audio.Media.ARTIST,
-                        MediaStore.Audio.Media.ALBUM,
-                        MediaStore.Audio.Media.ARTIST_ID,
-                        MediaStore.Audio.Media.ALBUM_ID,
-                        MediaStore.Audio.Media.DURATION,
-                        MediaStore.Audio.Media.DATA,
-                        MediaStore.Audio.Media.TRACK,
-                        MediaStore.Audio.Media.YEAR,
-                        MediaStore.Audio.Media.DATE_MODIFIED,
-                    )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    projectionList.add(MediaStore.Audio.Media.ALBUM_ARTIST)
-                }
-
-                val projection = projectionList.toTypedArray()
+                val projection = scanProjection(Build.VERSION.SDK_INT)
                 val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 1000"
                 val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 
@@ -95,9 +70,7 @@ class MediaStoreScanner
                     }
 
                 val songs = mutableListOf<SongEntity>()
-                val crossRefs = mutableListOf<SongArtistCrossRefEntity>()
-                val albumMap = mutableMapOf<Long, AlbumEntityAccumulator>()
-                val artistMap = mutableMapOf<Long, ArtistEntityAccumulator>()
+                val rawTracks = mutableListOf<RawTrack>()
                 val seenSongIds = mutableSetOf<Long>()
 
                 var totalCount = 0
@@ -139,6 +112,7 @@ class MediaStoreScanner
                         val yearColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
                         val dateModifiedColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
                         val albumArtistColumn = c.getColumnIndex("album_artist")
+                        val compilationColumn = c.getColumnIndex(MediaStore.Audio.Media.COMPILATION)
 
                         while (c.moveToNext()) {
                             val id = c.getLong(idColumn)
@@ -165,39 +139,10 @@ class MediaStoreScanner
                                 scannedCount++
                                 continue
                             }
-                            val trackNumber = c.getInt(trackColumn) % 1000
+                            val rawTrackValue = c.getInt(trackColumn)
+                            val trackNumber = rawTrackValue % 1000
                             val year = c.getInt(yearColumn)
                             val dateModified = c.getLong(dateModifiedColumn)
-
-                            val parsedArtists = ArtistParser.parse(rawArtist)
-                            val primaryArtist = parsedArtists.primaryArtists.first()
-
-                            val normalizedTitle = ArtistParser.normalizeAlbumTitle(album)
-                            val primaryArtistIds = parsedArtists.primaryArtists.map { it.id }.toSet()
-
-                            val existingAlbumAcc =
-                                if (rawAlbumArtist == null) {
-                                    albumMap.values.firstOrNull { acc ->
-                                        ArtistParser.normalizeAlbumTitle(acc.title) == normalizedTitle &&
-                                            acc.artistId in primaryArtistIds
-                                    }
-                                } else {
-                                    null
-                                }
-
-                            val albumArtistObj =
-                                when {
-                                    rawAlbumArtist != null -> ArtistParser.createParsedArtist(rawAlbumArtist)
-                                    existingAlbumAcc != null ->
-                                        ParsedArtist(
-                                            name = existingAlbumAcc.artist,
-                                            normalizedName = existingAlbumAcc.artist.lowercase(),
-                                            id = existingAlbumAcc.artistId,
-                                        )
-                                    else -> primaryArtist
-                                }
-
-                            val computedAlbumId = existingAlbumAcc?.id ?: ArtistParser.generateAlbumId(album, albumArtistObj.id)
 
                             val contentUri =
                                 ContentUris
@@ -208,14 +153,28 @@ class MediaStoreScanner
 
                             val artworkUri = ContentUris.withAppendedId(ALBUM_ART_BASE_URI, rawAlbumId).toString()
 
-                            val song =
+                            // Raw values only: credits, identity and album grouping are decided after the
+                            // whole library has been read (LibraryModelBuilder).
+                            rawTracks +=
+                                RawTrack(
+                                    songId = id,
+                                    title = title,
+                                    rawArtist = c.getString(artistColumn)?.takeUnless { it == MediaStore.UNKNOWN_STRING }.orEmpty(),
+                                    rawAlbumArtist = rawAlbumArtist,
+                                    album = c.getString(albumColumn).orEmpty(),
+                                    trackNumber = trackNumber,
+                                    discNumber = rawTrackValue / 1000,
+                                    folder = filePath.substringBeforeLast('/', missingDelimiterValue = ""),
+                                    isCompilation = compilationColumn >= 0 && c.getString(compilationColumn) == "1",
+                                )
+                            songs +=
                                 SongEntity(
                                     id = id,
                                     title = title,
                                     artist = rawArtist,
                                     album = album,
-                                    artistId = primaryArtist.id,
-                                    albumId = computedAlbumId,
+                                    artistId = 0L,
+                                    albumId = 0L,
                                     durationMs = durationMs,
                                     uri = contentUri,
                                     filePath = filePath,
@@ -224,52 +183,6 @@ class MediaStoreScanner
                                     dateModified = dateModified,
                                     artworkUri = artworkUri,
                                 )
-                            songs.add(song)
-
-                            parsedArtists.primaryArtists.forEachIndexed { pos, artist ->
-                                crossRefs.add(
-                                    SongArtistCrossRefEntity(
-                                        songId = id,
-                                        artistId = artist.id,
-                                        role = ArtistRole.PRIMARY,
-                                        position = pos,
-                                    ),
-                                )
-                                val acc = artistMap.getOrPut(artist.id) { ArtistEntityAccumulator(artist.id, artist.name) }
-                                acc.songCount++
-                            }
-
-                            parsedArtists.featuredArtists.forEachIndexed { pos, artist ->
-                                crossRefs.add(
-                                    SongArtistCrossRefEntity(
-                                        songId = id,
-                                        artistId = artist.id,
-                                        role = ArtistRole.FEATURED,
-                                        position = pos,
-                                    ),
-                                )
-                                val acc = artistMap.getOrPut(artist.id) { ArtistEntityAccumulator(artist.id, artist.name) }
-                                acc.songCount++
-                            }
-
-                            val albumAccumulator =
-                                albumMap.getOrPut(computedAlbumId) {
-                                    AlbumEntityAccumulator(
-                                        id = computedAlbumId,
-                                        title = album,
-                                        artist = albumArtistObj.name,
-                                        artistId = albumArtistObj.id,
-                                        year = year,
-                                        artworkUri = artworkUri,
-                                    )
-                                }
-                            albumAccumulator.songCount++
-
-                            val albumArtistAcc =
-                                artistMap.getOrPut(albumArtistObj.id) {
-                                    ArtistEntityAccumulator(albumArtistObj.id, albumArtistObj.name)
-                                }
-                            albumArtistAcc.albumIds.add(computedAlbumId)
 
                             scannedCount++
                             if (scannedCount % EMISSION_BATCH_SIZE == 0 || scannedCount == totalCount) {
@@ -286,46 +199,11 @@ class MediaStoreScanner
                     }
                 }
 
-                val albumEntities =
-                    albumMap.values.map {
-                        AlbumEntity(
-                            id = it.id,
-                            title = it.title,
-                            artist = it.artist,
-                            artistId = it.artistId,
-                            songCount = it.songCount,
-                            year = it.year,
-                            artworkUri = it.artworkUri,
-                        )
-                    }
-
-                val artistEntities =
-                    artistMap.values.map {
-                        ArtistEntity(
-                            id = it.id,
-                            name = it.name,
-                            songCount = it.songCount,
-                            albumCount = it.albumIds.size,
-                        )
-                    }
-
-                database.withTransaction {
-                    val plan = planLibrarySync(scanned = songs, existing = songDao.getAllSongsOnce())
-                    plan.deletedIds.chunked(SQLITE_MAX_VARIABLES).forEach {
-                        songDao.deleteSongsByIds(it)
-                        database.songArtistCrossRefDao().deleteBySongIds(it)
-                    }
-                    plan.upserts.chunked(SQLITE_MAX_VARIABLES).forEach { songDao.upsertAll(it) }
-
-                    database.songArtistCrossRefDao().deleteAll()
-                    crossRefs.chunked(SQLITE_MAX_VARIABLES).forEach { database.songArtistCrossRefDao().upsertAll(it) }
-
-                    albumDao.deleteAll()
-                    artistDao.deleteAll()
-                    albumEntities.chunked(SQLITE_MAX_VARIABLES).forEach { albumDao.upsertAll(it) }
-                    artistEntities.chunked(SQLITE_MAX_VARIABLES).forEach { artistDao.upsertAll(it) }
-                    logger.i(TAG, "Scan applied: ${plan.upserts.size} songs, ${plan.deletedIds.size} removed")
-                }
+                val aliases = libraryModelDao.getAliases().associate { it.aliasKey to it.canonicalKey }
+                val artwork = libraryModelDao.getArtworkByKey().associate { it.artistKey to it.artworkUri }
+                val model = LibraryModelBuilder.build(rawTracks, aliases)
+                val summary = libraryWriter.write(model.toEntities(songs, artwork))
+                logger.i(TAG, "Scan applied: ${summary.upserted} songs, ${summary.removed} removed, ${model.albums.size} albums")
 
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
@@ -412,33 +290,35 @@ class MediaStoreScanner
                 lower.endsWith(".ogg")
         }
 
-        private class AlbumEntityAccumulator
-            @Suppress("LongParameterList")
-            constructor(
-                val id: Long,
-                val title: String,
-                val artist: String,
-                val artistId: Long,
-                val year: Int,
-                val artworkUri: String,
-                var songCount: Int = 0,
-            )
-
-        private class ArtistEntityAccumulator(
-            val id: Long,
-            val name: String,
-            var songCount: Int = 0,
-            val albumIds: MutableSet<Long> = mutableSetOf(),
-        )
-
         companion object {
             private const val TAG = "MediaStoreScanner"
             private const val EMISSION_BATCH_SIZE = 50
             private const val SCAN_INDEXING_DELAY_MS = 800L
 
-            /** Stay well below SQLite's 999 bound-variable limit on API < 30. */
-            private const val SQLITE_MAX_VARIABLES = 500
-
             private val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
         }
     }
+
+/** MediaStore columns read by a scan; Album Artist and the compilation flag exist from API 30. */
+@SuppressLint("InlinedApi")
+internal fun scanProjection(sdkInt: Int): Array<String> {
+    val columns =
+        mutableListOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.ARTIST_ID,
+            MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.TRACK,
+            MediaStore.Audio.Media.YEAR,
+            MediaStore.Audio.Media.DATE_MODIFIED,
+        )
+    if (sdkInt >= Build.VERSION_CODES.R) {
+        columns += MediaStore.Audio.Media.ALBUM_ARTIST
+        columns += MediaStore.Audio.Media.COMPILATION
+    }
+    return columns.toTypedArray()
+}

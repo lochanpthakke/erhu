@@ -19,4 +19,8 @@ data class SongArtistCrossRefEntity(
     val artistId: Long,
     val role: String, // ArtistRole.PRIMARY or ArtistRole.FEATURED
     val position: Int = 0,
+    @ColumnInfo(name = "credit_text", defaultValue = "''")
+    val creditText: String = "",
+    @ColumnInfo(name = "is_unresolved", defaultValue = "0")
+    val isUnresolved: Boolean = false,
 )

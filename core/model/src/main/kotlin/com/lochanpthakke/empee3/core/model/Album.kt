@@ -8,4 +8,5 @@ data class Album(
     val songCount: Int,
     val year: Int,
     val artworkUri: String? = null,
+    val isCompilation: Boolean = false,
 )

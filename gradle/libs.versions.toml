@@ -25,6 +25,7 @@ protobuf = "3.25.3"
 protobuf-plugin = "0.10.0"
 glance = "1.2.0-rc01"
 room = "2.7.0-alpha13"
+robolectric = "4.14.1"
 paging = "3.3.6"
 jaudiotagger = "3.0.1"
 work = "2.10.0"
@@ -72,6 +73,8 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
+androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
 androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 androidx-paging-common = { group = "androidx.paging", name = "paging-common", version.ref = "paging" }

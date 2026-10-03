@@ -1,0 +1,41 @@
+package com.lochanpthakke.empee3.core.database
+
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+/**
+ * v5 → v6: credit/album/artist metadata columns, album–artist links, artwork and
+ * alias tables kept across scans, unverified credit segments. Derived rows are
+ * left in place; the next scan rebuilds them. Artwork is carried over by name key.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_5_6 =
+    object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_5_6.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_5_6 =
+    listOf(
+        "ALTER TABLE `song_artist_cross_ref` ADD COLUMN `credit_text` TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE `song_artist_cross_ref` ADD COLUMN `is_unresolved` INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE `albums` ADD COLUMN `is_compilation` INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE `albums` ADD COLUMN `album_artist_inconsistent` INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE `albums` ADD COLUMN `grouping_key` TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE `artists` ADD COLUMN `artist_key` TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE `artists` ADD COLUMN `is_unresolved` INTEGER NOT NULL DEFAULT 0",
+        "CREATE TABLE IF NOT EXISTS `album_artist_cross_ref` (`album_id` INTEGER NOT NULL, `artist_id` INTEGER NOT NULL, " +
+            "`position` INTEGER NOT NULL, PRIMARY KEY(`album_id`, `artist_id`))",
+        "CREATE INDEX IF NOT EXISTS `index_album_artist_cross_ref_artist_id` ON `album_artist_cross_ref` (`artist_id`)",
+        "CREATE TABLE IF NOT EXISTS `artist_artwork` (`artist_key` TEXT NOT NULL, `artwork_uri` TEXT NOT NULL, " +
+            "`updated_at` INTEGER NOT NULL, PRIMARY KEY(`artist_key`))",
+        "CREATE TABLE IF NOT EXISTS `artist_alias` (`alias_key` TEXT NOT NULL, `canonical_key` TEXT NOT NULL, " +
+            "`source` TEXT NOT NULL, `created_at` INTEGER NOT NULL, PRIMARY KEY(`alias_key`))",
+        "CREATE TABLE IF NOT EXISTS `unverified_credit_segment` (`song_id` INTEGER NOT NULL, `artist_id` INTEGER NOT NULL, " +
+            "`segment_key` TEXT NOT NULL, `segment_index` INTEGER NOT NULL, PRIMARY KEY(`song_id`, `artist_id`, `segment_index`))",
+        "CREATE INDEX IF NOT EXISTS `index_unverified_credit_segment_segment_key` ON `unverified_credit_segment` (`segment_key`)",
+        "INSERT OR REPLACE INTO `artist_artwork` (`artist_key`, `artwork_uri`, `updated_at`) " +
+            "SELECT lower(trim(`name`)), `artwork_uri`, 0 FROM `artists` WHERE `artwork_uri` IS NOT NULL",
+        "UPDATE `artists` SET `artist_key` = lower(trim(`name`))",
+    )

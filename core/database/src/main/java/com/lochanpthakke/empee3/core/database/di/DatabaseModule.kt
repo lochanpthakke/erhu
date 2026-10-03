@@ -3,8 +3,10 @@ package com.lochanpthakke.empee3.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.lochanpthakke.empee3.core.database.EmPee3Database
+import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
+import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
@@ -20,6 +22,7 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides
     @Singleton
+    @Suppress("MagicNumber") // schema version numbers
     fun provideEmPee3Database(
         @ApplicationContext context: Context,
     ): EmPee3Database =
@@ -28,7 +31,9 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).fallbackToDestructiveMigration(true)
+            ).addMigrations(MIGRATION_5_6)
+            .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
+            .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
 
     @Provides
@@ -42,6 +47,9 @@ object DatabaseModule {
 
     @Provides
     fun providePlaylistDao(database: EmPee3Database): PlaylistDao = database.playlistDao()
+
+    @Provides
+    fun provideLibraryModelDao(database: EmPee3Database): LibraryModelDao = database.libraryModelDao()
 
     @Provides
     fun provideMetadataProcessingDao(database: EmPee3Database): MetadataProcessingDao = database.metadataProcessingDao()

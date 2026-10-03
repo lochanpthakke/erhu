@@ -29,6 +29,9 @@ interface LibraryRepository {
 
     fun getFeaturedSongsByArtistId(artistId: Long): Flow<List<Song>>
 
+    /** Songs whose unresolved credit contains this artist's exact name; shown as "unverified". */
+    fun getUnverifiedSongsByArtistKey(artistKey: String): Flow<List<Song>>
+
     fun getAllAlbums(): Flow<List<Album>>
 
     fun getAlbumsByArtistId(artistId: Long): Flow<List<Album>>

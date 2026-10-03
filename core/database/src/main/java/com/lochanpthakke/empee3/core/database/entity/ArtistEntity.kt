@@ -15,4 +15,8 @@ data class ArtistEntity(
     val albumCount: Int,
     @ColumnInfo(name = "artwork_uri")
     val artworkUri: String? = null,
+    @ColumnInfo(name = "artist_key", defaultValue = "''")
+    val artistKey: String = "",
+    @ColumnInfo(name = "is_unresolved", defaultValue = "0")
+    val isUnresolved: Boolean = false,
 )

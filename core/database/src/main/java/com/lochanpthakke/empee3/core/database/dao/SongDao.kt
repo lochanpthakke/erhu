@@ -79,6 +79,17 @@ interface SongDao {
     )
     fun getFeaturedSongsByArtistId(artistId: Long): Flow<List<SongEntity>>
 
+    /** Songs whose unresolved credit contains this artist's exact standalone name (presentation only). */
+    @Query(
+        """
+        SELECT DISTINCT s.* FROM songs s
+        INNER JOIN unverified_credit_segment u ON u.song_id = s.id
+        WHERE u.segment_key = :artistKey
+        ORDER BY s.title COLLATE NOCASE ASC
+        """,
+    )
+    fun getUnverifiedSongsByArtistKey(artistKey: String): Flow<List<SongEntity>>
+
     @Query(
         """
         SELECT * FROM songs

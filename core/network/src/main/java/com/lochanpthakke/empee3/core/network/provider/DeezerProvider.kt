@@ -6,6 +6,8 @@ import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataProvider
 import com.lochanpthakke.empee3.core.network.api.DeezerApi
+import com.lochanpthakke.empee3.core.network.model.DeezerArtistDto
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -89,20 +91,32 @@ class DeezerProvider
             return urls.distinct()
         }
 
-        suspend fun fetchArtistArtwork(artistName: String): String? {
+        /**
+         * Profile artwork for exactly this artist. [ArtistArtworkLookup.Failed] (network error,
+         * Deezer error such as the request quota) is kept apart from [ArtistArtworkLookup.NotFound]
+         * so a temporary failure is never remembered as "this artist has no photo".
+         */
+        @Suppress("TooGenericExceptionCaught")
+        suspend fun lookupArtistArtwork(artistName: String): ArtistArtworkLookup {
             val trimmed = artistName.trim()
-            if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return null
+            if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return ArtistArtworkLookup.NotFound
             return try {
-                val response = deezerApi.searchArtist("artist:\"$trimmed\"")
-                val match =
-                    response.data.firstOrNull { dto ->
-                        dto.name.trim().equals(trimmed, ignoreCase = true) ||
-                            dto.name.trim().contains(trimmed, ignoreCase = true)
-                    } ?: response.data.firstOrNull()
-                match?.pictureBig ?: match?.pictureXl ?: match?.pictureMedium
+                // Plain name, not artist:"…": Deezer ranks the field query so that the exact
+                // artist is often missing (artist:"Drake" returns "William D Drake", "Drake Lamar", …).
+                val response = deezerApi.searchArtist(trimmed)
+                val match = pickExactArtist(trimmed, response.data)
+                val url = match?.pictureBig ?: match?.pictureXl ?: match?.pictureMedium
+                when {
+                    response.error != null -> {
+                        logger.w(TAG, "Deezer artist search failed for $artistName: ${response.error.message}")
+                        ArtistArtworkLookup.Failed
+                    }
+                    url != null -> ArtistArtworkLookup.Found(url)
+                    else -> ArtistArtworkLookup.NotFound
+                }
             } catch (e: Exception) {
                 logger.w(TAG, "Deezer artist art fetch failed for $artistName: ${e.message}", e)
-                null
+                ArtistArtworkLookup.Failed
             }
         }
 
@@ -110,3 +124,25 @@ class DeezerProvider
             private const val TAG = "DeezerProvider"
         }
     }
+
+/** The candidate whose name equals [query] (case-insensitive, trimmed); never a partial or first-result fallback. */
+internal fun pickExactArtist(
+    query: String,
+    candidates: List<DeezerArtistDto>,
+): DeezerArtistDto? {
+    val key = query.trim().lowercase(Locale.ROOT)
+    return candidates.firstOrNull { it.name.trim().lowercase(Locale.ROOT) == key }
+}
+
+/** Outcome of an artist artwork lookup. */
+sealed interface ArtistArtworkLookup {
+    data class Found(
+        val url: String,
+    ) : ArtistArtworkLookup
+
+    /** The search worked and Deezer has no artist with exactly this name (or no picture for it). */
+    data object NotFound : ArtistArtworkLookup
+
+    /** The search itself failed; try again later. */
+    data object Failed : ArtistArtworkLookup
+}
