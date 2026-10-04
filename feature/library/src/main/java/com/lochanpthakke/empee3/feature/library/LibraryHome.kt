@@ -1,14 +1,11 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -17,19 +14,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
-import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.model.Album
@@ -132,15 +124,13 @@ private fun SectionHeading(title: String) {
 }
 
 /**
- * The Library destination: the place where the user's own collection is
- * organised. Chips switch between Playlists, Favorites and Artists; each uses
- * the same list or grid it had before, so their actions are unchanged.
+ * A full Library shelf, opened from the overview's "More": Playlists, Favorites
+ * or Artists, each the same list or grid it was before, so its actions are unchanged.
  */
 @Composable
 @Suppress("LongParameterList")
 internal fun LibraryHub(
     shelf: LibraryShelf,
-    onShelfChange: (LibraryShelf) -> Unit,
     playlists: List<Playlist>,
     favoriteSongs: LazyPagingItems<Song>,
     artists: LazyPagingItems<Artist>,
@@ -154,55 +144,35 @@ internal fun LibraryHub(
     topInset: Dp,
     bottomInset: Dp,
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = topInset)
-                    // One line at any text size: the row scrolls instead of wrapping a label.
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = Spacing.screenGutter),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            LibraryShelf.entries.forEach { entry ->
-                FilterChip(
-                    selected = entry == shelf,
-                    onClick = { onShelfChange(entry) },
-                    label = { Text(entry.label, maxLines = 1, softWrap = false) },
-                    leadingIcon = { Icon(entry.icon, contentDescription = null, modifier = Modifier.size(IconSize.small)) },
-                )
-            }
-        }
-        when (shelf) {
-            LibraryShelf.PLAYLISTS ->
-                PlaylistsGrid(
-                    playlists = playlists,
-                    onPlaylistClick = onPlaylistClick,
-                    onNewPlaylist = onNewPlaylist,
-                    bottomInset = bottomInset,
-                )
-            LibraryShelf.FAVORITES ->
-                SongsTab(
-                    songs = favoriteSongs,
-                    currentSongId = currentSongId,
-                    isScanning = false,
-                    topInset = 0.dp,
-                    bottomInset = bottomInset,
-                    emptyIcon = LibraryShelf.FAVORITES.icon,
-                    emptyMessage = "No favorites yet. Tap the heart on any song to add it here.",
-                    onSongClick = onFavoriteClick,
-                    actions = actions,
-                )
-            LibraryShelf.ARTISTS ->
-                ArtistsTab(
-                    artists = artists,
-                    artwork = artistArtwork,
-                    topInset = 0.dp,
-                    bottomInset = bottomInset,
-                    onArtistClick = onArtistClick,
-                )
-        }
+    when (shelf) {
+        LibraryShelf.PLAYLISTS ->
+            PlaylistsGrid(
+                playlists = playlists,
+                onPlaylistClick = onPlaylistClick,
+                onNewPlaylist = onNewPlaylist,
+                topInset = topInset,
+                bottomInset = bottomInset,
+            )
+        LibraryShelf.FAVORITES ->
+            SongsTab(
+                songs = favoriteSongs,
+                currentSongId = currentSongId,
+                isScanning = false,
+                topInset = topInset,
+                bottomInset = bottomInset,
+                emptyIcon = LibraryShelf.FAVORITES.icon,
+                emptyMessage = "No favorites yet. Tap the heart on any song to add it here.",
+                onSongClick = onFavoriteClick,
+                actions = actions,
+            )
+        LibraryShelf.ARTISTS ->
+            ArtistsTab(
+                artists = artists,
+                artwork = artistArtwork,
+                topInset = topInset,
+                bottomInset = bottomInset,
+                onArtistClick = onArtistClick,
+            )
     }
 }
 
@@ -212,6 +182,7 @@ private fun PlaylistsGrid(
     playlists: List<Playlist>,
     onPlaylistClick: (Playlist) -> Unit,
     onNewPlaylist: () -> Unit,
+    topInset: Dp,
     bottomInset: Dp,
 ) {
     LazyVerticalGrid(
@@ -223,7 +194,7 @@ private fun PlaylistsGrid(
             PaddingValues(
                 start = Spacing.screenGutter,
                 end = Spacing.screenGutter,
-                top = Spacing.md,
+                top = Spacing.sm + topInset,
                 bottom = Spacing.lg + bottomInset,
             ),
     ) {

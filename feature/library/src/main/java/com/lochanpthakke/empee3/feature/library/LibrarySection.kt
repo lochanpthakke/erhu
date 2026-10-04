@@ -26,7 +26,7 @@ enum class LibrarySection(
     LIBRARY("Library", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
 }
 
-/** What the Library destination organises: switched by the chips at its top. */
+/** The full shelves the Library overview opens with "More". */
 enum class LibraryShelf(
     val label: String,
     val icon: ImageVector,

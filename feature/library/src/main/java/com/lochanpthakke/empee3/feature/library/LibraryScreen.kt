@@ -78,6 +78,7 @@ fun LibraryScreen(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
+    onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -97,7 +98,9 @@ fun LibraryScreen(
     val recentAlbums by viewModel.recentAlbums.collectAsState()
     val recentPlaylists by playlistsViewModel.recentPlaylists.collectAsState()
     val playlists by playlistsViewModel.playlists.collectAsState()
-    var libraryShelf by rememberSaveable { mutableStateOf(LibraryShelf.PLAYLISTS) }
+    // The Library tab is an overview; "More" opens one full shelf (null = the overview).
+    var openShelf by rememberSaveable { mutableStateOf<LibraryShelf?>(null) }
+    val shownShelf = openShelf.takeIf { section == LibrarySection.LIBRARY && !isSearchActive }
     var showNewPlaylist by remember { mutableStateOf(false) }
     // Only the playing song's id: position ticks must not recompose the library.
     val currentSongId by viewModel.currentSongId.collectAsState()
@@ -127,6 +130,8 @@ fun LibraryScreen(
     }
     // Search is a mode of this screen: system Back leaves it (and clears the query).
     BackHandler(enabled = isSearchActive, onBack = closeSearch)
+    // Back from a full shelf returns to the Library overview.
+    BackHandler(enabled = shownShelf != null) { openShelf = null }
 
     val isCustomScanEnabled by viewModel.isCustomScanLocationEnabled.collectAsState()
     val customScanPath by viewModel.customScanLocationPath.collectAsState()
@@ -140,6 +145,7 @@ fun LibraryScreen(
     LaunchedEffect(section) {
         if (section != lastSection) {
             lastSection = section
+            openShelf = null
             if (isSearchActive) closeSearch()
         }
     }
@@ -151,6 +157,11 @@ fun LibraryScreen(
                     query = searchQuery,
                     onQueryChange = viewModel::setLibrarySearchQuery,
                     onClose = closeSearch,
+                )
+            } else if (shownShelf != null) {
+                OverlayHeader(
+                    navigation = TopBarNavigation.Detail(onBack = { openShelf = null }),
+                    title = shownShelf.label,
                 )
             } else {
                 OverlayHeader(
@@ -232,22 +243,44 @@ fun LibraryScreen(
                                 onAlbumClick = onOpenAlbum,
                             )
                         LibrarySection.LIBRARY ->
-                            LibraryHub(
-                                shelf = libraryShelf,
-                                onShelfChange = { libraryShelf = it },
-                                playlists = playlists,
-                                favoriteSongs = favoriteSongs,
-                                artists = artists,
-                                artistArtwork = artistArtwork,
-                                currentSongId = currentSongId,
-                                onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
-                                onPlaylistClick = { onOpenPlaylist(it.id) },
-                                onNewPlaylist = { showNewPlaylist = true },
-                                onArtistClick = onOpenArtist,
-                                actions = actions,
-                                topInset = scroll.contentTop,
-                                bottomInset = scroll.contentBottom,
-                            )
+                            if (shownShelf == null) {
+                                LibraryOverview(
+                                    playlists = playlists,
+                                    favoriteSongs = favoriteSongs,
+                                    songs = songs,
+                                    artists = artists,
+                                    artistArtwork = artistArtwork,
+                                    isScanning = isScanning,
+                                    actions =
+                                        LibraryOverviewActions(
+                                            onMore = { openShelf = it },
+                                            onMoreSongs = { onSelectSection(LibrarySection.TRACKS) },
+                                            onPlaylistClick = { onOpenPlaylist(it.id) },
+                                            onNewPlaylist = { showNewPlaylist = true },
+                                            onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
+                                            onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
+                                            onArtistClick = onOpenArtist,
+                                        ),
+                                    topInset = scroll.contentTop,
+                                    bottomInset = scroll.contentBottom,
+                                )
+                            } else {
+                                LibraryHub(
+                                    shelf = shownShelf,
+                                    playlists = playlists,
+                                    favoriteSongs = favoriteSongs,
+                                    artists = artists,
+                                    artistArtwork = artistArtwork,
+                                    currentSongId = currentSongId,
+                                    onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
+                                    onPlaylistClick = { onOpenPlaylist(it.id) },
+                                    onNewPlaylist = { showNewPlaylist = true },
+                                    onArtistClick = onOpenArtist,
+                                    actions = actions,
+                                    topInset = scroll.contentTop,
+                                    bottomInset = scroll.contentBottom,
+                                )
+                            }
                     }
                 }
             }
