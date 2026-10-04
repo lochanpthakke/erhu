@@ -225,6 +225,7 @@ private fun MainSettingsList(
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun LibrarySettingsSubPage(
     viewModel: LibraryViewModel,
     title: String,
@@ -245,7 +246,8 @@ private fun LibrarySettingsSubPage(
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION,
                     )
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 val displayPath = parseFolderDisplayName(uri)
                 viewModel.setCustomScanLocation(uri.toString(), displayPath)
             }
@@ -280,7 +282,12 @@ private fun LibrarySettingsSubPage(
                         .clickable { viewModel.setScanEntireDevice() },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = if (!isCustomScanEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor =
+                            if (!isCustomScanEnabled) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
                     ),
             ) {
                 Row(
@@ -305,7 +312,12 @@ private fun LibrarySettingsSubPage(
                         .clickable { folderPickerLauncher.launch(null) },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = if (isCustomScanEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor =
+                            if (isCustomScanEnabled) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
                     ),
             ) {
                 Row(
@@ -314,8 +326,14 @@ private fun LibrarySettingsSubPage(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Custom Folder Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        val scanLocationText =
+                            if (isCustomScanEnabled && customScanPath.isNotBlank()) {
+                                "Location: $customScanPath"
+                            } else {
+                                "Tap to choose a specific scan directory"
+                            }
                         Text(
-                            text = if (isCustomScanEnabled && customScanPath.isNotBlank()) "Location: $customScanPath" else "Tap to choose a specific scan directory",
+                            text = scanLocationText,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -348,7 +366,10 @@ private fun parseFolderDisplayName(uri: Uri): String {
             return pathPart.trim('/')
         }
     }
-    return uri.lastPathSegment?.substringAfter(':')?.trim('/')?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+    return uri.lastPathSegment
+        ?.substringAfter(':')
+        ?.trim('/')
+        ?.ifBlank { "Selected Folder" } ?: "Selected Folder"
 }
 
 @Composable

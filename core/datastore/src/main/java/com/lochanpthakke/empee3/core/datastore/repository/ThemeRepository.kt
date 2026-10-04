@@ -39,7 +39,10 @@ interface ThemeRepository {
 
     suspend fun setGlassEffectEnabled(enabled: Boolean): AppResult<Unit>
 
-    suspend fun setCustomScanLocation(uri: String, path: String): AppResult<Unit>
+    suspend fun setCustomScanLocation(
+        uri: String,
+        path: String,
+    ): AppResult<Unit>
 
     suspend fun setScanEntireDevice(): AppResult<Unit>
 

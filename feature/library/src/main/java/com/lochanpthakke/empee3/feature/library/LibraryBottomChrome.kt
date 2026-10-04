@@ -38,6 +38,7 @@ import kotlin.math.roundToInt
  * Without [showNavigation] (other screens) it is just the mini player.
  */
 @Composable
+@Suppress("LongMethod")
 fun LibraryBottomChrome(
     state: LibraryChromeState,
     showNavigation: Boolean,
@@ -102,11 +103,12 @@ fun LibraryBottomChrome(
         val search = searchMeasurable.measure(if (hasNav) Constraints.fixed(action, nav.height) else Constraints.fixed(0, 0))
 
         val expandedHeight = mini.height + if (hasNav) nav.height + bottomPad else 0
-        val condensedHeight = if (hasNav && mini.height > 0) {
-            max(mini.height, nav.height)
-        } else {
-            expandedHeight
-        }
+        val condensedHeight =
+            if (hasNav && mini.height > 0) {
+                max(mini.height, nav.height)
+            } else {
+                expandedHeight
+            }
         val currentHeight = lerp(expandedHeight.toFloat(), condensedHeight.toFloat(), c).roundToInt()
 
         layout(width, currentHeight) {

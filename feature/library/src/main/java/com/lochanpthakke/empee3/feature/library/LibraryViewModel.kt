@@ -64,7 +64,7 @@ data class ArtworkQueueItem(
 )
 
 @HiltViewModel
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class LibraryViewModel
     @Inject
@@ -80,7 +80,10 @@ class LibraryViewModel
         val customScanLocationPath: StateFlow<String> = themeRepository.customScanLocationPath
         val scanLocationConfigured: StateFlow<Boolean> = themeRepository.scanLocationConfigured
 
-        fun setCustomScanLocation(uri: String, displayPath: String) {
+        fun setCustomScanLocation(
+            uri: String,
+            displayPath: String,
+        ) {
             viewModelScope.launch {
                 themeRepository.setCustomScanLocation(uri, displayPath)
                 triggerScan()
@@ -93,6 +96,7 @@ class LibraryViewModel
                 triggerScan()
             }
         }
+
         /** Albums of songs actually played, newest first (Tracks home). */
         val recentAlbums: StateFlow<List<Album>> =
             recentlyPlayed

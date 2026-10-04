@@ -124,10 +124,14 @@ class ThemeRepositoryImpl
                 _glassEffectEnabled.value = enabled
             }
 
-        override suspend fun setCustomScanLocation(uri: String, path: String): AppResult<Unit> =
+        override suspend fun setCustomScanLocation(
+            uri: String,
+            path: String,
+        ): AppResult<Unit> =
             appResultOf {
                 dataStore.updateData {
-                    it.toBuilder()
+                    it
+                        .toBuilder()
                         .setCustomScanLocationUri(uri)
                         .setCustomScanLocationPath(path)
                         .setIsCustomScanLocationEnabled(true)
@@ -143,7 +147,8 @@ class ThemeRepositoryImpl
         override suspend fun setScanEntireDevice(): AppResult<Unit> =
             appResultOf {
                 dataStore.updateData {
-                    it.toBuilder()
+                    it
+                        .toBuilder()
                         .setIsCustomScanLocationEnabled(false)
                         .setScanLocationConfigured(true)
                         .build()

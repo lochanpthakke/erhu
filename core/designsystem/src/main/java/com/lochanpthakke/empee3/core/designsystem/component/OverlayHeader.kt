@@ -62,6 +62,7 @@ private const val SCRIM_MID_STOP = 0.5f
  * height as top padding. Pair it with `forScrollingContent(topOverlay = true)`.
  */
 @Composable
+@Suppress("LongMethod")
 fun OverlayHeader(
     navigation: TopBarNavigation,
     modifier: Modifier = Modifier,

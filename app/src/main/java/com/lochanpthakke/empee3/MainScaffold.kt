@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.EditNote
@@ -75,6 +74,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHeight
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.LocalSharedTransitionScope
@@ -512,7 +512,7 @@ private fun Context.findActivity(): Activity? =
     }
 
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun LibraryRoute(
     libraryViewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
@@ -601,7 +601,8 @@ private fun LibraryRoute(
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION,
                     )
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 val displayPath = parseFolderDisplayName(uri)
                 libraryViewModel.setCustomScanLocation(uri.toString(), displayPath)
             } else {
@@ -700,7 +701,10 @@ private fun parseFolderDisplayName(uri: Uri): String {
             return pathPart.trim('/')
         }
     }
-    return uri.lastPathSegment?.substringAfter(':')?.trim('/')?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+    return uri.lastPathSegment
+        ?.substringAfter(':')
+        ?.trim('/')
+        ?.ifBlank { "Selected Folder" } ?: "Selected Folder"
 }
 
 @Composable

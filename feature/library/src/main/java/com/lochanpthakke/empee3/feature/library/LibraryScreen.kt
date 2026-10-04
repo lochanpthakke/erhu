@@ -130,10 +130,11 @@ fun LibraryScreen(
 
     val isCustomScanEnabled by viewModel.isCustomScanLocationEnabled.collectAsState()
     val customScanPath by viewModel.customScanLocationPath.collectAsState()
-    val emptyMessage = when {
-        isCustomScanEnabled && customScanPath.isNotBlank() -> "No songs found in $customScanPath"
-        else -> "No songs found on this device"
-    }
+    val emptyMessage =
+        when {
+            isCustomScanEnabled && customScanPath.isNotBlank() -> "No songs found in $customScanPath"
+            else -> "No songs found on this device"
+        }
 
     // Picking a section in the bottom navigation while searching leaves search.
     var lastSection by rememberSaveable { mutableStateOf(section) }

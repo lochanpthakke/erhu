@@ -39,7 +39,16 @@ class MediaStoreScanner
         private val dataStore: DataStore<PlaybackStateProto>,
         private val logger: Logger,
     ) {
-        @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength", "TooGenericExceptionCaught")
+        @Suppress(
+            "DEPRECATION",
+            "LongMethod",
+            "CyclomaticComplexMethod",
+            "NestedBlockDepth",
+            "MagicNumber",
+            "MaxLineLength",
+            "TooGenericExceptionCaught",
+            "LoopWithTooManyJumpStatements",
+        )
         fun scanLibrary(): Flow<ScanProgress> =
             flow {
                 // Without read access MediaStore returns an empty result, which would
@@ -50,12 +59,13 @@ class MediaStoreScanner
                     return@flow
                 }
 
-                val proto = try {
-                    dataStore.data.first()
-                } catch (e: Exception) {
-                    logger.d(TAG, "Failed to read scan location settings: ${e.message}")
-                    null
-                }
+                val proto =
+                    try {
+                        dataStore.data.first()
+                    } catch (e: Exception) {
+                        logger.d(TAG, "Failed to read scan location settings: ${e.message}")
+                        null
+                    }
                 val isCustomEnabled = proto?.isCustomScanLocationEnabled == true
                 val customPath = proto?.customScanLocationPath.orEmpty().trim()
                 val customUri = proto?.customScanLocationUri.orEmpty().trim()
@@ -149,7 +159,9 @@ class MediaStoreScanner
                             val rawAlbumId = c.getLong(rawAlbumIdColumn)
                             val durationMs = c.getLong(durationColumn)
                             val filePath = c.getString(dataColumn) ?: ""
-                            if (isExcludedFromLibrary(filePath) || !matchesCustomLocation(filePath, isCustomEnabled, customPath, customUri)) {
+                            if (isExcludedFromLibrary(filePath) ||
+                                !matchesCustomLocation(filePath, isCustomEnabled, customPath, customUri)
+                            ) {
                                 scannedCount++
                                 continue
                             }
@@ -222,6 +234,7 @@ class MediaStoreScanner
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
 
+        @Suppress("ReturnCount")
         private fun matchesCustomLocation(
             filePath: String,
             isCustomEnabled: Boolean,
@@ -261,7 +274,7 @@ class MediaStoreScanner
             return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
 
-        @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth")
+        @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth", "CyclomaticComplexMethod", "ComplexCondition")
         private fun triggerMediaScannerForStorage() {
             try {
                 val pathsToScan = mutableListOf<String>()
@@ -274,8 +287,10 @@ class MediaStoreScanner
                 for (dir in externalFilesDirs) {
                     if (dir != null) {
                         var root: File? = dir
-                        while (root != null && root.parentFile != null &&
-                            root.parentFile?.name != "storage" && root.parentFile?.name != "mnt"
+                        while (root != null &&
+                            root.parentFile != null &&
+                            root.parentFile?.name != "storage" &&
+                            root.parentFile?.name != "mnt"
                         ) {
                             root = root.parentFile
                         }
@@ -292,7 +307,11 @@ class MediaStoreScanner
                     }
                 }
 
-                fun collectAudioFiles(dir: File, depth: Int = 0) {
+                @Suppress("MagicNumber")
+                fun collectAudioFiles(
+                    dir: File,
+                    depth: Int = 0,
+                ) {
                     if (depth > 10 || !dir.exists() || !dir.isDirectory) return
                     dir.listFiles()?.forEach { file ->
                         if (file.isDirectory) {
