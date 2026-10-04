@@ -18,6 +18,7 @@ import com.google.common.util.concurrent.SettableFuture
 import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
+import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
 import com.lochanpthakke.empee3.core.playback.PlaybackController
 import com.lochanpthakke.empee3.core.playback.browse.BrowseTree
 import com.lochanpthakke.empee3.core.playback.browse.MediaId
@@ -54,6 +55,9 @@ class MusicPlaybackService : MediaLibraryService() {
     lateinit var dispatchers: DispatcherProvider
 
     @Inject
+    lateinit var recentlyPlayed: RecentlyPlayedRecorder
+
+    @Inject
     lateinit var logger: Logger
 
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -79,6 +83,31 @@ class MusicPlaybackService : MediaLibraryService() {
             )
         }
         mediaLibrarySession = builder.build()
+        player.addListener(playHistoryListener)
+    }
+
+    /**
+     * Recently played albums come from real playback only: a song counts when it
+     * actually starts playing (play pressed, or the next track while playing), not
+     * when a saved queue is merely restored at launch.
+     */
+    private val playHistoryListener =
+        object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) recordCurrentSong()
+            }
+
+            override fun onMediaItemTransition(
+                mediaItem: MediaItem?,
+                reason: Int,
+            ) {
+                if (player.isPlaying) recordCurrentSong()
+            }
+        }
+
+    private fun recordCurrentSong() {
+        val songId = player.currentMediaItem?.mediaId?.toLongOrNull() ?: return
+        serviceScope.launch(dispatchers.io) { recentlyPlayed.recordSongPlayed(songId) }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
@@ -86,6 +115,7 @@ class MusicPlaybackService : MediaLibraryService() {
     override fun onDestroy() {
         // The player is an app-wide singleton shared with PlaybackController, so
         // only the session is released here — never the player itself.
+        player.removeListener(playHistoryListener)
         mediaLibrarySession?.run {
             release()
             mediaLibrarySession = null

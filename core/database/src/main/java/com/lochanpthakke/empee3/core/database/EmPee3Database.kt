@@ -7,6 +7,7 @@ import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
+import com.lochanpthakke.empee3.core.database.dao.RecentlyPlayedDao
 import com.lochanpthakke.empee3.core.database.dao.SongArtistCrossRefDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
 import com.lochanpthakke.empee3.core.database.entity.AlbumArtistCrossRefEntity
@@ -17,6 +18,7 @@ import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
 import com.lochanpthakke.empee3.core.database.entity.MetadataProcessingEntity
 import com.lochanpthakke.empee3.core.database.entity.PlaylistEntity
 import com.lochanpthakke.empee3.core.database.entity.PlaylistSongCrossRefEntity
+import com.lochanpthakke.empee3.core.database.entity.RecentlyPlayedEntity
 import com.lochanpthakke.empee3.core.database.entity.SongArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
 import com.lochanpthakke.empee3.core.database.entity.UnverifiedCreditSegmentEntity
@@ -34,8 +36,9 @@ import com.lochanpthakke.empee3.core.database.entity.UnverifiedCreditSegmentEnti
         ArtistArtworkEntity::class,
         ArtistAliasEntity::class,
         UnverifiedCreditSegmentEntity::class,
+        RecentlyPlayedEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class EmPee3Database : RoomDatabase() {
@@ -52,4 +55,6 @@ abstract class EmPee3Database : RoomDatabase() {
     abstract fun songArtistCrossRefDao(): SongArtistCrossRefDao
 
     abstract fun libraryModelDao(): LibraryModelDao
+
+    abstract fun recentlyPlayedDao(): RecentlyPlayedDao
 }

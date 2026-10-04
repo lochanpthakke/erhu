@@ -32,6 +32,12 @@ class PlaylistsViewModel
                 .observePlaylists()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
+        /** Playlists recently played from a playlist, newest first (Tracks home). */
+        val recentPlaylists: StateFlow<List<Playlist>> =
+            playlistRepository
+                .observeRecentPlaylists(RECENT_LIMIT)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
         private val openPlaylistId = MutableStateFlow<Long?>(null)
 
         val openPlaylist: StateFlow<Playlist?> =
@@ -113,6 +119,31 @@ class PlaylistsViewModel
                 }
         }
 
+        fun renameOpenPlaylist(name: String) {
+            val playlistId = openPlaylistId.value ?: return
+            viewModelScope.launch {
+                (playlistRepository.renamePlaylist(playlistId, name) as? AppResult.Error)?.let { _userMessage.value = it.error.message }
+            }
+        }
+
+        /** [imageBytes]: the cropped square cover, already encoded. */
+        fun setOpenPlaylistArtwork(imageBytes: ByteArray) {
+            val playlistId = openPlaylistId.value ?: return
+            viewModelScope.launch {
+                (playlistRepository.setPlaylistArtwork(playlistId, imageBytes) as? AppResult.Error)?.let {
+                    _userMessage.value =
+                        it.error.message
+                }
+            }
+        }
+
+        fun clearOpenPlaylistArtwork() {
+            val playlistId = openPlaylistId.value ?: return
+            viewModelScope.launch {
+                (playlistRepository.clearPlaylistArtwork(playlistId) as? AppResult.Error)?.let { _userMessage.value = it.error.message }
+            }
+        }
+
         fun removeSongFromOpenPlaylist(song: Song) {
             val playlistId = openPlaylistId.value ?: return
             viewModelScope.launch {
@@ -124,6 +155,7 @@ class PlaylistsViewModel
             val songs = openPlaylistSongs.value
             if (songs.isEmpty()) return
             playbackRepository.playSongsFromQueue(songs, startIndex.coerceIn(0, songs.lastIndex))
+            markOpenPlaylistPlayed()
         }
 
         fun shuffleOpenPlaylist() {
@@ -131,9 +163,16 @@ class PlaylistsViewModel
             if (songs.isEmpty()) return
             playbackRepository.setShuffleModeEnabled(true)
             playbackRepository.playSongsFromQueue(songs, songs.indices.random())
+            markOpenPlaylistPlayed()
+        }
+
+        private fun markOpenPlaylistPlayed() {
+            val playlistId = openPlaylistId.value ?: return
+            viewModelScope.launch { playlistRepository.markPlaylistPlayed(playlistId) }
         }
 
         companion object {
             private const val STOP_TIMEOUT_MS = 5_000L
+            private const val RECENT_LIMIT = 12
         }
     }

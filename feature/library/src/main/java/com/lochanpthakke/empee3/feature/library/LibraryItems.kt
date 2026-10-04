@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +31,7 @@ import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
@@ -34,6 +39,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
+import com.lochanpthakke.empee3.core.model.Playlist
 import com.lochanpthakke.empee3.core.model.Song
 
 /*
@@ -143,6 +149,81 @@ fun AlbumTile(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/** A playlist's cover: the user's own artwork, or the default playlist cover. */
+@Composable
+fun PlaylistCover(
+    playlist: Playlist,
+    modifier: Modifier = Modifier,
+) {
+    AlbumArtwork(
+        artworkUri = playlist.artworkUri,
+        contentDescription = null,
+        placeholderIcon = Icons.AutoMirrored.Filled.QueueMusic,
+        modifier = modifier,
+    )
+}
+
+/** Artwork-first playlist card, the same treatment as [AlbumTile]. */
+@Composable
+fun PlaylistTile(
+    playlist: Playlist,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.clickable(onClick = onClick)) {
+        PlaylistCover(
+            playlist = playlist,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(Radius.mediumShape),
+        )
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        Text(
+            text = playlist.name,
+            style = TextStyles.tileTitle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = countLabel(playlist.songCount, "song"),
+            style = TextStyles.tileSubtitle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** First cell of the playlist grid: same footprint as a playlist card. */
+@Composable
+fun NewPlaylistTile(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.clickable(onClick = onClick)) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(Radius.mediumShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(IconSize.large),
+            )
+        }
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        Text(text = "New playlist", style = TextStyles.tileTitle, maxLines = 1)
     }
 }
 

@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -76,7 +77,10 @@ fun ExpandingPlayer(
     content: @Composable () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    BackHandler(enabled = state.isOpen) { scope.launch { state.collapse() } }
+    // Re-registered every time the player opens: the navigation host re-registers its own
+    // handler on each navigation, and the most recently registered handler wins. Without
+    // this, Back on a detail page popped the page behind the open player.
+    key(state.isOpen) { BackHandler(enabled = state.isOpen) { scope.launch { state.collapse() } } }
     val visible by remember(state) { derivedStateOf { state.progress.value > 0f } }
     if (!visible) return
 

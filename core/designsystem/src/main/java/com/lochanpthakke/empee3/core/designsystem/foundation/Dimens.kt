@@ -63,6 +63,9 @@ object ArtworkSize {
      */
     val gridMin = 140.dp
 
+    /** Card width in horizontal shelves (recently played rows). */
+    val shelf = 144.dp
+
     /** Upper bound for full-width hero artwork on large screens. */
     val heroMax = 480.dp
 }

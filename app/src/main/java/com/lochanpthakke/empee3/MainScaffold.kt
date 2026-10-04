@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Settings
@@ -102,7 +101,6 @@ import com.lochanpthakke.empee3.feature.library.LocalPlayerTransition
 import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
 import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
-import com.lochanpthakke.empee3.feature.library.PlaylistsScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
@@ -121,7 +119,6 @@ import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
 import com.lochanpthakke.empee3.navigation.MetadataEditor
 import com.lochanpthakke.empee3.navigation.PlaylistDetail
-import com.lochanpthakke.empee3.navigation.Playlists
 import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.navigation.SettingsCategory
 import com.lochanpthakke.empee3.navigation.navEnter
@@ -143,7 +140,6 @@ private class DrawerDestination(
 private val DRAWER_DESTINATIONS =
     listOf(
         DrawerDestination("Library", Icons.AutoMirrored.Filled.LibraryBooks, Library),
-        DrawerDestination("Playlists", Icons.AutoMirrored.Filled.QueueMusic, Playlists),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
         DrawerDestination("Metadata Editor", Icons.Default.EditNote, MetadataEditor),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
@@ -348,6 +344,7 @@ fun MainScaffold() {
                                                     onContentShownChange = { isLibraryContentShown = it },
                                                     onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
                                                     onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
+                                                    onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
                                                     isSearchActive = isLibrarySearchActive,
                                                     onSearchActiveChange = { isLibrarySearchActive = it },
                                                     chromeScroll = libraryChrome.connection,
@@ -377,24 +374,14 @@ fun MainScaffold() {
                                                 )
                                             }
                                         }
-                                        composable<Playlists> {
-                                            ProvideMotionScope(this) {
-                                                PlaylistsScreen(
-                                                    viewModel = playlistsViewModel,
-                                                    onOpenDrawer = openDrawer,
-                                                    onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                                                )
-                                            }
-                                        }
                                         composable<PlaylistDetail> { entry ->
                                             ProvideMotionScope(this) {
                                                 val route = entry.toRoute<PlaylistDetail>()
-                                                val currentSongId by libraryViewModel.currentSongId.collectAsState()
                                                 PlaylistDetailScreen(
                                                     playlistId = route.playlistId,
                                                     viewModel = playlistsViewModel,
-                                                    currentSongId = currentSongId,
-                                                    onBackClick = { navController.popBackStack() },
+                                                    libraryViewModel = libraryViewModel,
+                                                    onBack = { navController.popBackStack() },
                                                 )
                                             }
                                         }
@@ -531,6 +518,7 @@ private fun LibraryRoute(
     onContentShownChange: (Boolean) -> Unit,
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
+    onOpenPlaylist: (Long) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     chromeScroll: NestedScrollConnection,
@@ -609,6 +597,7 @@ private fun LibraryRoute(
             onOpenDrawer = onOpenDrawer,
             onOpenAlbum = onOpenAlbum,
             onOpenArtist = onOpenArtist,
+            onOpenPlaylist = onOpenPlaylist,
             isSearchActive = isSearchActive,
             onSearchActiveChange = onSearchActiveChange,
             chromeScroll = chromeScroll,

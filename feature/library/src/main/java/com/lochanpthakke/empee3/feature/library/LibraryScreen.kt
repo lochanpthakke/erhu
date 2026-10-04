@@ -77,6 +77,7 @@ fun LibraryScreen(
     onOpenDrawer: () -> Unit,
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
+    onOpenPlaylist: (Long) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -93,6 +94,11 @@ fun LibraryScreen(
     val searchResults by viewModel.librarySearchResults.collectAsState()
     val searchArtists by viewModel.librarySearchArtists.collectAsState()
     val searchAlbums by viewModel.librarySearchAlbums.collectAsState()
+    val recentAlbums by viewModel.recentAlbums.collectAsState()
+    val recentPlaylists by playlistsViewModel.recentPlaylists.collectAsState()
+    val playlists by playlistsViewModel.playlists.collectAsState()
+    var libraryShelf by rememberSaveable { mutableStateOf(LibraryShelf.PLAYLISTS) }
+    var showNewPlaylist by remember { mutableStateOf(false) }
     // Only the playing song's id: position ticks must not recompose the library.
     val currentSongId by viewModel.currentSongId.collectAsState()
 
@@ -197,27 +203,18 @@ fun LibraryScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     when (section) {
                         LibrarySection.TRACKS ->
-                            SongsTab(
+                            HomeFeed(
                                 songs = songs,
+                                recentAlbums = recentAlbums,
+                                recentPlaylists = recentPlaylists,
                                 currentSongId = currentSongId,
                                 isScanning = isScanning,
-                                topInset = scroll.contentTop,
-                                bottomInset = scroll.contentBottom,
-                                emptyIcon = LibrarySection.TRACKS.icon,
                                 onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
+                                onAlbumClick = onOpenAlbum,
+                                onPlaylistClick = { onOpenPlaylist(it.id) },
                                 actions = actions,
-                            )
-                        LibrarySection.FAVORITES ->
-                            SongsTab(
-                                songs = favoriteSongs,
-                                currentSongId = currentSongId,
-                                isScanning = false,
                                 topInset = scroll.contentTop,
                                 bottomInset = scroll.contentBottom,
-                                emptyIcon = LibrarySection.FAVORITES.icon,
-                                emptyMessage = "No favorites yet. Tap the heart on any song to add it here.",
-                                onSongClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
-                                actions = actions,
                             )
                         LibrarySection.ALBUMS ->
                             AlbumsTab(
@@ -226,13 +223,22 @@ fun LibraryScreen(
                                 bottomInset = scroll.contentBottom,
                                 onAlbumClick = onOpenAlbum,
                             )
-                        LibrarySection.ARTISTS ->
-                            ArtistsTab(
+                        LibrarySection.LIBRARY ->
+                            LibraryHub(
+                                shelf = libraryShelf,
+                                onShelfChange = { libraryShelf = it },
+                                playlists = playlists,
+                                favoriteSongs = favoriteSongs,
                                 artists = artists,
-                                artwork = artistArtwork,
+                                artistArtwork = artistArtwork,
+                                currentSongId = currentSongId,
+                                onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
+                                onPlaylistClick = { onOpenPlaylist(it.id) },
+                                onNewPlaylist = { showNewPlaylist = true },
+                                onArtistClick = onOpenArtist,
+                                actions = actions,
                                 topInset = scroll.contentTop,
                                 bottomInset = scroll.contentBottom,
-                                onArtistClick = onOpenArtist,
                             )
                     }
                 }
@@ -252,6 +258,17 @@ fun LibraryScreen(
         )
     }
 
+    if (showNewPlaylist) {
+        PlaylistNameDialog(
+            title = "New playlist",
+            onDismiss = { showNewPlaylist = false },
+            onConfirm = { name ->
+                playlistsViewModel.createPlaylist(name)
+                showNewPlaylist = false
+            },
+        )
+    }
+
     songForPlaylist?.let { song ->
         AddToPlaylistDialog(
             song = song,
@@ -262,7 +279,7 @@ fun LibraryScreen(
 }
 
 @Composable
-private fun SongsTab(
+internal fun SongsTab(
     songs: LazyPagingItems<Song>,
     currentSongId: Long?,
     isScanning: Boolean,
@@ -303,7 +320,7 @@ private fun SongsTab(
     }
 }
 
-/** A library track row with the favorite toggle and the song menu. Shared with the album page. */
+/** A library track row with the favorite toggle and the song menu. Shared with the album and playlist pages. */
 @Composable
 internal fun LibrarySongRow(
     song: Song,
@@ -312,6 +329,7 @@ internal fun LibrarySongRow(
     actions: SongActions,
     modifier: Modifier = Modifier,
     showTrackNumber: Boolean = false,
+    onRemoveFromPlaylist: (() -> Unit)? = null,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     TrackRow(
@@ -368,6 +386,15 @@ internal fun LibrarySongRow(
                         actions.onFixTags(song)
                     },
                 )
+                if (onRemoveFromPlaylist != null) {
+                    DropdownMenuItem(
+                        text = { Text("Remove from playlist") },
+                        onClick = {
+                            menuExpanded = false
+                            onRemoveFromPlaylist()
+                        },
+                    )
+                }
             }
         }
     }
@@ -416,7 +443,7 @@ private fun AlbumsTab(
 }
 
 @Composable
-private fun ArtistsTab(
+internal fun ArtistsTab(
     artists: LazyPagingItems<Artist>,
     artwork: Map<Long, String>,
     topInset: Dp,
@@ -427,7 +454,7 @@ private fun ArtistsTab(
     if (artists.itemCount == 0) {
         EmptyState(
             message = "No artists found. Pull down to rescan your device.",
-            icon = LibrarySection.ARTISTS.icon,
+            icon = LibraryShelf.ARTISTS.icon,
             modifier = Modifier.padding(top = topInset, bottom = bottomInset),
         )
     } else {

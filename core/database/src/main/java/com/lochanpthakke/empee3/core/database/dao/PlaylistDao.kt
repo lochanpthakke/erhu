@@ -14,6 +14,7 @@ data class PlaylistWithCount(
     val id: Long,
     val name: String,
     val songCount: Int,
+    val artworkUri: String? = null,
 )
 
 @Dao
@@ -28,7 +29,7 @@ interface PlaylistDao {
     /** Counts only songs that still exist in the library. */
     @Query(
         """
-        SELECT p.id AS id, p.name AS name, COUNT(s.id) AS songCount
+        SELECT p.id AS id, p.name AS name, p.artwork_uri AS artworkUri, COUNT(s.id) AS songCount
         FROM playlists p
         LEFT JOIN playlist_song_cross_ref ref ON ref.playlist_id = p.id
         LEFT JOIN songs s ON s.id = ref.song_id
@@ -56,6 +57,20 @@ interface PlaylistDao {
         deleteAllSongsFromPlaylist(playlistId)
         deletePlaylistRow(playlistId)
     }
+
+    @Query("UPDATE playlists SET name = :name, updated_at = :timestamp WHERE id = :playlistId")
+    suspend fun renamePlaylist(
+        playlistId: Long,
+        name: String,
+        timestamp: Long,
+    ): Int
+
+    @Query("UPDATE playlists SET artwork_uri = :artworkUri, updated_at = :timestamp WHERE id = :playlistId")
+    suspend fun setArtwork(
+        playlistId: Long,
+        artworkUri: String?,
+        timestamp: Long,
+    ): Int
 
     @Query("UPDATE playlists SET updated_at = :timestamp WHERE id = :playlistId")
     suspend fun touchPlaylist(

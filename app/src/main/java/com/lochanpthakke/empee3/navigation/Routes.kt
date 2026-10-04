@@ -6,9 +6,6 @@ import kotlinx.serialization.Serializable
 object Library
 
 @Serializable
-object Playlists
-
-@Serializable
 data class PlaylistDetail(
     val playlistId: Long,
 )

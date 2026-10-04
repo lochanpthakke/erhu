@@ -125,7 +125,7 @@ fun ArtistDetailScreen(
             artist == null ->
                 EmptyState(
                     message = "This artist is no longer in your library.",
-                    icon = LibrarySection.ARTISTS.icon,
+                    icon = LibraryShelf.ARTISTS.icon,
                     modifier = Modifier.padding(innerPadding),
                 )
             else -> {

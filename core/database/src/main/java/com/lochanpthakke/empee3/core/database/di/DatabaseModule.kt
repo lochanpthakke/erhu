@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.room.Room
 import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
+import com.lochanpthakke.empee3.core.database.MIGRATION_6_7
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
+import com.lochanpthakke.empee3.core.database.dao.RecentlyPlayedDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
 import dagger.Module
 import dagger.Provides
@@ -31,7 +33,7 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).addMigrations(MIGRATION_5_6)
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7)
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
@@ -50,6 +52,9 @@ object DatabaseModule {
 
     @Provides
     fun provideLibraryModelDao(database: EmPee3Database): LibraryModelDao = database.libraryModelDao()
+
+    @Provides
+    fun provideRecentlyPlayedDao(database: EmPee3Database): RecentlyPlayedDao = database.recentlyPlayedDao()
 
     @Provides
     fun provideMetadataProcessingDao(database: EmPee3Database): MetadataProcessingDao = database.metadataProcessingDao()

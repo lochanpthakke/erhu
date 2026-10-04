@@ -9,6 +9,7 @@ import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
 import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
+import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
@@ -72,7 +73,14 @@ class LibraryViewModel
         val playbackRepository: PlaybackRepository,
         private val metadataRepository: MetadataRepository,
         private val deezerProvider: com.lochanpthakke.empee3.core.network.provider.DeezerProvider,
+        recentlyPlayed: RecentlyPlayedRecorder,
     ) : ViewModel() {
+        /** Albums of songs actually played, newest first (Tracks home). */
+        val recentAlbums: StateFlow<List<Album>> =
+            recentlyPlayed
+                .observeRecentAlbums(RECENT_ALBUMS_LIMIT)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
         val songsPaged: Flow<PagingData<Song>> =
             libraryRepository
                 .getSongsPaged()
@@ -785,6 +793,7 @@ class LibraryViewModel
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L
+            private const val RECENT_ALBUMS_LIMIT = 12
 
             /** Deezer allows 50 requests per 5 s; keep the artwork lookups well under that. */
             private const val ARTWORK_LOOKUP_SPACING_MS = 120L

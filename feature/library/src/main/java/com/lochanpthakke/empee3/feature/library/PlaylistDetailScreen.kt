@@ -1,0 +1,296 @@
+package com.lochanpthakke.empee3.feature.library
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
+import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
+import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.model.Playlist
+import com.lochanpthakke.empee3.core.model.Song
+
+/** Same proportions as the album page header. */
+private const val COVER_WIDTH_FRACTION = 0.62f
+private const val MS_PER_MINUTE = 60_000L
+
+/**
+ * A playlist's page, built like the album page: the playlist's cover, name and
+ * facts, Play / Shuffle and a menu (Edit playlist, Delete playlist), then its
+ * songs in playlist order. Tapping a song plays the playlist from that song.
+ */
+@Composable
+@Suppress("LongMethod")
+fun PlaylistDetailScreen(
+    playlistId: Long,
+    viewModel: PlaylistsViewModel,
+    libraryViewModel: LibraryViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LaunchedEffect(playlistId) { viewModel.openPlaylist(playlistId) }
+    val playlist by viewModel.openPlaylist.collectAsState()
+    val songs by viewModel.openPlaylistSongs.collectAsState()
+    val currentSongId by libraryViewModel.currentSongId.collectAsState()
+    val candidates by libraryViewModel.metadataCandidates.collectAsState()
+
+    var showEditor by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
+    var songForFixTags by remember { mutableStateOf<Song?>(null) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    UserMessageEffect(viewModel.userMessage, snackbarHostState, viewModel::consumeUserMessage)
+    UserMessageEffect(libraryViewModel.userMessage, snackbarHostState, libraryViewModel::consumeUserMessage)
+
+    val actions =
+        SongActions(
+            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
+            onPlayNext = { libraryViewModel.playNext(it) },
+            onAddToQueue = { libraryViewModel.addToQueue(it) },
+            onAddToPlaylist = { songsForPlaylist = listOf(it) },
+            onFixTags = { song ->
+                songForFixTags = song
+                libraryViewModel.searchMetadataForSong(song)
+            },
+        )
+
+    AppScaffold(
+        topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        modifier = modifier,
+    ) { innerPadding ->
+        // Shown once the playlist has loaded (it is never null for long: Room answers within a frame).
+        val current = playlist?.takeIf { it.id == playlistId } ?: return@AppScaffold
+        val scroll = innerPadding.forScrollingContent(topOverlay = true)
+        LazyColumn(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(scroll.container),
+            contentPadding = PaddingValues(top = scroll.contentTop, bottom = Spacing.lg + scroll.contentBottom),
+        ) {
+            item(key = "header") {
+                PlaylistHeader(
+                    playlist = current,
+                    songs = songs,
+                    onPlay = { viewModel.playOpenPlaylist() },
+                    onShuffle = { viewModel.shuffleOpenPlaylist() },
+                    onEdit = { showEditor = true },
+                    onDelete = { confirmDelete = true },
+                )
+            }
+            if (songs.isEmpty()) {
+                item(key = "empty") {
+                    EmptyState(
+                        message = "This playlist is empty. Add songs with \"Add to playlist\" in any song's menu.",
+                        modifier = Modifier.padding(top = Spacing.xl),
+                    )
+                }
+            } else {
+                itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+                    LibrarySongRow(
+                        song = song,
+                        isCurrent = song.id == currentSongId,
+                        onClick = { viewModel.playOpenPlaylist(index) },
+                        actions = actions,
+                        onRemoveFromPlaylist = { viewModel.removeSongFromOpenPlaylist(song) },
+                    )
+                }
+            }
+        }
+
+        if (showEditor) {
+            EditPlaylistDialog(
+                playlist = current,
+                onDismiss = { showEditor = false },
+                onSave = { name, cover ->
+                    if (name.trim() != current.name) viewModel.renameOpenPlaylist(name)
+                    when (cover) {
+                        is CoverChange.Replace -> viewModel.setOpenPlaylistArtwork(cover.jpegBytes)
+                        CoverChange.Remove -> viewModel.clearOpenPlaylistArtwork()
+                        CoverChange.None -> Unit
+                    }
+                    showEditor = false
+                },
+            )
+        }
+
+        if (confirmDelete) {
+            GlassAlertDialog(
+                onDismissRequest = { confirmDelete = false },
+                title = { Text("Delete playlist?") },
+                text = { Text("\"${current.name}\" will be deleted. The songs stay in your library.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmDelete = false
+                        viewModel.deletePlaylist(current)
+                        onBack()
+                    }) { Text("Delete") }
+                },
+                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+            )
+        }
+    }
+
+    songForFixTags?.let { song ->
+        FixTagsDialog(
+            song = song,
+            candidates = candidates,
+            onDismiss = { songForFixTags = null },
+            onSaveTags = { title, artist, album, year, genre ->
+                libraryViewModel.writeTags(song, title, artist, album, year, genre)
+                songForFixTags = null
+            },
+        )
+    }
+
+    songsForPlaylist?.let { picked ->
+        AddToPlaylistDialog(songs = picked, viewModel = viewModel, onDismiss = { songsForPlaylist = null })
+    }
+}
+
+@Composable
+@Suppress("LongParameterList")
+private fun PlaylistHeader(
+    playlist: Playlist,
+    songs: List<Song>,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = Spacing.screenGutter, end = Spacing.screenGutter, bottom = Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        PlaylistCover(
+            playlist = playlist,
+            modifier =
+                Modifier
+                    .widthIn(max = ArtworkSize.heroMax)
+                    .fillMaxWidth(COVER_WIDTH_FRACTION)
+                    .aspectRatio(1f)
+                    .clip(Radius.largeShape),
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        Text(
+            text = playlist.name,
+            style = TextStyles.pageTitle,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        Text(
+            text = playlistFacts(songs),
+            style = TextStyles.metadata,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(onClick = onPlay, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text("Play", maxLines = 1, softWrap = false)
+            }
+            FilledTonalButton(onClick = onShuffle, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
+                Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text("Shuffle", maxLines = 1, softWrap = false)
+            }
+            PlaylistMenu(onEdit = onEdit, onDelete = onDelete)
+        }
+    }
+}
+
+@Composable
+private fun PlaylistMenu(
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Playlist options")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Edit playlist") },
+                onClick = {
+                    expanded = false
+                    onEdit()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Delete playlist") },
+                onClick = {
+                    expanded = false
+                    onDelete()
+                },
+            )
+        }
+    }
+}
+
+/** "12 songs · 43 min"; the duration is left out when unknown. */
+private fun playlistFacts(songs: List<Song>): String {
+    val minutes = songs.sumOf { it.durationMs } / MS_PER_MINUTE
+    return listOfNotNull(countLabel(songs.size, "song"), minutes.takeIf { it > 0 }?.let { "$it min" }).joinToString(" · ")
+}

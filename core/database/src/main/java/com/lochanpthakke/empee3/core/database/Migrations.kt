@@ -39,3 +39,20 @@ private val STATEMENTS_5_6 =
             "SELECT lower(trim(`name`)), `artwork_uri`, 0 FROM `artists` WHERE `artwork_uri` IS NOT NULL",
         "UPDATE `artists` SET `artist_key` = lower(trim(`name`))",
     )
+
+/** v6 → v7: user-chosen playlist artwork and the recently-played log (both kept across scans). */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_6_7 =
+    object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_6_7.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_6_7 =
+    listOf(
+        "ALTER TABLE `playlists` ADD COLUMN `artwork_uri` TEXT",
+        "CREATE TABLE IF NOT EXISTS `recently_played` (`kind` TEXT NOT NULL, `item_id` INTEGER NOT NULL, " +
+            "`played_at` INTEGER NOT NULL, PRIMARY KEY(`kind`, `item_id`))",
+        "CREATE INDEX IF NOT EXISTS `index_recently_played_played_at` ON `recently_played` (`played_at`)",
+    )
