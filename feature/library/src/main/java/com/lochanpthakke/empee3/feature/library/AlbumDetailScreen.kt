@@ -290,7 +290,7 @@ private fun albumFacts(
             else -> "${totalMinutes / MINUTES_PER_HOUR} hr ${totalMinutes % MINUTES_PER_HOUR} min"
         }
     return listOfNotNull(
-        album.year.takeIf { it > 0 }?.toString(),
+        album.year.takeIf { it in 1900..2099 }?.toString(),
         countLabel(songs.size, "song"),
         duration,
     ).joinToString(" · ")

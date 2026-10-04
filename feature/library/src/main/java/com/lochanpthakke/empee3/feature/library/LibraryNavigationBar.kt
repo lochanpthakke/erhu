@@ -6,6 +6,7 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,12 +26,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -39,6 +40,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import kotlin.math.abs
@@ -66,15 +68,16 @@ private const val STRETCH_PER_VELOCITY = 0.03f
 private const val MAX_STRETCH = 0.12f
 private const val SQUASH_RATIO = 0.4f
 
+internal fun getOrderedSections(start: LibrarySection): List<LibrarySection> {
+    val defaultList = listOf(LibrarySection.TRACKS, LibrarySection.ALBUMS, LibrarySection.LIBRARY)
+    if (start !in defaultList) return defaultList
+    return listOf(start) + defaultList.filter { it != start }
+}
+
 /**
  * Floating, icon-first navigation between the library sections. Placed by
  * [LibraryBottomControls] in the lowest layer of the shell's bottom chrome,
  * directly under the mini player, and shares its shape and material.
- *
- * Selection is shown by ONE indicator that slides between sections: a small
- * glass surface with the Glass Effect on, the theme's tinted pill otherwise.
- * The slide is the same either way. Its position is read only while laying out
- * and drawing the indicator, so the animation never recomposes the bar.
  */
 @Composable
 @Suppress("LongMethod")
@@ -82,6 +85,7 @@ fun LibraryNavigationBar(
     selected: LibrarySection,
     onSelect: (LibrarySection) -> Unit,
     modifier: Modifier = Modifier,
+    defaultStartSection: LibrarySection = LibrarySection.TRACKS,
     searching: Boolean = false,
     compact: () -> Float = { 0f },
     onExpand: () -> Unit = {},
@@ -98,8 +102,8 @@ fun LibraryNavigationBar(
     )
     val glass = EmPee3Glass.isActive
     val shape = BottomChrome.shape()
-    val sections = LibrarySection.entries
-    val selectedIndex = sections.indexOf(selected)
+    val sections = remember(defaultStartSection) { getOrderedSections(defaultStartSection) }
+    val selectedIndex = sections.indexOf(selected).coerceAtLeast(0)
 
     // Retargeting cancels the running animation and continues from the current
     // position and velocity, so rapid taps always end on the last selection.
@@ -129,8 +133,7 @@ fun LibraryNavigationBar(
         ) {
             SelectionIndicator(
                 position = indicatorPosition,
-                count = sections.size,
-                glass = glass,
+                itemCount = sections.size,
                 modifier =
                     Modifier
                         .matchParentSize()
@@ -181,76 +184,89 @@ private fun CompactSectionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (!enabled) return
     Box(
         modifier =
-            if (enabled) {
-                modifier
-                    .clickable(interactionSource = null, indication = null, onClick = onClick)
-                    .semantics { contentDescription = "Show library sections" }
-            } else {
-                modifier.clearAndSetSemantics { }
-            },
+            modifier.clickable(
+                enabled = enabled,
+                onClick = onClick,
+                role = Role.Button,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = section.selectedIcon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(IconSize.standard),
+            imageVector = section.icon,
+            contentDescription = "Expand section bar (${section.label})",
+            tint = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
 
 /**
  * The sliding selection surface: a horizontal pill around the selected icon
- * (the icon box of [LibraryNavigationItem], so the label sits below it), centred
- * in its section cell. [position] is a fractional section index.
+ * that stretches and squashes while moving. Drawn as a layout child that
+ * offsets itself, so position updates avoid recomposition.
  */
 @Composable
 private fun SelectionIndicator(
     position: Animatable<Float, AnimationVector1D>,
-    count: Int,
-    glass: Boolean,
+    itemCount: Int,
     modifier: Modifier = Modifier,
 ) {
-    val material =
+    val glass = EmPee3Glass.isActive
+    val shape = Radius.pillShape
+    val color =
         if (glass) {
-            // Glass on glass: no second blur, just the material's tint, light and rim.
-            Modifier.glassPanel(Radius.pillShape, elevated = false, backdrop = null)
+            Color.Transparent
         } else {
-            Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = SELECTED_PILL_ALPHA), Radius.pillShape)
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = SELECTED_PILL_ALPHA)
         }
-    Box(modifier = modifier) {
-        Box(
-            modifier =
-                Modifier
-                    .layout { measurable, constraints ->
-                        // Intrinsic passes (the bottom row sizes itself with IntrinsicSize.Min)
-                        // measure with unbounded constraints: the indicator takes no space then.
-                        if (!constraints.hasBoundedWidth || !constraints.hasBoundedHeight) {
-                            val empty = measurable.measure(Constraints.fixed(0, 0))
-                            return@layout layout(0, 0) { empty.place(0, 0) }
+
+    Box(
+        modifier =
+            modifier
+                .layout { measurable, constraints ->
+                    val width = constraints.maxWidth
+                    val height = constraints.maxHeight
+                    val itemWidth = width.toFloat() / itemCount.coerceAtLeast(1)
+
+                    val placeable =
+                        measurable.measure(
+                            Constraints.fixed(
+                                INDICATOR_WIDTH.roundToPx(),
+                                INDICATOR_HEIGHT.roundToPx(),
+                            ),
+                        )
+
+                    layout(width, height) {
+                        val current = position.value
+                        val velocity = position.velocity
+
+                        val center = (current + 0.5f) * itemWidth
+                        val x = (center - placeable.width / 2f).roundToInt()
+                        val y = Spacing.xs.roundToPx()
+
+                        // Velocity stretch along the direction of motion.
+                        val stretch = (abs(velocity) * STRETCH_PER_VELOCITY).coerceAtMost(MAX_STRETCH)
+                        val scaleX = 1f + stretch
+                        val scaleY = (1f - stretch * SQUASH_RATIO).coerceAtLeast(0.5f)
+
+                        placeable.placeWithLayer(x, y) {
+                            this.scaleX = scaleX
+                            this.scaleY = scaleY
                         }
-                        val cell = constraints.maxWidth / count
-                        val width = INDICATOR_WIDTH.roundToPx().coerceAtMost(cell)
-                        val indicator = measurable.measure(Constraints.fixed(width, INDICATOR_HEIGHT.roundToPx()))
-                        layout(constraints.maxWidth, constraints.maxHeight) {
-                            // Read during placement only: moving it never recomposes anything.
-                            indicator.place(
-                                x = (position.value * cell).roundToInt() + (cell - width) / 2,
-                                // Same top offset as the icon box inside the item.
-                                y = Spacing.xs.roundToPx(),
-                            )
-                        }
-                    }.graphicsLayer {
-                        val stretch = (abs(position.velocity) * STRETCH_PER_VELOCITY).coerceAtMost(MAX_STRETCH)
-                        scaleX = 1f + stretch
-                        scaleY = 1f - stretch * SQUASH_RATIO
-                    }.then(material),
-        )
-    }
+                    }
+                }.glassPanel(
+                    shape = shape,
+                    strong = false,
+                    elevated = false,
+                    outlined = false,
+                    bar = true,
+                ).background(color, shape),
+    )
 }
 
+/** One section item: icon plus small label underneath, spaced tightly. */
 @Composable
 private fun LibraryNavigationItem(
     section: LibrarySection,
@@ -258,55 +274,53 @@ private fun LibraryNavigationItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val contentColor by animateColorAsState(
+    val iconColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = Motion.fade(),
-        label = "libraryNavContent",
+        label = "libraryNavItemColor",
     )
-    // The selected icon lifts very slightly as the indicator arrives.
     val iconScale by animateFloatAsState(
         targetValue = if (selected) SELECTED_ICON_SCALE else 1f,
-        animationSpec = Motion.press(),
-        label = "libraryNavIcon",
+        animationSpec = Motion.fade(),
+        label = "libraryNavItemScale",
     )
+    val interactionSource = remember { MutableInteractionSource() }
 
-    // The whole column is the touch target (at least 48 dp tall). No press
-    // indication: the sliding indicator is the only selection visual, so a ripple
-    // would leave a second, ghost highlight behind on the tapped item.
     Column(
         modifier =
             modifier
                 .selectable(
                     selected = selected,
-                    interactionSource = null,
+                    interactionSource = interactionSource,
                     indication = null,
-                    role = Role.Tab,
                     onClick = onClick,
-                ).padding(vertical = Spacing.xs),
+                    role = Role.Tab,
+                ).padding(vertical = Spacing.xs)
+                .clearAndSetSemantics {
+                    contentDescription = section.label
+                },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Same padding as before so the bar keeps its size.
         Box(
-            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            modifier =
+                Modifier
+                    .size(INDICATOR_WIDTH, INDICATOR_HEIGHT)
+                    .graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = if (selected) section.selectedIcon else section.icon,
                 contentDescription = null,
-                tint = contentColor,
-                modifier =
-                    Modifier
-                        .size(IconSize.standard)
-                        .graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                        },
+                tint = iconColor,
             )
         }
         Text(
             text = section.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = contentColor,
+            style = TextStyles.metadata,
+            color = iconColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

@@ -89,7 +89,7 @@ fun FixTagsDialog(
                                         title = candidate.title
                                         artist = candidate.artist
                                         album = candidate.album
-                                        if (candidate.year > 0) yearStr = candidate.year.toString()
+                                        if (candidate.year in 1900..2099) yearStr = candidate.year.toString()
                                         candidate.genre?.let { genre = it }
                                     },
                             colors =
@@ -175,7 +175,7 @@ fun FixTagsDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val year = yearStr.toIntOrNull() ?: 0
+                    val year = (yearStr.toIntOrNull() ?: 0).takeIf { it in 1900..2099 } ?: 0
                     onSaveTags(title, artist, album, year, genre)
                 },
                 enabled = title.isNotBlank() && artist.isNotBlank(),

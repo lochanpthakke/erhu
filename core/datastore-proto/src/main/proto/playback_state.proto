@@ -26,12 +26,16 @@ message PlaybackStateProto {
   string custom_scan_location_path = 17;
   bool is_custom_scan_location_enabled = 18;
   bool scan_location_configured = 19;
+  string default_start_section = 20;
 }
 
 message EqPresetProto {
   string id = 1;
   string name = 2;
   repeated float band_gains = 3;
+  repeated float band_frequencies = 4;
+  repeated float band_qs = 5;
+  repeated string filter_types = 6;
 }
 
 message SoundSettingsProto {
@@ -45,6 +49,11 @@ message SoundSettingsProto {
   int32 virtualizer_strength = 8;
   bool loudness_enabled = 9;
   int32 loudness_gain_mb = 10;
+  repeated float band_frequencies = 11;
+  repeated float band_qs = 12;
+  repeated string filter_types = 13;
+  int32 active_band_count = 14;
+  int32 selected_band_index = 15;
 }
 
 enum RepeatModeProto {

@@ -18,10 +18,18 @@ data class PersistedSoundSettings(
     val virtualizerStrength: Int,
     val loudnessEnabled: Boolean,
     val loudnessGainMb: Int,
+    val bandFrequencies: List<Float> = emptyList(),
+    val bandQs: List<Float> = emptyList(),
+    val filterTypes: List<String> = emptyList(),
+    val activeBandCount: Int = 8,
+    val selectedBandIndex: Int = 0,
 )
 
 data class PersistedEqPreset(
     val id: String,
     val name: String,
     val bandGains: List<Float>,
+    val bandFrequencies: List<Float> = emptyList(),
+    val bandQs: List<Float> = emptyList(),
+    val filterTypes: List<String> = emptyList(),
 )

@@ -201,8 +201,24 @@ fun MainScaffold() {
         val player = rememberPlayerTransitionState()
         val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
 
+        val defaultStartSectionName by themeViewModel.defaultStartSection.collectAsState()
+        val defaultStartSection = remember(defaultStartSectionName) {
+            try {
+                com.lochanpthakke.empee3.feature.library.LibrarySection.valueOf(defaultStartSectionName.uppercase())
+            } catch (_: Exception) {
+                com.lochanpthakke.empee3.feature.library.LibrarySection.TRACKS
+            }
+        }
+
         // Library section lives here because its navigation is part of the shell's bottom chrome.
-        var librarySection by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
+        var librarySection by rememberSaveable { mutableStateOf(defaultStartSection) }
+        var hasInitializedSection by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(defaultStartSection) {
+            if (!hasInitializedSection) {
+                hasInitializedSection = true
+                librarySection = defaultStartSection
+            }
+        }
         // Search is opened from the bottom controls, so its on/off state lives here too.
         var isLibrarySearchActive by rememberSaveable { mutableStateOf(false) }
         // Library scrolling compacts the bottom chrome; switching section or searching restores it.
@@ -304,6 +320,7 @@ fun MainScaffold() {
                                                 showNavigation = isOnLibrary && isLibraryContentShown,
                                                 selected = librarySection,
                                                 onSelect = { librarySection = it },
+                                                defaultStartSection = defaultStartSection,
                                                 onSearch = { isLibrarySearchActive = true },
                                                 onExpand = { scope.launch { libraryChrome.expand() } },
                                                 searching = isLibrarySearchActive,

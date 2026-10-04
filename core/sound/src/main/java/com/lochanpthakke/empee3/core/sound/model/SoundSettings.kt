@@ -1,9 +1,21 @@
 package com.lochanpthakke.empee3.core.sound.model
 
+import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
+import com.lochanpthakke.empee3.core.sound.dsp.FilterType
+
+data class BandConfig(
+    val frequencyHz: Float,
+    val gainDb: Float,
+    val q: Float = CustomEqAudioProcessor.DEFAULT_Q,
+    val filterType: FilterType = FilterType.PEAKING,
+)
+
 @Suppress("MagicNumber", "EqualsWithHashCodeExist")
 data class SoundSettings(
     val isEqEnabled: Boolean = true,
-    val currentBandGains: FloatArray = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f),
+    val bands: List<BandConfig> = defaultBands(),
+    val activeBandCount: Int = CustomEqAudioProcessor.BAND_COUNT,
+    val selectedBandIndex: Int = 0,
     val activePresetId: String = EqPreset.FLAT.id,
     val customPresets: List<EqPreset> = emptyList(),
     val isBassBoostEnabled: Boolean = false,
@@ -13,36 +25,30 @@ data class SoundSettings(
     val isLoudnessEnabled: Boolean = false,
     val loudnessGainMb: Int = 0,
 ) {
+    val currentBandGains: FloatArray
+        get() = FloatArray(bands.size) { bands[it].gainDb }
+
+    val currentBandFrequencies: FloatArray
+        get() = FloatArray(bands.size) { bands[it].frequencyHz }
+
+    val currentBandQs: FloatArray
+        get() = FloatArray(bands.size) { bands[it].q }
+
+    val currentFilterTypes: Array<FilterType>
+        get() = Array(bands.size) { bands[it].filterType }
+
     val allPresets: List<EqPreset>
         get() = EqPreset.DEFAULT_PRESETS + customPresets
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is SoundSettings) return false
-
-        return isEqEnabled == other.isEqEnabled &&
-            currentBandGains.contentEquals(other.currentBandGains) &&
-            activePresetId == other.activePresetId &&
-            customPresets == other.customPresets &&
-            isBassBoostEnabled == other.isBassBoostEnabled &&
-            bassBoostStrength == other.bassBoostStrength &&
-            isVirtualizerEnabled == other.isVirtualizerEnabled &&
-            virtualizerStrength == other.virtualizerStrength &&
-            isLoudnessEnabled == other.isLoudnessEnabled &&
-            loudnessGainMb == other.loudnessGainMb
-    }
-
-    override fun hashCode(): Int {
-        var result = isEqEnabled.hashCode()
-        result = 31 * result + currentBandGains.contentHashCode()
-        result = 31 * result + activePresetId.hashCode()
-        result = 31 * result + customPresets.hashCode()
-        result = 31 * result + isBassBoostEnabled.hashCode()
-        result = 31 * result + bassBoostStrength.hashCode()
-        result = 31 * result + isVirtualizerEnabled.hashCode()
-        result = 31 * result + virtualizerStrength.hashCode()
-        result = 31 * result + isLoudnessEnabled.hashCode()
-        result = 31 * result + loudnessGainMb.hashCode()
-        return result
+    companion object {
+        fun defaultBands(): List<BandConfig> =
+            List(CustomEqAudioProcessor.BAND_COUNT) { i ->
+                BandConfig(
+                    frequencyHz = CustomEqAudioProcessor.BAND_FREQUENCIES[i],
+                    gainDb = 0f,
+                    q = CustomEqAudioProcessor.DEFAULT_Q,
+                    filterType = FilterType.PEAKING,
+                )
+            }
     }
 }

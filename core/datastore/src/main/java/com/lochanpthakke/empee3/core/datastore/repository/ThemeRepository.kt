@@ -30,6 +30,7 @@ interface ThemeRepository {
     val customScanLocationPath: StateFlow<String>
     val isCustomScanLocationEnabled: StateFlow<Boolean>
     val scanLocationConfigured: StateFlow<Boolean>
+    val defaultStartSection: StateFlow<String>
 
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
@@ -38,6 +39,8 @@ interface ThemeRepository {
     suspend fun setLibraryLayoutMode(mode: String): AppResult<Unit>
 
     suspend fun setGlassEffectEnabled(enabled: Boolean): AppResult<Unit>
+
+    suspend fun setDefaultStartSection(section: String): AppResult<Unit>
 
     suspend fun setCustomScanLocation(
         uri: String,

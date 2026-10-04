@@ -37,6 +37,7 @@ class MediaStoreScanner
         private val libraryModelDao: LibraryModelDao,
         private val libraryWriter: LibraryWriter,
         private val dataStore: DataStore<PlaybackStateProto>,
+        private val jaudioTaggerEnricher: JAudioTaggerEnricher,
         private val logger: Logger,
     ) {
         @Suppress(
@@ -167,8 +168,15 @@ class MediaStoreScanner
                             }
                             val rawTrackValue = c.getInt(trackColumn)
                             val trackNumber = rawTrackValue % 1000
-                            val year = c.getInt(yearColumn)
-                            val dateModified = c.getLong(dateModifiedColumn)
+
+                            var year = c.getInt(yearColumn)
+                            if (year !in 1900..2099) {
+                                year = jaudioTaggerEnricher.extractYearFromId3Header(filePath)
+                            }
+                            year = year.takeIf { it in 1900..2099 } ?: 0
+
+                            val dateModifiedSec = c.getLong(dateModifiedColumn)
+                            val dateModified = if (dateModifiedSec in 100_000_000L..100_000_000_000L) dateModifiedSec * 1000L else dateModifiedSec
 
                             val contentUri =
                                 ContentUris
@@ -234,7 +242,6 @@ class MediaStoreScanner
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
 
-        @Suppress("ReturnCount")
         private fun matchesCustomLocation(
             filePath: String,
             isCustomEnabled: Boolean,
@@ -274,7 +281,7 @@ class MediaStoreScanner
             return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
 
-        @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth", "CyclomaticComplexMethod", "ComplexCondition")
+        @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth")
         private fun triggerMediaScannerForStorage() {
             try {
                 val pathsToScan = mutableListOf<String>()
@@ -287,10 +294,8 @@ class MediaStoreScanner
                 for (dir in externalFilesDirs) {
                     if (dir != null) {
                         var root: File? = dir
-                        while (root != null &&
-                            root.parentFile != null &&
-                            root.parentFile?.name != "storage" &&
-                            root.parentFile?.name != "mnt"
+                        while (root != null && root.parentFile != null &&
+                            root.parentFile?.name != "storage" && root.parentFile?.name != "mnt"
                         ) {
                             root = root.parentFile
                         }
@@ -307,11 +312,7 @@ class MediaStoreScanner
                     }
                 }
 
-                @Suppress("MagicNumber")
-                fun collectAudioFiles(
-                    dir: File,
-                    depth: Int = 0,
-                ) {
+                fun collectAudioFiles(dir: File, depth: Int = 0) {
                     if (depth > 10 || !dir.exists() || !dir.isDirectory) return
                     dir.listFiles()?.forEach { file ->
                         if (file.isDirectory) {

@@ -8,6 +8,7 @@ import com.lochanpthakke.empee3.core.model.PersistedSoundSettings
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.effects.AudioEffectManager
 import com.lochanpthakke.empee3.core.sound.effects.EffectCapabilities
+import com.lochanpthakke.empee3.core.sound.model.BandConfig
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
 import com.lochanpthakke.empee3.core.sound.model.toPersisted
@@ -111,10 +112,11 @@ class SoundRepositoryImplTest {
             )
     }
 
+    private val sampleGains = floatArrayOf(6f, 5f, 3f, 1f, 0f, 0f, 0f, 0f)
     private val saved =
         SoundSettings(
             isEqEnabled = false,
-            currentBandGains = floatArrayOf(6f, 5f, 3f, 1f, 0f, 0f, 0f, 0f),
+            bands = List(8) { i -> BandConfig(CustomEqAudioProcessor.BAND_FREQUENCIES[i], sampleGains[i]) },
             activePresetId = EqPreset.BASS_BOOSTER.id,
             customPresets = listOf(EqPreset("custom_1", "Car", FloatArray(8) { 2f }, isCustom = true)),
             isBassBoostEnabled = true,

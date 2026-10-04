@@ -19,6 +19,11 @@ fun PersistedSoundSettings.toProto(): SoundSettingsProto =
         .setVirtualizerStrength(virtualizerStrength)
         .setLoudnessEnabled(loudnessEnabled)
         .setLoudnessGainMb(loudnessGainMb)
+        .addAllBandFrequencies(bandFrequencies)
+        .addAllBandQs(bandQs)
+        .addAllFilterTypes(filterTypes)
+        .setActiveBandCount(activeBandCount)
+        .setSelectedBandIndex(selectedBandIndex)
         .build()
 
 fun SoundSettingsProto.toDomain(): PersistedSoundSettings =
@@ -33,6 +38,11 @@ fun SoundSettingsProto.toDomain(): PersistedSoundSettings =
         virtualizerStrength = virtualizerStrength,
         loudnessEnabled = loudnessEnabled,
         loudnessGainMb = loudnessGainMb,
+        bandFrequencies = bandFrequenciesList,
+        bandQs = bandQsList,
+        filterTypes = filterTypesList,
+        activeBandCount = if (activeBandCount > 0) activeBandCount else 8,
+        selectedBandIndex = selectedBandIndex,
     )
 
 private fun PersistedEqPreset.toProto(): EqPresetProto =
@@ -41,9 +51,20 @@ private fun PersistedEqPreset.toProto(): EqPresetProto =
         .setId(id)
         .setName(name)
         .addAllBandGains(bandGains)
+        .addAllBandFrequencies(bandFrequencies)
+        .addAllBandQs(bandQs)
+        .addAllFilterTypes(filterTypes)
         .build()
 
-private fun EqPresetProto.toDomain(): PersistedEqPreset = PersistedEqPreset(id = id, name = name, bandGains = bandGainsList)
+private fun EqPresetProto.toDomain(): PersistedEqPreset =
+    PersistedEqPreset(
+        id = id,
+        name = name,
+        bandGains = bandGainsList,
+        bandFrequencies = bandFrequenciesList,
+        bandQs = bandQsList,
+        filterTypes = filterTypesList,
+    )
 
 /** Writes the sound settings into [existing], keeping playback and theme fields. */
 fun PersistedSoundSettings.applyTo(existing: PlaybackStateProto): PlaybackStateProto =

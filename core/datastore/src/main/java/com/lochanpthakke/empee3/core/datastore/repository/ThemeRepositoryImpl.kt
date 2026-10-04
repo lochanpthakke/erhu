@@ -66,6 +66,9 @@ class ThemeRepositoryImpl
         private val _scanLocationConfigured = MutableStateFlow(false)
         override val scanLocationConfigured: StateFlow<Boolean> = _scanLocationConfigured.asStateFlow()
 
+        private val _defaultStartSection = MutableStateFlow("TRACKS")
+        override val defaultStartSection: StateFlow<String> = _defaultStartSection.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -80,6 +83,7 @@ class ThemeRepositoryImpl
                 _customScanLocationPath.value = proto.customScanLocationPath
                 _isCustomScanLocationEnabled.value = proto.isCustomScanLocationEnabled
                 _scanLocationConfigured.value = proto.scanLocationConfigured
+                _defaultStartSection.value = proto.defaultStartSection.ifBlank { "TRACKS" }
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
@@ -122,6 +126,12 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setGlassEffectEnabled(enabled).build() }
                 _glassEffectEnabled.value = enabled
+            }
+
+        override suspend fun setDefaultStartSection(section: String): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setDefaultStartSection(section).build() }
+                _defaultStartSection.value = section
             }
 
         override suspend fun setCustomScanLocation(

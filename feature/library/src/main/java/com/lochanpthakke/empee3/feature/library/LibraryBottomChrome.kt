@@ -49,6 +49,7 @@ fun LibraryBottomChrome(
     searching: Boolean,
     miniPlayer: @Composable (compact: () -> Float) -> Unit,
     modifier: Modifier = Modifier,
+    defaultStartSection: LibrarySection = LibrarySection.TRACKS,
 ) {
     val compact = { if (showNavigation) state.fraction else 0f }
     val stepAside = Modifier.stepAsideForPlayer(LocalPlayerTransition.current)
@@ -67,6 +68,7 @@ fun LibraryBottomChrome(
                     LibraryNavigationBar(
                         selected = selected,
                         onSelect = onSelect,
+                        defaultStartSection = defaultStartSection,
                         searching = searching,
                         compact = compact,
                         onExpand = onExpand,

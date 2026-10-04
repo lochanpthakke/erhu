@@ -9,8 +9,10 @@ import com.lochanpthakke.empee3.core.common.result.appResultOf
 import com.lochanpthakke.empee3.core.common.result.onError
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
+import com.lochanpthakke.empee3.core.sound.dsp.FilterType
 import com.lochanpthakke.empee3.core.sound.effects.AudioEffectCapabilities
 import com.lochanpthakke.empee3.core.sound.effects.AudioEffectManager
+import com.lochanpthakke.empee3.core.sound.model.BandConfig
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
 import com.lochanpthakke.empee3.core.sound.model.toPersisted
@@ -30,19 +32,6 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Owns the sound settings and pushes them into the audio pipeline.
- *
- * Every setter updates the EQ processor / audio effects synchronously, so a
- * change is audible immediately; persistence happens afterwards, debounced.
- *
- * Startup: the saved settings are read once and applied. Nothing is written
- * until that restore has finished, so the built-in defaults can never
- * overwrite what the user saved. If the user changes something before the
- * restore completes, that change wins (saved custom presets are still kept).
- * All state changes run on the main dispatcher, so restore and setters never
- * interleave.
- */
 @Singleton
 @Suppress("TooManyFunctions", "TooGenericExceptionThrown")
 @OptIn(FlowPreview::class)
@@ -91,7 +80,6 @@ class SoundRepositoryImpl
                 }
             if (saved != null) {
                 if (changedBeforeRestore) {
-                    // Keep the user's fresh edits but don't lose presets they saved earlier.
                     val known =
                         _soundSettings.value.customPresets
                             .map { it.id }
@@ -101,16 +89,21 @@ class SoundRepositoryImpl
                     }
                 } else {
                     applyToPipeline(saved)
-                    _soundSettings.value = saved.copy(currentBandGains = customEqAudioProcessor.getBandGains())
+                    _soundSettings.value = saved
                 }
             }
             restoreFinished = true
             if (changedBeforeRestore) requestSave()
         }
 
-        /** Pushes every persisted value into the processor and the system effects. */
         private fun applyToPipeline(settings: SoundSettings) {
-            customEqAudioProcessor.setBandGains(settings.currentBandGains)
+            customEqAudioProcessor.configureParametricState(
+                gainsDb = settings.currentBandGains,
+                frequenciesHz = settings.currentBandFrequencies,
+                qs = settings.currentBandQs,
+                types = settings.currentFilterTypes,
+                activeCount = settings.activeBandCount,
+            )
             customEqAudioProcessor.setEqEnabled(settings.isEqEnabled)
             effectManager.setBassBoost(settings.isBassBoostEnabled, settings.bassBoostStrength)
             effectManager.setVirtualizer(settings.isVirtualizerEnabled, settings.virtualizerStrength)
@@ -140,20 +133,139 @@ class SoundRepositoryImpl
             bandIndex: Int,
             gainDb: Float,
         ) {
+            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
             customEqAudioProcessor.setBandGain(bandIndex, gainDb)
-            val currentGains = customEqAudioProcessor.getBandGains()
-            _soundSettings.update { it.copy(currentBandGains = currentGains) }
+            _soundSettings.update { settings ->
+                val updatedBands = settings.bands.toMutableList()
+                val current = updatedBands[bandIndex]
+                updatedBands[bandIndex] = current.copy(gainDb = gainDb.coerceIn(-15f, 15f))
+                settings.copy(bands = updatedBands)
+            }
+            onUserChange()
+        }
+
+        override fun setBandFrequency(
+            bandIndex: Int,
+            freqHz: Float,
+        ) {
+            val currentGain = _soundSettings.value.bands.getOrNull(bandIndex)?.gainDb ?: 0f
+            setBandFrequencyAndGain(bandIndex, freqHz, currentGain)
+        }
+
+        override fun setBandQ(
+            bandIndex: Int,
+            q: Float,
+        ) {
+            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
+            customEqAudioProcessor.setBandQ(bandIndex, q)
+            _soundSettings.update { settings ->
+                val updatedBands = settings.bands.toMutableList()
+                val current = updatedBands[bandIndex]
+                updatedBands[bandIndex] = current.copy(q = q.coerceIn(CustomEqAudioProcessor.MIN_Q, CustomEqAudioProcessor.MAX_Q))
+                settings.copy(bands = updatedBands)
+            }
+            onUserChange()
+        }
+
+        override fun setFilterType(
+            bandIndex: Int,
+            type: FilterType,
+        ) {
+            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
+            customEqAudioProcessor.setFilterType(bandIndex, type)
+            _soundSettings.update { settings ->
+                val updatedBands = settings.bands.toMutableList()
+                val current = updatedBands[bandIndex]
+                updatedBands[bandIndex] = current.copy(filterType = type)
+                settings.copy(bands = updatedBands)
+            }
+            onUserChange()
+        }
+
+        override fun setActiveBandCount(count: Int) {
+            val safeCount = count.coerceIn(CustomEqAudioProcessor.MIN_BAND_COUNT, CustomEqAudioProcessor.BAND_COUNT)
+            customEqAudioProcessor.setActiveBandCount(safeCount)
+            _soundSettings.update { settings ->
+                val nextSelected = settings.selectedBandIndex.coerceIn(0, safeCount - 1)
+                settings.copy(activeBandCount = safeCount, selectedBandIndex = nextSelected)
+            }
+            onUserChange()
+        }
+
+        override fun setSelectedBandIndex(index: Int) {
+            _soundSettings.update { settings ->
+                val safeIndex = index.coerceIn(0, settings.activeBandCount - 1)
+                settings.copy(selectedBandIndex = safeIndex)
+            }
+        }
+
+        override fun setBandFrequencyAndGain(
+            bandIndex: Int,
+            freqHz: Float,
+            gainDb: Float,
+        ) {
+            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
+            _soundSettings.update { settings ->
+                val bands = settings.bands.toMutableList()
+                val targetFreq = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ)
+                val targetGain = gainDb.coerceIn(-15f, 15f)
+
+                bands[bandIndex] = bands[bandIndex].copy(frequencyHz = targetFreq, gainDb = targetGain)
+
+                val minRatio = 1.05f
+
+                // Push higher bands (scooch right)
+                for (i in (bandIndex + 1) until settings.activeBandCount) {
+                    val minAllowed = (bands[i - 1].frequencyHz * minRatio).coerceAtMost(CustomEqAudioProcessor.MAX_FREQ_HZ)
+                    if (bands[i].frequencyHz < minAllowed) {
+                        bands[i] = bands[i].copy(frequencyHz = minAllowed)
+                    }
+                }
+
+                // Push lower bands (scooch left)
+                for (i in (bandIndex - 1) downTo 0) {
+                    val maxAllowed = (bands[i + 1].frequencyHz / minRatio).coerceAtLeast(CustomEqAudioProcessor.MIN_FREQ_HZ)
+                    if (bands[i].frequencyHz > maxAllowed) {
+                        bands[i] = bands[i].copy(frequencyHz = maxAllowed)
+                    }
+                }
+
+                val updated = settings.copy(bands = bands)
+                customEqAudioProcessor.configureParametricState(
+                    gainsDb = updated.currentBandGains,
+                    frequenciesHz = updated.currentBandFrequencies,
+                    qs = updated.currentBandQs,
+                    types = updated.currentFilterTypes,
+                    activeCount = updated.activeBandCount,
+                )
+                updated
+            }
             onUserChange()
         }
 
         override fun applyPreset(presetId: String) {
             val targetPreset = _soundSettings.value.allPresets.find { it.id == presetId } ?: return
-            customEqAudioProcessor.setBandGains(targetPreset.bandGains)
-            _soundSettings.update {
-                it.copy(
+            _soundSettings.update { settings ->
+                val updatedBands = List(CustomEqAudioProcessor.BAND_COUNT) { i ->
+                    BandConfig(
+                        frequencyHz = targetPreset.bandFrequencies.getOrElse(i) { CustomEqAudioProcessor.BAND_FREQUENCIES[i] },
+                        gainDb = targetPreset.bandGains.getOrElse(i) { 0f },
+                        q = targetPreset.bandQs.getOrElse(i) { CustomEqAudioProcessor.DEFAULT_Q },
+                        filterType = targetPreset.filterTypes.getOrElse(i) { FilterType.PEAKING },
+                    )
+                }
+                val updated = settings.copy(
                     activePresetId = presetId,
-                    currentBandGains = customEqAudioProcessor.getBandGains(),
+                    bands = updatedBands,
                 )
+                customEqAudioProcessor.configureParametricState(
+                    gainsDb = updated.currentBandGains,
+                    frequenciesHz = updated.currentBandFrequencies,
+                    qs = updated.currentBandQs,
+                    types = updated.currentFilterTypes,
+                    activeCount = updated.activeBandCount,
+                )
+                updated
             }
             onUserChange()
         }
@@ -167,11 +279,15 @@ class SoundRepositoryImpl
                 if (name.isBlank()) {
                     throw IllegalArgumentException("Preset name cannot be blank")
                 }
+                val currentSettings = _soundSettings.value
                 val newPreset =
                     EqPreset(
                         id = "custom_${UUID.randomUUID()}",
                         name = name.trim(),
-                        bandGains = customEqAudioProcessor.getBandGains(),
+                        bandGains = currentSettings.currentBandGains,
+                        bandFrequencies = currentSettings.currentBandFrequencies,
+                        bandQs = currentSettings.currentBandQs,
+                        filterTypes = currentSettings.currentFilterTypes,
                         isCustom = true,
                     )
                 _soundSettings.update {
