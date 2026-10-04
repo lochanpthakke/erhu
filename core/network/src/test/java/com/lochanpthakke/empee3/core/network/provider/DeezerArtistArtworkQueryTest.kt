@@ -7,8 +7,12 @@ import com.lochanpthakke.empee3.core.network.model.DeezerArtistSearchResponse
 import com.lochanpthakke.empee3.core.network.model.DeezerErrorDto
 import com.lochanpthakke.empee3.core.network.model.DeezerSearchResponse
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.SerializationException
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import retrofit2.HttpException
+import retrofit2.Response
 
 /**
  * Deezer ranks `artist:"Drake"` results so that the real Drake is not returned at all
@@ -20,11 +24,16 @@ class DeezerArtistArtworkQueryTest {
         private val respond: () -> DeezerArtistSearchResponse,
     ) : DeezerApi {
         val queries = mutableListOf<String>()
+        val limits = mutableListOf<Int>()
 
         override suspend fun searchTrack(query: String) = DeezerSearchResponse()
 
-        override suspend fun searchArtist(query: String): DeezerArtistSearchResponse {
+        override suspend fun searchArtist(
+            query: String,
+            limit: Int,
+        ): DeezerArtistSearchResponse {
             queries += query
+            limits += limit
             return respond()
         }
     }
@@ -69,8 +78,42 @@ class DeezerArtistArtworkQueryTest {
     @Test
     fun `artist artwork is searched with the plain artist name`() {
         val api = RecordingApi { DeezerArtistSearchResponse(data = listOf(DeezerArtistDto(id = 1, name = "Drake", pictureBig = "https://img/drake.jpg"))) }
-        assertEquals(ArtistArtworkLookup.Found("https://img/drake.jpg"), lookup(api))
+        assertEquals(ArtistArtworkLookup.Found("https://img/drake.jpg", deezerArtistId = 1), lookup(api))
         assertEquals(listOf("Drake"), api.queries)
+        assertEquals(listOf(DeezerApi.ARTIST_SEARCH_LIMIT), api.limits)
+    }
+
+    @Test
+    fun `ambiguous same-name profiles are not found`() {
+        val api =
+            RecordingApi {
+                DeezerArtistSearchResponse(
+                    data =
+                        listOf(
+                            DeezerArtistDto(id = 1, name = "Drake", pictureBig = "https://img/a.jpg", nbFan = 166),
+                            DeezerArtistDto(id = 2, name = "Drake", pictureBig = "https://img/b.jpg", nbFan = 141),
+                        ),
+                )
+            }
+        assertEquals(ArtistArtworkLookup.NotFound, lookup(api))
+    }
+
+    @Test
+    fun `a response with neither results nor an error is a failed lookup, not a not-found`() {
+        val api = RecordingApi { DeezerArtistSearchResponse() }
+        assertEquals(ArtistArtworkLookup.Failed, lookup(api))
+    }
+
+    @Test
+    fun `an unreadable response is a failed lookup`() {
+        val api = RecordingApi { throw SerializationException("bad json") }
+        assertEquals(ArtistArtworkLookup.Failed, lookup(api))
+    }
+
+    @Test
+    fun `an HTTP error such as rate limiting is a failed lookup`() {
+        val api = RecordingApi { throw HttpException(Response.error<Any>(429, "".toResponseBody(null))) }
+        assertEquals(ArtistArtworkLookup.Failed, lookup(api))
     }
 
     @Test

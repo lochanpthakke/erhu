@@ -67,12 +67,29 @@ class RescanPersistenceTest {
         runBlocking {
             scan()
             val drake = IdentityHash.of("drake")
-            db.artistDao().updateArtistArtwork(drake, "https://img/drake.jpg")
             db.libraryModelDao().upsertArtwork(ArtistArtworkEntity("drake", "https://img/drake.jpg", 1))
             db.songDao().setFavorite(id = 1, isFavorite = true)
             scan()
             assertEquals("https://img/drake.jpg", db.artistDao().getArtistById(drake)?.artworkUri)
             assertTrue(db.songDao().getSongById(1)!!.isFavorite)
             assertEquals(1, db.albumDao().getAllAlbums().first().size)
+        }
+
+    @Test
+    fun `a custom image set after the scan read the artwork is not undone by that scan`() =
+        runBlocking {
+            scan()
+            val drake = IdentityHash.of("drake")
+            db.libraryModelDao().upsertArtwork(ArtistArtworkEntity("drake", "https://img/auto.jpg", 1))
+            // The scan reads artwork, then the user picks an image before the scan writes.
+            val staleArtwork = db.libraryModelDao().getArtworkByKey().associate { it.artistKey to it.artworkUri }
+            db.libraryModelDao().upsertArtwork(
+                ArtistArtworkEntity("drake", "file:///data/artist_artwork/a.jpg", 2, source = ArtistArtworkEntity.SOURCE_CUSTOM),
+            )
+            writer.write(LibraryModelBuilder.build(raw, emptyMap()).toEntities(songs, staleArtwork))
+            assertEquals("file:///data/artist_artwork/a.jpg", db.artistDao().getArtistById(drake)?.artworkUri)
+            val row = db.libraryModelDao().getArtwork("drake")!!
+            assertEquals(ArtistArtworkEntity.SOURCE_CUSTOM, row.source)
+            assertEquals("file:///data/artist_artwork/a.jpg", row.artworkUri)
         }
 }

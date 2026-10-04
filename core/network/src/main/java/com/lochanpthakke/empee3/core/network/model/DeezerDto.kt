@@ -12,7 +12,8 @@ data class DeezerSearchResponse(
 
 @Serializable
 data class DeezerArtistSearchResponse(
-    val data: List<DeezerArtistDto> = emptyList(),
+    /** Null when the body had neither results nor an error: an unreadable answer, not "no such artist". */
+    val data: List<DeezerArtistDto>? = null,
     /** Set instead of [data] when the request failed, e.g. "Quota limit exceeded" (code 4). */
     val error: DeezerErrorDto? = null,
 )
@@ -45,6 +46,9 @@ data class DeezerArtistDto(
     val pictureBig: String? = null,
     @SerialName("picture_xl")
     val pictureXl: String? = null,
+    /** Followers on Deezer; used only to tell apart profiles that share one exact name. */
+    @SerialName("nb_fan")
+    val nbFan: Long = 0,
 )
 
 @Serializable

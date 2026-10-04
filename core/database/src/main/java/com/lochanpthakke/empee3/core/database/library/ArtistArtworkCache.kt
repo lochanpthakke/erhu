@@ -1,19 +1,40 @@
 package com.lochanpthakke.empee3.core.database.library
 
+import com.lochanpthakke.empee3.core.database.entity.ArtistArtworkEntity
+
 /**
- * Values stored for an artist's profile artwork: a URL, or a "looked up, nothing
- * found" marker so the lookup is not repeated on every launch.
+ * Rules for stored artist artwork ([ArtistArtworkEntity]).
  *
- * The marker is versioned. Plain [LEGACY_NOT_FOUND] was written by the old lookup,
- * whose `artist:"…"` query often missed the real artist (e.g. Drake), so it is
- * retried exactly once; the retry stores [NOT_FOUND], which is never retried.
+ * Automatic rows are decided by a matcher version. Rows from an older matcher (the first exact-name
+ * pick that chose Deezer duplicates, or blank photos) are re-checked once. [NOT_FOUND] means the
+ * current matcher found no safe photo; it is retried after [NOT_FOUND_RETRY_MS]. A failed lookup
+ * stores nothing, so it is retried on a later launch. CUSTOM rows are never looked up.
  */
 object ArtistArtworkCache {
-    const val NOT_FOUND = "NONE:2"
-    private const val LEGACY_NOT_FOUND = "NONE"
+    /** Versioned "looked up, no safe photo" marker of matcher [MATCHER_VERSION]. */
+    const val NOT_FOUND = "NONE:3"
     private const val NOT_FOUND_PREFIX = "NONE"
 
-    fun needsLookup(artworkUri: String?): Boolean = artworkUri == null || artworkUri == LEGACY_NOT_FOUND
+    /** The Deezer matcher with exact-name candidates, fan-count disambiguation and photo validation. */
+    const val MATCHER_VERSION = 2
 
-    fun hasArtwork(artworkUri: String?): Boolean = !artworkUri.isNullOrBlank() && !artworkUri.startsWith(NOT_FOUND_PREFIX)
+    const val NOT_FOUND_RETRY_MS = 30L * 24 * 60 * 60 * 1000
+
+    /** Whether the automatic lookup should (re)decide this artist's artwork; never for custom artwork. */
+    fun needsAutomaticLookup(
+        stored: ArtistArtworkEntity?,
+        now: Long,
+    ): Boolean =
+        when {
+            stored == null -> true
+            stored.source != ArtistArtworkEntity.SOURCE_AUTO -> false
+            stored.matcherVersion < MATCHER_VERSION -> true
+            // A clock that went backwards must not postpone the retry forever.
+            isNotFound(stored.artworkUri) -> now - stored.updatedAt !in 0 until NOT_FOUND_RETRY_MS
+            else -> false
+        }
+
+    fun isNotFound(artworkUri: String?): Boolean = artworkUri?.startsWith(NOT_FOUND_PREFIX) == true
+
+    fun hasArtwork(artworkUri: String?): Boolean = !artworkUri.isNullOrBlank() && !isNotFound(artworkUri)
 }

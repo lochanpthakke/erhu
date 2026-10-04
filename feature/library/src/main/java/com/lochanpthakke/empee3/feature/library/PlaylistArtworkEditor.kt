@@ -165,7 +165,7 @@ fun EditPlaylistDialog(
  */
 @Composable
 @Suppress("LongMethod")
-private fun SquareCropDialog(
+internal fun SquareCropDialog(
     imageUri: Uri,
     onDismiss: () -> Unit,
     onCropped: (ByteArray, ImageBitmap) -> Unit,

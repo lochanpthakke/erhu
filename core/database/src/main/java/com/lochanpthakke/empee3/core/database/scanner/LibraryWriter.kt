@@ -113,6 +113,8 @@ class LibraryWriter
                 libraryModelDao.deleteUnverifiedSegments()
                 entities.albums.chunked(CHUNK).forEach { albumDao.upsertAll(it) }
                 entities.artists.chunked(CHUNK).forEach { artistDao.upsertAll(it) }
+                // Inside this transaction: artwork set (e.g. a custom image) after the scan read it is not undone.
+                artistDao.syncAllArtwork()
                 entities.albumArtists.chunked(CHUNK).forEach { libraryModelDao.insertAlbumArtists(it) }
                 entities.unverified.chunked(CHUNK).forEach { libraryModelDao.insertUnverifiedSegments(it) }
                 WriteSummary(upserted = plan.upserts.size, removed = plan.deletedIds.size)

@@ -24,11 +24,20 @@ interface ArtistDao {
     @Query("SELECT * FROM artists WHERE id = :id LIMIT 1")
     fun observeArtistById(id: Long): Flow<ArtistEntity?>
 
-    @Query("UPDATE artists SET artwork_uri = :artworkUri WHERE id = :id")
-    suspend fun updateArtistArtwork(
-        id: Long,
-        artworkUri: String?,
-    ): Int
+    /** Copies the stored artwork (artist_artwork, the source of truth) onto every artist row. */
+    @Query(
+        "UPDATE artists SET artwork_uri = " +
+            "(SELECT w.artwork_uri FROM artist_artwork w WHERE w.artist_key = artists.artist_key)",
+    )
+    suspend fun syncAllArtwork(): Int
+
+    /** [syncAllArtwork] for one artist key. */
+    @Query(
+        "UPDATE artists SET artwork_uri = " +
+            "(SELECT w.artwork_uri FROM artist_artwork w WHERE w.artist_key = artists.artist_key) " +
+            "WHERE artist_key = :artistKey",
+    )
+    suspend fun syncArtwork(artistKey: String): Int
 
     @Query("DELETE FROM artists")
     suspend fun deleteAll(): Int
