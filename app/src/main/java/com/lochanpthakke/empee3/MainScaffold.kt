@@ -83,7 +83,6 @@ import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
-import com.lochanpthakke.empee3.core.designsystem.theme.glassChromeFade
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.Album
@@ -294,7 +293,7 @@ fun MainScaffold() {
                                     CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
                                         // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
                                         // Stack: mini player, then (on Library) the section navigation, then the gesture area.
-                                        Column(modifier = Modifier.glassChromeFade()) {
+                                        Column {
                                             // Mini player + (on the Library) sections and search, as one chrome
                                             // that compacts while the library scrolls.
                                             LibraryBottomChrome(

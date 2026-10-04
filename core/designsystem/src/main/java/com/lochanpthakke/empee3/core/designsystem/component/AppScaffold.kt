@@ -40,11 +40,10 @@ data class ScrollingPadding(
 )
 
 /**
- * Under a glass theme scrolling content continues underneath the bottom chrome
- * (the mini player is a translucent layer over it): the container takes only the
- * top padding and the chrome height becomes scroll content padding, so the last
- * item still scrolls fully above the player. Other themes keep content ending
- * at the top edge of the chrome.
+ * Scrolling content continues underneath the bottom chrome (the floating
+ * mini player and controls sit over it): the container takes 0dp bottom padding
+ * and the chrome height becomes scroll content padding inside the list, so the
+ * last item still scrolls fully above the player while content flows edge-to-edge.
  */
 @Composable
 fun PaddingValues.forScrollingContent(topOverlay: Boolean = false): ScrollingPadding {
@@ -56,8 +55,8 @@ fun PaddingValues.forScrollingContent(topOverlay: Boolean = false): ScrollingPad
     // padding, so the first item is still fully visible.
     val underTop = topOverlay || glass
     return ScrollingPadding(
-        container = PaddingValues(top = if (underTop) 0.dp else top, bottom = if (glass) 0.dp else bottom),
-        contentBottom = if (glass) bottom else 0.dp,
+        container = PaddingValues(top = if (underTop) 0.dp else top, bottom = 0.dp),
+        contentBottom = bottom,
         contentTop = if (underTop) top else 0.dp,
     )
 }

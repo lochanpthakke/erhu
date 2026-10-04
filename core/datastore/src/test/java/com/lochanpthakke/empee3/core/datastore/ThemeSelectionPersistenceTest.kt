@@ -51,8 +51,8 @@ class ThemeSelectionPersistenceTest {
         var proto = stored(BuiltInThemes.SYSTEM_DEFAULT_ID)
         proto = proto.toBuilder().setAppThemeId("default_dark").build().afterRestart()
         assertSame(BuiltInThemes.DEFAULT_DARK, BuiltInThemes.resolve(proto.appThemeId).theme)
-        proto = proto.toBuilder().setAppThemeId("cyberpunk_tech").build().afterRestart()
-        assertSame(BuiltInThemes.CYBERPUNK_TECH, BuiltInThemes.resolve(proto.appThemeId).theme)
+        proto = proto.toBuilder().setAppThemeId("default_light").build().afterRestart()
+        assertSame(BuiltInThemes.DEFAULT_LIGHT, BuiltInThemes.resolve(proto.appThemeId).theme)
     }
 
     @Test
@@ -103,7 +103,7 @@ class ThemeSelectionPersistenceTest {
         val legacyGlassOff =
             stored(BuiltInThemes.LEGACY_GLASSMORPHISM_ID).toBuilder().setGlassEffectEnabled(false).build()
         assertFalse(legacyGlassOff.migratedThemeSelection()!!.glassEffectEnabled)
-        assertNull(stored("cyberpunk_tech").migratedThemeSelection())
+        assertNull(stored("default_light").migratedThemeSelection())
         assertNull(stored(BuiltInThemes.SYSTEM_DEFAULT_ID).migratedThemeSelection())
     }
 

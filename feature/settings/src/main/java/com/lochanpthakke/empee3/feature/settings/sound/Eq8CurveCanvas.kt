@@ -11,10 +11,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -39,7 +39,9 @@ fun Eq8CurveCanvas(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val primaryColor = MaterialTheme.colorScheme.primary
-    val gridColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+    val containerBgColor = MaterialTheme.colorScheme.surfaceVariant
+    val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
 
     val freqPoints =
         remember {
@@ -62,7 +64,7 @@ fun Eq8CurveCanvas(
                 .fillMaxWidth()
                 .height(200.dp)
                 .clip(Radius.mediumShape)
-                .background(Color(0xFF121212)),
+                .background(containerBgColor),
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(200.dp)) {
             val width = size.width
@@ -148,7 +150,7 @@ fun Eq8CurveCanvas(
                 drawText(
                     textMeasurer = textMeasurer,
                     text = "${b + 1}",
-                    style = TextStyle(color = Color.Black, fontSize = 10.sp),
+                    style = TextStyle(color = onPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold),
                     topLeft = Offset(nodeX - 3.dp.toPx(), nodeY - 6.dp.toPx()),
                 )
             }

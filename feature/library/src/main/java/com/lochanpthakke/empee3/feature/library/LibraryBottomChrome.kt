@@ -15,6 +15,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.BottomChrome
 import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
@@ -31,8 +32,8 @@ import kotlin.math.roundToInt
  * current section, the mini player rises into the row beside it (its skip
  * buttons fold away) and Search stays anchored. All of it happens in layout
  * and draw from [LibraryChromeState.fraction]: no recomposition per frame.
- * The chrome reports its expanded height throughout, so content padding does
- * not change while it moves.
+ * The chrome dynamically shrinks its layout height as it condenses into a single
+ * row, ensuring the background backdrop wraps snugly without leaving empty space.
  *
  * Without [showNavigation] (other screens) it is just the mini player.
  */
@@ -89,9 +90,7 @@ fun LibraryBottomChrome(
         val bottomPad = Spacing.sm.roundToPx()
         val (miniMeasurable, navMeasurable, searchMeasurable) = measurables
 
-        // Each child is measured once, at its width for the current state. Heights do
-        // not depend on width (single-line content), so the chrome's height is the
-        // same in every state and content padding never changes while it moves.
+        // Each child is measured once, at its width for the current state.
         val miniCompactWidth = (width - 2 * (action + gap)).coerceAtLeast(0)
         val requested = if (showNavigation) compact().coerceIn(0f, 1f) else 0f
         val mini = miniMeasurable.measure(Constraints.fixedWidth(lerp(width.toFloat(), miniCompactWidth.toFloat(), requested).roundToInt()))
@@ -102,16 +101,30 @@ fun LibraryBottomChrome(
         val hasNav = nav.height > 0
         val search = searchMeasurable.measure(if (hasNav) Constraints.fixed(action, nav.height) else Constraints.fixed(0, 0))
 
-        val height = mini.height + if (hasNav) nav.height + bottomPad else 0
-        layout(width, height) {
-            nav.placeRelative(margin, mini.height)
-            search.placeRelative(width - margin - action, mini.height)
-            // The mini player rises from above the row into the row, between the two buttons.
-            val miniCompactY = mini.height + nav.height / 2 - mini.height / 2
-            mini.placeRelative(
-                x = lerp(0f, (action + gap).toFloat(), c).roundToInt(),
-                y = lerp(0f, miniCompactY.toFloat(), c).roundToInt(),
-            )
+        val expandedHeight = mini.height + if (hasNav) nav.height + bottomPad else 0
+        val condensedHeight = if (hasNav && mini.height > 0) {
+            max(mini.height, nav.height)
+        } else {
+            expandedHeight
+        }
+        val currentHeight = lerp(expandedHeight.toFloat(), condensedHeight.toFloat(), c).roundToInt()
+
+        layout(width, currentHeight) {
+            val navExpandedY = mini.height
+            val navCondensedY = (condensedHeight - nav.height) / 2
+            val navY = lerp(navExpandedY.toFloat(), navCondensedY.toFloat(), c).roundToInt()
+            nav.placeRelative(margin, navY)
+
+            val searchExpandedY = mini.height
+            val searchCondensedY = (condensedHeight - search.height) / 2
+            val searchY = lerp(searchExpandedY.toFloat(), searchCondensedY.toFloat(), c).roundToInt()
+            search.placeRelative(width - margin - action, searchY)
+
+            val miniExpandedY = 0
+            val miniCondensedY = (condensedHeight - mini.height) / 2
+            val miniY = lerp(miniExpandedY.toFloat(), miniCondensedY.toFloat(), c).roundToInt()
+            val miniX = lerp(0f, (action + gap).toFloat(), c).roundToInt()
+            mini.placeRelative(miniX, miniY)
         }
     }
 }
