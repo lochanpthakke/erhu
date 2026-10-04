@@ -30,10 +30,10 @@ class ThemeRepositoryImpl
     ) : ThemeRepository {
         private val scope = CoroutineScope(Dispatchers.IO)
 
-        private val _appThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.CYBERPUNK_TECH)
+        private val _appThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.DEFAULT_DARK)
         override val appThemeState: StateFlow<ThemeManifest> = _appThemeState.asStateFlow()
 
-        private val _appThemeId = MutableStateFlow(BuiltInThemes.CYBERPUNK_TECH.id)
+        private val _appThemeId = MutableStateFlow(BuiltInThemes.SYSTEM_DEFAULT_ID)
         override val appThemeId: StateFlow<String> = _appThemeId.asStateFlow()
 
         private val _glassEffectEnabled = MutableStateFlow(false)
@@ -42,7 +42,7 @@ class ThemeRepositoryImpl
         private val _appSkinState = MutableStateFlow<SkinManifest?>(null)
         override val appSkinState: StateFlow<SkinManifest?> = _appSkinState.asStateFlow()
 
-        private val _widgetThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.CYBERPUNK_TECH)
+        private val _widgetThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.DEFAULT_DARK)
         override val widgetThemeState: StateFlow<ThemeManifest> = _widgetThemeState.asStateFlow()
 
         private val _widgetSkinState = MutableStateFlow<SkinManifest?>(null)
@@ -64,8 +64,8 @@ class ThemeRepositoryImpl
                 _glassEffectEnabled.value = proto.glassEffectEnabled
                 _libraryLayoutMode.value = proto.libraryLayoutMode.ifBlank { "GRID" }
                 _isRollbackFlagActive.value = proto.themeRollbackFlag
-                resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }, isApp = true)
-                resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }, isApp = false)
+                resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.SYSTEM_DEFAULT_ID }, isApp = true)
+                resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
         }
 
@@ -137,7 +137,7 @@ class ThemeRepositoryImpl
                     dataStore.data
                         .first()
                         .lastVerifiedStableThemeId
-                        .ifBlank { BuiltInThemes.CYBERPUNK_TECH.id }
+                        .ifBlank { BuiltInThemes.SYSTEM_DEFAULT_ID }
                 dataStore.updateData {
                     it
                         .toBuilder()

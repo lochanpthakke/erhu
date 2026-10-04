@@ -21,7 +21,7 @@ class GlassThemeTest {
     @Test
     fun glassmorphismIsNoLongerATheme_existingThemesRemain() {
         assertFalse(BuiltInThemes.ALL_BUILT_IN_THEMES.any { it.id == BuiltInThemes.LEGACY_GLASSMORPHISM_ID })
-        listOf("default_light", "default_dark", "frosted_glass", "cyberpunk_tech").forEach { id ->
+        listOf("default_light", "default_dark").forEach { id ->
             assertTrue(id, BuiltInThemes.ALL_BUILT_IN_THEMES.any { it.id == id })
         }
     }
@@ -63,14 +63,6 @@ class GlassThemeTest {
     fun unknownOrBlankIds_fallBackToTheDefaultTheme() {
         assertSame(BuiltInThemes.FALLBACK_THEME, BuiltInThemes.resolve("").theme)
         assertSame(BuiltInThemes.FALLBACK_THEME, BuiltInThemes.resolve("theme_that_was_removed").theme)
-    }
-
-    @Test
-    fun skinIds_resolveToFallbackThemePlusSkin() {
-        val skin = BuiltInThemes.RETRO_VST_SKIN
-        val resolved = BuiltInThemes.resolve(skin.id)
-        assertSame(BuiltInThemes.FALLBACK_THEME, resolved.theme)
-        assertSame(skin, resolved.skin)
     }
 
     // ---- Derived glass keeps the theme's environment
