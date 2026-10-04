@@ -68,7 +68,17 @@ class AlbumPresenterTest {
     fun `unresolved credit counts toward a standalone leading artist only`() {
         val credits = mapOf(1L to listOf(credit("Kanye West")), 2L to listOf(credit("Kanye West/JAY-Z", unresolved = true)))
         assertEquals("Kanye West", present(group(2), credits, setOf("kanye west")).displayArtist)
+        // Without evidence the credit is text only: shown as written, linked to no artist.
         val tyler = mapOf(1L to listOf(credit("Tyler/ The Creator", unresolved = true)))
-        assertEquals("tyler/ the creator", present(group(1), tyler).linkedArtistKeys.single())
+        val unaliased = present(group(1), tyler)
+        assertEquals("Tyler/ The Creator", unaliased.displayArtist)
+        assertEquals(emptyList<String>(), unaliased.linkedArtistKeys)
+        // With the approved alias it is the artist Tyler, The Creator.
+        val aliased =
+            AlbumPresenter.present(group(1), tyler, emptySet(), ArtistIdentityResolver(ManualArtistAliases.aliasKeys, ManualArtistAliases.artistNames)) {
+                ManualArtistAliases.artistNames[it] ?: it
+            }
+        assertEquals("Tyler, The Creator", aliased.displayArtist)
+        assertEquals(listOf("tyler, the creator"), aliased.linkedArtistKeys)
     }
 }

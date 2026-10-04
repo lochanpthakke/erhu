@@ -8,12 +8,10 @@ import kotlin.random.Random
 class LibraryModelBuilderTest {
     private val fixture get() = LibraryFixture.tracks
 
-    private fun creditsOf(
-        model: LibraryModel,
-        title: String,
-    ): List<Pair<String, CreditRole>> {
-        val id = LibraryFixture.songId(title)
-        return model.credits.filter { it.songId == id }.sortedBy { it.position }.map { it.creditText to it.role }
+    /** Layer A (credit resolution), which the identity rules do not change. */
+    private fun creditsOf(title: String): List<Pair<String, CreditRole>> {
+        val track = fixture.first { it.title == title }
+        return CreditResolver(EvidenceIndex.build(fixture)).resolve(track).map { it.text to it.role }
     }
 
     @Test
@@ -22,10 +20,10 @@ class LibraryModelBuilderTest {
         val albums = model.albums.sortedBy { it.title.lowercase() }.map { Triple(it.title, it.songIds.size, it.displayArtist) }
         assertEquals(
             listOf(
-                Triple("Flower Boy", 14, "Tyler/ The Creator"),
+                Triple("Flower Boy", 14, "Tyler, The Creator"),
                 Triple("Her Loss", 16, "Drake & 21 Savage"),
                 Triple("ICEMAN", 18, "Drake"),
-                Triple("IGOR", 12, "Tyler/ The Creator"),
+                Triple("IGOR", 12, "Tyler, The Creator"),
                 Triple("Late Registration", 21, "Kanye West"),
                 Triple("My Beautiful Dark Twisted Fantasy", 13, "Kanye West"),
                 Triple("Without Warning", 10, "Metro Boomin, 21 Savage & Offset"),
@@ -36,25 +34,24 @@ class LibraryModelBuilderTest {
 
     @Test
     fun `golden credits for the investigated tracks`() {
-        val m = LibraryModelBuilder.build(fixture, emptyMap())
         val p = CreditRole.PRIMARY
         val f = CreditRole.FEATURED
-        assertEquals(listOf("Drake" to p, "21 Savage" to p), creditsOf(m, "Rich Flex"))
-        assertEquals(listOf("Drake" to p, "21 Savage" to f), creditsOf(m, "B's On The Table (feat. 21 Savage)"))
-        assertEquals(listOf("21 Savage" to p, "Offset" to p, "Metro Boomin" to p), creditsOf(m, "Darth Vader"))
-        assertEquals(listOf("Offset" to p, "Metro Boomin" to p), creditsOf(m, "Nightmare"))
+        assertEquals(listOf("Drake" to p, "21 Savage" to p), creditsOf("Rich Flex"))
+        assertEquals(listOf("Drake" to p, "21 Savage" to f), creditsOf("B's On The Table (feat. 21 Savage)"))
+        assertEquals(listOf("21 Savage" to p, "Offset" to p, "Metro Boomin" to p), creditsOf("Darth Vader"))
+        assertEquals(listOf("Offset" to p, "Metro Boomin" to p), creditsOf("Nightmare"))
         assertEquals(
             listOf("21 Savage" to p, "Offset" to p, "Metro Boomin" to p, "Travis Scott" to f),
-            creditsOf(m, "Ghostface Killers (feat. Travis Scott)"),
+            creditsOf("Ghostface Killers (feat. Travis Scott)"),
         )
-        assertEquals(listOf("Tyler/ The Creator" to p), creditsOf(m, "Glitter"))
-        assertEquals(listOf("Tyler/ The Creator" to p, "Kali Uchis" to f), creditsOf(m, "See You Again (feat. Kali Uchis)"))
+        assertEquals(listOf("Tyler/ The Creator" to p), creditsOf("Glitter"))
+        assertEquals(listOf("Tyler/ The Creator" to p, "Kali Uchis" to f), creditsOf("See You Again (feat. Kali Uchis)"))
         assertEquals(
             listOf("Tyler/ The Creator" to p, "Rex Orange County/Anna of the North" to f),
-            creditsOf(m, "Boredom (feat. Rex Orange County & Anna of the North)"),
+            creditsOf("Boredom (feat. Rex Orange County & Anna of the North)"),
         )
-        assertEquals(listOf("Tyler/ The Creator/Alexander Brettin/Jaden" to p), creditsOf(m, "Pothole (feat. Jaden Smith)"))
-        assertEquals(listOf("Kanye West/JAY-Z" to p, "Rick Ross/Nicki Minaj/Bon Iver" to p), creditsOf(m, "Monster"))
+        assertEquals(listOf("Tyler/ The Creator/Alexander Brettin/Jaden" to p), creditsOf("Pothole (feat. Jaden Smith)"))
+        assertEquals(listOf("Kanye West/JAY-Z" to p, "Rick Ross/Nicki Minaj/Bon Iver" to p), creditsOf("Monster"))
     }
 
     @Test
@@ -87,7 +84,8 @@ class LibraryModelBuilderTest {
     @Test
     fun `credits depend only on raw rows`() {
         val evidence = EvidenceIndex.build(fixture)
-        val direct = fixture.associate { it.songId to CreditResolver(evidence).resolve(it).map { c -> c.text } }
+        val identity = ArtistIdentityResolver(ManualArtistAliases.aliasKeys, ManualArtistAliases.artistNames)
+        val direct = fixture.associate { it.songId to CreditResolver(evidence).resolve(it).filter(identity::hasIdentity).map { c -> c.text } }
         val model = LibraryModelBuilder.build(fixture, emptyMap())
         direct.forEach { (id, texts) ->
             assertEquals(texts, model.credits.filter { it.songId == id }.sortedBy { it.position }.map { it.creditText })

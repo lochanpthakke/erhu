@@ -32,16 +32,21 @@ class AcceptanceCriteriaTest {
 
     @Test
     fun `tyler is one artist and the creator does not exist`() {
-        assertEquals(1, model.artists.count { it.key == "tyler/ the creator" })
-        assertTrue(model.artists.none { it.key == "the creator" || it.key == "tyler" })
+        // via the explicitly approved alias "Tyler/ The Creator" -> "Tyler, The Creator"
+        assertEquals(listOf("Tyler, The Creator"), model.artists.filter { it.key == "tyler, the creator" }.map { it.name })
+        assertTrue(model.artists.none { it.key == "the creator" || it.key == "tyler" || it.key == "tyler/ the creator" })
     }
 
     @Test
-    fun `nothing nowhere is one artist`() {
+    fun `nothing nowhere is kept as one credit and never split into two artists`() {
         val extra = RawTrack(9_000_001, "Song", "nothing/nowhere.", null, "Album", 1, 1, "/m/nn", false)
-        val withNn = LibraryModelBuilder.build(LibraryFixture.tracks + extra, emptyMap())
-        assertEquals(1, withNn.artists.count { it.key == "nothing/nowhere." })
-        assertTrue(withNn.artists.none { it.key == "nothing" || it.key == "nowhere." })
+        val tracks = LibraryFixture.tracks + extra
+        // Layer A: one unresolved credit, not split.
+        val credits = CreditResolver(EvidenceIndex.build(tracks)).resolve(extra)
+        assertEquals(listOf("nothing/nowhere."), credits.map { it.text })
+        // Identity: without approved evidence it is credit text only, never an artist row.
+        val withNn = LibraryModelBuilder.build(tracks, emptyMap())
+        assertTrue(withNn.artists.none { it.key == "nothing" || it.key == "nowhere." || it.key == "nothing/nowhere." })
     }
 
     @Test
@@ -68,8 +73,9 @@ class AcceptanceCriteriaTest {
     @Test
     fun `credits are identical with and without album presentation`() {
         val resolver = CreditResolver(EvidenceIndex.build(LibraryFixture.tracks))
+        val identity = ArtistIdentityResolver(ManualArtistAliases.aliasKeys, ManualArtistAliases.artistNames)
         for (track in LibraryFixture.tracks) {
-            val expected = resolver.resolve(track).map { it.text to it.role }
+            val expected = resolver.resolve(track).filter(identity::hasIdentity).map { it.text to it.role }
             val actual = model.credits.filter { it.songId == track.songId }.sortedBy { it.position }.map { it.creditText to it.role }
             assertEquals(expected, actual)
         }

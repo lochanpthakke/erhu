@@ -32,13 +32,50 @@ object AlbumPresenter {
                 .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
                 .map { it.key }
         val tagged = group.albumArtistKey
+        val dominantCredit = if (core.isEmpty()) dominantUnresolvedCredit(group, creditsBySong, standaloneKeys, identity) else null
         return when {
-            tagged != null -> AlbumPresentation(group.albumArtistText ?: displayName(tagged), listOf(tagged), false)
-            group.isCompilationTagged || core.isEmpty() || core.size > MAX_CORE_ARTISTS ->
-                AlbumPresentation(VARIOUS_ARTISTS, emptyList(), true)
+            // A tagged Album Artist is shown as written; it is linked only when it names one artist.
+            tagged != null -> {
+                val links = if (taggedHasIdentity(group, identity)) listOf(tagged) else emptyList()
+                AlbumPresentation(group.albumArtistText ?: displayName(tagged), links, false)
+            }
+            group.isCompilationTagged || core.size > MAX_CORE_ARTISTS -> AlbumPresentation(VARIOUS_ARTISTS, emptyList(), true)
+            // Credit text only (no artist identity): shown as written, linked to nobody.
+            dominantCredit != null -> AlbumPresentation(dominantCredit, emptyList(), false)
+            core.isEmpty() -> AlbumPresentation(VARIOUS_ARTISTS, emptyList(), true)
             else -> AlbumPresentation(joinNames(core.map(displayName)), core, false)
         }
     }
+
+    private fun taggedHasIdentity(
+        group: AlbumGroup,
+        identity: ArtistIdentityResolver,
+    ): Boolean {
+        val text = group.albumArtistText ?: return true
+        return CreditText.segmentsOf(text).size <= 1 || identity.isAliased(CreditText.canonicalKey(text))
+    }
+
+    /** The unresolved primary credit text on at least half the tracks, when no artist qualifies. */
+    private fun dominantUnresolvedCredit(
+        group: AlbumGroup,
+        creditsBySong: Map<Long, List<ResolvedCredit>>,
+        standaloneKeys: Set<String>,
+        identity: ArtistIdentityResolver,
+    ): String? =
+        group.songIds
+            .flatMap { id ->
+                creditsBySong[id]
+                    .orEmpty()
+                    .filter { it.role == CreditRole.PRIMARY && !identity.hasIdentity(it) && it.segmentKeys.first() !in standaloneKeys }
+                    .map { it.text }
+                    .toSet()
+            }.groupingBy { it }
+            .eachCount()
+            .entries
+            .filter { it.value * 2 >= group.songIds.size }
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .firstOrNull()
+            ?.key
 
     private fun coreKeys(
         credits: List<ResolvedCredit>,
@@ -47,9 +84,14 @@ object AlbumPresenter {
     ): Set<String> =
         credits
             .filter { it.role == CreditRole.PRIMARY }
-            .map { credit ->
+            .mapNotNull { credit ->
                 val lead = credit.segmentKeys.first()
-                identity.canonicalKey(if (credit.isUnresolved && lead in standaloneKeys) lead else credit.key)
+                when {
+                    identity.hasIdentity(credit) -> identity.canonicalKey(credit.key)
+                    // Counts toward the standalone artist it starts with (raw evidence), never itself.
+                    lead in standaloneKeys -> identity.canonicalKey(lead)
+                    else -> null
+                }
             }.toSet()
 
     private fun joinNames(names: List<String>): String =

@@ -1,5 +1,8 @@
 package com.lochanpthakke.empee3.core.database.library
 
+/** A song's primary artist id when none of its credits is a resolved artist (no artist row has this id). */
+const val NO_ARTIST_ID = 0L
+
 /** The derived library for one scan; written to the database by the scanner. */
 data class LibraryModel(
     val songs: Map<Long, SongAssignment>,
@@ -50,6 +53,7 @@ data class ArtistRow(
     val isUnresolved: Boolean,
 )
 
+/** [artistId] is the hash of the unresolved credit text (a credit id), never an artist row. */
 data class UnverifiedSegmentRow(
     val songId: Long,
     val artistId: Long,
