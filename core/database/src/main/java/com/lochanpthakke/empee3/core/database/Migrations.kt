@@ -56,3 +56,22 @@ private val STATEMENTS_6_7 =
             "`played_at` INTEGER NOT NULL, PRIMARY KEY(`kind`, `item_id`))",
         "CREATE INDEX IF NOT EXISTS `index_recently_played_played_at` ON `recently_played` (`played_at`)",
     )
+
+/**
+ * v7 → v8: artist artwork records where it came from. Existing rows become automatic artwork of
+ * matcher 0, so the new matcher re-checks them once; nothing is deleted or rewritten.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_7_8 =
+    object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_7_8.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_7_8 =
+    listOf(
+        "ALTER TABLE `artist_artwork` ADD COLUMN `source` TEXT NOT NULL DEFAULT 'AUTO'",
+        "ALTER TABLE `artist_artwork` ADD COLUMN `provider_artist_id` INTEGER",
+        "ALTER TABLE `artist_artwork` ADD COLUMN `matcher_version` INTEGER NOT NULL DEFAULT 0",
+    )

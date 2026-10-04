@@ -5,6 +5,9 @@ package com.lochanpthakke.empee3.core.database.di
 import android.content.Context
 import androidx.work.WorkManager
 import com.lochanpthakke.empee3.core.database.lookup.RoomSongLookup
+import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
+import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepositoryImpl
+import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkStore
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepositoryImpl
 import com.lochanpthakke.empee3.core.database.repository.PlaylistArtworkStore
@@ -36,6 +39,10 @@ interface RepositoryModule {
     @Singleton
     fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
 
+    @Binds
+    @Singleton
+    fun bindArtistArtworkRepository(impl: ArtistArtworkRepositoryImpl): ArtistArtworkRepository
+
     companion object {
         @Provides
         @Singleton
@@ -46,6 +53,12 @@ interface RepositoryModule {
         fun providePlaylistArtworkStore(
             @ApplicationContext context: Context,
         ): PlaylistArtworkStore = PlaylistArtworkStore(File(context.filesDir, "playlist_artwork"))
+
+        @Provides
+        @Singleton
+        fun provideArtistArtworkStore(
+            @ApplicationContext context: Context,
+        ): ArtistArtworkStore = ArtistArtworkStore(File(context.filesDir, "artist_artwork"))
 
         @Provides
         @Singleton

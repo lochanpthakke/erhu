@@ -9,6 +9,7 @@ import com.lochanpthakke.empee3.core.database.entity.AlbumArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistAliasEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistArtworkEntity
 import com.lochanpthakke.empee3.core.database.entity.UnverifiedCreditSegmentEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LibraryModelDao {
@@ -32,4 +33,14 @@ interface LibraryModelDao {
 
     @Upsert
     suspend fun upsertArtwork(artwork: ArtistArtworkEntity)
+
+    @Query("SELECT * FROM artist_artwork WHERE artist_key = :artistKey LIMIT 1")
+    suspend fun getArtwork(artistKey: String): ArtistArtworkEntity?
+
+    @Query("SELECT artist_key FROM artist_artwork WHERE source = 'CUSTOM'")
+    fun observeCustomArtworkKeys(): Flow<List<String>>
+
+    /** Removes a custom image's row only; automatic rows are never deleted. */
+    @Query("DELETE FROM artist_artwork WHERE artist_key = :artistKey AND source = 'CUSTOM'")
+    suspend fun deleteCustomArtwork(artistKey: String): Int
 }

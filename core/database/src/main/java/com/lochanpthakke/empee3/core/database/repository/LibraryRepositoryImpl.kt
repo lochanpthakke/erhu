@@ -14,9 +14,7 @@ import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
-import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
-import com.lochanpthakke.empee3.core.database.entity.ArtistArtworkEntity
 import com.lochanpthakke.empee3.core.database.mapper.toDomainModel
 import com.lochanpthakke.empee3.core.database.scanner.LibraryScanWorker
 import com.lochanpthakke.empee3.core.model.Album
@@ -37,7 +35,6 @@ class LibraryRepositoryImpl
         private val songDao: SongDao,
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
-        private val libraryModelDao: LibraryModelDao,
         // Lazy: this repository is created during Application injection (widget
         // updater), before HiltWorkerFactory is ready for WorkManager's config.
         private val workManager: Lazy<WorkManager>,
@@ -174,19 +171,6 @@ class LibraryRepositoryImpl
                 .getWorkInfosForUniqueWorkFlow(LibraryScanWorker.WORK_NAME)
                 .map { infos -> infos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED } }
                 .distinctUntilChanged()
-
-        override suspend fun updateArtistArtwork(
-            artistId: Long,
-            artworkUri: String?,
-        ): AppResult<Unit> =
-            appResultOf {
-                artistDao.updateArtistArtwork(artistId, artworkUri)
-                // Also keep it by artist key: the artists table is rebuilt on every scan.
-                val key = artistDao.getArtistById(artistId)?.artistKey.orEmpty()
-                if (key.isNotEmpty() && artworkUri != null) {
-                    libraryModelDao.upsertArtwork(ArtistArtworkEntity(key, artworkUri, System.currentTimeMillis()))
-                }
-            }
 
         companion object {
             private const val DEFAULT_PAGE_SIZE = 30

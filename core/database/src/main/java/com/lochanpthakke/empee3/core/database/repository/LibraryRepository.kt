@@ -70,9 +70,4 @@ interface LibraryRepository {
 
     /** True while a library scan is queued or running. */
     fun observeIsScanning(): Flow<Boolean>
-
-    suspend fun updateArtistArtwork(
-        artistId: Long,
-        artworkUri: String?,
-    ): AppResult<Unit>
 }

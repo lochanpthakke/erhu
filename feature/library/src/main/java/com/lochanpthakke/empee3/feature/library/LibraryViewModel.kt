@@ -8,6 +8,7 @@ import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
 import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
+import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
@@ -15,7 +16,6 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.Song
-import com.lochanpthakke.empee3.core.network.provider.ArtistArtworkLookup
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
@@ -72,8 +72,9 @@ class LibraryViewModel
         private val libraryRepository: LibraryRepository,
         val playbackRepository: PlaybackRepository,
         private val metadataRepository: MetadataRepository,
-        private val deezerProvider: com.lochanpthakke.empee3.core.network.provider.DeezerProvider,
         private val themeRepository: com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository,
+        private val artistArtworkRepository: ArtistArtworkRepository,
+        private val artistArtworkUpdater: ArtistArtworkUpdater,
         recentlyPlayed: RecentlyPlayedRecorder,
     ) : ViewModel() {
         val isCustomScanLocationEnabled: StateFlow<Boolean> = themeRepository.isCustomScanLocationEnabled
@@ -264,29 +265,39 @@ class LibraryViewModel
         private val _isSearchingArtwork = MutableStateFlow(false)
         val isSearchingArtwork: StateFlow<Boolean> = _isSearchingArtwork.asStateFlow()
 
-        private val resolvedArtistIds = mutableSetOf<Long>()
-
         init {
             triggerScan()
             resolveArtistArtwork()
         }
 
+        /** Keys of artists whose image the user chose (custom artwork always wins over Deezer). */
+        val customArtworkArtistKeys: StateFlow<Set<String>> =
+            artistArtworkRepository
+                .observeCustomArtworkKeys()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
+
         private fun resolveArtistArtwork() {
+            viewModelScope.launch(Dispatchers.IO) { artistArtworkUpdater.updateDueArtists(System.currentTimeMillis()) }
+        }
+
+        /** Saves [imageBytes] (an encoded, cropped image) as [artist]'s own picture. */
+        fun setCustomArtistArtwork(
+            artist: Artist,
+            imageBytes: ByteArray,
+        ) {
             viewModelScope.launch(Dispatchers.IO) {
-                val artists = libraryRepository.getAllArtists().first()
-                // Unresolved credits ("Tyler/ The Creator") are not one artist name, so no profile photo is looked up.
-                // A legacy "not found" from the old query is retried once (see ArtistArtworkCache).
-                val missing =
-                    artists.filter { ArtistArtworkCache.needsLookup(it.artworkUri) && !it.isUnresolved && it.id !in resolvedArtistIds }
-                for (artist in missing) {
-                    resolvedArtistIds.add(artist.id)
-                    when (val result = deezerProvider.lookupArtistArtwork(artist.name)) {
-                        is ArtistArtworkLookup.Found -> libraryRepository.updateArtistArtwork(artist.id, result.url)
-                        ArtistArtworkLookup.NotFound -> libraryRepository.updateArtistArtwork(artist.id, ArtistArtworkCache.NOT_FOUND)
-                        // Offline or over the request quota: store nothing, the next launch tries again.
-                        ArtistArtworkLookup.Failed -> Unit
-                    }
-                    delay(ARTWORK_LOOKUP_SPACING_MS)
+                (artistArtworkRepository.setCustomArtwork(artist.id, imageBytes) as? AppResult.Error)?.let {
+                    _userMessage.value = it.error.message
+                }
+            }
+        }
+
+        /** Removes [artist]'s own picture, then lets the automatic Deezer lookup decide again. */
+        fun clearCustomArtistArtwork(artist: Artist) {
+            viewModelScope.launch(Dispatchers.IO) {
+                when (val result = artistArtworkRepository.clearCustomArtwork(artist.id)) {
+                    is AppResult.Error -> _userMessage.value = result.error.message
+                    is AppResult.Success -> artistArtworkUpdater.lookUp(artist)
                 }
             }
         }
@@ -812,8 +823,5 @@ class LibraryViewModel
             private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L
             private const val RECENT_ALBUMS_LIMIT = 12
-
-            /** Deezer allows 50 requests per 5 s; keep the artwork lookups well under that. */
-            private const val ARTWORK_LOOKUP_SPACING_MS = 120L
         }
     }

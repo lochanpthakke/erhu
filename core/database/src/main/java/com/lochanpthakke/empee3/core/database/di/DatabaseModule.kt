@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
 import com.lochanpthakke.empee3.core.database.MIGRATION_6_7
+import com.lochanpthakke.empee3.core.database.MIGRATION_7_8
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
@@ -33,7 +34,7 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7)
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()

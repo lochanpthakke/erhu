@@ -14,5 +14,11 @@ interface DeezerApi {
     @GET("search/artist")
     suspend fun searchArtist(
         @Query("q") query: String,
+        @Query("limit") limit: Int = ARTIST_SEARCH_LIMIT,
     ): DeezerArtistSearchResponse
+
+    companion object {
+        /** Deezer's page maximum: same-name duplicates often rank below the first 25 results. */
+        const val ARTIST_SEARCH_LIMIT = 100
+    }
 }

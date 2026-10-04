@@ -38,7 +38,7 @@ import com.lochanpthakke.empee3.core.database.entity.UnverifiedCreditSegmentEnti
         UnverifiedCreditSegmentEntity::class,
         RecentlyPlayedEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class EmPee3Database : RoomDatabase() {

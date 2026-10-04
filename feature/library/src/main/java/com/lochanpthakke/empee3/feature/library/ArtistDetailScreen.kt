@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
@@ -40,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
@@ -96,6 +98,8 @@ fun ArtistDetailScreen(
 
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
+    var showImageDialog by remember { mutableStateOf(false) }
+    val customArtworkKeys by viewModel.customArtworkArtistKeys.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     UserMessageEffect(viewModel.userMessage, snackbarHostState, viewModel::consumeUserMessage)
@@ -148,6 +152,7 @@ fun ArtistDetailScreen(
                             songs = allArtistSongs,
                             onPlay = { viewModel.playInOrder(allArtistSongs) },
                             onShuffle = { viewModel.playShuffled(allArtistSongs) },
+                            onArtworkClick = { showImageDialog = true },
                         )
                     }
 
@@ -284,6 +289,23 @@ fun ArtistDetailScreen(
             onDismiss = { songsForPlaylist = null },
         )
     }
+
+    val shownArtist = detail?.artist
+    if (showImageDialog && shownArtist != null) {
+        ArtistImageDialog(
+            artist = shownArtist,
+            hasCustomImage = shownArtist.artistKey in customArtworkKeys,
+            onDismiss = { showImageDialog = false },
+            onSave = { change ->
+                when (change) {
+                    is CoverChange.Replace -> viewModel.setCustomArtistArtwork(shownArtist, change.jpegBytes)
+                    CoverChange.Remove -> viewModel.clearCustomArtistArtwork(shownArtist)
+                    CoverChange.None -> Unit
+                }
+                showImageDialog = false
+            },
+        )
+    }
 }
 
 @Composable
@@ -292,6 +314,7 @@ private fun ArtistHeader(
     songs: List<Song>,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
+    onArtworkClick: () -> Unit,
 ) {
     Column(
         modifier =
@@ -301,13 +324,16 @@ private fun ArtistHeader(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ArtistArtwork(
-            artworkUri = artist.artworkUri,
+            // "NONE…" means looked up, no photo: show the monogram.
+            artworkUri = artist.artworkUri?.takeIf(ArtistArtworkCache::hasArtwork),
             artistName = artist.name,
             modifier =
                 Modifier
                     .widthIn(max = ArtworkSize.heroMax)
                     .fillMaxWidth(ARTWORK_WIDTH_FRACTION)
-                    .aspectRatio(1f),
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+                    .clickable(onClickLabel = "Change artist image", onClick = onArtworkClick),
         )
         Spacer(modifier = Modifier.height(Spacing.lg))
         Text(
