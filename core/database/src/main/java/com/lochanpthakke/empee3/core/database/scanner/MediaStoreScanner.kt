@@ -11,15 +11,18 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
+import androidx.datastore.core.DataStore
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
 import com.lochanpthakke.empee3.core.database.library.LibraryModelBuilder
 import com.lochanpthakke.empee3.core.database.library.RawTrack
+import com.lochanpthakke.empee3.core.datastore.proto.PlaybackStateProto
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.io.File
@@ -33,6 +36,7 @@ class MediaStoreScanner
         @ApplicationContext private val context: Context,
         private val libraryModelDao: LibraryModelDao,
         private val libraryWriter: LibraryWriter,
+        private val dataStore: DataStore<PlaybackStateProto>,
         private val logger: Logger,
     ) {
         @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength", "TooGenericExceptionCaught")
@@ -45,6 +49,16 @@ class MediaStoreScanner
                     emit(ScanProgress(isComplete = true))
                     return@flow
                 }
+
+                val proto = try {
+                    dataStore.data.first()
+                } catch (e: Exception) {
+                    logger.d(TAG, "Failed to read scan location settings: ${e.message}")
+                    null
+                }
+                val isCustomEnabled = proto?.isCustomScanLocationEnabled == true
+                val customPath = proto?.customScanLocationPath.orEmpty().trim()
+                val customUri = proto?.customScanLocationUri.orEmpty().trim()
 
                 triggerMediaScannerForStorage()
                 delay(SCAN_INDEXING_DELAY_MS)
@@ -135,7 +149,7 @@ class MediaStoreScanner
                             val rawAlbumId = c.getLong(rawAlbumIdColumn)
                             val durationMs = c.getLong(durationColumn)
                             val filePath = c.getString(dataColumn) ?: ""
-                            if (isExcludedFromLibrary(filePath)) {
+                            if (isExcludedFromLibrary(filePath) || !matchesCustomLocation(filePath, isCustomEnabled, customPath, customUri)) {
                                 scannedCount++
                                 continue
                             }
@@ -207,6 +221,35 @@ class MediaStoreScanner
 
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
+
+        private fun matchesCustomLocation(
+            filePath: String,
+            isCustomEnabled: Boolean,
+            customPath: String,
+            customUri: String,
+        ): Boolean {
+            if (!isCustomEnabled || (customPath.isBlank() && customUri.isBlank())) return true
+            val lowerFilePath = filePath.lowercase().replace('\\', '/')
+            val lowerCustomPath = customPath.lowercase().replace('\\', '/').trimEnd('/')
+
+            if (lowerCustomPath.isNotBlank()) {
+                if (lowerCustomPath.startsWith("/")) {
+                    if (lowerFilePath.startsWith(lowerCustomPath)) return true
+                } else {
+                    if (lowerFilePath.contains(lowerCustomPath)) return true
+                }
+            }
+
+            if (customUri.isNotBlank()) {
+                val treeId = Uri.decode(customUri).substringAfter("/tree/", "").substringBefore("/document/")
+                val relativePath = treeId.substringAfter(':').lowercase().trimEnd('/')
+                if (relativePath.isNotBlank() && lowerFilePath.contains(relativePath)) {
+                    return true
+                }
+            }
+
+            return false
+        }
 
         private fun hasAudioPermission(): Boolean {
             val permission =

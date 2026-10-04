@@ -22,11 +22,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
@@ -441,6 +444,7 @@ fun MainScaffold() {
                                                     themeViewModel = themeViewModel,
                                                     soundViewModel = soundViewModel,
                                                     diagnosticsViewModel = diagnosticsViewModel,
+                                                    libraryViewModel = libraryViewModel,
                                                 )
                                             }
                                         }
@@ -585,10 +589,37 @@ private fun LibraryRoute(
         onPauseOrDispose {}
     }
 
+    val scanLocationConfigured by libraryViewModel.scanLocationConfigured.collectAsState()
+
+    val folderPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocumentTree(),
+        ) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                } catch (_: Exception) {}
+                val displayPath = parseFolderDisplayName(uri)
+                libraryViewModel.setCustomScanLocation(uri.toString(), displayPath)
+            } else {
+                libraryViewModel.setScanEntireDevice()
+            }
+        }
+
     // The section navigation is only shown over actual library content.
     LaunchedEffect(permissionState) { onContentShownChange(permissionState == PermissionUiState.GRANTED) }
 
     if (permissionState == PermissionUiState.GRANTED) {
+        if (!scanLocationConfigured) {
+            ChooseScanLocationDialog(
+                onSelectCustomFolder = { folderPickerLauncher.launch(null) },
+                onScanEntireDevice = { libraryViewModel.setScanEntireDevice() },
+            )
+        }
+
         LibraryScreen(
             viewModel = libraryViewModel,
             playlistsViewModel = playlistsViewModel,
@@ -659,4 +690,51 @@ private fun PermissionRequestView(
             }
         }
     }
+}
+
+private fun parseFolderDisplayName(uri: Uri): String {
+    val treeId = Uri.decode(uri.toString()).substringAfter("/tree/", "").substringBefore("/document/")
+    if (treeId.isNotBlank()) {
+        val pathPart = treeId.substringAfter(':')
+        if (pathPart.isNotBlank()) {
+            return pathPart.trim('/')
+        }
+    }
+    return uri.lastPathSegment?.substringAfter(':')?.trim('/')?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+}
+
+@Composable
+private fun ChooseScanLocationDialog(
+    onSelectCustomFolder: () -> Unit,
+    onScanEntireDevice: () -> Unit,
+) {
+    GlassAlertDialog(
+        onDismissRequest = {},
+        title = { Text("Choose Scan Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(
+                    "Choose where empee3 should look for your music files.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(modifier = Modifier.height(Spacing.md))
+                Button(
+                    onClick = onSelectCustomFolder,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(imageVector = Icons.Default.Folder, contentDescription = null)
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Text("Set Custom Scan Location")
+                }
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                androidx.compose.material3.TextButton(
+                    onClick = onScanEntireDevice,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Scan Entire Device")
+                }
+            }
+        },
+        confirmButton = {},
+    )
 }

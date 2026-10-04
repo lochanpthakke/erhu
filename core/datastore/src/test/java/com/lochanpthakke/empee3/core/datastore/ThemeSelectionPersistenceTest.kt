@@ -37,8 +37,8 @@ class ThemeSelectionPersistenceTest {
     }
 
     @Test
-    fun glassEffect_isOffWhenNeverSet_andPersistsBothWays() {
-        assertFalse(stored("default_dark").afterRestart().glassEffectEnabled)
+    fun glassEffect_isUnsetWhenNeverSet_andPersistsBothWays() {
+        assertFalse(stored("default_dark").afterRestart().hasGlassEffectEnabled())
         val on = stored("default_dark").toBuilder().setGlassEffectEnabled(true).build().afterRestart()
         assertTrue(on.glassEffectEnabled)
         val off = on.toBuilder().setGlassEffectEnabled(false).build().afterRestart()
