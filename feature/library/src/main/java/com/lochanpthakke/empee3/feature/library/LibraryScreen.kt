@@ -128,6 +128,13 @@ fun LibraryScreen(
     // Search is a mode of this screen: system Back leaves it (and clears the query).
     BackHandler(enabled = isSearchActive, onBack = closeSearch)
 
+    val isCustomScanEnabled by viewModel.isCustomScanLocationEnabled.collectAsState()
+    val customScanPath by viewModel.customScanLocationPath.collectAsState()
+    val emptyMessage = when {
+        isCustomScanEnabled && customScanPath.isNotBlank() -> "No songs found in $customScanPath"
+        else -> "No songs found on this device"
+    }
+
     // Picking a section in the bottom navigation while searching leaves search.
     var lastSection by rememberSaveable { mutableStateOf(section) }
     LaunchedEffect(section) {
@@ -215,6 +222,7 @@ fun LibraryScreen(
                                 actions = actions,
                                 topInset = scroll.contentTop,
                                 bottomInset = scroll.contentBottom,
+                                emptyMessage = emptyMessage,
                             )
                         LibrarySection.ALBUMS ->
                             AlbumsTab(

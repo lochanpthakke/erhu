@@ -33,10 +33,10 @@ class ThemeRepositoryImpl
         private val _appThemeState = MutableStateFlow<ThemeManifest>(BuiltInThemes.DEFAULT_DARK)
         override val appThemeState: StateFlow<ThemeManifest> = _appThemeState.asStateFlow()
 
-        private val _appThemeId = MutableStateFlow(BuiltInThemes.SYSTEM_DEFAULT_ID)
+        private val _appThemeId = MutableStateFlow(BuiltInThemes.DEFAULT_DARK.id)
         override val appThemeId: StateFlow<String> = _appThemeId.asStateFlow()
 
-        private val _glassEffectEnabled = MutableStateFlow(false)
+        private val _glassEffectEnabled = MutableStateFlow(true)
         override val glassEffectEnabled: StateFlow<Boolean> = _glassEffectEnabled.asStateFlow()
 
         private val _appSkinState = MutableStateFlow<SkinManifest?>(null)
@@ -54,6 +54,18 @@ class ThemeRepositoryImpl
         private val _isRollbackFlagActive = MutableStateFlow(false)
         override val isRollbackFlagActive: StateFlow<Boolean> = _isRollbackFlagActive.asStateFlow()
 
+        private val _customScanLocationUri = MutableStateFlow("")
+        override val customScanLocationUri: StateFlow<String> = _customScanLocationUri.asStateFlow()
+
+        private val _customScanLocationPath = MutableStateFlow("")
+        override val customScanLocationPath: StateFlow<String> = _customScanLocationPath.asStateFlow()
+
+        private val _isCustomScanLocationEnabled = MutableStateFlow(false)
+        override val isCustomScanLocationEnabled: StateFlow<Boolean> = _isCustomScanLocationEnabled.asStateFlow()
+
+        private val _scanLocationConfigured = MutableStateFlow(false)
+        override val scanLocationConfigured: StateFlow<Boolean> = _scanLocationConfigured.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -61,10 +73,14 @@ class ThemeRepositoryImpl
                     dataStore.updateData { it.migratedThemeSelection() ?: it }
                     proto = migrated
                 }
-                _glassEffectEnabled.value = proto.glassEffectEnabled
+                _glassEffectEnabled.value = if (proto.hasGlassEffectEnabled()) proto.glassEffectEnabled else true
                 _libraryLayoutMode.value = proto.libraryLayoutMode.ifBlank { "GRID" }
                 _isRollbackFlagActive.value = proto.themeRollbackFlag
-                resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.SYSTEM_DEFAULT_ID }, isApp = true)
+                _customScanLocationUri.value = proto.customScanLocationUri
+                _customScanLocationPath.value = proto.customScanLocationPath
+                _isCustomScanLocationEnabled.value = proto.isCustomScanLocationEnabled
+                _scanLocationConfigured.value = proto.scanLocationConfigured
+                resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
         }
@@ -106,6 +122,34 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setGlassEffectEnabled(enabled).build() }
                 _glassEffectEnabled.value = enabled
+            }
+
+        override suspend fun setCustomScanLocation(uri: String, path: String): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData {
+                    it.toBuilder()
+                        .setCustomScanLocationUri(uri)
+                        .setCustomScanLocationPath(path)
+                        .setIsCustomScanLocationEnabled(true)
+                        .setScanLocationConfigured(true)
+                        .build()
+                }
+                _customScanLocationUri.value = uri
+                _customScanLocationPath.value = path
+                _isCustomScanLocationEnabled.value = true
+                _scanLocationConfigured.value = true
+            }
+
+        override suspend fun setScanEntireDevice(): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData {
+                    it.toBuilder()
+                        .setIsCustomScanLocationEnabled(false)
+                        .setScanLocationConfigured(true)
+                        .build()
+                }
+                _isCustomScanLocationEnabled.value = false
+                _scanLocationConfigured.value = true
             }
 
         override suspend fun importPackage(inputStream: InputStream): AppResult<ImportedThemeResult> =

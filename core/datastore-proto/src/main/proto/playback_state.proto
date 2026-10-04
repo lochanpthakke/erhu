@@ -22,6 +22,10 @@ message PlaybackStateProto {
   reserved 14;
   // Glass material on floating surfaces, independent of the theme. Unset = off.
   optional bool glass_effect_enabled = 15;
+  string custom_scan_location_uri = 16;
+  string custom_scan_location_path = 17;
+  bool is_custom_scan_location_enabled = 18;
+  bool scan_location_configured = 19;
 }
 
 message EqPresetProto {

@@ -31,6 +31,7 @@ dependencies {
     implementation(project(":core:datastore"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:network"))
+    implementation(project(":feature:library"))
 
     implementation(libs.androidx.media3.common)
 

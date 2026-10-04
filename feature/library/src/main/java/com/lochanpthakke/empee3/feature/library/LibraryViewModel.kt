@@ -73,8 +73,26 @@ class LibraryViewModel
         val playbackRepository: PlaybackRepository,
         private val metadataRepository: MetadataRepository,
         private val deezerProvider: com.lochanpthakke.empee3.core.network.provider.DeezerProvider,
+        private val themeRepository: com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository,
         recentlyPlayed: RecentlyPlayedRecorder,
     ) : ViewModel() {
+        val isCustomScanLocationEnabled: StateFlow<Boolean> = themeRepository.isCustomScanLocationEnabled
+        val customScanLocationPath: StateFlow<String> = themeRepository.customScanLocationPath
+        val scanLocationConfigured: StateFlow<Boolean> = themeRepository.scanLocationConfigured
+
+        fun setCustomScanLocation(uri: String, displayPath: String) {
+            viewModelScope.launch {
+                themeRepository.setCustomScanLocation(uri, displayPath)
+                triggerScan()
+            }
+        }
+
+        fun setScanEntireDevice() {
+            viewModelScope.launch {
+                themeRepository.setScanEntireDevice()
+                triggerScan()
+            }
+        }
         /** Albums of songs actually played, newest first (Tracks home). */
         val recentAlbums: StateFlow<List<Album>> =
             recentlyPlayed

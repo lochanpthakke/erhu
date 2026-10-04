@@ -38,9 +38,12 @@ dependencies {
     implementation(project(":core:common"))
     api(project(":core:model"))
     implementation(project(":core:network"))
+    implementation(project(":core:datastore-proto"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.datastore)
+    implementation(libs.protobuf.javalite)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

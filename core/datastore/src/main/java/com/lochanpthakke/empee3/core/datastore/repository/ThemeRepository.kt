@@ -26,6 +26,11 @@ interface ThemeRepository {
     /** Glass material on floating surfaces, independent of the theme. */
     val glassEffectEnabled: StateFlow<Boolean>
 
+    val customScanLocationUri: StateFlow<String>
+    val customScanLocationPath: StateFlow<String>
+    val isCustomScanLocationEnabled: StateFlow<Boolean>
+    val scanLocationConfigured: StateFlow<Boolean>
+
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
     suspend fun setWidgetTheme(themeId: String): AppResult<Unit>
@@ -33,6 +38,10 @@ interface ThemeRepository {
     suspend fun setLibraryLayoutMode(mode: String): AppResult<Unit>
 
     suspend fun setGlassEffectEnabled(enabled: Boolean): AppResult<Unit>
+
+    suspend fun setCustomScanLocation(uri: String, path: String): AppResult<Unit>
+
+    suspend fun setScanEntireDevice(): AppResult<Unit>
 
     suspend fun importPackage(inputStream: InputStream): AppResult<ImportedThemeResult>
 

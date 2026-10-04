@@ -50,7 +50,7 @@ object EmPee3Theme {
 fun EmPee3Theme(
     themeManifest: ThemeManifest = BuiltInThemes.DEFAULT_DARK,
     skinManifest: SkinManifest? = null,
-    glassEffectEnabled: Boolean = false,
+    glassEffectEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val colors = themeManifest.colors

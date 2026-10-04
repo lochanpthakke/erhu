@@ -56,6 +56,7 @@ internal fun HomeFeed(
     actions: SongActions,
     topInset: Dp,
     bottomInset: Dp,
+    emptyMessage: String = "No songs found on this device",
 ) {
     val hasShelves = recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty()
     LazyColumn(
@@ -91,7 +92,7 @@ internal fun HomeFeed(
         if (songs.itemCount == 0) {
             item(key = "empty", contentType = "empty") {
                 EmptyState(
-                    message = if (isScanning) "Scanning your music…" else "No songs found. Pull down to rescan your device.",
+                    message = if (isScanning) "Scanning your music…" else emptyMessage,
                     icon = LibrarySection.TRACKS.icon,
                 )
             }

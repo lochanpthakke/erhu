@@ -1,5 +1,9 @@
 package com.lochanpthakke.empee3.feature.settings
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,24 +16,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -41,6 +52,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
+import com.lochanpthakke.empee3.feature.library.LibraryViewModel
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
 import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
@@ -68,6 +80,12 @@ private val SETTING_CATEGORIES =
             "Audio & Equalizer",
             "8-band equalizer, presets and audio effects",
             Icons.Default.Equalizer,
+        ),
+        SettingCategory(
+            "library",
+            "Library & Scan Location",
+            "Manage custom scan location folder or scan entire device",
+            Icons.Default.Folder,
         ),
         SettingCategory(
             "metadata",
@@ -118,6 +136,7 @@ fun SettingsCategoryScreen(
     themeViewModel: ThemeViewModel,
     soundViewModel: SoundViewModel,
     diagnosticsViewModel: DiagnosticsViewModel,
+    libraryViewModel: LibraryViewModel,
 ) {
     val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
     when (categoryId) {
@@ -127,6 +146,12 @@ fun SettingsCategoryScreen(
                 viewModel = soundViewModel,
                 title = title,
                 navigation = TopBarNavigation.Detail(onBack),
+            )
+        "library" ->
+            LibrarySettingsSubPage(
+                viewModel = libraryViewModel,
+                title = title,
+                onBack = onBack,
             )
         "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel, title = title, onBack = onBack)
         else ->
@@ -197,6 +222,133 @@ private fun MainSettingsList(
             }
         }
     }
+}
+
+@Composable
+private fun LibrarySettingsSubPage(
+    viewModel: LibraryViewModel,
+    title: String,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    val isCustomScanEnabled by viewModel.isCustomScanLocationEnabled.collectAsState()
+    val customScanPath by viewModel.customScanLocationPath.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
+
+    val folderPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocumentTree(),
+        ) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                } catch (_: Exception) {}
+                val displayPath = parseFolderDisplayName(uri)
+                viewModel.setCustomScanLocation(uri.toString(), displayPath)
+            }
+        }
+
+    AppScaffold(
+        topBar = { AppTopBar(navigation = TopBarNavigation.Detail(onBack), title = title) },
+    ) { innerPadding ->
+        val scroll = innerPadding.forScrollingContent()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(scroll.container)
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = scroll.contentTop)
+                    .padding(Spacing.screenGutter)
+                    .padding(bottom = scroll.contentBottom),
+        ) {
+            Text(
+                text = "Scan Location",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(Spacing.sm))
+
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Spacing.xs)
+                        .clickable { viewModel.setScanEntireDevice() },
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = if (!isCustomScanEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Scan Entire Device", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Scan all storage volumes for music files", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (!isCustomScanEnabled) {
+                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = Spacing.xs)
+                        .clickable { folderPickerLauncher.launch(null) },
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = if (isCustomScanEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Custom Folder Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isCustomScanEnabled && customScanPath.isNotBlank()) "Location: $customScanPath" else "Tap to choose a specific scan directory",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    if (isCustomScanEnabled) {
+                        Icon(imageVector = Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xl))
+
+            Button(
+                onClick = { viewModel.triggerScan() },
+                enabled = !isScanning,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text(if (isScanning) "Scanning Library…" else "Rescan Library Now")
+            }
+        }
+    }
+}
+
+private fun parseFolderDisplayName(uri: Uri): String {
+    val treeId = Uri.decode(uri.toString()).substringAfter("/tree/", "").substringBefore("/document/")
+    if (treeId.isNotBlank()) {
+        val pathPart = treeId.substringAfter(':')
+        if (pathPart.isNotBlank()) {
+            return pathPart.trim('/')
+        }
+    }
+    return uri.lastPathSegment?.substringAfter(':')?.trim('/')?.ifBlank { "Selected Folder" } ?: "Selected Folder"
 }
 
 @Composable
