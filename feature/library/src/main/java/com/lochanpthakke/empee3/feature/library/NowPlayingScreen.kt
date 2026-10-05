@@ -103,6 +103,9 @@ private const val INACTIVE_ALPHA = 0.6f
 /** The blurred artwork background is fully there over the first part of the expansion. */
 private const val BACKDROP_REVEAL_END = 0.4f
 
+/** Environment glass of the controls pill: a little less than the mini player's. */
+private const val NOW_PLAYING_OPTICS = 0.7f
+
 /** "Previous" restarts the current song past this position (the player's own rule). */
 private const val RESTART_THRESHOLD_MS = 3_000L
 
@@ -285,8 +288,12 @@ fun NowPlayingScreen(
                                     .then(
                                         if (glass) {
                                             Modifier
-                                                .glassPanel(Radius.pillShape, level = GlassLevel.Strong)
-                                                .padding(vertical = Spacing.sm)
+                                                .glassPanel(
+                                                    Radius.pillShape,
+                                                    level = GlassLevel.Strong,
+                                                    optics = NOW_PLAYING_OPTICS,
+                                                    environmentLens = true,
+                                                ).padding(vertical = Spacing.sm)
                                         } else {
                                             Modifier
                                         },

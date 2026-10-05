@@ -257,6 +257,8 @@ fun MainScaffold() {
                                 level = GlassLevel.Strong,
                                 elevated = false,
                                 backdrop = shellBackdrop,
+                                optics = DRAWER_OPTICS,
+                                environmentLens = true,
                             ),
                     ) {
                         Column(
@@ -499,6 +501,9 @@ fun MainScaffold() {
         }
     }
 }
+
+/** Environment glass of the navigation drawer: lots of text, so half the mini player's strength. */
+private const val DRAWER_OPTICS = 0.5f
 
 private fun NavHostController.navigateTopLevel(route: Any) {
     navigate(route) {

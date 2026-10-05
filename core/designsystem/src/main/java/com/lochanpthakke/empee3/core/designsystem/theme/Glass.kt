@@ -1,11 +1,6 @@
 package com.lochanpthakke.empee3.core.designsystem.theme
 
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -28,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -87,11 +81,8 @@ object EmPee3Glass {
 
 private const val SHEEN_ALPHA = 0.06f
 
-/** Saturation of the blurred backdrop: colours stay alive through the frost without turning loud. */
-private const val FROST_SATURATION = 1.2f
-
-/** Upper light band: where it fades out (fraction of the height). */
-private const val SPECULAR_END = 0.5f
+/** Upper light: a narrow sheen along the top edge, fading out by this fraction of the height. */
+private const val SPECULAR_END = 0.3f
 
 /** Lower shade: where it starts (fraction of the height). */
 private const val SHADE_START = 0.55f
@@ -124,13 +115,13 @@ enum class GlassLevel(
     internal val floats: Boolean,
 ) {
     /** Content-level surfaces (settings cards): a hint of material, no depth. */
-    Minimal(frostedFillScale = 0.5f, lightScale = 0.5f, shadeScale = 0.3f, floats = false),
+    Minimal(frostedFillScale = 0.3f, lightScale = 0.5f, shadeScale = 0.3f, floats = false),
 
     /** Top bars, search, selected indicators. */
-    Medium(frostedFillScale = 0.55f, lightScale = 0.8f, shadeScale = 0.6f, floats = false),
+    Medium(frostedFillScale = 0.3f, lightScale = 0.8f, shadeScale = 0.6f, floats = false),
 
     /** Mini player, library navigation, floating buttons, Now Playing controls, drawer. */
-    Strong(frostedFillScale = 0.62f, lightScale = 1f, shadeScale = 1f, floats = true),
+    Strong(frostedFillScale = 0.3f, lightScale = 1f, shadeScale = 1f, floats = true),
 }
 
 /**
@@ -138,8 +129,11 @@ enum class GlassLevel(
  *
  * 0. (Strong) a soft floating shadow, drawn only outside the shape so it never
  *    darkens the glass itself;
- * 1. the [backdrop] behind the surface, blurred and gently saturated
- *    (Android 12+ with a [GlassBackdrop]; skipped otherwise);
+ * 1. the [backdrop] seen THROUGH the surface (Android 12+ with a [GlassBackdrop];
+ *    skipped otherwise), through the glass optics (GlassOptics.kt): edge refraction
+ *    (Android 13+, not on bars), a light blur, and a tone that keeps the colours
+ *    while compressing brightness for legible text. The content stays recognisable;
+ *    the material is a thin tint on top, not a frost;
  * 2. a translucent fill in the theme's own panel colour (lighter when frosted),
  *    or [fill] when given (a solid surface that still wants the material's light);
  * 3. light: a soft upper band plus a corner highlight at the top-start;
@@ -150,6 +144,14 @@ enum class GlassLevel(
  * Without a backdrop or below Android 12 it is the same material minus the
  * blur, with the panel fill at full strength. Pure draw operations plus, when
  * frosted, one small graphics layer per surface; content is not recomposed.
+ *
+ * [optics]: strength of the edge optics (refraction, colour fringe, edge light),
+ * 1 for the primary floating surface (the mini player), [SECONDARY_OPTICS] otherwise.
+ *
+ * [environmentLens] (Android 13+, floating surfaces): the backdrop is drawn outside the
+ * shape clip with a margin, and the lens pulls in the content around the surface
+ * (GlassEnvironmentOptics.kt) instead of the inward-only edge optics; [optics] sets
+ * its strength against the mini player (1).
  *
  * [windowFrosted]: the platform already blurs behind this surface (a dialog
  * window with cross-window blur), so no in-window frost is drawn.
@@ -168,9 +170,15 @@ fun Modifier.glassPanel(
     windowFrosted: Boolean = false,
     bar: Boolean = false,
     fill: Color? = null,
+    optics: Float = SECONDARY_OPTICS,
+    environmentLens: Boolean = false,
 ): Modifier {
     val glass = LocalGlassTokens.current ?: return this
     val frost = backdrop?.takeIf { isBackdropBlurSupported && !windowFrosted }
+    // Floating surfaces: the lens pulls in the world around the surface.
+    val environment = environmentSource(frost, environmentLens, bar)
+    // The clipped frost, when the environment lens does not draw the backdrop itself.
+    val clippedFrost = frost?.takeIf { environment == null }
     val position = remember { GlassPosition() }
     val surfaceFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted)
     val shadowModifier = Modifier.glassElevation(elevated, shape, glass)
@@ -180,29 +188,53 @@ fun Modifier.glassPanel(
         .then(shadowModifier)
         .then(floatShadow)
         .then(tracked)
+        .environmentLayer(environment, shape, glass, optics) { position.offset }
         .clip(shape)
         .drawWithCache {
             val outline = shape.createOutline(size, layoutDirection, this)
             val layers = glassLayers(glass, level, surfaceFill, outlined, bar)
             val environment = Color(glass.backgroundGradient.first())
             val frostRadius = glass.frostRadiusDp.dp.toPx()
+            // Record a margin around the surface so the blur has real content at its edges.
+            val margin = ceil(frostRadius * 2).toInt()
             val frostLayer =
-                if (frost != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    obtainGraphicsLayer().apply { renderEffect = frostEffect(frostRadius) }
+                if (clippedFrost != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    // Full-width bars get no edge optics: they have no curved edge to bend light.
+                    val lens = if (bar) null else edgeLens(glass, outline, margin, optics)
+                    obtainGraphicsLayer().apply {
+                        renderEffect = glassOptics(frostRadius, glass.frostSaturation, glass.frostDim, glass.frostLift, lens)
+                    }
                 } else {
                     null
                 }
-            // Record a margin around the surface so the blur has real content at its edges.
-            val margin = ceil(frostRadius * 2).toInt()
 
             onDrawBehind {
-                if (frostLayer != null && frost != null) {
-                    drawFrost(frost, frostLayer, position.offset, margin, environment)
+                if (frostLayer != null && clippedFrost != null) {
+                    drawFrost(clippedFrost, frostLayer, position.offset, margin, environment)
                 }
                 drawGlassLayers(layers, outline, bar)
             }
         }
 }
+
+/** Edge optics of a surface of this size drawn through a backdrop layer with [margin] around it. */
+private fun CacheDrawScope.edgeLens(
+    glass: GlassTokens,
+    outline: Outline,
+    margin: Int,
+    optics: Float,
+): GlassLens =
+    GlassLens(
+        origin = margin.toFloat(),
+        size = size,
+        cornerRadius = outline.cornerRadius(),
+        band = glass.lensBandDp.dp.toPx(),
+        strength = glass.lensStrengthDp.dp.toPx() * optics,
+        capBoost = glass.lensCapBoost,
+        dispersion = glass.lensDispersionDp.dp.toPx() * optics,
+        highlight = glass.edgeLight * optics,
+        shade = glass.edgeShadeOptics * optics,
+    )
 
 /** Panel fill for [level]; lighter whenever something blurred is underneath (our frost or the window's). */
 private fun GlassTokens.surfaceFill(
@@ -322,24 +354,22 @@ private class GlassPosition {
     var offset by mutableStateOf(Offset.Zero)
 }
 
-@RequiresApi(Build.VERSION_CODES.S)
-private fun frostEffect(radiusPx: Float): androidx.compose.ui.graphics.RenderEffect {
-    val blur = RenderEffect.createBlurEffect(radiusPx, radiusPx, Shader.TileMode.CLAMP)
-    val saturate =
-        RenderEffect.createColorFilterEffect(
-            ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(FROST_SATURATION) }),
-        )
-    // Blur first, then saturate the blurred result.
-    return RenderEffect.createChainEffect(saturate, blur).asComposeRenderEffect()
-}
+/**
+ * Edge optics of surfaces other than the primary one (the mini player passes 1): the
+ * same material family, weaker, so the navigation and buttons do not compete with it.
+ */
+const val SECONDARY_OPTICS = 0.65f
 
 private const val CHROME_FADE_EXTENT_DP = 40
 private const val CHROME_FADE_EDGE_ALPHA = 0.9f
 private const val CHROME_FADE_BOTTOM_ALPHA = 0.97f
 
-/** With real frost the chrome itself separates from the content: only a breath of fade remains. */
-private const val FROSTED_FADE_EDGE_ALPHA = 0.35f
-private const val FROSTED_FADE_BOTTOM_ALPHA = 0.55f
+/**
+ * With real glass the chrome itself separates from the content, and the content must stay
+ * visible THROUGH it: no fade at the chrome's edge, only a breath towards the screen bottom.
+ */
+private const val FROSTED_FADE_EDGE_ALPHA = 0f
+private const val FROSTED_FADE_BOTTOM_ALPHA = 0.15f
 
 /**
  * Behind floating bottom chrome (the mini player): content that scrolls

@@ -92,7 +92,7 @@ fun MiniPlayer(
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
                 }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)
                 .glassPressEffect(interactionSource, shape)
-                .glassPanel(shape, strong = true, elevated = false, outlined = false)
+                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = 1f, environmentLens = true)
                 .clickable(interactionSource = interactionSource, indication = glassIndication(), onClick = onMiniPlayerClick),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),

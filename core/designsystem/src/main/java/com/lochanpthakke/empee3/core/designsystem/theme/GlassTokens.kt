@@ -33,8 +33,30 @@ data class GlassTokens(
     val artworkBlurRadiusDp: Int = 40,
     /** Darkening over the artwork backdrop so text stays readable. */
     val artworkScrim: Long,
-    /** Backdrop blur of glass surfaces (Android 12+, where a backdrop is available). */
-    val frostRadiusDp: Int = 20,
+    /**
+     * Light softening of what is seen through glass (Android 12+, where a backdrop is
+     * available). Kept small: the content underneath must stay recognisable.
+     */
+    val frostRadiusDp: Int = 6,
+    /** Colour intensity of the content seen through glass (vibrancy). */
+    val frostSaturation: Float = 1.35f,
+    /** Brightness compression of that content for legible text: share pulled towards black... */
+    val frostDim: Float = 0f,
+    /** ...and share pulled towards white. */
+    val frostLift: Float = 0f,
+    /**
+     * Edge optics (Android 13+), at full strength (the mini player; other surfaces use
+     * less): width of the edge zone, how far the content bends at the very edge, the
+     * red/blue separation there, and the soft edge light (share of the way to white).
+     */
+    val lensBandDp: Int = 22,
+    val lensStrengthDp: Int = 9,
+    /** Extra refraction in the curved ends of a surface (pill ends, corners). */
+    val lensCapBoost: Float = 0.5f,
+    val lensDispersionDp: Float = 0.6f,
+    val edgeLight: Float = 0.14f,
+    /** Slight dark falloff on the rim facing away from the light, for thickness. */
+    val edgeShadeOptics: Float = 0.12f,
     /** Soft light on the upper part of a glass surface (specular response). */
     val specular: Long = 0x14FFFFFFL,
     /** Shade along the lower part of a glass surface, for depth without a drop shadow. */
@@ -74,12 +96,14 @@ data class GlassTokens(
                     glowSecondary = NO_GLOW,
                     panelFill = 0x14FFFFFFL,
                     panelFillStrong = 0xB8000000L or surfaceRgb,
-                    borderHighlight = 0x33FFFFFFL,
+                    borderHighlight = 0x2BFFFFFFL,
                     borderShadow = 0x0AFFFFFFL,
                     artworkScrim = 0xA6000000L or backgroundRgb,
-                    specular = 0x14FFFFFFL,
+                    specular = 0x1FFFFFFFL,
                     edgeShade = 0x26000000L,
                     floatShadow = 0x59000000L,
+                    // Bright artwork is toned down so white text stays readable; colours stay.
+                    frostDim = 0.35f,
                 )
             } else {
                 GlassTokens(
@@ -88,12 +112,16 @@ data class GlassTokens(
                     glowSecondary = NO_GLOW,
                     panelFill = 0x99FFFFFFL,
                     panelFillStrong = 0xC7000000L or surfaceRgb,
-                    borderHighlight = 0xCCFFFFFFL,
+                    borderHighlight = 0x8CFFFFFFL,
                     borderShadow = 0x14000000L,
                     artworkScrim = 0x99000000L or backgroundRgb,
                     specular = 0x59FFFFFFL,
                     edgeShade = 0x0F000000L,
                     floatShadow = 0x1F000000L,
+                    // Dark content is lifted so dark text stays readable; colours stay.
+                    frostLift = 0.3f,
+                    edgeLight = 0.2f,
+                    edgeShadeOptics = 0.06f,
                 )
             }
         }
