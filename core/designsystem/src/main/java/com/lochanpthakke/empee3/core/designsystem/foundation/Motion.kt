@@ -8,7 +8,6 @@ import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.TweenSpec
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -91,6 +90,13 @@ object Motion {
      */
     fun <T> hero(): SpringSpec<T> = spring(dampingRatio = 1f, stiffness = 220f)
 
+    /**
+     * Now Playing's track strip settling on a page (after a swipe, a skip button or
+     * the end of a song): short and critically damped, so the new track is
+     * established almost at once and a swipe's velocity carries straight into it.
+     */
+    fun <T> trackSettle(): SpringSpec<T> = spring(dampingRatio = 1f, stiffness = 650f)
+
     /** Appearance change (fade, colour) for a level's duration. */
     fun <T> fade(
         durationMillis: Int = MICRO,
@@ -110,25 +116,15 @@ object Motion {
      * The current track changing: the new content enters from the side it comes
      * from while the old one leaves the other way, on one timeline. [direction]
      * is +1 for next, -1 for previous. Size never animates (no relayout per frame).
-     *
-     * [handedOff]: the user already threw the old content off screen with a
-     * swipe, so it disappears at once and only the new content arrives.
      */
-    fun directional(
-        direction: Int,
-        handedOff: Boolean = false,
-    ): ContentTransform =
+    fun directional(direction: Int): ContentTransform =
         ContentTransform(
             targetContentEnter =
                 slideInHorizontally(tween(CONTENT, easing = Decelerate)) { width -> direction * width / SLIDE_FRACTION } +
                     fadeIn(fade(CONTENT)),
             initialContentExit =
-                if (handedOff) {
-                    fadeOut(snap())
-                } else {
-                    slideOutHorizontally(tween(CONTENT, easing = Accelerate)) { width -> -direction * width / SLIDE_FRACTION } +
-                        fadeOut(fade(MICRO))
-                },
+                slideOutHorizontally(tween(CONTENT, easing = Accelerate)) { width -> -direction * width / SLIDE_FRACTION } +
+                    fadeOut(fade(MICRO)),
             sizeTransform = null,
         )
 

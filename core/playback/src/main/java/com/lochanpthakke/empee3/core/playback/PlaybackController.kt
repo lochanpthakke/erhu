@@ -28,6 +28,9 @@ interface PlaybackController {
 
     fun skipPrevious()
 
+    /** The previous song in play order, never a restart of the current one (the track swipe). */
+    fun skipToPreviousItem()
+
     /** Jumps to [index] in the current queue (playback-list order). */
     fun skipToQueueItem(index: Int)
 

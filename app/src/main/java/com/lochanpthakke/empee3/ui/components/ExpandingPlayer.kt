@@ -12,11 +12,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
@@ -27,6 +30,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.DpSize
@@ -38,6 +42,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHei
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.PlayerTransitionState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** The surface becomes opaque over the first part of the expansion (it covers the mini player). */
@@ -45,10 +50,6 @@ private const val SURFACE_FADE_SPAN = 0.15f
 
 /** The surface's sides and bottom reach the screen edges over this part of the expansion. */
 private const val EDGE_SPAN = 0.3f
-
-/** Now Playing's content fades in over this part of the expansion, once the surface is large. */
-private const val CONTENT_FADE_START = 0.35f
-private const val CONTENT_FADE_SPAN = 0.5f
 
 /** Corner radius of the hero artwork in Now Playing (Radius.large). */
 private val HERO_CORNER = 16.dp
@@ -62,7 +63,8 @@ private val MINI_CORNER = 8.dp
  *
  * - the expanding surface: from the mini player's exact rectangle and capsule
  *   corners to the full screen, opaque in the theme's environment colour, and
- *   holding Now Playing, whose content fades in as the surface opens;
+ *   holding Now Playing, whose sections reveal themselves on the same progress
+ *   (revealWithPlayer), so nothing here fades the content a second time;
  * - the artwork: ONE image travelling and scaling from the mini player's artwork
  *   to Now Playing's hero artwork (both of those are hidden while it travels).
  *   It is the cached bitmap at the hero size; nothing is decoded per frame.
@@ -82,11 +84,33 @@ fun ExpandingPlayer(
     // this, Back on a detail page popped the page behind the open player.
     key(state.isOpen) { BackHandler(enabled = state.isOpen) { scope.launch { state.collapse() } } }
     val visible by remember(state) { derivedStateOf { state.progress.value > 0f } }
-    if (!visible) return
+    // Now Playing is composed ahead of the first open (shortly after there is a song, not
+    // during app start) and stays composed while collapsed, only unplaced: opening then
+    // moves content that already exists, instead of building the whole screen (and
+    // decoding its artwork) in the first frame of the motion.
+    var warm by remember { mutableStateOf(false) }
+    val hasSong = song != null
+    LaunchedEffect(hasSong) {
+        if (hasSong) {
+            delay(WARM_UP_DELAY_MS)
+            warm = true
+        }
+    }
+    if (!visible && !warm) return
 
     val navigationBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val environment = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background)
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                // Collapsed: measured and composed but not placed, so it is neither drawn nor
+                // touchable. Read in the placement phase: no recomposition when it toggles.
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) { if (visible) placeable.place(0, 0) }
+                },
+    ) {
         Box(
             modifier =
                 Modifier
@@ -110,14 +134,7 @@ fun ExpandingPlayer(
                         alpha = (p / SURFACE_FADE_SPAN).coerceAtMost(1f)
                     }.background(environment),
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            alpha = ((state.progress.value - CONTENT_FADE_START) / CONTENT_FADE_SPAN).coerceIn(0f, 1f)
-                        },
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 // No bottom chrome while the player owns the screen: only the gesture area.
                 CompositionLocalProvider(LocalBottomChromeHeight provides navigationBar, content = content)
             }
@@ -166,6 +183,9 @@ private fun TravellingArtwork(
 }
 
 private const val MIN_SCALE = 0.01f
+
+/** Now Playing is composed this long after a song is available (after app start settles). */
+private const val WARM_UP_DELAY_MS = 1_500L
 
 /** A rounded rectangle at arbitrary [bounds] inside the layer (the expanding surface). */
 private class ExpandingShape(

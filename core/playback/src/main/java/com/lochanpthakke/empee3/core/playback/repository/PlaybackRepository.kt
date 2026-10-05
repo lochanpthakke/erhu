@@ -38,6 +38,9 @@ interface PlaybackRepository {
 
     fun skipPrevious()
 
+    /** The previous song in play order, never a restart of the current one (the track swipe). */
+    fun skipToPreviousItem()
+
     fun skipToQueueItem(index: Int)
 
     fun setShuffleModeEnabled(enabled: Boolean)

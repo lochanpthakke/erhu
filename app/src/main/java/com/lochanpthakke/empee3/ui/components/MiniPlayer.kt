@@ -133,6 +133,9 @@ fun MiniPlayer(
                             modifier =
                                 Modifier
                                     .onGloballyPositioned { coordinates -> transition?.miniArtworkBounds = coordinates.boundsInRoot() }
+                                    // The player's artwork is ONE object: once it starts travelling, the
+                                    // travelling copy (same bitmap, same place) is the only one drawn.
+                                    .graphicsLayer { alpha = if ((transition?.progress?.value ?: 0f) > 0f) 0f else 1f }
                                     .size(ArtworkSize.miniPlayer)
                                     .clip(Radius.smallShape),
                         )

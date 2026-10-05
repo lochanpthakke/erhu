@@ -43,6 +43,8 @@ class PlaybackRepositoryImpl
 
         override fun skipPrevious() = playbackController.skipPrevious()
 
+        override fun skipToPreviousItem() = playbackController.skipToPreviousItem()
+
         override fun skipToQueueItem(index: Int) = playbackController.skipToQueueItem(index)
 
         override fun setShuffleModeEnabled(enabled: Boolean) = playbackController.setShuffleModeEnabled(enabled)

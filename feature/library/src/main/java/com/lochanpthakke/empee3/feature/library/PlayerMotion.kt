@@ -27,7 +27,6 @@ fun AnimatedTrack(
     shuffle: Boolean,
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
-    handOff: () -> Int = { 0 },
     content: @Composable (Song) -> Unit,
 ) {
     AnimatedContent(
@@ -35,18 +34,7 @@ fun AnimatedTrack(
         contentKey = { it.first.id },
         transitionSpec = {
             val forward = shuffle || targetState.second >= initialState.second
-            // A swipe already threw the old content: the new one comes from the swipe's side.
-            val thrown = handOff()
-            Motion.directional(
-                if (thrown != 0) {
-                    thrown
-                } else if (forward) {
-                    1
-                } else {
-                    -1
-                },
-                handedOff = thrown != 0,
-            )
+            Motion.directional(if (forward) 1 else -1)
         },
         contentAlignment = contentAlignment,
         label = "track",

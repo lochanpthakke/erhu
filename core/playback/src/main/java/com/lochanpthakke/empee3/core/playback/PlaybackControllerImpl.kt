@@ -102,11 +102,14 @@ class PlaybackControllerImpl
 
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                     _playbackState.update { it.copy(shuffleModeEnabled = shuffleModeEnabled) }
+                    // The next / previous song follow the play order.
+                    refreshQueueAndCurrent()
                     persistState()
                 }
 
                 override fun onRepeatModeChanged(repeatMode: Int) {
                     _playbackState.update { it.copy(repeatMode = repeatMode.toDomainRepeatMode()) }
+                    refreshQueueAndCurrent()
                     persistState()
                 }
 
@@ -162,6 +165,8 @@ class PlaybackControllerImpl
                     queue = songs,
                     currentIndex = currentIndex,
                     currentSong = current,
+                    nextIndex = player.nextMediaItemIndex.takeIf { songs.isNotEmpty() && it in songs.indices } ?: -1,
+                    previousIndex = player.previousMediaItemIndex.takeIf { songs.isNotEmpty() && it in songs.indices } ?: -1,
                     durationMs = resolveDuration(current),
                     positionMs = if (current == null) 0L else it.positionMs,
                 )
@@ -313,6 +318,10 @@ class PlaybackControllerImpl
 
         override fun skipNext() {
             if (player.hasNextMediaItem()) player.seekToNextMediaItem()
+        }
+
+        override fun skipToPreviousItem() {
+            if (player.hasPreviousMediaItem()) player.seekToPreviousMediaItem()
         }
 
         override fun skipPrevious() {
