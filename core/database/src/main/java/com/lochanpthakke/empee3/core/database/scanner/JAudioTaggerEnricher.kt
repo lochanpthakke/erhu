@@ -25,6 +25,27 @@ class JAudioTaggerEnricher
         }
 
         @Suppress("TooGenericExceptionCaught")
+        fun extractYearFromId3Header(filePath: String): Int {
+            val file = File(filePath)
+            if (!file.exists()) return 0
+            return try {
+                val audioFile = AudioFileIO.read(file)
+                val tag = audioFile.tag ?: return 0
+                val yearStr =
+                    tag
+                        .getFirst(FieldKey.YEAR)
+                        .ifBlank { tag.getFirst(FieldKey.ORIGINAL_YEAR) }
+                        .takeIf { it.isNotBlank() } ?: return 0
+
+                val regex = Regex("""\b(19\d{2}|20\d{2})\b""")
+                val match = regex.find(yearStr)
+                match?.value?.toIntOrNull() ?: 0
+            } catch (_: Exception) {
+                0
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
         suspend fun enrichUnenrichedSongs() =
             withContext(Dispatchers.IO) {
                 val unenrichedSongs = songDao.getUnenrichedSongs()

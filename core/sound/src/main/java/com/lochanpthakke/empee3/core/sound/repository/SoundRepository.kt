@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.sound.repository
 
 import com.lochanpthakke.empee3.core.common.result.AppResult
+import com.lochanpthakke.empee3.core.sound.dsp.FilterType
 import com.lochanpthakke.empee3.core.sound.effects.AudioEffectCapabilities
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
@@ -17,6 +18,31 @@ interface SoundRepository {
 
     fun setBandGain(
         bandIndex: Int,
+        gainDb: Float,
+    )
+
+    fun setBandFrequency(
+        bandIndex: Int,
+        freqHz: Float,
+    )
+
+    fun setBandQ(
+        bandIndex: Int,
+        q: Float,
+    )
+
+    fun setFilterType(
+        bandIndex: Int,
+        type: FilterType,
+    )
+
+    fun setActiveBandCount(count: Int)
+
+    fun setSelectedBandIndex(index: Int)
+
+    fun setBandFrequencyAndGain(
+        bandIndex: Int,
+        freqHz: Float,
         gainDb: Float,
     )
 

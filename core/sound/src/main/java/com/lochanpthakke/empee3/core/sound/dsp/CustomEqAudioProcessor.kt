@@ -11,13 +11,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 8-band peaking EQ inserted into ExoPlayer's DefaultAudioSink (see
- * PlayerProviderModule).
- *
- * Threading: gain / enable changes arrive on the main thread while samples are
- * processed on the playback thread. Setters only write the (volatile) target
- * state; filter coefficients are recomputed on the playback thread before the
- * next buffer, so filters are never mutated mid-buffer.
+ * Parametric/Graphic EQ inserted into ExoPlayer's DefaultAudioSink.
+ * Supports up to 8 bands with dynamic center frequency, gain, Q factor,
+ * filter type (Peaking, Low Shelf, High Shelf), and active band count (4..8).
  */
 @Singleton
 @Suppress("MagicNumber", "CyclomaticComplexMethod", "NestedBlockDepth")
@@ -25,10 +21,14 @@ class CustomEqAudioProcessor
     @Inject
     constructor() : BaseAudioProcessor() {
         @Volatile private var isEqEnabled: Boolean = true
+
         private val bandGains = FloatArray(BAND_COUNT) { 0.0f }
+        private val bandFrequencies = BAND_FREQUENCIES.copyOf()
+        private val bandQs = FloatArray(BAND_COUNT) { DEFAULT_Q }
+        private val filterTypes = Array(BAND_COUNT) { FilterType.PEAKING }
+        @Volatile private var activeBandCount: Int = BAND_COUNT
 
         @Volatile private var coefficientsDirty = true
-
         @Volatile private var resetRequested = false
 
         /** One filter chain per channel of the current input format. */
@@ -48,7 +48,7 @@ class CustomEqAudioProcessor
 
         fun setBandGains(gainsDb: FloatArray) {
             require(gainsDb.size == BAND_COUNT) { "Expected $BAND_COUNT band gains" }
-            synchronized(bandGains) {
+            synchronized(this) {
                 for (i in 0 until BAND_COUNT) {
                     bandGains[i] = gainsDb[i].coerceIn(MIN_GAIN_DB, MAX_GAIN_DB)
                 }
@@ -61,19 +61,98 @@ class CustomEqAudioProcessor
             gainDb: Float,
         ) {
             require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
-            synchronized(bandGains) { bandGains[bandIndex] = gainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB) }
+            synchronized(this) { bandGains[bandIndex] = gainDb.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB) }
             coefficientsDirty = true
         }
 
-        fun getBandGains(): FloatArray = synchronized(bandGains) { bandGains.copyOf() }
+        fun getBandGains(): FloatArray = synchronized(this) { bandGains.copyOf() }
+
+        fun setBandFrequency(bandIndex: Int, freqHz: Float) {
+            require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
+            synchronized(this) { bandFrequencies[bandIndex] = freqHz.coerceIn(MIN_FREQ_HZ, MAX_FREQ_HZ) }
+            coefficientsDirty = true
+        }
+
+        fun getBandFrequencies(): FloatArray = synchronized(this) { bandFrequencies.copyOf() }
+
+        fun setBandQ(bandIndex: Int, q: Float) {
+            require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
+            synchronized(this) { bandQs[bandIndex] = q.coerceIn(MIN_Q, MAX_Q) }
+            coefficientsDirty = true
+        }
+
+        fun getBandQs(): FloatArray = synchronized(this) { bandQs.copyOf() }
+
+        fun setFilterType(bandIndex: Int, type: FilterType) {
+            require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
+            synchronized(this) { filterTypes[bandIndex] = type }
+            coefficientsDirty = true
+        }
+
+        fun getFilterTypes(): Array<FilterType> = synchronized(this) { filterTypes.copyOf() }
+
+        fun setActiveBandCount(count: Int) {
+            synchronized(this) { activeBandCount = count.coerceIn(MIN_BAND_COUNT, BAND_COUNT) }
+            coefficientsDirty = true
+        }
+
+        fun getActiveBandCount(): Int = activeBandCount
+
+        fun configureParametricState(
+            gainsDb: FloatArray,
+            frequenciesHz: FloatArray,
+            qs: FloatArray,
+            types: Array<FilterType>,
+            activeCount: Int,
+        ) {
+            require(gainsDb.size == BAND_COUNT && frequenciesHz.size == BAND_COUNT && qs.size == BAND_COUNT && types.size == BAND_COUNT) {
+                "Expected size $BAND_COUNT for all parametric parameters"
+            }
+            synchronized(this) {
+                for (i in 0 until BAND_COUNT) {
+                    bandGains[i] = gainsDb[i].coerceIn(MIN_GAIN_DB, MAX_GAIN_DB)
+                    bandFrequencies[i] = frequenciesHz[i].coerceIn(MIN_FREQ_HZ, MAX_FREQ_HZ)
+                    bandQs[i] = qs[i].coerceIn(MIN_Q, MAX_Q)
+                    filterTypes[i] = types[i]
+                }
+                activeBandCount = activeCount.coerceIn(MIN_BAND_COUNT, BAND_COUNT)
+            }
+            coefficientsDirty = true
+        }
+
+        private data class StateSnapshot(
+            val gains: FloatArray,
+            val freqs: FloatArray,
+            val qs: FloatArray,
+            val types: Array<FilterType>,
+            val activeCount: Int,
+        )
+
+        private fun getParametricStateSnapshot(): StateSnapshot =
+            synchronized(this) {
+                StateSnapshot(
+                    gains = bandGains.copyOf(),
+                    freqs = bandFrequencies.copyOf(),
+                    qs = bandQs.copyOf(),
+                    types = filterTypes.copyOf(),
+                    activeCount = activeBandCount,
+                )
+            }
 
         fun getCombinedFrequencyResponse(
             frequencyPoints: FloatArray,
             sampleRate: Int = 44100,
         ): FloatArray {
-            val gains = getBandGains()
+            val (gains, freqs, qs, types, activeCount) = getParametricStateSnapshot()
             for (b in 0 until BAND_COUNT) {
-                previewFilters[b].configurePeakingEq(BAND_FREQUENCIES[b], sampleRate, gains[b])
+                val active = b < activeCount
+                previewFilters[b].configure(
+                    centerFrequency = freqs[b],
+                    sampleRate = sampleRate,
+                    gainInDb = if (active) gains[b] else 0f,
+                    q = qs[b],
+                    type = types[b],
+                )
             }
             val response = FloatArray(frequencyPoints.size)
             for (i in frequencyPoints.indices) {
@@ -87,8 +166,6 @@ class CustomEqAudioProcessor
         }
 
         override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
-            // Only 16-bit PCM is supported; for anything else ExoPlayer bypasses this
-            // processor instead of receiving mislabelled output.
             if (inputAudioFormat.encoding != C.ENCODING_PCM_16BIT || inputAudioFormat.channelCount <= 0) {
                 throw AudioProcessor.UnhandledAudioFormatException(inputAudioFormat)
             }
@@ -96,7 +173,6 @@ class CustomEqAudioProcessor
         }
 
         override fun onFlush() {
-            // Called on the playback thread after configure, seek or track change.
             val channels = inputAudioFormat.channelCount.coerceAtLeast(0)
             if (channelFilters.size != channels) {
                 channelFilters = Array(channels) { Array(BAND_COUNT) { BiquadFilter() } }
@@ -147,18 +223,25 @@ class CustomEqAudioProcessor
             outputBuffer.flip()
         }
 
-        private fun isFlat(): Boolean = synchronized(bandGains) { bandGains.all { it == 0.0f } }
+        private fun isFlat(): Boolean = synchronized(this) { bandGains.all { it == 0.0f } }
 
         private fun applyPendingChanges() {
             if (coefficientsDirty) {
                 coefficientsDirty = false
-                val gains = getBandGains()
+                val (gains, freqs, qs, types, activeCount) = getParametricStateSnapshot()
                 val sampleRate = inputAudioFormat.sampleRate.takeIf { it > 0 } ?: 44100
                 for (filters in channelFilters) {
                     for (b in 0 until BAND_COUNT) {
-                        // Bands at/above Nyquist would make the biquad unstable; leave them flat.
-                        val usable = BAND_FREQUENCIES[b] < sampleRate * MAX_BAND_TO_SAMPLE_RATE_RATIO
-                        filters[b].configurePeakingEq(BAND_FREQUENCIES[b], sampleRate, if (usable) gains[b] else 0f)
+                        val active = b < activeCount
+                        val freq = freqs[b]
+                        val usable = active && (freq < sampleRate * MAX_BAND_TO_SAMPLE_RATE_RATIO)
+                        filters[b].configure(
+                            centerFrequency = freq,
+                            sampleRate = sampleRate,
+                            gainInDb = if (usable) gains[b] else 0f,
+                            q = qs[b],
+                            type = types[b],
+                        )
                     }
                 }
             }
@@ -170,6 +253,13 @@ class CustomEqAudioProcessor
 
         companion object {
             const val BAND_COUNT = 8
+            const val MIN_BAND_COUNT = 4
+            const val DEFAULT_Q = 1.414f
+            const val MIN_Q = 0.5f
+            const val MAX_Q = 5.0f
+            const val MIN_FREQ_HZ = 20.0f
+            const val MAX_FREQ_HZ = 18000.0f
+
             val BAND_FREQUENCIES =
                 floatArrayOf(
                     60.0f,

@@ -211,7 +211,7 @@ fun ArtistDetailScreen(
                     if (data.unverifiedSongs.isNotEmpty()) {
                         item(key = "unverified_header") {
                             Text(
-                                text = "Also credited (unverified)",
+                                text = "Credited",
                                 style = TextStyles.sectionTitle,
                                 modifier =
                                     Modifier.padding(
@@ -410,7 +410,7 @@ private fun CompactAlbumTile(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (album.year > 0) {
+        if (album.year in 1900..2099) {
             Text(
                 text = album.year.toString(),
                 style = TextStyles.tileSubtitle,

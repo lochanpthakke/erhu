@@ -37,9 +37,19 @@ class MediaStoreScanner
         private val libraryModelDao: LibraryModelDao,
         private val libraryWriter: LibraryWriter,
         private val dataStore: DataStore<PlaybackStateProto>,
+        private val jaudioTaggerEnricher: JAudioTaggerEnricher,
         private val logger: Logger,
     ) {
-        @Suppress("DEPRECATION", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "MagicNumber", "MaxLineLength", "TooGenericExceptionCaught")
+        @Suppress(
+            "DEPRECATION",
+            "LongMethod",
+            "CyclomaticComplexMethod",
+            "NestedBlockDepth",
+            "MagicNumber",
+            "MaxLineLength",
+            "TooGenericExceptionCaught",
+            "LoopWithTooManyJumpStatements",
+        )
         fun scanLibrary(): Flow<ScanProgress> =
             flow {
                 // Without read access MediaStore returns an empty result, which would
@@ -50,12 +60,13 @@ class MediaStoreScanner
                     return@flow
                 }
 
-                val proto = try {
-                    dataStore.data.first()
-                } catch (e: Exception) {
-                    logger.d(TAG, "Failed to read scan location settings: ${e.message}")
-                    null
-                }
+                val proto =
+                    try {
+                        dataStore.data.first()
+                    } catch (e: Exception) {
+                        logger.d(TAG, "Failed to read scan location settings: ${e.message}")
+                        null
+                    }
                 val isCustomEnabled = proto?.isCustomScanLocationEnabled == true
                 val customPath = proto?.customScanLocationPath.orEmpty().trim()
                 val customUri = proto?.customScanLocationUri.orEmpty().trim()
@@ -149,14 +160,23 @@ class MediaStoreScanner
                             val rawAlbumId = c.getLong(rawAlbumIdColumn)
                             val durationMs = c.getLong(durationColumn)
                             val filePath = c.getString(dataColumn) ?: ""
-                            if (isExcludedFromLibrary(filePath) || !matchesCustomLocation(filePath, isCustomEnabled, customPath, customUri)) {
+                            if (isExcludedFromLibrary(filePath) ||
+                                !matchesCustomLocation(filePath, isCustomEnabled, customPath, customUri)
+                            ) {
                                 scannedCount++
                                 continue
                             }
                             val rawTrackValue = c.getInt(trackColumn)
                             val trackNumber = rawTrackValue % 1000
-                            val year = c.getInt(yearColumn)
-                            val dateModified = c.getLong(dateModifiedColumn)
+
+                            var year = c.getInt(yearColumn)
+                            if (year !in 1900..2099) {
+                                year = jaudioTaggerEnricher.extractYearFromId3Header(filePath)
+                            }
+                            year = year.takeIf { it in 1900..2099 } ?: 0
+
+                            val dateModifiedSec = c.getLong(dateModifiedColumn)
+                            val dateModified = if (dateModifiedSec in 100_000_000L..100_000_000_000L) dateModifiedSec * 1000L else dateModifiedSec
 
                             val contentUri =
                                 ContentUris

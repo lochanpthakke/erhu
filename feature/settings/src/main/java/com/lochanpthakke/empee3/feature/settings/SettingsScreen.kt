@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tag
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -74,6 +75,12 @@ private val SETTING_CATEGORIES =
             "Themes & Appearance",
             "Built-in themes, Custom Skins & dark mode customization",
             Icons.Default.Palette,
+        ),
+        SettingCategory(
+            "navigation",
+            "Navigation & Home Page",
+            "Set default landing page and bottom navigation bar order",
+            Icons.Default.Tune,
         ),
         SettingCategory(
             "audio",
@@ -141,6 +148,7 @@ fun SettingsCategoryScreen(
     val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
     when (categoryId) {
         "themes" -> ThemeSettingsScreen(viewModel = themeViewModel, title = title, onBack = onBack)
+        "navigation" -> NavigationSettingsSubPage(viewModel = themeViewModel, title = title, onBack = onBack)
         "audio" ->
             SoundSettingsScreen(
                 viewModel = soundViewModel,
@@ -218,6 +226,77 @@ private fun MainSettingsList(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavigationSettingsSubPage(
+    viewModel: ThemeViewModel,
+    title: String,
+    onBack: () -> Unit,
+) {
+    val defaultStartSection by viewModel.defaultStartSection.collectAsState()
+
+    AppScaffold(
+        topBar = { AppTopBar(navigation = TopBarNavigation.Detail(onBack), title = title) },
+    ) { innerPadding ->
+        val scroll = innerPadding.forScrollingContent()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(scroll.container)
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = scroll.contentTop)
+                    .padding(Spacing.screenGutter)
+                    .padding(bottom = scroll.contentBottom),
+        ) {
+            Text(
+                text = "Set Home Page",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            Text(
+                text = "Choose the default page when opening empee3. The chosen landing page will be placed as the leftmost icon in the bottom navigation bar.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(Spacing.md))
+
+            listOf(
+                "TRACKS" to ("Tracks" to "Home feed with recently played shelves and full track list"),
+                "ALBUMS" to ("Albums" to "Grid view of all music albums"),
+                "LIBRARY" to ("Library" to "Library overview with playlists, favorites, artists and songs"),
+            ).forEach { (key, info) ->
+                val (label, description) = info
+                val isSelected = defaultStartSection.equals(key, ignoreCase = true)
+                Card(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = Spacing.xs)
+                            .clickable { viewModel.setDefaultStartSection(key) },
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        ),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(description, style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (isSelected) {
+                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
             }
         }

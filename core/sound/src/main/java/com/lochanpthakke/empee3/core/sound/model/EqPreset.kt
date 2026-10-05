@@ -1,10 +1,16 @@
 package com.lochanpthakke.empee3.core.sound.model
 
+import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
+import com.lochanpthakke.empee3.core.sound.dsp.FilterType
+
 @Suppress("MagicNumber", "EqualsWithHashCodeExist")
 data class EqPreset(
     val id: String,
     val name: String,
     val bandGains: FloatArray,
+    val bandFrequencies: FloatArray = CustomEqAudioProcessor.BAND_FREQUENCIES.copyOf(),
+    val bandQs: FloatArray = FloatArray(CustomEqAudioProcessor.BAND_COUNT) { CustomEqAudioProcessor.DEFAULT_Q },
+    val filterTypes: Array<FilterType> = Array(CustomEqAudioProcessor.BAND_COUNT) { FilterType.PEAKING },
     val isCustom: Boolean = false,
 ) {
     override fun equals(other: Any?): Boolean {
@@ -14,6 +20,9 @@ data class EqPreset(
         return id == other.id &&
             name == other.name &&
             bandGains.contentEquals(other.bandGains) &&
+            bandFrequencies.contentEquals(other.bandFrequencies) &&
+            bandQs.contentEquals(other.bandQs) &&
+            filterTypes.contentEquals(other.filterTypes) &&
             isCustom == other.isCustom
     }
 
@@ -21,6 +30,9 @@ data class EqPreset(
         var result = id.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + bandGains.contentHashCode()
+        result = 31 * result + bandFrequencies.contentHashCode()
+        result = 31 * result + bandQs.contentHashCode()
+        result = 31 * result + filterTypes.contentHashCode()
         result = 31 * result + isCustom.hashCode()
         return result
     }

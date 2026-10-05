@@ -102,17 +102,6 @@ internal fun LibraryOverview(
                     SongTile(song = song, onClick = { actions.onFavoriteClick(song) }, modifier = Modifier.width(cardWidth))
                 }
             }
-            item(key = "songs", contentType = "section") {
-                LibraryPagedSection(
-                    title = "Songs",
-                    items = songs,
-                    itemKey = { it.id },
-                    emptyMessage = if (isScanning) "Scanning your music…" else "No songs found. Pull down to rescan your device.",
-                    onMore = actions.onMoreSongs,
-                ) { song ->
-                    SongTile(song = song, onClick = { actions.onSongClick(song) }, modifier = Modifier.width(cardWidth))
-                }
-            }
             item(key = "artists", contentType = "section") {
                 LibraryPagedSection(
                     title = LibraryShelf.ARTISTS.label,
@@ -127,6 +116,17 @@ internal fun LibraryOverview(
                         onClick = { actions.onArtistClick(artist) },
                         modifier = Modifier.width(cardWidth),
                     )
+                }
+            }
+            item(key = "songs", contentType = "section") {
+                LibraryPagedSection(
+                    title = "Songs",
+                    items = songs,
+                    itemKey = { it.id },
+                    emptyMessage = if (isScanning) "Scanning your music…" else "No songs found. Pull down to rescan your device.",
+                    onMore = actions.onMoreSongs,
+                ) { song ->
+                    SongTile(song = song, onClick = { actions.onSongClick(song) }, modifier = Modifier.width(cardWidth))
                 }
             }
         }

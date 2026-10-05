@@ -7,9 +7,16 @@ import kotlin.math.cos
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
+
+enum class FilterType {
+    PEAKING,
+    LOW_SHELF,
+    HIGH_SHELF,
+}
 
 /**
- * Biquad IIR filter implementing Robert Bristow-Johnson's Audio EQ Cookbook Peaking EQ.
+ * Biquad IIR filter implementing Robert Bristow-Johnson's Audio EQ Cookbook.
  */
 @Suppress("MagicNumber")
 class BiquadFilter {
@@ -30,6 +37,40 @@ class BiquadFilter {
     var gainDb: Float = 0.0f
         private set
 
+    var qFactor: Float = 1.414f
+        private set
+
+    var filterType: FilterType = FilterType.PEAKING
+        private set
+
+    fun configure(
+        centerFrequency: Float,
+        sampleRate: Int,
+        gainInDb: Float,
+        q: Float = 1.414f,
+        type: FilterType = FilterType.PEAKING,
+    ) {
+        frequency = centerFrequency
+        gainDb = gainInDb
+        qFactor = q
+        filterType = type
+
+        if (gainInDb == 0.0f || sampleRate <= 0) {
+            b0 = 1.0f
+            b1 = 0.0f
+            b2 = 0.0f
+            a1 = 0.0f
+            a2 = 0.0f
+            return
+        }
+
+        when (type) {
+            FilterType.PEAKING -> configurePeakingEq(centerFrequency, sampleRate, gainInDb, q)
+            FilterType.LOW_SHELF -> configureLowShelfEq(centerFrequency, sampleRate, gainInDb, q)
+            FilterType.HIGH_SHELF -> configureHighShelfEq(centerFrequency, sampleRate, gainInDb, q)
+        }
+    }
+
     fun configurePeakingEq(
         centerFrequency: Float,
         sampleRate: Int,
@@ -38,6 +79,8 @@ class BiquadFilter {
     ) {
         frequency = centerFrequency
         gainDb = gainInDb
+        qFactor = q
+        filterType = FilterType.PEAKING
 
         if (gainInDb == 0.0f || sampleRate <= 0) {
             b0 = 1.0f
@@ -50,7 +93,7 @@ class BiquadFilter {
 
         val a = 10.0.pow(gainInDb / 40.0)
         val w0 = 2.0 * PI * centerFrequency / sampleRate
-        val alpha = sin(w0) / (2.0 * q)
+        val alpha = sin(w0) / (2.0 * q.coerceAtLeast(0.1f))
         val cosW0 = cos(w0)
 
         val rawB0 = 1.0 + alpha * a
@@ -59,6 +102,60 @@ class BiquadFilter {
         val rawA0 = 1.0 + alpha / a
         val rawA1 = -2.0 * cosW0
         val rawA2 = 1.0 - alpha / a
+
+        b0 = (rawB0 / rawA0).toFloat()
+        b1 = (rawB1 / rawA0).toFloat()
+        b2 = (rawB2 / rawA0).toFloat()
+        a1 = (rawA1 / rawA0).toFloat()
+        a2 = (rawA2 / rawA0).toFloat()
+    }
+
+    private fun configureLowShelfEq(
+        centerFrequency: Float,
+        sampleRate: Int,
+        gainInDb: Float,
+        q: Float = 1.414f,
+    ) {
+        val a = 10.0.pow(gainInDb / 40.0)
+        val w0 = 2.0 * PI * centerFrequency / sampleRate
+        val cosW0 = cos(w0)
+        val insideSqrt = ((a + 1.0 / a) * (1.0 / q.coerceAtLeast(0.1f) - 1.0) + 2.0).coerceAtLeast(0.0)
+        val alpha = sin(w0) / 2.0 * sqrt(insideSqrt)
+        val beta = 2.0 * sqrt(a.coerceAtLeast(0.0001)) * alpha
+
+        val rawB0 = a * ((a + 1.0) - (a - 1.0) * cosW0 + beta)
+        val rawB1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * cosW0)
+        val rawB2 = a * ((a + 1.0) - (a - 1.0) * cosW0 - beta)
+        val rawA0 = (a + 1.0) + (a - 1.0) * cosW0 + beta
+        val rawA1 = -2.0 * ((a - 1.0) + (a + 1.0) * cosW0)
+        val rawA2 = (a + 1.0) + (a - 1.0) * cosW0 - beta
+
+        b0 = (rawB0 / rawA0).toFloat()
+        b1 = (rawB1 / rawA0).toFloat()
+        b2 = (rawB2 / rawA0).toFloat()
+        a1 = (rawA1 / rawA0).toFloat()
+        a2 = (rawA2 / rawA0).toFloat()
+    }
+
+    private fun configureHighShelfEq(
+        centerFrequency: Float,
+        sampleRate: Int,
+        gainInDb: Float,
+        q: Float = 1.414f,
+    ) {
+        val a = 10.0.pow(gainInDb / 40.0)
+        val w0 = 2.0 * PI * centerFrequency / sampleRate
+        val cosW0 = cos(w0)
+        val insideSqrt = ((a + 1.0 / a) * (1.0 / q.coerceAtLeast(0.1f) - 1.0) + 2.0).coerceAtLeast(0.0)
+        val alpha = sin(w0) / 2.0 * sqrt(insideSqrt)
+        val beta = 2.0 * sqrt(a.coerceAtLeast(0.0001)) * alpha
+
+        val rawB0 = a * ((a + 1.0) + (a - 1.0) * cosW0 + beta)
+        val rawB1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * cosW0)
+        val rawB2 = a * ((a + 1.0) + (a - 1.0) * cosW0 - beta)
+        val rawA0 = (a + 1.0) - (a - 1.0) * cosW0 + beta
+        val rawA1 = 2.0 * ((a - 1.0) - (a + 1.0) * cosW0)
+        val rawA2 = (a + 1.0) - (a - 1.0) * cosW0 - beta
 
         b0 = (rawB0 / rawA0).toFloat()
         b1 = (rawB1 / rawA0).toFloat()

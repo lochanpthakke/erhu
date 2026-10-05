@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.feature.settings.sound
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
+import com.lochanpthakke.empee3.core.sound.dsp.FilterType
 import com.lochanpthakke.empee3.core.sound.effects.AudioEffectCapabilities
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
 import com.lochanpthakke.empee3.core.sound.repository.SoundRepository
@@ -30,6 +31,43 @@ class SoundViewModel
             gainDb: Float,
         ) {
             soundRepository.setBandGain(bandIndex, gainDb)
+        }
+
+        fun setBandFrequency(
+            bandIndex: Int,
+            freqHz: Float,
+        ) {
+            soundRepository.setBandFrequency(bandIndex, freqHz)
+        }
+
+        fun setBandQ(
+            bandIndex: Int,
+            q: Float,
+        ) {
+            soundRepository.setBandQ(bandIndex, q)
+        }
+
+        fun setFilterType(
+            bandIndex: Int,
+            type: FilterType,
+        ) {
+            soundRepository.setFilterType(bandIndex, type)
+        }
+
+        fun setActiveBandCount(count: Int) {
+            soundRepository.setActiveBandCount(count)
+        }
+
+        fun setSelectedBandIndex(index: Int) {
+            soundRepository.setSelectedBandIndex(index)
+        }
+
+        fun setBandFrequencyAndGain(
+            bandIndex: Int,
+            freqHz: Float,
+            gainDb: Float,
+        ) {
+            soundRepository.setBandFrequencyAndGain(bandIndex, freqHz, gainDb)
         }
 
         fun applyPreset(presetId: String) {

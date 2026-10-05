@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.sound.model
 
 import com.lochanpthakke.empee3.core.model.PersistedEqPreset
 import com.lochanpthakke.empee3.core.model.PersistedSoundSettings
+import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -9,10 +10,12 @@ import org.junit.Test
 class SoundSettingsMapperTest {
     private val custom = EqPreset("custom_a", "Mine", floatArrayOf(1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f), isCustom = true)
 
+    private val sampleGains = floatArrayOf(3f, 2f, 1f, 0f, -1f, -2f, -3f, 4f)
+
     private val settings =
         SoundSettings(
             isEqEnabled = false,
-            currentBandGains = floatArrayOf(3f, 2f, 1f, 0f, -1f, -2f, -3f, 4f),
+            bands = List(8) { i -> BandConfig(CustomEqAudioProcessor.BAND_FREQUENCIES[i], sampleGains[i]) },
             activePresetId = custom.id,
             customPresets = listOf(custom),
             isBassBoostEnabled = true,

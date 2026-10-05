@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.EditNote
@@ -75,6 +74,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHeight
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.LocalSharedTransitionScope
@@ -201,8 +201,24 @@ fun MainScaffold() {
         val player = rememberPlayerTransitionState()
         val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
 
+        val defaultStartSectionName by themeViewModel.defaultStartSection.collectAsState()
+        val defaultStartSection = remember(defaultStartSectionName) {
+            try {
+                com.lochanpthakke.empee3.feature.library.LibrarySection.valueOf(defaultStartSectionName.uppercase())
+            } catch (_: Exception) {
+                com.lochanpthakke.empee3.feature.library.LibrarySection.TRACKS
+            }
+        }
+
         // Library section lives here because its navigation is part of the shell's bottom chrome.
-        var librarySection by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
+        var librarySection by rememberSaveable { mutableStateOf(defaultStartSection) }
+        var hasInitializedSection by rememberSaveable { mutableStateOf(false) }
+        LaunchedEffect(defaultStartSection) {
+            if (!hasInitializedSection) {
+                hasInitializedSection = true
+                librarySection = defaultStartSection
+            }
+        }
         // Search is opened from the bottom controls, so its on/off state lives here too.
         var isLibrarySearchActive by rememberSaveable { mutableStateOf(false) }
         // Library scrolling compacts the bottom chrome; switching section or searching restores it.
@@ -304,6 +320,7 @@ fun MainScaffold() {
                                                 showNavigation = isOnLibrary && isLibraryContentShown,
                                                 selected = librarySection,
                                                 onSelect = { librarySection = it },
+                                                defaultStartSection = defaultStartSection,
                                                 onSearch = { isLibrarySearchActive = true },
                                                 onExpand = { scope.launch { libraryChrome.expand() } },
                                                 searching = isLibrarySearchActive,
@@ -513,7 +530,7 @@ private fun Context.findActivity(): Activity? =
     }
 
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun LibraryRoute(
     libraryViewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
@@ -603,7 +620,8 @@ private fun LibraryRoute(
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION,
                     )
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 val displayPath = parseFolderDisplayName(uri)
                 libraryViewModel.setCustomScanLocation(uri.toString(), displayPath)
             } else {
@@ -703,7 +721,10 @@ private fun parseFolderDisplayName(uri: Uri): String {
             return pathPart.trim('/')
         }
     }
-    return uri.lastPathSegment?.substringAfter(':')?.trim('/')?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+    return uri.lastPathSegment
+        ?.substringAfter(':')
+        ?.trim('/')
+        ?.ifBlank { "Selected Folder" } ?: "Selected Folder"
 }
 
 @Composable
