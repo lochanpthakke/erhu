@@ -119,7 +119,7 @@ fun LibraryNavigationBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .glassPanel(shape, strong = true, elevated = false, outlined = false),
+                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = NAVIGATION_OPTICS, environmentLens = true),
         shape = shape,
         color = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -326,3 +326,6 @@ private fun LibraryNavigationItem(
         )
     }
 }
+
+/** Environment glass of the section bar: the mini player's material, thinner. */
+private const val NAVIGATION_OPTICS = 0.62f

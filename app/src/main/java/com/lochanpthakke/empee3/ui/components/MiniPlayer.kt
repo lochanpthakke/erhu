@@ -92,7 +92,7 @@ fun MiniPlayer(
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
                 }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)
                 .glassPressEffect(interactionSource, shape)
-                .glassPanel(shape, strong = true, elevated = false, outlined = false)
+                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = 1f, environmentLens = true)
                 .clickable(interactionSource = interactionSource, indication = glassIndication(), onClick = onMiniPlayerClick),
         shape = shape,
         colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
@@ -133,6 +133,9 @@ fun MiniPlayer(
                             modifier =
                                 Modifier
                                     .onGloballyPositioned { coordinates -> transition?.miniArtworkBounds = coordinates.boundsInRoot() }
+                                    // The player's artwork is ONE object: once it starts travelling, the
+                                    // travelling copy (same bitmap, same place) is the only one drawn.
+                                    .graphicsLayer { alpha = if ((transition?.progress?.value ?: 0f) > 0f) 0f else 1f }
                                     .size(ArtworkSize.miniPlayer)
                                     .clip(Radius.smallShape),
                         )

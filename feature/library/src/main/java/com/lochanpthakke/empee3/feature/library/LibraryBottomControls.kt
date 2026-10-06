@@ -81,7 +81,7 @@ internal fun LibrarySearchButton(
             modifier
                 .width(ComponentSize.chromeAction)
                 .glassPressEffect(interactionSource, shape)
-                .glassPanel(shape, strong = true, elevated = false, outlined = false),
+                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = SEARCH_OPTICS, environmentLens = true),
         shape = shape,
         color = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -103,3 +103,6 @@ internal fun LibrarySearchButton(
         }
     }
 }
+
+/** Environment glass of the search button: the mini player's material, weaker. */
+private const val SEARCH_OPTICS = 0.55f

@@ -4,7 +4,6 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
-import androidx.compose.foundation.gestures.drag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -12,19 +11,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
 /** At or above this the player counts as fully expanded (float tolerance). */
@@ -35,15 +35,6 @@ private const val SETTLE_THRESHOLD = 0.65f
 
 /** A release faster than this (per second, in screen heights) decides the direction on its own. */
 private const val FLING_FRACTION_PER_SECOND = 1.2f
-
-/** Dragged sideways past this share of the content width, the track changes on release. */
-private const val SKIP_DISTANCE_FRACTION = 0.25f
-
-/** A sideways release faster than this skips regardless of distance. */
-private val SKIP_FLING_VELOCITY = 1100.dp
-
-/** How long a thrown swipe waits for the player to report the new track. */
-private const val TRACK_CHANGE_TIMEOUT_MS = 800L
 
 /**
  * The player as ONE object with one continuous state: [progress] 0 = collapsed
@@ -73,9 +64,11 @@ class PlayerTransitionState {
     /** True while the player is open or opening (drives Back and accessibility). */
     val isOpen: Boolean get() = progress.targetValue > 0f
 
-    suspend fun expand(velocity: Float = 0f) = progress.animateTo(1f, Motion.hero(), initialVelocity = velocity)
+    // Interrupting a running open/close keeps its current velocity, so reversing
+    // mid-way turns around smoothly from where the player is instead of restarting.
+    suspend fun expand(velocity: Float = progress.velocity) = progress.animateTo(1f, Motion.hero(), initialVelocity = velocity)
 
-    suspend fun collapse(velocity: Float = 0f) = progress.animateTo(0f, Motion.hero(), initialVelocity = velocity)
+    suspend fun collapse(velocity: Float = progress.velocity) = progress.animateTo(0f, Motion.hero(), initialVelocity = velocity)
 
     /** Direct manipulation: the finger moved by [delta] in units of the drag distance. */
     internal suspend fun dragBy(delta: Float) = progress.snapTo((progress.value + delta).coerceIn(0f, 1f))
@@ -97,6 +90,54 @@ class PlayerTransitionState {
 
 @Composable
 fun rememberPlayerTransitionState(): PlayerTransitionState = remember { PlayerTransitionState() }
+
+/**
+ * A part of Now Playing arriving with the player: over [start]..[end] of the
+ * expansion it fades in and travels [rise] into place (negative = from above).
+ * Each section has its own slice of the SAME progress, so the content assembles
+ * in order as the player opens and leaves in reverse as it closes; there is no
+ * separate animation. Read in the draw phase only.
+ */
+fun Modifier.revealWithPlayer(
+    state: PlayerTransitionState?,
+    start: Float,
+    end: Float,
+    rise: Dp = REVEAL_RISE_DEFAULT,
+): Modifier =
+    if (state == null) {
+        this
+    } else {
+        graphicsLayer {
+            val t = ((state.progress.value - start) / (end - start)).coerceIn(0f, 1f)
+            alpha = t
+            translationY = (1f - Motion.Decelerate.transform(t)) * rise.toPx()
+        }
+    }
+
+private val REVEAL_RISE_DEFAULT = 24.dp
+
+/**
+ * Follows pointer [pointerId] until it lifts, reporting every movement to [onDelta] and
+ * [tracker] INCLUDING the movement carried by the up event and the batched historical
+ * points. Foundation's drag() drops the up event's movement: when the UI thread was busy
+ * (e.g. composing a new track), a whole fast swipe can arrive as one batch ending in that
+ * up, and the swipe would read as a tiny, velocity-less drag.
+ */
+internal suspend fun AwaitPointerEventScope.trackDrag(
+    pointerId: PointerId,
+    tracker: VelocityTracker,
+    onDelta: (Offset) -> Unit,
+) {
+    while (true) {
+        val change = awaitPointerEvent().changes.firstOrNull { it.id == pointerId } ?: return
+        change.historical.forEach { tracker.addPosition(it.uptimeMillis, it.position) }
+        tracker.addPosition(change.uptimeMillis, change.position)
+        val delta = change.positionChange()
+        if (delta != Offset.Zero) onDelta(delta)
+        change.consume()
+        if (!change.pressed) return
+    }
+}
 
 /** The player's transition, provided by the shell to both representations. */
 val LocalPlayerTransition = staticCompositionLocalOf<PlayerTransitionState?> { null }
@@ -134,106 +175,9 @@ fun Modifier.playerDrag(
             val tracker = VelocityTracker()
             tracker.addPosition(start.uptimeMillis, start.position)
             scope.launch { state.dragBy(-slop.y / travel) }
-            drag(start.id) { change ->
-                tracker.addPosition(change.uptimeMillis, change.position)
-                val dy = change.positionChange().y
-                change.consume()
-                scope.launch { state.dragBy(-dy / travel) }
-            }
+            trackDrag(start.id, tracker) { delta -> scope.launch { state.dragBy(-delta.y / travel) } }
             val velocity = -tracker.calculateVelocity().y / travel
             scope.launch { state.release(velocity) }
         }
-    }
-}
-
-/**
- * Sideways swipe on Now Playing's artwork / title: the content follows the
- * finger ([swipeOffset]); far or fast enough, it keeps travelling off screen,
- * the track changes and the new one arrives from the other side ([onSkipThrown]
- * hands the direction to the track transition) — one continuous motion.
- * Otherwise, or if "previous" just restarts the song, it springs back.
- */
-@Composable
-internal fun Modifier.trackSwipe(
-    swipeOffset: Animatable<Float, *>,
-    onNext: () -> Unit,
-    onPrevious: () -> Unit,
-    canSkipNext: () -> Boolean,
-    onSkipThrown: (direction: Int) -> Unit,
-    currentTrackId: () -> Long?,
-): Modifier {
-    val scope = rememberCoroutineScope()
-    return pointerInput(Unit) {
-        val fling = SKIP_FLING_VELOCITY.toPx()
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false)
-            var slop = Offset.Zero
-            val start =
-                awaitTouchSlopOrCancellation(down.id) { change, over ->
-                    if (abs(over.x) > abs(over.y)) {
-                        change.consume()
-                        slop = over
-                    }
-                } ?: return@awaitEachGesture
-            if (slop == Offset.Zero) return@awaitEachGesture
-            val tracker = VelocityTracker()
-            tracker.addPosition(start.uptimeMillis, start.position)
-            // This gesture's own travel decides the outcome: the shared offset can be
-            // reset under it when an earlier swipe's track change lands mid-drag.
-            var travelled = slop.x
-            scope.launch { swipeOffset.snapTo(swipeOffset.value + slop.x) }
-            drag(start.id) { change ->
-                tracker.addPosition(change.uptimeMillis, change.position)
-                val dx = change.positionChange().x
-                travelled += dx
-                change.consume()
-                scope.launch { swipeOffset.snapTo(swipeOffset.value + dx) }
-            }
-            val velocity = tracker.calculateVelocity().x
-            val width = size.width.toFloat()
-            val direction =
-                when {
-                    abs(velocity) > fling -> if (velocity < 0) 1 else -1
-                    abs(travelled) > width * SKIP_DISTANCE_FRACTION -> if (travelled < 0) 1 else -1
-                    else -> 0
-                }
-            scope.launch {
-                releaseSwipe(swipeOffset, velocity, width, direction, canSkipNext, onNext, onPrevious, onSkipThrown, currentTrackId)
-            }
-        }
-    }
-}
-
-@Suppress("LongParameterList")
-private suspend fun releaseSwipe(
-    swipeOffset: Animatable<Float, *>,
-    velocity: Float,
-    width: Float,
-    direction: Int,
-    canSkipNext: () -> Boolean,
-    onNext: () -> Unit,
-    onPrevious: () -> Unit,
-    onSkipThrown: (Int) -> Unit,
-    currentTrackId: () -> Long?,
-) {
-    // +1 = thrown left (next), -1 = thrown right (previous), 0 = not far or fast enough.
-    val towardsNext = direction > 0
-    if (direction == 0 || (towardsNext && !canSkipNext())) {
-        swipeOffset.animateTo(0f, Motion.gestureSettle(), initialVelocity = velocity)
-        return
-    }
-    val before = currentTrackId()
-    try {
-        swipeOffset.animateTo(if (towardsNext) -width else width, Motion.gestureSettle(), initialVelocity = velocity)
-    } finally {
-        // The skip is committed even when the next swipe interrupts this throw, so
-        // rapid swipes each change the track. Thrown left = next, right = previous.
-        onSkipThrown(if (towardsNext) 1 else -1)
-        if (towardsNext) onNext() else onPrevious()
-    }
-    val changed = withTimeoutOrNull(TRACK_CHANGE_TIMEOUT_MS) { snapshotFlow { currentTrackId() }.first { it != before } } != null
-    if (!changed) {
-        onSkipThrown(0)
-        swipeOffset.animateTo(0f, Motion.gestureSettle())
     }
 }

@@ -1,7 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +51,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -64,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -101,6 +100,18 @@ private const val MS_PER_SECOND = 1000
 private const val SECONDS_PER_MINUTE = 60
 private const val INACTIVE_ALPHA = 0.6f
 
+/** The blurred artwork background is fully there over the first part of the expansion. */
+private const val BACKDROP_REVEAL_END = 0.4f
+
+/** Environment glass of the controls pill: a little less than the mini player's. */
+private const val NOW_PLAYING_OPTICS = 0.7f
+
+/** "Previous" restarts the current song past this position (the player's own rule). */
+private const val RESTART_THRESHOLD_MS = 3_000L
+
+/** How far Now Playing's sections travel into place as the player opens. */
+private val REVEAL_RISE = 24.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList")
@@ -124,27 +135,21 @@ fun NowPlayingScreen(
     // The player is one object (PlayerTransitionState): dragging the artwork / title
     // down collapses it into the mini player; sideways swipes change the track.
     val transition = LocalPlayerTransition.current
-    val swipe = remember { Animatable(0f) }
-    // Set when a swipe throws the current track off screen; the track transition then
-    // only brings the new one in from that side (one continuous motion).
-    val swipeHandOff = remember { mutableIntStateOf(0) }
-    LaunchedEffect(song?.id) {
-        swipe.snapTo(0f)
-        swipeHandOff.intValue = 0
-    }
+    // Tracks are a strip (previous | current | next) moved by one offset: the swipe drives
+    // it directly and every track change (swipe, buttons, end of song) slides it.
+    val carousel = rememberTrackCarouselState()
+    TrackChangeEffect(carousel, song, playbackState.previousSong, playbackState.nextSong)
     val latestState by rememberUpdatedState(playbackState)
     val collapseDrag = if (transition != null) Modifier.playerDrag(transition, expandsUpward = false) else Modifier
     val trackSwipe =
-        Modifier.trackSwipe(
-            swipeOffset = swipe,
-            onNext = { playbackRepository.skipNext() },
-            onPrevious = { playbackRepository.skipPrevious() },
-            canSkipNext = { hasNext(latestState) },
-            onSkipThrown = { swipeHandOff.intValue = it },
-            currentTrackId = { latestState.currentSong?.id },
+        Modifier.trackCarouselSwipe(
+            state = carousel,
+            canGoNext = { latestState.nextSong != null },
+            canGoPrevious = { latestState.previousSong != null },
+            // A swipe always changes the song (never a restart), matching the page it showed.
+            skip = { direction -> if (direction > 0) playbackRepository.skipNext() else playbackRepository.skipToPreviousItem() },
         )
     val gestureRegion = collapseDrag.then(trackSwipe)
-    val followSwipe = Modifier.graphicsLayer { translationX = swipe.value }
     var showQueue by remember { mutableStateOf(false) }
     val glass = EmPee3Glass.isActive
 
@@ -154,11 +159,12 @@ fun NowPlayingScreen(
     // behind the status and gesture bars.
     // The artwork backdrop is what the glass controls frost.
     val artworkBackdrop = rememberGlassBackdrop()
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize().onSizeChanged { carousel.page = it.width.toFloat() }) {
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .revealWithPlayer(transition, start = 0f, end = BACKDROP_REVEAL_END, rise = 0.dp)
                     .glassBackdropSource(artworkBackdrop),
         ) {
             GlassArtworkBackdrop(song = song)
@@ -171,6 +177,7 @@ fun NowPlayingScreen(
                     title = "Now Playing",
                     glass = false,
                     containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.revealWithPlayer(transition, start = 0.45f, end = 0.9f, rise = -REVEAL_RISE),
                 )
             },
         ) { innerPadding ->
@@ -196,25 +203,31 @@ fun NowPlayingScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
                     ) {
-                        AnimatedTrack(
-                            song = song,
-                            index = playbackState.currentIndex,
-                            shuffle = playbackState.shuffleModeEnabled,
-                            handOff = { swipeHandOff.intValue },
+                        TrackCarousel(
+                            state = carousel,
+                            previous = playbackState.previousSong,
+                            current = song,
+                            next = playbackState.nextSong,
                             modifier =
                                 Modifier
                                     .weight(1f, fill = false)
-                                    .then(gestureRegion)
-                                    .then(followSwipe),
-                            contentAlignment = Alignment.Center,
-                        ) { track ->
-                            SongArtwork(
-                                song = track,
-                                contentDescription = "Album artwork",
-                                modifier =
+                                    .then(gestureRegion),
+                        ) { track, isCurrent ->
+                            // The current page is the player's hero artwork: hidden while the
+                            // travelling artwork stands in for it during open / close.
+                            val hero =
+                                if (isCurrent) {
                                     Modifier
                                         .onGloballyPositioned { transition?.heroArtworkBounds = it.boundsInRoot() }
                                         .graphicsLayer { alpha = if (transition == null || transition.isSettledOpen) 1f else 0f }
+                                } else {
+                                    Modifier
+                                }
+                            SongArtwork(
+                                song = track,
+                                contentDescription = if (isCurrent) "Album artwork" else null,
+                                modifier =
+                                    hero
                                         .widthIn(max = ArtworkSize.heroMax)
                                         .fillMaxWidth()
                                         .aspectRatio(1f, matchHeightConstraintsFirst = true)
@@ -223,17 +236,16 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        AnimatedTrack(
-                            song = song,
-                            index = playbackState.currentIndex,
-                            shuffle = playbackState.shuffleModeEnabled,
-                            handOff = { swipeHandOff.intValue },
+                        TrackCarousel(
+                            state = carousel,
+                            previous = playbackState.previousSong,
+                            current = song,
+                            next = playbackState.nextSong,
                             modifier =
                                 Modifier
-                                    .then(gestureRegion)
-                                    .then(followSwipe),
-                            contentAlignment = Alignment.Center,
-                        ) { track ->
+                                    .revealWithPlayer(transition, start = 0.35f, end = 0.8f)
+                                    .then(gestureRegion),
+                        ) { track, _ ->
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = track.title,
@@ -265,17 +277,23 @@ fun NowPlayingScreen(
                                     null
                                 },
                             onSeek = { playbackRepository.seekTo(it) },
+                            modifier = Modifier.revealWithPlayer(transition, start = 0.42f, end = 0.86f),
                         )
 
                         Row(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
+                                    .revealWithPlayer(transition, start = 0.48f, end = 0.92f)
                                     .then(
                                         if (glass) {
                                             Modifier
-                                                .glassPanel(Radius.pillShape, level = GlassLevel.Strong)
-                                                .padding(vertical = Spacing.sm)
+                                                .glassPanel(
+                                                    Radius.pillShape,
+                                                    level = GlassLevel.Strong,
+                                                    optics = NOW_PLAYING_OPTICS,
+                                                    environmentLens = true,
+                                                ).padding(vertical = Spacing.sm)
                                         } else {
                                             Modifier
                                         },
@@ -293,7 +311,17 @@ fun NowPlayingScreen(
                                 )
                             }
 
-                            PressIconButton(onClick = { playbackRepository.skipPrevious() }) {
+                            PressIconButton(
+                                onClick = {
+                                    // Past the first seconds "previous" restarts the song (no page change);
+                                    // otherwise it is the same strip motion as a swipe.
+                                    if (position.value > RESTART_THRESHOLD_MS || latestState.previousSong == null) {
+                                        playbackRepository.skipPrevious()
+                                    } else {
+                                        carousel.skipFromButton(-1) { playbackRepository.skipToPreviousItem() }
+                                    }
+                                },
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
                                     contentDescription = "Previous",
@@ -321,7 +349,13 @@ fun NowPlayingScreen(
                             }
 
                             PressIconButton(
-                                onClick = { playbackRepository.skipNext() },
+                                onClick = {
+                                    if (latestState.nextSong != null) {
+                                        carousel.skipFromButton(1) { playbackRepository.skipNext() }
+                                    } else {
+                                        playbackRepository.skipNext()
+                                    }
+                                },
                                 enabled = hasNext(playbackState),
                             ) {
                                 Icon(
@@ -358,7 +392,10 @@ fun NowPlayingScreen(
                         }
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .revealWithPlayer(transition, start = 0.54f, end = 0.98f),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -415,12 +452,13 @@ private fun PlaybackProgress(
     totalDurationMs: Long,
     queueLabel: String?,
     onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(0f) }
     val displayPositionMs = (if (isDragging) dragPositionMs.toLong() else position.value).coerceIn(0L, totalDurationMs)
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Slider(
             value = displayPositionMs.toFloat(),
             onValueChange = {
