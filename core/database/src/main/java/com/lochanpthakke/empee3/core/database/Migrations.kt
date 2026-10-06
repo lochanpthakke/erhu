@@ -75,3 +75,24 @@ private val STATEMENTS_7_8 =
         "ALTER TABLE `artist_artwork` ADD COLUMN `provider_artist_id` INTEGER",
         "ALTER TABLE `artist_artwork` ADD COLUMN `matcher_version` INTEGER NOT NULL DEFAULT 0",
     )
+
+/**
+ * v8 → v9: monthly listening statistics (Sound Capsule). Two new tables only; no existing
+ * table, row or column is touched.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_8_9 =
+    object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_8_9.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_8_9 =
+    listOf(
+        "CREATE TABLE IF NOT EXISTS `listening_stats` (`month_key` TEXT NOT NULL, `song_id` INTEGER NOT NULL, " +
+            "`play_count` INTEGER NOT NULL, `listened_ms` INTEGER NOT NULL, `last_played_at` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`month_key`, `song_id`))",
+        "CREATE INDEX IF NOT EXISTS `index_listening_stats_song_id` ON `listening_stats` (`song_id`)",
+        "CREATE TABLE IF NOT EXISTS `listening_days` (`day` TEXT NOT NULL, `play_count` INTEGER NOT NULL, PRIMARY KEY(`day`))",
+    )

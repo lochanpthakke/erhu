@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.core.playback
 
+import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -9,6 +10,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.common.result.onError
+import com.lochanpthakke.empee3.core.database.repository.ListeningStatsRepository
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistence
 import com.lochanpthakke.empee3.core.model.PersistedPlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackState
@@ -44,12 +46,13 @@ class PlaybackControllerImpl
     @Inject
     constructor(
         private val player: Player,
-        dispatcherProvider: DispatcherProvider,
+        private val dispatcherProvider: DispatcherProvider,
         private val logger: Logger,
         private val serviceConnector: PlaybackServiceConnector,
         private val persistence: PlaybackStatePersistence,
         private val songLookup: SongLookup,
         private val soundRepository: SoundRepository,
+        private val listeningStats: ListeningStatsRepository,
     ) : PlaybackController {
         private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
@@ -63,9 +66,18 @@ class PlaybackControllerImpl
         private var restoreFinished = false
         private var consecutiveErrors = 0
 
+        /** Sound Capsule: plays (half a song actually heard) and listening time, from the player's own callbacks. */
+        private val listening =
+            ListeningTracker(
+                elapsedRealtime = SystemClock::elapsedRealtime,
+                onPlayCounted = { songId -> recordListening { listeningStats.recordPlay(songId) } },
+                onListened = { songId, ms -> recordListening { listeningStats.addListeningTime(songId, ms) } },
+            )
+
         private val playerListener =
             object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    listening.onPlayingChanged(isPlaying, currentDurationMs())
                     updateStatus()
                     if (isPlaying) {
                         consecutiveErrors = 0
@@ -78,6 +90,7 @@ class PlaybackControllerImpl
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) listening.onEnded()
                     updateStatus()
                 }
 
@@ -85,6 +98,7 @@ class PlaybackControllerImpl
                     mediaItem: MediaItem?,
                     reason: Int,
                 ) {
+                    listening.onItemChanged(mediaItem?.mediaId?.toLongOrNull(), currentDurationMs(), player.isPlaying)
                     refreshQueueAndCurrent()
                     _playbackState.update { it.copy(positionMs = player.currentPosition.coerceAtLeast(0L)) }
                     persistState()
@@ -180,6 +194,8 @@ class PlaybackControllerImpl
             return duration.coerceAtLeast(0L)
         }
 
+        private fun currentDurationMs(): Long = resolveDuration(player.currentMediaItem?.toSongOrNull())
+
         private fun refreshPosition() {
             _playbackState.update {
                 it.copy(
@@ -196,8 +212,10 @@ class PlaybackControllerImpl
                     var ticks = 0
                     while (true) {
                         refreshPosition()
+                        listening.onProgress(_playbackState.value.durationMs)
                         ticks++
                         if (ticks % PERSIST_EVERY_N_POLLS == 0) persistState()
+                        if (ticks % LISTENING_CHECKPOINT_POLLS == 0) listening.checkpoint()
                         delay(POSITION_POLL_INTERVAL_MS)
                     }
                 }
@@ -251,6 +269,19 @@ class PlaybackControllerImpl
                 logger.w(TAG, "Could not restore playback state: ${e.message}", e)
             } finally {
                 restoreFinished = true
+            }
+        }
+
+        /** One small statistics write, off the main thread; a failure never reaches playback. */
+        private fun recordListening(write: suspend () -> Unit) {
+            scope.launch(dispatcherProvider.io) {
+                try {
+                    write()
+                } catch (
+                    @Suppress("TooGenericExceptionCaught") e: Exception,
+                ) {
+                    logger.w(TAG, "Could not record listening statistics: ${e.message}", e)
+                }
             }
         }
 
@@ -377,5 +408,8 @@ class PlaybackControllerImpl
 
             /** Persist the position roughly every 5 s while playing. */
             private const val PERSIST_EVERY_N_POLLS = 20
+
+            /** Record the listening time so far about once a minute while playing. */
+            private const val LISTENING_CHECKPOINT_POLLS = 240
         }
     }
