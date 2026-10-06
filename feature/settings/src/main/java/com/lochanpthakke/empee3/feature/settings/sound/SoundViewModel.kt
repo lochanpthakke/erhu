@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.dsp.FilterType
-import com.lochanpthakke.empee3.core.sound.effects.AudioEffectCapabilities
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
 import com.lochanpthakke.empee3.core.sound.repository.SoundRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +19,6 @@ class SoundViewModel
         val customEqAudioProcessor: CustomEqAudioProcessor,
     ) : ViewModel() {
         val soundSettings: StateFlow<SoundSettings> = soundRepository.soundSettings
-        val capabilities: StateFlow<AudioEffectCapabilities> = soundRepository.capabilities
 
         fun setEqEnabled(enabled: Boolean) {
             soundRepository.setEqEnabled(enabled)
@@ -88,26 +86,5 @@ class SoundViewModel
             viewModelScope.launch {
                 soundRepository.deleteCustomPreset(presetId)
             }
-        }
-
-        fun setBassBoost(
-            enabled: Boolean,
-            strength: Short,
-        ) {
-            soundRepository.setBassBoost(enabled, strength)
-        }
-
-        fun setVirtualizer(
-            enabled: Boolean,
-            strength: Short,
-        ) {
-            soundRepository.setVirtualizer(enabled, strength)
-        }
-
-        fun setLoudnessEnhancer(
-            enabled: Boolean,
-            gainMb: Int,
-        ) {
-            soundRepository.setLoudnessEnhancer(enabled, gainMb)
         }
     }

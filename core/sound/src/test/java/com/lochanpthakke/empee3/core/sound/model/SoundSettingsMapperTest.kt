@@ -1,7 +1,6 @@
 package com.lochanpthakke.empee3.core.sound.model
 
 import com.lochanpthakke.empee3.core.model.PersistedEqPreset
-import com.lochanpthakke.empee3.core.model.PersistedSoundSettings
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -18,12 +17,6 @@ class SoundSettingsMapperTest {
             bands = List(8) { i -> BandConfig(CustomEqAudioProcessor.BAND_FREQUENCIES[i], sampleGains[i]) },
             activePresetId = custom.id,
             customPresets = listOf(custom),
-            isBassBoostEnabled = true,
-            bassBoostStrength = 700,
-            isVirtualizerEnabled = true,
-            virtualizerStrength = 300,
-            isLoudnessEnabled = true,
-            loudnessGainMb = 500,
         )
 
     @Test
@@ -70,16 +63,5 @@ class SoundSettingsMapperTest {
         assertEquals(listOf("custom_ok"), restored.customPresets.map { it.id })
         assertEquals("custom_ok", restored.activePresetId)
         assertEquals(true, restored.customPresets.single().isCustom)
-    }
-
-    @Test
-    fun outOfRangeEffectStrengths_areClamped() {
-        val restored =
-            persisted()
-                .copy(bassBoostStrength = 50_000, virtualizerStrength = -5, loudnessGainMb = 99_999)
-                .toSoundSettings()
-        assertEquals(1000.toShort(), restored.bassBoostStrength)
-        assertEquals(0.toShort(), restored.virtualizerStrength)
-        assertEquals(1000, restored.loudnessGainMb)
     }
 }

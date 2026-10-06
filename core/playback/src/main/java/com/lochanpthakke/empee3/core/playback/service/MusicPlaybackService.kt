@@ -4,6 +4,7 @@ package com.lochanpthakke.empee3.core.playback.service
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -67,9 +68,16 @@ class MusicPlaybackService : MediaLibraryService() {
         super.onCreate()
         serviceScope = CoroutineScope(SupervisorJob() + dispatchers.main)
 
+        val sessionPlayer =
+            object : ForwardingPlayer(player) {
+                override fun isPlaying(): Boolean =
+                    super.isPlaying() ||
+                        (playWhenReady && playbackState != Player.STATE_IDLE && playbackState != Player.STATE_ENDED)
+            }
+
         val builder =
             MediaLibrarySession
-                .Builder(this, player, LibrarySessionCallback())
+                .Builder(this, sessionPlayer, LibrarySessionCallback())
                 .setBitmapLoader(SongArtworkBitmapLoader(this))
         packageManager.getLaunchIntentForPackage(packageName)?.let { launchIntent ->
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)

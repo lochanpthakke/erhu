@@ -25,7 +25,8 @@ class PlayPauseAction : ActionCallback {
         parameters: ActionParameters,
     ) = withContext(Dispatchers.Main) {
         val controller = context.playbackController()
-        val isPlaying = controller.playbackState.value.status == PlaybackStatus.PLAYING
+        val status = controller.playbackState.value.status
+        val isPlaying = status == PlaybackStatus.PLAYING || status == PlaybackStatus.BUFFERING
         if (isPlaying) controller.pause() else controller.play()
     }
 }

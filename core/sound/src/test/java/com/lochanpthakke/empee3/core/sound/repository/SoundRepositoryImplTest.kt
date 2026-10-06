@@ -6,8 +6,6 @@ import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
 import com.lochanpthakke.empee3.core.model.PersistedSoundSettings
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
-import com.lochanpthakke.empee3.core.sound.effects.AudioEffectManager
-import com.lochanpthakke.empee3.core.sound.effects.EffectCapabilities
 import com.lochanpthakke.empee3.core.sound.model.BandConfig
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
@@ -105,7 +103,6 @@ class SoundRepositoryImplTest {
         val repository =
             SoundRepositoryImpl(
                 customEqAudioProcessor = processor,
-                effectManager = AudioEffectManager(EffectCapabilities(SilentLogger), SilentLogger),
                 persistence = persistence,
                 dispatchers = TestDispatchers(StandardTestDispatcher(scope.testScheduler)),
                 logger = SilentLogger,
@@ -119,8 +116,6 @@ class SoundRepositoryImplTest {
             bands = List(8) { i -> BandConfig(CustomEqAudioProcessor.BAND_FREQUENCIES[i], sampleGains[i]) },
             activePresetId = EqPreset.BASS_BOOSTER.id,
             customPresets = listOf(EqPreset("custom_1", "Car", FloatArray(8) { 2f }, isCustom = true)),
-            isBassBoostEnabled = true,
-            bassBoostStrength = 500,
         ).toPersisted()
 
     @Test
@@ -157,7 +152,6 @@ class SoundRepositoryImplTest {
             first.repository.applyPreset(EqPreset.ROCK.id)
             first.repository.setBandGain(2, 7.5f)
             first.repository.setEqEnabled(false)
-            first.repository.setVirtualizer(true, 420)
             first.repository.saveCustomPreset("Night")
             advanceUntilIdle()
             val beforeRestart = first.repository.soundSettings.value
