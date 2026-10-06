@@ -202,13 +202,15 @@ fun MainScaffold() {
         val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
 
         val defaultStartSectionName by themeViewModel.defaultStartSection.collectAsState()
-        val defaultStartSection = remember(defaultStartSectionName) {
-            try {
-                com.lochanpthakke.empee3.feature.library.LibrarySection.valueOf(defaultStartSectionName.uppercase())
-            } catch (_: Exception) {
-                com.lochanpthakke.empee3.feature.library.LibrarySection.TRACKS
+        val defaultStartSection =
+            remember(defaultStartSectionName) {
+                try {
+                    com.lochanpthakke.empee3.feature.library.LibrarySection
+                        .valueOf(defaultStartSectionName.uppercase())
+                } catch (_: Exception) {
+                    com.lochanpthakke.empee3.feature.library.LibrarySection.TRACKS
+                }
             }
-        }
 
         // Library section lives here because its navigation is part of the shell's bottom chrome.
         var librarySection by rememberSaveable { mutableStateOf(defaultStartSection) }

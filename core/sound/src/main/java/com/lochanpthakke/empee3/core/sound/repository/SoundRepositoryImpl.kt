@@ -148,7 +148,10 @@ class SoundRepositoryImpl
             bandIndex: Int,
             freqHz: Float,
         ) {
-            val currentGain = _soundSettings.value.bands.getOrNull(bandIndex)?.gainDb ?: 0f
+            val currentGain =
+                _soundSettings.value.bands
+                    .getOrNull(bandIndex)
+                    ?.gainDb ?: 0f
             setBandFrequencyAndGain(bandIndex, freqHz, currentGain)
         }
 
@@ -246,18 +249,20 @@ class SoundRepositoryImpl
         override fun applyPreset(presetId: String) {
             val targetPreset = _soundSettings.value.allPresets.find { it.id == presetId } ?: return
             _soundSettings.update { settings ->
-                val updatedBands = List(CustomEqAudioProcessor.BAND_COUNT) { i ->
-                    BandConfig(
-                        frequencyHz = targetPreset.bandFrequencies.getOrElse(i) { CustomEqAudioProcessor.BAND_FREQUENCIES[i] },
-                        gainDb = targetPreset.bandGains.getOrElse(i) { 0f },
-                        q = targetPreset.bandQs.getOrElse(i) { CustomEqAudioProcessor.DEFAULT_Q },
-                        filterType = targetPreset.filterTypes.getOrElse(i) { FilterType.PEAKING },
+                val updatedBands =
+                    List(CustomEqAudioProcessor.BAND_COUNT) { i ->
+                        BandConfig(
+                            frequencyHz = targetPreset.bandFrequencies.getOrElse(i) { CustomEqAudioProcessor.BAND_FREQUENCIES[i] },
+                            gainDb = targetPreset.bandGains.getOrElse(i) { 0f },
+                            q = targetPreset.bandQs.getOrElse(i) { CustomEqAudioProcessor.DEFAULT_Q },
+                            filterType = targetPreset.filterTypes.getOrElse(i) { FilterType.PEAKING },
+                        )
+                    }
+                val updated =
+                    settings.copy(
+                        activePresetId = presetId,
+                        bands = updatedBands,
                     )
-                }
-                val updated = settings.copy(
-                    activePresetId = presetId,
-                    bands = updatedBands,
-                )
                 customEqAudioProcessor.configureParametricState(
                     gainsDb = updated.currentBandGains,
                     frequenciesHz = updated.currentBandFrequencies,

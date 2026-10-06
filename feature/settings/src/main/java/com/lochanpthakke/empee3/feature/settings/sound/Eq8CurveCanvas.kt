@@ -103,8 +103,7 @@ fun Eq8CurveCanvas(
                             }
                         },
                     )
-                }
-                .pointerInput(bands, activeBandCount) {
+                }.pointerInput(bands, activeBandCount) {
                     detectDragGestures(
                         onDragStart = { offset ->
                             val w = size.width.toFloat()
@@ -236,14 +235,20 @@ fun Eq8CurveCanvas(
     }
 }
 
-private fun freqToX(f: Float, width: Float): Float {
+private fun freqToX(
+    f: Float,
+    width: Float,
+): Float {
     val logMin = log10(MIN_FREQ)
     val logMax = log10(MAX_FREQ)
     val logF = log10(f.coerceIn(MIN_FREQ, MAX_FREQ))
     return ((logF - logMin) / (logMax - logMin)) * width
 }
 
-private fun xToFreq(x: Float, width: Float): Float {
+private fun xToFreq(
+    x: Float,
+    width: Float,
+): Float {
     if (width <= 0f) return 1000f
     val logMin = log10(MIN_FREQ)
     val logMax = log10(MAX_FREQ)
@@ -252,13 +257,19 @@ private fun xToFreq(x: Float, width: Float): Float {
     return 10.0f.pow(logF).coerceIn(MIN_FREQ, MAX_FREQ)
 }
 
-private fun gainToY(db: Float, height: Float): Float {
+private fun gainToY(
+    db: Float,
+    height: Float,
+): Float {
     val clamped = db.coerceIn(MIN_GAIN_DB, MAX_GAIN_DB)
     val norm = (clamped - MIN_GAIN_DB) / (MAX_GAIN_DB - MIN_GAIN_DB)
     return height * (1.0f - norm)
 }
 
-private fun yToGain(y: Float, height: Float): Float {
+private fun yToGain(
+    y: Float,
+    height: Float,
+): Float {
     if (height <= 0f) return 0f
     val norm = (1.0f - (y / height)).coerceIn(0f, 1f)
     return (MIN_GAIN_DB + norm * (MAX_GAIN_DB - MIN_GAIN_DB)).coerceIn(MIN_GAIN_DB, MAX_GAIN_DB)

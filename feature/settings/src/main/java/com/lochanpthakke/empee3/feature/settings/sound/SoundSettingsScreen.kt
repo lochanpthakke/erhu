@@ -602,5 +602,4 @@ private fun formatFrequency(freqHz: Float): String =
         "${freqHz.roundToInt()} Hz"
     }
 
-private fun formatGain(gainDb: Float): String =
-    "${if (gainDb > 0) "+" else ""}${String.format("%.1f", gainDb)} dB"
+private fun formatGain(gainDb: Float): String = "${if (gainDb > 0) "+" else ""}${String.format("%.1f", gainDb)} dB"

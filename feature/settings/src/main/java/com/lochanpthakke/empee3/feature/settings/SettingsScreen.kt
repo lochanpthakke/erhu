@@ -261,7 +261,9 @@ private fun NavigationSettingsSubPage(
             )
             Spacer(modifier = Modifier.height(Spacing.xs))
             Text(
-                text = "Choose the default page when opening empee3. The chosen landing page will be placed as the leftmost icon in the bottom navigation bar.",
+                text =
+                    "Choose the default page when opening empee3. " +
+                        "The chosen landing page will be placed as the leftmost icon in the bottom navigation bar.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -282,7 +284,12 @@ private fun NavigationSettingsSubPage(
                             .clickable { viewModel.setDefaultStartSection(key) },
                     colors =
                         CardDefaults.cardColors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor =
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
                         ),
                 ) {
                     Row(
@@ -294,7 +301,11 @@ private fun NavigationSettingsSubPage(
                             Text(description, style = MaterialTheme.typography.bodySmall)
                         }
                         if (isSelected) {
-                            Icon(imageVector = Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                 }
@@ -324,7 +335,8 @@ private fun LibrarySettingsSubPage(
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION,
                     )
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 val displayPath = parseFolderDisplayName(uri)
                 viewModel.setCustomScanLocation(uri.toString(), displayPath)
             }
@@ -359,7 +371,12 @@ private fun LibrarySettingsSubPage(
                         .clickable { viewModel.setScanEntireDevice() },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = if (!isCustomScanEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor =
+                            if (!isCustomScanEnabled) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
                     ),
             ) {
                 Row(
@@ -384,7 +401,12 @@ private fun LibrarySettingsSubPage(
                         .clickable { folderPickerLauncher.launch(null) },
                 colors =
                     CardDefaults.cardColors(
-                        containerColor = if (isCustomScanEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        containerColor =
+                            if (isCustomScanEnabled) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
                     ),
             ) {
                 Row(
@@ -394,7 +416,14 @@ private fun LibrarySettingsSubPage(
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Custom Folder Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
-                            text = if (isCustomScanEnabled && customScanPath.isNotBlank()) "Location: $customScanPath" else "Tap to choose a specific scan directory",
+                            text =
+                                if (isCustomScanEnabled &&
+                                    customScanPath.isNotBlank()
+                                ) {
+                                    "Location: $customScanPath"
+                                } else {
+                                    "Tap to choose a specific scan directory"
+                                },
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -427,7 +456,10 @@ private fun parseFolderDisplayName(uri: Uri): String {
             return pathPart.trim('/')
         }
     }
-    return uri.lastPathSegment?.substringAfter(':')?.trim('/')?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+    return uri.lastPathSegment
+        ?.substringAfter(':')
+        ?.trim('/')
+        ?.ifBlank { "Selected Folder" } ?: "Selected Folder"
 }
 
 @Composable

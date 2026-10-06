@@ -26,9 +26,11 @@ class CustomEqAudioProcessor
         private val bandFrequencies = BAND_FREQUENCIES.copyOf()
         private val bandQs = FloatArray(BAND_COUNT) { DEFAULT_Q }
         private val filterTypes = Array(BAND_COUNT) { FilterType.PEAKING }
+
         @Volatile private var activeBandCount: Int = BAND_COUNT
 
         @Volatile private var coefficientsDirty = true
+
         @Volatile private var resetRequested = false
 
         /** One filter chain per channel of the current input format. */
@@ -67,7 +69,10 @@ class CustomEqAudioProcessor
 
         fun getBandGains(): FloatArray = synchronized(this) { bandGains.copyOf() }
 
-        fun setBandFrequency(bandIndex: Int, freqHz: Float) {
+        fun setBandFrequency(
+            bandIndex: Int,
+            freqHz: Float,
+        ) {
             require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
             synchronized(this) { bandFrequencies[bandIndex] = freqHz.coerceIn(MIN_FREQ_HZ, MAX_FREQ_HZ) }
             coefficientsDirty = true
@@ -75,7 +80,10 @@ class CustomEqAudioProcessor
 
         fun getBandFrequencies(): FloatArray = synchronized(this) { bandFrequencies.copyOf() }
 
-        fun setBandQ(bandIndex: Int, q: Float) {
+        fun setBandQ(
+            bandIndex: Int,
+            q: Float,
+        ) {
             require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
             synchronized(this) { bandQs[bandIndex] = q.coerceIn(MIN_Q, MAX_Q) }
             coefficientsDirty = true
@@ -83,7 +91,10 @@ class CustomEqAudioProcessor
 
         fun getBandQs(): FloatArray = synchronized(this) { bandQs.copyOf() }
 
-        fun setFilterType(bandIndex: Int, type: FilterType) {
+        fun setFilterType(
+            bandIndex: Int,
+            type: FilterType,
+        ) {
             require(bandIndex in 0 until BAND_COUNT) { "Invalid band index: $bandIndex" }
             synchronized(this) { filterTypes[bandIndex] = type }
             coefficientsDirty = true

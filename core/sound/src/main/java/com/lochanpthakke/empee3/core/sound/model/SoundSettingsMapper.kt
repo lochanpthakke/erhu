@@ -45,9 +45,30 @@ fun PersistedSoundSettings.toSoundSettings(): SoundSettings {
         customPresets
             .filter { it.bandGains.size == CustomEqAudioProcessor.BAND_COUNT && it.id.isNotBlank() }
             .map { p ->
-                val freqs = if (p.bandFrequencies.size == CustomEqAudioProcessor.BAND_COUNT) p.bandFrequencies.toFloatArray() else CustomEqAudioProcessor.BAND_FREQUENCIES.copyOf()
-                val qs = if (p.bandQs.size == CustomEqAudioProcessor.BAND_COUNT) p.bandQs.toFloatArray() else FloatArray(CustomEqAudioProcessor.BAND_COUNT) { CustomEqAudioProcessor.DEFAULT_Q }
-                val types = if (p.filterTypes.size == CustomEqAudioProcessor.BAND_COUNT) p.filterTypes.map { parseFilterType(it) }.toTypedArray() else Array(CustomEqAudioProcessor.BAND_COUNT) { FilterType.PEAKING }
+                val freqs =
+                    if (p.bandFrequencies.size ==
+                        CustomEqAudioProcessor.BAND_COUNT
+                    ) {
+                        p.bandFrequencies.toFloatArray()
+                    } else {
+                        CustomEqAudioProcessor.BAND_FREQUENCIES.copyOf()
+                    }
+                val qs =
+                    if (p.bandQs.size ==
+                        CustomEqAudioProcessor.BAND_COUNT
+                    ) {
+                        p.bandQs.toFloatArray()
+                    } else {
+                        FloatArray(CustomEqAudioProcessor.BAND_COUNT) { CustomEqAudioProcessor.DEFAULT_Q }
+                    }
+                val types =
+                    if (p.filterTypes.size ==
+                        CustomEqAudioProcessor.BAND_COUNT
+                    ) {
+                        p.filterTypes.map { parseFilterType(it) }.toTypedArray()
+                    } else {
+                        Array(CustomEqAudioProcessor.BAND_COUNT) { FilterType.PEAKING }
+                    }
                 EqPreset(
                     id = p.id,
                     name = p.name,
@@ -60,9 +81,30 @@ fun PersistedSoundSettings.toSoundSettings(): SoundSettings {
             }
 
     val gains = if (bandGains.size == CustomEqAudioProcessor.BAND_COUNT) bandGains else EqPreset.FLAT.bandGains.toList()
-    val freqs = if (bandFrequencies.size == CustomEqAudioProcessor.BAND_COUNT) bandFrequencies else CustomEqAudioProcessor.BAND_FREQUENCIES.toList()
-    val qs = if (bandQs.size == CustomEqAudioProcessor.BAND_COUNT) bandQs else List(CustomEqAudioProcessor.BAND_COUNT) { CustomEqAudioProcessor.DEFAULT_Q }
-    val types = if (filterTypes.size == CustomEqAudioProcessor.BAND_COUNT) filterTypes.map { parseFilterType(it) } else List(CustomEqAudioProcessor.BAND_COUNT) { FilterType.PEAKING }
+    val freqs =
+        if (bandFrequencies.size ==
+            CustomEqAudioProcessor.BAND_COUNT
+        ) {
+            bandFrequencies
+        } else {
+            CustomEqAudioProcessor.BAND_FREQUENCIES.toList()
+        }
+    val qs =
+        if (bandQs.size ==
+            CustomEqAudioProcessor.BAND_COUNT
+        ) {
+            bandQs
+        } else {
+            List(CustomEqAudioProcessor.BAND_COUNT) { CustomEqAudioProcessor.DEFAULT_Q }
+        }
+    val types =
+        if (filterTypes.size ==
+            CustomEqAudioProcessor.BAND_COUNT
+        ) {
+            filterTypes.map { parseFilterType(it) }
+        } else {
+            List(CustomEqAudioProcessor.BAND_COUNT) { FilterType.PEAKING }
+        }
 
     val bandsList =
         List(CustomEqAudioProcessor.BAND_COUNT) { i ->
