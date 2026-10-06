@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,9 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
@@ -27,42 +29,58 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
-import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
-import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.combine
 
-/**
- * Header artwork width as a share of the screen width: prominent, while the
- * first tracks stay visible on a phone without scrolling.
- */
-private const val ARTWORK_WIDTH_FRACTION = 0.62f
+/** The hero artwork moves at this share of the scroll speed (parallax) as the page scrolls. */
+private const val HERO_PARALLAX = 0.5f
 
-/**
- * Width of the centered Play/Shuffle pair as a share of the header width: the
- * width the pair had beside the former playlist icon, so the buttons keep their size.
- */
+/** How much the hero artwork fades by the time it has scrolled away. */
+private const val HERO_FADE = 0.6f
+
+/** The artwork fades into the page from here down, so the title reads over its lower part (any cover). */
+private const val HERO_SCRIM_START = 0.35f
+private const val HERO_SCRIM_STEPS = 12
+
+/** Smoothstep (3t² − 2t³): eases the fade at both ends. */
+private const val SMOOTHSTEP_A = 3f
+private const val SMOOTHSTEP_B = 2f
+
+/** Scrolled past this share of the hero, the album title moves into the floating header. */
+private const val COMPACT_HEADER_AT = 0.75f
+
+/** Width of the centered Play / Shuffle pair as a share of the screen (as on the artist page). */
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
+
+/** The title over the artwork fades out over this much scrolling. */
+private val TITLE_FADE_DISTANCE = 160.dp
 
 private const val MS_PER_MINUTE = 60_000L
 private const val MINUTES_PER_HOUR = 60L
@@ -74,8 +92,10 @@ private class AlbumDetailData(
 )
 
 /**
- * An album's page: artwork, title, artist and facts from the library, Play /
- * Shuffle / Add to playlist, then the album's tracks in album order. Data comes
+ * An album's page, artwork first: the cover fills the top edge to edge with the
+ * title, artist and facts over its lower part, then Shuffle / Play, then the
+ * album's tracks in album order. As the page scrolls the cover drifts and fades
+ * and the title moves into the floating header. Data comes
  * from the library repository through [viewModel] and updates live, so an album
  * removed by a rescan turns into an empty state instead of failing.
  */
@@ -114,9 +134,22 @@ fun AlbumDetailScreen(
             },
         )
 
+    val listState = rememberLazyListState()
+    val compactHeader by remember(listState) {
+        derivedStateOf {
+            val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == HERO_KEY }
+            hero == null || listState.firstVisibleItemScrollOffset > hero.size * COMPACT_HEADER_AT
+        }
+    }
     AppScaffold(
-        // Floating back button only; the page scrolls underneath it, as in the Library.
-        topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
+        // Floating glass back button over the cover; once the cover has scrolled away
+        // the album title joins it as a compact header.
+        topBar = {
+            OverlayHeader(
+                navigation = TopBarNavigation.Detail(onBack),
+                title = detail?.album?.title?.takeIf { compactHeader },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { innerPadding ->
@@ -142,16 +175,18 @@ fun AlbumDetailScreen(
                     }
                 val scroll = innerPadding.forScrollingContent(topOverlay = true)
                 LazyColumn(
+                    state = listState,
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(scroll.container),
-                    contentPadding = PaddingValues(top = scroll.contentTop, bottom = Spacing.lg + scroll.contentBottom),
+                    // The cover starts at the very top, under the status bar and the floating header.
+                    contentPadding = PaddingValues(bottom = Spacing.lg + scroll.contentBottom),
                 ) {
-                    item(key = "header") {
-                        AlbumHeader(
-                            album = album,
-                            songs = songs,
+                    item(key = HERO_KEY) { AlbumHero(album = album, songs = songs, listState = listState) }
+                    item(key = "actions") {
+                        AlbumActions(
+                            enabled = songs.isNotEmpty(),
                             onPlay = { viewModel.playInOrder(songs) },
                             onShuffle = { viewModel.playShuffled(songs) },
                         )
@@ -197,19 +232,32 @@ fun AlbumDetailScreen(
     }
 }
 
+/**
+ * The cover, edge to edge, fading into the page at the bottom where the title,
+ * artist and facts sit. While the page scrolls the cover moves at half speed and
+ * fades, and the title fades out (read in the draw phase: no recomposition).
+ */
 @Composable
-private fun AlbumHeader(
+private fun AlbumHero(
     album: Album,
     songs: List<Song>,
-    onPlay: () -> Unit,
-    onShuffle: () -> Unit,
+    listState: LazyListState,
 ) {
-    Column(
+    // The opaque colour the track list sits on (the theme background is translucent under glass).
+    val page = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
+    val scrim =
+        remember(page) {
+            List(HERO_SCRIM_STEPS + 1) { i ->
+                val t = i / HERO_SCRIM_STEPS.toFloat()
+                page.copy(alpha = t * t * (SMOOTHSTEP_A - SMOOTHSTEP_B * t))
+            }
+        }
+    Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(start = Spacing.screenGutter, end = Spacing.screenGutter, bottom = Spacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
+                .aspectRatio(1f)
+                .clipToBounds(),
     ) {
         AlbumArtwork(
             artworkUri = album.artworkUri,
@@ -217,71 +265,121 @@ private fun AlbumHeader(
             modifier =
                 Modifier
                     .sharedArtwork(albumArtworkKey(album.id))
-                    .widthIn(max = ArtworkSize.heroMax)
-                    .fillMaxWidth(ARTWORK_WIDTH_FRACTION)
-                    .aspectRatio(1f)
-                    .clip(Radius.largeShape),
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val scrolled = heroScroll(listState, size.height)
+                        translationY = scrolled * HERO_PARALLAX
+                        alpha = 1f - HERO_FADE * (scrolled / size.height).coerceIn(0f, 1f)
+                    },
         )
-        Spacer(modifier = Modifier.height(Spacing.lg))
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    // Eased in many small steps: the cover flows into the page with no visible boundary.
+                    .drawBehind {
+                        drawRect(Brush.verticalGradient(scrim, startY = size.height * HERO_SCRIM_START, endY = size.height))
+                    },
+        )
+        AlbumTitleBlock(
+            album = album,
+            songs = songs,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        val scrolled = heroScroll(listState, Float.MAX_VALUE)
+                        alpha = 1f - (scrolled / TITLE_FADE_DISTANCE.toPx()).coerceIn(0f, 1f)
+                    },
+        )
+    }
+}
+
+/** Title, artist and facts, centered over the lower part of the cover. */
+@Composable
+private fun AlbumTitleBlock(
+    album: Album,
+    songs: List<Song>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.heroGutter)
+                .padding(bottom = Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = album.title,
-            style = TextStyles.pageTitle,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
             text = album.artist,
-            style = TextStyles.listTitle,
-            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            text = albumFacts(album, songs),
+            text = albumFacts(songs),
             style = TextStyles.metadata,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(modifier = Modifier.height(Spacing.lg))
-        AlbumActions(enabled = songs.isNotEmpty(), onPlay = onPlay, onShuffle = onShuffle)
     }
 }
 
-/** Play and Shuffle as an equal-width pair, centered (the header column centers it). */
+/** How far the hero has scrolled up, px ([whenGone] once it is off screen). */
+private fun heroScroll(
+    state: LazyListState,
+    whenGone: Float,
+): Float = if (state.firstVisibleItemIndex == 0) state.firstVisibleItemScrollOffset.toFloat() else whenGone
+
+/** Play and Shuffle as an equal-width pair, centered (the same pair as the artist page). */
 @Composable
 private fun AlbumActions(
     enabled: Boolean,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(ACTION_PAIR_WIDTH_FRACTION),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.md),
+        contentAlignment = Alignment.Center,
     ) {
-        Button(onClick = onPlay, enabled = enabled, modifier = Modifier.weight(1f)) {
-            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Text("Play")
-        }
-        FilledTonalButton(onClick = onShuffle, enabled = enabled, modifier = Modifier.weight(1f)) {
-            Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            Text("Shuffle")
+        Row(
+            modifier = Modifier.fillMaxWidth(ACTION_PAIR_WIDTH_FRACTION),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Button(onClick = onPlay, enabled = enabled, modifier = Modifier.weight(1f)) {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text("Play")
+            }
+            FilledTonalButton(onClick = onShuffle, enabled = enabled, modifier = Modifier.weight(1f)) {
+                Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
+                Spacer(modifier = Modifier.width(Spacing.sm))
+                Text("Shuffle")
+            }
         }
     }
 }
 
-/** "2024 · 12 songs · 43 min" from what the library knows; unknown parts are left out. */
-private fun albumFacts(
-    album: Album,
-    songs: List<Song>,
-): String {
+/** "12 songs · 43 min" from the album's tracks; unknown parts are left out. */
+private fun albumFacts(songs: List<Song>): String {
     val totalMinutes = songs.sumOf { it.durationMs } / MS_PER_MINUTE
     val duration =
         when {
@@ -290,8 +388,9 @@ private fun albumFacts(
             else -> "${totalMinutes / MINUTES_PER_HOUR} hr ${totalMinutes % MINUTES_PER_HOUR} min"
         }
     return listOfNotNull(
-        album.year.takeIf { it in 1900..2099 }?.toString(),
         countLabel(songs.size, "song"),
         duration,
     ).joinToString(" · ")
 }
+
+private const val HERO_KEY = "hero"
