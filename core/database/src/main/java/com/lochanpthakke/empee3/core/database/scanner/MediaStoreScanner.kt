@@ -176,7 +176,14 @@ class MediaStoreScanner
                             year = year.takeIf { it in 1900..2099 } ?: 0
 
                             val dateModifiedSec = c.getLong(dateModifiedColumn)
-                            val dateModified = if (dateModifiedSec in 100_000_000L..100_000_000_000L) dateModifiedSec * 1000L else dateModifiedSec
+                            val dateModified =
+                                if (dateModifiedSec in
+                                    100_000_000L..100_000_000_000L
+                                ) {
+                                    dateModifiedSec * 1000L
+                                } else {
+                                    dateModifiedSec
+                                }
 
                             val contentUri =
                                 ContentUris
@@ -294,8 +301,10 @@ class MediaStoreScanner
                 for (dir in externalFilesDirs) {
                     if (dir != null) {
                         var root: File? = dir
-                        while (root != null && root.parentFile != null &&
-                            root.parentFile?.name != "storage" && root.parentFile?.name != "mnt"
+                        while (root != null &&
+                            root.parentFile != null &&
+                            root.parentFile?.name != "storage" &&
+                            root.parentFile?.name != "mnt"
                         ) {
                             root = root.parentFile
                         }
@@ -312,7 +321,10 @@ class MediaStoreScanner
                     }
                 }
 
-                fun collectAudioFiles(dir: File, depth: Int = 0) {
+                fun collectAudioFiles(
+                    dir: File,
+                    depth: Int = 0,
+                ) {
                     if (depth > 10 || !dir.exists() || !dir.isDirectory) return
                     dir.listFiles()?.forEach { file ->
                         if (file.isDirectory) {
