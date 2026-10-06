@@ -6,9 +6,11 @@ import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
 import com.lochanpthakke.empee3.core.database.MIGRATION_6_7
 import com.lochanpthakke.empee3.core.database.MIGRATION_7_8
+import com.lochanpthakke.empee3.core.database.MIGRATION_8_9
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
+import com.lochanpthakke.empee3.core.database.dao.ListeningStatsDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
 import com.lochanpthakke.empee3.core.database.dao.RecentlyPlayedDao
@@ -34,7 +36,7 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
@@ -56,6 +58,9 @@ object DatabaseModule {
 
     @Provides
     fun provideRecentlyPlayedDao(database: EmPee3Database): RecentlyPlayedDao = database.recentlyPlayedDao()
+
+    @Provides
+    fun provideListeningStatsDao(database: EmPee3Database): ListeningStatsDao = database.listeningStatsDao()
 
     @Provides
     fun provideMetadataProcessingDao(database: EmPee3Database): MetadataProcessingDao = database.metadataProcessingDao()

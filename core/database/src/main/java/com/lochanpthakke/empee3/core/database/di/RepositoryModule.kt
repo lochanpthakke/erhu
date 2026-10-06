@@ -14,6 +14,7 @@ import com.lochanpthakke.empee3.core.database.repository.PlaylistArtworkStore
 import com.lochanpthakke.empee3.core.database.repository.PlaylistRepository
 import com.lochanpthakke.empee3.core.database.repository.PlaylistRepositoryImpl
 import com.lochanpthakke.empee3.core.database.repository.TimeSource
+import com.lochanpthakke.empee3.core.database.repository.ZoneSource
 import com.lochanpthakke.empee3.core.model.SongLookup
 import dagger.Binds
 import dagger.Module
@@ -22,6 +23,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.io.File
+import java.time.ZoneId
 import javax.inject.Singleton
 
 @Module
@@ -47,6 +49,10 @@ interface RepositoryModule {
         @Provides
         @Singleton
         fun provideTimeSource(): TimeSource = TimeSource(System::currentTimeMillis)
+
+        @Provides
+        @Singleton
+        fun provideZoneSource(): ZoneSource = ZoneSource(ZoneId::systemDefault)
 
         @Provides
         @Singleton

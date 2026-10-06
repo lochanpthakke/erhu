@@ -22,6 +22,10 @@ data class ArtistDetail(
     val artistId: Long,
 )
 
+/** Sound Capsule: the month's listening statistics. */
+@Serializable
+object SoundCapsule
+
 @Serializable
 object Equalizer
 

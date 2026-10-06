@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
@@ -110,6 +111,7 @@ import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
 import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
+import com.lochanpthakke.empee3.feature.library.SoundCapsuleScreen
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
 import com.lochanpthakke.empee3.feature.library.rememberPlayerTransitionState
@@ -129,6 +131,7 @@ import com.lochanpthakke.empee3.navigation.MetadataEditor
 import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.navigation.SettingsCategory
+import com.lochanpthakke.empee3.navigation.SoundCapsule
 import com.lochanpthakke.empee3.navigation.navEnter
 import com.lochanpthakke.empee3.navigation.navExit
 import com.lochanpthakke.empee3.navigation.navPopEnter
@@ -147,6 +150,7 @@ private class DrawerDestination(
 private val DRAWER_DESTINATIONS =
     listOf(
         DrawerDestination("Library", Icons.AutoMirrored.Filled.LibraryBooks, Library),
+        DrawerDestination("Sound Capsule", Icons.Default.Insights, SoundCapsule),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
         DrawerDestination("Metadata Editor", Icons.Default.EditNote, MetadataEditor),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
@@ -447,6 +451,16 @@ fun MainScaffold() {
                                                         viewModel = playlistsViewModel,
                                                         libraryViewModel = libraryViewModel,
                                                         onBack = { navController.popBackStack() },
+                                                    )
+                                                }
+                                            }
+                                            composable<SoundCapsule> {
+                                                ProvideMotionScope(this) {
+                                                    SoundCapsuleScreen(
+                                                        viewModel = hiltViewModel(),
+                                                        onOpenDrawer = openDrawer,
+                                                        onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                                        onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                     )
                                                 }
                                             }
