@@ -30,6 +30,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +57,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -139,6 +142,17 @@ fun ArtistDetailScreen(
                 val allArtistSongs = primarySongs.ifEmpty { featuredSongs }
                 val scroll = innerPadding.forScrollingContent(topOverlay = true)
 
+                val setFocusedArtwork = LocalSetFocusedArtworkUri.current
+                val artistArtUri = artist.artworkUri ?: allArtistSongs.firstOrNull()?.artworkUri ?: allArtistSongs.firstOrNull()?.uri
+                LaunchedEffect(artistArtUri) {
+                    setFocusedArtwork(artistArtUri)
+                }
+                DisposableEffect(Unit) {
+                    onDispose {
+                        setFocusedArtwork(null)
+                    }
+                }
+
                 LazyColumn(
                     modifier =
                         Modifier
@@ -156,31 +170,37 @@ fun ArtistDetailScreen(
                         )
                     }
 
-                    if (albums.isNotEmpty()) {
-                        item(key = "albums_section") {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = Spacing.md),
-                            ) {
-                                Text(
-                                    text = "Albums",
-                                    style = TextStyles.sectionTitle,
-                                    modifier = Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.xs),
-                                )
-                                LazyRow(
-                                    contentPadding = PaddingValues(horizontal = Spacing.screenGutter),
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                                ) {
-                                    items(albums, key = { it.id }) { album ->
-                                        CompactAlbumTile(
-                                            album = album,
-                                            onClick = { onOpenAlbum(album) },
-                                        )
-                                    }
-                                }
-                            }
+                    val lps = albums.filter { it.songCount >= 7 }
+                    val eps = albums.filter { it.songCount in 4..6 }
+                    val singles = albums.filter { it.songCount in 1..3 }
+
+                    if (lps.isNotEmpty()) {
+                        item(key = "lps_section") {
+                            AlbumSectionRow(
+                                title = "Albums",
+                                albums = lps,
+                                onOpenAlbum = onOpenAlbum,
+                            )
+                        }
+                    }
+
+                    if (eps.isNotEmpty()) {
+                        item(key = "eps_section") {
+                            AlbumSectionRow(
+                                title = "EPs",
+                                albums = eps,
+                                onOpenAlbum = onOpenAlbum,
+                            )
+                        }
+                    }
+
+                    if (singles.isNotEmpty()) {
+                        item(key = "singles_section") {
+                            AlbumSectionRow(
+                                title = "Singles",
+                                albums = singles,
+                                onOpenAlbum = onOpenAlbum,
+                            )
                         }
                     }
 
@@ -377,6 +397,37 @@ private fun ArtistActions(
             Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
             Spacer(modifier = Modifier.width(Spacing.sm))
             Text("Shuffle")
+        }
+    }
+}
+
+@Composable
+private fun AlbumSectionRow(
+    title: String,
+    albums: List<Album>,
+    onOpenAlbum: (Album) -> Unit,
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = Spacing.sm),
+    ) {
+        Text(
+            text = title,
+            style = TextStyles.sectionTitle,
+            modifier = Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.xs),
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = Spacing.screenGutter),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        ) {
+            items(albums, key = { it.id }) { album ->
+                CompactAlbumTile(
+                    album = album,
+                    onClick = { onOpenAlbum(album) },
+                )
+            }
         }
     }
 }

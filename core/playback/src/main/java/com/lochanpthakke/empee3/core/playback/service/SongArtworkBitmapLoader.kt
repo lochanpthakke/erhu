@@ -2,36 +2,37 @@ package com.lochanpthakke.empee3.core.playback.service
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Build
-import android.util.Size
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
+import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.google.common.util.concurrent.MoreExecutors
+import com.lochanpthakke.empee3.core.common.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.playback.songUriFromExtras
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.Executors
 
 /**
  * Artwork for the media notification / lock screen.
  *
- * The MediaStore album-art URI is not reliable (on Samsung One UI it returns
- * data that fails to decode), so for our own songs the picture is read from the
- * audio file itself: MediaStore's generated thumbnail on API 29+, the embedded
- * picture otherwise. Anything else falls back to Media3's default loader.
+ * Uses [ArtworkLoader]'s in-memory cache for instant 0ms hits when skipping tracks.
+ * Stale background requests from rapid multi-skips are automatically canceled.
  */
 @UnstableApi
 internal class SongArtworkBitmapLoader(
     private val context: Context,
 ) : BitmapLoader {
-    private val executor: ListeningExecutorService = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
+    private val executor: ListeningExecutorService =
+        MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor())
     private val fallback = DataSourceBitmapLoader(context)
+
+    @Volatile
+    private var activeTask: ListenableFuture<Bitmap>? = null
 
     override fun supportsMimeType(mimeType: String): Boolean = fallback.supportsMimeType(mimeType)
 
@@ -41,33 +42,24 @@ internal class SongArtworkBitmapLoader(
 
     override fun loadBitmapFromMetadata(metadata: MediaMetadata): ListenableFuture<Bitmap>? {
         val songUri = metadata.extras?.songUriFromExtras() ?: return super.loadBitmapFromMetadata(metadata)
-        return executor.submit<Bitmap> {
-            loadFromSong(Uri.parse(songUri)) ?: throw IOException("No artwork for $songUri")
-        }
-    }
+        val albumArtUri = metadata.artworkUri?.toString()
 
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    private fun loadFromSong(uri: Uri): Bitmap? {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                return context.contentResolver.loadThumbnail(uri, Size(ARTWORK_SIZE_PX, ARTWORK_SIZE_PX), null)
-            } catch (e: Exception) {
-                // No thumbnail — try the embedded picture below.
-            }
+        // Fast path: instant 0ms memory cache hit for single atomic notification update
+        ArtworkLoader.peek(songUri, albumArtUri)?.let { cachedBitmap ->
+            return Futures.immediateFuture(cachedBitmap)
         }
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(context, uri)
-            retriever.embeddedPicture?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
-        } catch (e: Exception) {
-            null
-        } finally {
-            try {
-                retriever.release()
-            } catch (e: Exception) {
-                // Nothing useful to do if release fails.
+
+        // Slow path: cancel stale in-flight request from previous rapid skips
+        activeTask?.cancel(true)
+
+        val task =
+            executor.submit<Bitmap> {
+                runBlocking {
+                    ArtworkLoader.load(context, songUri, albumArtUri, ARTWORK_SIZE_PX)
+                } ?: throw IOException("No artwork for $songUri")
             }
-        }
+        activeTask = task
+        return task
     }
 
     companion object {

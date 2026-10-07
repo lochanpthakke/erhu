@@ -18,12 +18,6 @@ data class SoundSettings(
     val selectedBandIndex: Int = 0,
     val activePresetId: String = EqPreset.FLAT.id,
     val customPresets: List<EqPreset> = emptyList(),
-    val isBassBoostEnabled: Boolean = false,
-    val bassBoostStrength: Short = 0,
-    val isVirtualizerEnabled: Boolean = false,
-    val virtualizerStrength: Short = 0,
-    val isLoudnessEnabled: Boolean = false,
-    val loudnessGainMb: Int = 0,
 ) {
     val currentBandGains: FloatArray
         get() = FloatArray(bands.size) { bands[it].gainDb }

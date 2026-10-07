@@ -70,7 +70,9 @@ fun MiniPlayer(
     val song = playbackState.currentSong ?: return
     val durationMs = playbackState.durationMs
 
-    val isPlaying = playbackState.status == PlaybackStatus.PLAYING
+    val isPlaying =
+        playbackState.status == PlaybackStatus.PLAYING ||
+            playbackState.status == PlaybackStatus.BUFFERING
     val glass = EmPee3Glass.isActive
     val shape = BottomChrome.shape()
     val interactionSource = remember { MutableInteractionSource() }

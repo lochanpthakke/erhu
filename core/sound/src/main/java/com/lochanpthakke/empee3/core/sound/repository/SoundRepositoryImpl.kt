@@ -10,8 +10,6 @@ import com.lochanpthakke.empee3.core.common.result.onError
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.dsp.FilterType
-import com.lochanpthakke.empee3.core.sound.effects.AudioEffectCapabilities
-import com.lochanpthakke.empee3.core.sound.effects.AudioEffectManager
 import com.lochanpthakke.empee3.core.sound.model.BandConfig
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
@@ -39,7 +37,6 @@ class SoundRepositoryImpl
     @Inject
     constructor(
         private val customEqAudioProcessor: CustomEqAudioProcessor,
-        private val effectManager: AudioEffectManager,
         private val persistence: SoundSettingsPersistence,
         dispatchers: DispatcherProvider,
         private val logger: Logger,
@@ -48,9 +45,6 @@ class SoundRepositoryImpl
 
         private val _soundSettings = MutableStateFlow(SoundSettings())
         override val soundSettings: StateFlow<SoundSettings> = _soundSettings.asStateFlow()
-
-        private val _capabilities = MutableStateFlow(AudioEffectCapabilities())
-        override val capabilities: StateFlow<AudioEffectCapabilities> = _capabilities.asStateFlow()
 
         private var restoreFinished = false
         private var changedBeforeRestore = false
@@ -105,9 +99,6 @@ class SoundRepositoryImpl
                 activeCount = settings.activeBandCount,
             )
             customEqAudioProcessor.setEqEnabled(settings.isEqEnabled)
-            effectManager.setBassBoost(settings.isBassBoostEnabled, settings.bassBoostStrength)
-            effectManager.setVirtualizer(settings.isVirtualizerEnabled, settings.virtualizerStrength)
-            effectManager.setLoudnessEnhancer(settings.isLoudnessEnabled, settings.loudnessGainMb)
         }
 
         private fun onUserChange() {
@@ -119,8 +110,7 @@ class SoundRepositoryImpl
         }
 
         override fun attachAudioSession(audioSessionId: Int) {
-            val caps = effectManager.attachToAudioSession(audioSessionId)
-            _capabilities.value = caps
+            // No-op (previously attached OEM AudioEffect instances)
         }
 
         override fun setEqEnabled(enabled: Boolean) {
@@ -322,39 +312,6 @@ class SoundRepositoryImpl
                 }
                 onUserChange()
             }
-
-        override fun setBassBoost(
-            enabled: Boolean,
-            strength: Short,
-        ) {
-            effectManager.setBassBoost(enabled, strength)
-            _soundSettings.update {
-                it.copy(isBassBoostEnabled = enabled, bassBoostStrength = strength)
-            }
-            onUserChange()
-        }
-
-        override fun setVirtualizer(
-            enabled: Boolean,
-            strength: Short,
-        ) {
-            effectManager.setVirtualizer(enabled, strength)
-            _soundSettings.update {
-                it.copy(isVirtualizerEnabled = enabled, virtualizerStrength = strength)
-            }
-            onUserChange()
-        }
-
-        override fun setLoudnessEnhancer(
-            enabled: Boolean,
-            gainMb: Int,
-        ) {
-            effectManager.setLoudnessEnhancer(enabled, gainMb)
-            _soundSettings.update {
-                it.copy(isLoudnessEnabled = enabled, loudnessGainMb = gainMb)
-            }
-            onUserChange()
-        }
 
         companion object {
             private const val TAG = "SoundRepository"

@@ -96,7 +96,32 @@ object BuiltInThemes {
                 ),
         )
 
-    val ALL_BUILT_IN_THEMES = listOf(DEFAULT_LIGHT, DEFAULT_DARK)
+    const val DOMINANT_COLOR_ID = "dominant_color"
+    const val GRADIENT_UI_ID = "gradient_ui"
+
+    val DOMINANT_COLOR =
+        ThemeManifest(
+            id = DOMINANT_COLOR_ID,
+            name = "Dominant Color",
+            author = "empee3",
+            isDark = true,
+            colors = DEFAULT_DARK.colors,
+            shapes = DEFAULT_DARK.shapes,
+            widgetConfig = DEFAULT_DARK.widgetConfig,
+        )
+
+    val GRADIENT_UI =
+        ThemeManifest(
+            id = GRADIENT_UI_ID,
+            name = "Gradient UI",
+            author = "empee3",
+            isDark = true,
+            colors = DEFAULT_DARK.colors,
+            shapes = DEFAULT_DARK.shapes,
+            widgetConfig = DEFAULT_DARK.widgetConfig,
+        )
+
+    val ALL_BUILT_IN_THEMES = listOf(DEFAULT_LIGHT, DEFAULT_DARK, DOMINANT_COLOR, GRADIENT_UI)
     val ALL_BUILT_IN_SKINS = emptyList<SkinManifest>()
 
     /** Theme used when a stored id is blank or unknown (the app's long-standing default). */

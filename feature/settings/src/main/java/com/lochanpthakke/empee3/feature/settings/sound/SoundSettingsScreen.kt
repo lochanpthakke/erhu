@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
-import com.lochanpthakke.empee3.core.designsystem.component.SectionHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -75,7 +74,6 @@ fun SoundSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val soundSettings by viewModel.soundSettings.collectAsState()
-    val capabilities by viewModel.capabilities.collectAsState()
 
     var showSaveDialog by remember { mutableStateOf(false) }
 
@@ -172,45 +170,6 @@ fun SoundSettingsScreen(
             )
 
             Spacer(modifier = Modifier.height(Spacing.xl))
-
-            // Audio Effects Section
-            if (capabilities.isBassBoostSupported || capabilities.isVirtualizerSupported || capabilities.isLoudnessEnhancerSupported) {
-                SectionHeader(text = "Audio Effects")
-                Spacer(modifier = Modifier.height(Spacing.sm))
-
-                if (capabilities.isBassBoostSupported) {
-                    EffectSliderRow(
-                        title = "Bass Boost",
-                        enabled = soundSettings.isBassBoostEnabled,
-                        value = soundSettings.bassBoostStrength.toFloat(),
-                        valueRange = 0f..1000f,
-                        onToggle = { viewModel.setBassBoost(it, soundSettings.bassBoostStrength) },
-                        onValueChange = { viewModel.setBassBoost(soundSettings.isBassBoostEnabled, it.roundToInt().toShort()) },
-                    )
-                }
-
-                if (capabilities.isVirtualizerSupported) {
-                    EffectSliderRow(
-                        title = "Virtualizer (3D Audio)",
-                        enabled = soundSettings.isVirtualizerEnabled,
-                        value = soundSettings.virtualizerStrength.toFloat(),
-                        valueRange = 0f..1000f,
-                        onToggle = { viewModel.setVirtualizer(it, soundSettings.virtualizerStrength) },
-                        onValueChange = { viewModel.setVirtualizer(soundSettings.isVirtualizerEnabled, it.roundToInt().toShort()) },
-                    )
-                }
-
-                if (capabilities.isLoudnessEnhancerSupported) {
-                    EffectSliderRow(
-                        title = "Loudness Enhancer",
-                        enabled = soundSettings.isLoudnessEnabled,
-                        value = soundSettings.loudnessGainMb.toFloat(),
-                        valueRange = 0f..1000f,
-                        onToggle = { viewModel.setLoudnessEnhancer(it, soundSettings.loudnessGainMb) },
-                        onValueChange = { viewModel.setLoudnessEnhancer(soundSettings.isLoudnessEnabled, it.roundToInt()) },
-                    )
-                }
-            }
         }
     }
 
@@ -505,39 +464,6 @@ private fun PresetAndResetHeader(
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text("Reset")
-        }
-    }
-}
-
-@Composable
-@Suppress("MagicNumber", "LongParameterList")
-private fun EffectSliderRow(
-    title: String,
-    enabled: Boolean,
-    value: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
-    onToggle: (Boolean) -> Unit,
-    onValueChange: (Float) -> Unit,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xs),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Switch(checked = enabled, onCheckedChange = onToggle)
-            }
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                enabled = enabled,
-            )
         }
     }
 }

@@ -1,7 +1,11 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,12 +25,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Pause
@@ -45,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -60,15 +64,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.lochanpthakke.empee3.core.designsystem.artwork.GlassArtworkBackdrop
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
@@ -95,6 +102,7 @@ import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private const val MS_PER_SECOND = 1000
 private const val SECONDS_PER_MINUTE = 60
@@ -129,7 +137,9 @@ fun NowPlayingScreen(
     val playbackState by playbackRepository.collectStablePlaybackState()
     val position = playbackRepository.collectPlaybackPosition()
     val song = playbackState.currentSong
-    val isPlaying = playbackState.status == PlaybackStatus.PLAYING
+    val isPlaying =
+        playbackState.status == PlaybackStatus.PLAYING ||
+            playbackState.status == PlaybackStatus.BUFFERING
 
     var showLyrics by remember { mutableStateOf(false) }
     // The player is one object (PlayerTransitionState): dragging the artwork / title
@@ -391,36 +401,61 @@ fun NowPlayingScreen(
                             }
                         }
 
-                        Row(
+                        // 3 Action Icons + Up Arrow to open Queue Sheet
+                        Column(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .revealWithPlayer(transition, start = 0.54f, end = 0.98f),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            PressIconButton(onClick = { onToggleFavorite(song) }) {
-                                val heartColor =
-                                    animatedStateColor(
-                                        if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                        label = "favoriteTint",
-                                    )
-                                SwapIcon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder) {
-                                    Icon(
-                                        imageVector = it,
-                                        contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                        tint = heartColor,
-                                    )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                PressIconButton(onClick = { onToggleFavorite(song) }) {
+                                    val heartColor =
+                                        animatedStateColor(
+                                            if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            label = "favoriteTint",
+                                        )
+                                    SwapIcon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder) {
+                                        Icon(
+                                            imageVector = it,
+                                            contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                            tint = heartColor,
+                                        )
+                                    }
+                                }
+                                PressIconButton(onClick = { showLyrics = true }) {
+                                    Icon(imageVector = Icons.Default.Lyrics, contentDescription = "Lyrics")
+                                }
+                                PressIconButton(onClick = { onAddToPlaylist(song) }) {
+                                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add to playlist")
                                 }
                             }
-                            PressIconButton(onClick = { showLyrics = true }) {
-                                Icon(imageVector = Icons.Default.Lyrics, contentDescription = "Lyrics")
-                            }
-                            PressIconButton(onClick = { showQueue = true }) {
-                                Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue")
-                            }
-                            PressIconButton(onClick = { onAddToPlaylist(song) }) {
-                                Icon(imageVector = Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Add to playlist")
+
+                            Spacer(modifier = Modifier.height(Spacing.xs))
+
+                            // Up Arrow & Flick/Swipe gesture trigger to open Queue
+                            PressIconButton(
+                                onClick = { showQueue = true },
+                                modifier =
+                                    Modifier.pointerInput(Unit) {
+                                        detectVerticalDragGestures { _, dragAmount ->
+                                            if (dragAmount < -10f) {
+                                                showQueue = true
+                                            }
+                                        }
+                                    },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowUp,
+                                    contentDescription = "Open queue",
+                                    modifier = Modifier.size(IconSize.large),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -568,11 +603,23 @@ private fun QueueSheet(
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val queue = playbackState.queue
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     LaunchedEffect(Unit) {
-        if (playbackState.currentIndex > 0) listState.scrollToItem(playbackState.currentIndex)
+        if (playbackState.currentIndex > 0) {
+            listState.scrollToItem(playbackState.currentIndex)
+        }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    var draggingIndex by remember { mutableStateOf<Int?>(null) }
+    var draggingOffset by remember { mutableFloatStateOf(0f) }
+    val density = LocalDensity.current
+    val rowHeightPx = with(density) { 68.dp.toPx() }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+    ) {
         Text(
             text = "Queue (${queue.size})",
             style = MaterialTheme.typography.titleLarge,
@@ -584,25 +631,96 @@ private fun QueueSheet(
                 modifier = Modifier.padding(Spacing.lg),
             )
         } else {
-            LazyColumn(state = listState) {
-                // Keys must be unique even if the same song is queued twice.
-                itemsIndexed(queue, key = { index, song -> "${song.id}_$index" }) { index, queuedSong ->
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                itemsIndexed(
+                    items = queue,
+                    key = { index, song -> "${song.id}_$index" },
+                ) { index, queuedSong ->
+                    val isDragging = draggingIndex == index
+                    val activeDragIndex = draggingIndex
+
+                    val displacement =
+                        if (activeDragIndex != null && !isDragging) {
+                            val targetIndex =
+                                (activeDragIndex + (draggingOffset / rowHeightPx).roundToInt()).coerceIn(0, queue.lastIndex)
+                            when {
+                                activeDragIndex < targetIndex && index in (activeDragIndex + 1)..targetIndex -> -rowHeightPx
+                                activeDragIndex > targetIndex && index in targetIndex..<activeDragIndex -> rowHeightPx
+                                else -> 0f
+                            }
+                        } else {
+                            0f
+                        }
+
+                    val animatedDisplacement by animateFloatAsState(
+                        targetValue = displacement,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "queueItemDisplacement",
+                    )
+
+                    val itemModifier =
+                        if (isDragging) {
+                            Modifier
+                                .zIndex(2f)
+                                .graphicsLayer {
+                                    translationY = draggingOffset
+                                    scaleX = 1.04f
+                                    scaleY = 1.04f
+                                    shadowElevation = 8.dp.toPx()
+                                }
+                        } else {
+                            Modifier
+                                .zIndex(1f)
+                                .graphicsLayer {
+                                    translationY = animatedDisplacement
+                                }
+                        }
+
                     SongRow(
                         song = queuedSong,
                         isHighlighted = index == playbackState.currentIndex,
                         onClick = { playbackRepository.skipToQueueItem(index) },
+                        modifier = itemModifier,
                     ) {
                         IconButton(
-                            onClick = { scope.launch { playbackRepository.reorder(index, index - 1) } },
-                            enabled = index > 0,
+                            onClick = {},
+                            modifier =
+                                Modifier.pointerInput(queue) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = {
+                                            draggingIndex = index
+                                            draggingOffset = 0f
+                                        },
+                                        onDragEnd = {
+                                            val from = draggingIndex
+                                            if (from != null) {
+                                                val to = (from + (draggingOffset / rowHeightPx).roundToInt()).coerceIn(0, queue.lastIndex)
+                                                if (from != to) {
+                                                    scope.launch { playbackRepository.reorder(from, to) }
+                                                }
+                                            }
+                                            draggingIndex = null
+                                            draggingOffset = 0f
+                                        },
+                                        onDragCancel = {
+                                            draggingIndex = null
+                                            draggingOffset = 0f
+                                        },
+                                        onVerticalDrag = { change, dragAmount ->
+                                            change.consume()
+                                            draggingOffset += dragAmount
+                                        },
+                                    )
+                                },
                         ) {
-                            Icon(imageVector = Icons.Default.KeyboardArrowUp, contentDescription = "Move up")
-                        }
-                        IconButton(
-                            onClick = { scope.launch { playbackRepository.reorder(index, index + 1) } },
-                            enabled = index < queue.lastIndex,
-                        ) {
-                            Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "Move down")
+                            Icon(
+                                imageVector = Icons.Default.DragHandle,
+                                contentDescription = "Drag to reorder",
+                                tint = if (isDragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         IconButton(onClick = { scope.launch { playbackRepository.removeFromQueue(index) } }) {
                             Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from queue")

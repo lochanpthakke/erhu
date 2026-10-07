@@ -28,6 +28,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -55,6 +57,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.combine
@@ -173,6 +176,17 @@ fun AlbumDetailScreen(
                                 .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
                         )
                     }
+
+                val setFocusedArtwork = LocalSetFocusedArtworkUri.current
+                val albumArtUri = album.artworkUri ?: songs.firstOrNull()?.artworkUri ?: songs.firstOrNull()?.uri
+                LaunchedEffect(albumArtUri) {
+                    setFocusedArtwork(albumArtUri)
+                }
+                DisposableEffect(Unit) {
+                    onDispose {
+                        setFocusedArtwork(null)
+                    }
+                }
                 val scroll = innerPadding.forScrollingContent(topOverlay = true)
                 LazyColumn(
                     state = listState,

@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.core.playback
 
+import android.content.Context
 import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -7,6 +8,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
+import com.lochanpthakke.empee3.core.common.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.common.result.onError
@@ -20,6 +22,7 @@ import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.SongLookup
 import com.lochanpthakke.empee3.core.playback.service.PlaybackServiceConnector
 import com.lochanpthakke.empee3.core.sound.repository.SoundRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -45,6 +48,7 @@ import javax.inject.Inject
 class PlaybackControllerImpl
     @Inject
     constructor(
+        @ApplicationContext private val context: Context,
         private val player: Player,
         private val dispatcherProvider: DispatcherProvider,
         private val logger: Logger,
@@ -156,10 +160,10 @@ class PlaybackControllerImpl
             val status =
                 when {
                     player.isPlaying -> PlaybackStatus.PLAYING
-                    player.playbackState == Player.STATE_BUFFERING && player.playWhenReady -> PlaybackStatus.BUFFERING
                     player.playbackState == Player.STATE_IDLE && player.mediaItemCount == 0 -> PlaybackStatus.IDLE
                     player.playbackState == Player.STATE_ENDED -> PlaybackStatus.IDLE
-                    else -> PlaybackStatus.PAUSED
+                    !player.playWhenReady -> PlaybackStatus.PAUSED
+                    else -> PlaybackStatus.BUFFERING
                 }
             _playbackState.update {
                 it.copy(
@@ -185,7 +189,32 @@ class PlaybackControllerImpl
                     positionMs = if (current == null) 0L else it.positionMs,
                 )
             }
-            if (current == null) updateStatus()
+            if (current == null) {
+                updateStatus()
+            } else {
+                preloadUpcomingQueueArtwork()
+            }
+        }
+
+        private var preloadJob: Job? = null
+
+        private fun preloadUpcomingQueueArtwork() {
+            preloadJob?.cancel()
+            val state = _playbackState.value
+            val current = state.currentSong ?: return
+            val next = state.nextSong
+            val prev = state.previousSong
+
+            preloadJob =
+                scope.launch(dispatcherProvider.io) {
+                    ArtworkLoader.load(context, current.uri, current.artworkUri, PRELOAD_ARTWORK_SIZE_PX)
+                    if (next != null) {
+                        ArtworkLoader.load(context, next.uri, next.artworkUri, PRELOAD_ARTWORK_SIZE_PX)
+                    }
+                    if (prev != null) {
+                        ArtworkLoader.load(context, prev.uri, prev.artworkUri, PRELOAD_ARTWORK_SIZE_PX)
+                    }
+                }
         }
 
         private fun resolveDuration(song: Song?): Long {
@@ -408,6 +437,7 @@ class PlaybackControllerImpl
 
             /** Persist the position roughly every 5 s while playing. */
             private const val PERSIST_EVERY_N_POLLS = 20
+            private const val PRELOAD_ARTWORK_SIZE_PX = 512
 
             /** Record the listening time so far about once a minute while playing. */
             private const val LISTENING_CHECKPOINT_POLLS = 240

@@ -5,8 +5,6 @@ import com.lochanpthakke.empee3.core.model.PersistedSoundSettings
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.dsp.FilterType
 
-private const val MAX_EFFECT_STRENGTH = 1000
-
 fun SoundSettings.toPersisted(): PersistedSoundSettings =
     PersistedSoundSettings(
         eqEnabled = isEqEnabled,
@@ -23,12 +21,12 @@ fun SoundSettings.toPersisted(): PersistedSoundSettings =
                     filterTypes = it.filterTypes.map { type -> type.name },
                 )
             },
-        bassBoostEnabled = isBassBoostEnabled,
-        bassBoostStrength = bassBoostStrength.toInt(),
-        virtualizerEnabled = isVirtualizerEnabled,
-        virtualizerStrength = virtualizerStrength.toInt(),
-        loudnessEnabled = isLoudnessEnabled,
-        loudnessGainMb = loudnessGainMb,
+        bassBoostEnabled = false,
+        bassBoostStrength = 0,
+        virtualizerEnabled = false,
+        virtualizerStrength = 0,
+        loudnessEnabled = false,
+        loudnessGainMb = 0,
         bandFrequencies = currentBandFrequencies.toList(),
         bandQs = currentBandQs.toList(),
         filterTypes = currentFilterTypes.map { it.name },
@@ -127,12 +125,6 @@ fun PersistedSoundSettings.toSoundSettings(): SoundSettings {
         selectedBandIndex = safeSelectedBandIndex,
         activePresetId = activePresetId.takeIf { it in knownPresetIds } ?: EqPreset.FLAT.id,
         customPresets = customs,
-        isBassBoostEnabled = bassBoostEnabled,
-        bassBoostStrength = bassBoostStrength.coerceIn(0, MAX_EFFECT_STRENGTH).toShort(),
-        isVirtualizerEnabled = virtualizerEnabled,
-        virtualizerStrength = virtualizerStrength.coerceIn(0, MAX_EFFECT_STRENGTH).toShort(),
-        isLoudnessEnabled = loudnessEnabled,
-        loudnessGainMb = loudnessGainMb.coerceIn(0, MAX_EFFECT_STRENGTH),
     )
 }
 

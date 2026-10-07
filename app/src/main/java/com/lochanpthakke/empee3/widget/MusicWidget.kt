@@ -55,7 +55,9 @@ class MusicWidget : GlanceAppWidget() {
                 title = song?.title ?: "Nothing playing",
                 artist = song?.artist.orEmpty(),
                 artwork = artwork,
-                isPlaying = playbackState.status == PlaybackStatus.PLAYING,
+                isPlaying =
+                    playbackState.status == PlaybackStatus.PLAYING ||
+                        playbackState.status == PlaybackStatus.BUFFERING,
                 isFavorite = isFavorite,
                 hasSong = song != null,
             )
