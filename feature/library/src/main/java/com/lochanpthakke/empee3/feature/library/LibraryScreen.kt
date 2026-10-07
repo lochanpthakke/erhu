@@ -3,6 +3,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,6 +88,8 @@ fun LibraryScreen(
     chromeScroll: NestedScrollConnection? = null,
 ) {
     val songs = viewModel.songsPaged.collectAsLazyPagingItems()
+    // The library is usable once its first tracks are on screen (reported to the system as "fully drawn").
+    ReportDrawnWhen { songs.itemCount > 0 }
     val favoriteSongs = viewModel.favoriteSongsPaged.collectAsLazyPagingItems()
     val albums = viewModel.albumsPaged.collectAsLazyPagingItems()
     val artists = viewModel.artistsPaged.collectAsLazyPagingItems()

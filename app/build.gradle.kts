@@ -15,6 +15,8 @@ android {
 
     defaultConfig {
         applicationId = "com.lochanpthakke.empee3"
+        // Measurement builds (-PperfApp) install beside the real app instead of over it.
+        if (project.hasProperty("perfApp")) applicationIdSuffix = ".perf"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
