@@ -10,6 +10,12 @@ data class PlaylistDetail(
     val playlistId: Long,
 )
 
+/** A smart playlist's page ([playlist] is a SmartPlaylist name), opened from the Tracks page. */
+@Serializable
+data class SmartPlaylistDetail(
+    val playlist: String,
+)
+
 /** An album's detail page, opened from the library's album grid. */
 @Serializable
 data class AlbumDetail(

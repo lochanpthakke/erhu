@@ -97,6 +97,7 @@ import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
+import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
@@ -111,6 +112,7 @@ import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
 import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
+import com.lochanpthakke.empee3.feature.library.SmartPlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.SoundCapsuleScreen
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
@@ -131,6 +133,7 @@ import com.lochanpthakke.empee3.navigation.MetadataEditor
 import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.navigation.SettingsCategory
+import com.lochanpthakke.empee3.navigation.SmartPlaylistDetail
 import com.lochanpthakke.empee3.navigation.SoundCapsule
 import com.lochanpthakke.empee3.navigation.navEnter
 import com.lochanpthakke.empee3.navigation.navExit
@@ -413,6 +416,7 @@ fun MainScaffold() {
                                                         onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                         onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
+                                                        onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it.name)) },
                                                         onSelectSection = { librarySection = it },
                                                         isSearchActive = isLibrarySearchActive,
                                                         onSearchActiveChange = { isLibrarySearchActive = it },
@@ -440,6 +444,18 @@ fun MainScaffold() {
                                                         playlistsViewModel = playlistsViewModel,
                                                         onBack = { navController.popBackStack() },
                                                         onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                                    )
+                                                }
+                                            }
+                                            composable<SmartPlaylistDetail> { entry ->
+                                                ProvideMotionScope(this) {
+                                                    val route = entry.toRoute<SmartPlaylistDetail>()
+                                                    SmartPlaylistDetailScreen(
+                                                        playlist = SmartPlaylist.valueOf(route.playlist),
+                                                        viewModel = hiltViewModel(),
+                                                        libraryViewModel = libraryViewModel,
+                                                        playlistsViewModel = playlistsViewModel,
+                                                        onBack = { navController.popBackStack() },
                                                     )
                                                 }
                                             }
@@ -603,6 +619,7 @@ private fun LibraryRoute(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
+    onOpenSmartPlaylist: (SmartPlaylist) -> Unit,
     onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
@@ -711,6 +728,7 @@ private fun LibraryRoute(
             onOpenAlbum = onOpenAlbum,
             onOpenArtist = onOpenArtist,
             onOpenPlaylist = onOpenPlaylist,
+            onOpenSmartPlaylist = onOpenSmartPlaylist,
             onSelectSection = onSelectSection,
             isSearchActive = isSearchActive,
             onSearchActiveChange = onSearchActiveChange,

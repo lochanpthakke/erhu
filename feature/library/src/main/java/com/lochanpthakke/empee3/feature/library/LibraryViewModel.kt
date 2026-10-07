@@ -11,10 +11,12 @@ import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
+import com.lochanpthakke.empee3.core.database.repository.SmartPlaylistRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
+import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
@@ -76,7 +78,17 @@ class LibraryViewModel
         private val artistArtworkRepository: ArtistArtworkRepository,
         private val artistArtworkUpdater: ArtistArtworkUpdater,
         recentlyPlayed: RecentlyPlayedRecorder,
+        smartPlaylistRepository: SmartPlaylistRepository,
     ) : ViewModel() {
+        /**
+         * The album artwork (one song per album, up to four) of each smart playlist card on
+         * the Tracks page, from the playlists' current songs. Queried only while the cards show.
+         */
+        val smartPlaylistCovers: StateFlow<Map<SmartPlaylist, List<Song>>> =
+            combine(HOME_SMART_PLAYLISTS.map { playlist -> smartPlaylistRepository.observeCover(playlist).map { playlist to it } }) {
+                it.toMap()
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+
         val isCustomScanLocationEnabled: StateFlow<Boolean> = themeRepository.isCustomScanLocationEnabled
         val customScanLocationPath: StateFlow<String> = themeRepository.customScanLocationPath
         val scanLocationConfigured: StateFlow<Boolean> = themeRepository.scanLocationConfigured

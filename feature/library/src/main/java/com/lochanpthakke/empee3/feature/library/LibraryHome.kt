@@ -27,17 +27,19 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Playlist
+import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 
 /**
  * The Tracks destination as the home feed: recently played albums and playlists
- * (from real playback history; a shelf with nothing in it is not shown), then
- * the full track list. One lazy list, so the shelves scroll away with the tracks.
+ * (from real playback history; a shelf with nothing in it is not shown), the smart
+ * playlists (whenever the library has songs), then the full track list. One lazy list, so the shelves scroll away with the tracks.
  */
 @Composable
 @Suppress("LongParameterList")
 internal fun HomeFeed(
     songs: LazyPagingItems<Song>,
+    smartPlaylistCovers: Map<SmartPlaylist, List<Song>>,
     recentAlbums: List<Album>,
     recentPlaylists: List<Playlist>,
     currentSongId: Long?,
@@ -45,12 +47,14 @@ internal fun HomeFeed(
     onSongClick: (Song) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
+    onSmartPlaylistClick: (SmartPlaylist) -> Unit,
     actions: SongActions,
     topInset: Dp,
     bottomInset: Dp,
     emptyMessage: String = "No songs found on this device",
 ) {
-    val hasShelves = recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty()
+    val hasSmartPlaylists = songs.itemCount > 0
+    val hasShelves = recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty() || hasSmartPlaylists
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.sm + bottomInset),
@@ -73,6 +77,18 @@ internal fun HomeFeed(
                             PlaylistTile(
                                 playlist = playlist,
                                 onClick = { onPlaylistClick(playlist) },
+                                modifier = Modifier.width(ArtworkSize.shelf),
+                            )
+                        }
+                    }
+                }
+                if (hasSmartPlaylists) {
+                    Shelf(title = "Smart Playlists") {
+                        items(HOME_SMART_PLAYLISTS, key = { it.name }) { playlist ->
+                            SmartPlaylistTile(
+                                playlist = playlist,
+                                covers = smartPlaylistCovers[playlist].orEmpty(),
+                                onClick = { onSmartPlaylistClick(playlist) },
                                 modifier = Modifier.width(ArtworkSize.shelf),
                             )
                         }

@@ -31,6 +31,14 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
     fun getFavoriteSongs(): Flow<List<SongEntity>>
 
+    /** Newest in the library first: the file's MediaStore modification time (when it was added or last changed). */
+    @Query("SELECT * FROM songs ORDER BY date_modified DESC, id DESC LIMIT :limit")
+    fun observeRecentlyAddedSongs(limit: Int): Flow<List<SongEntity>>
+
+    /** Favorite songs by title, at most [limit] (-1 = all). */
+    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC, id ASC LIMIT :limit")
+    fun observeFavoriteSongs(limit: Int): Flow<List<SongEntity>>
+
     @Query("UPDATE songs SET is_favorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(
         id: Long,

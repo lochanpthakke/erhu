@@ -56,6 +56,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
+import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 
 /** Actions offered for a single song wherever it is listed. */
@@ -78,6 +79,7 @@ fun LibraryScreen(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
+    onOpenSmartPlaylist: (SmartPlaylist) -> Unit,
     onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
@@ -221,9 +223,12 @@ fun LibraryScreen(
                 // Sections are switched by LibraryNavigationBar in the shell's bottom chrome.
                 Column(modifier = Modifier.fillMaxSize()) {
                     when (section) {
-                        LibrarySection.TRACKS ->
+                        LibrarySection.TRACKS -> {
+                            // Collected only on the Tracks section, which shows the smart playlist cards.
+                            val smartPlaylistCovers by viewModel.smartPlaylistCovers.collectAsState()
                             HomeFeed(
                                 songs = songs,
+                                smartPlaylistCovers = smartPlaylistCovers,
                                 recentAlbums = recentAlbums,
                                 recentPlaylists = recentPlaylists,
                                 currentSongId = currentSongId,
@@ -231,11 +236,13 @@ fun LibraryScreen(
                                 onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
                                 onAlbumClick = onOpenAlbum,
                                 onPlaylistClick = { onOpenPlaylist(it.id) },
+                                onSmartPlaylistClick = onOpenSmartPlaylist,
                                 actions = actions,
                                 topInset = scroll.contentTop,
                                 bottomInset = scroll.contentBottom,
                                 emptyMessage = emptyMessage,
                             )
+                        }
                         LibrarySection.ALBUMS ->
                             AlbumsTab(
                                 albums = albums,

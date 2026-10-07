@@ -168,4 +168,45 @@ interface ListeningStatsDao {
 
     @Query("SELECT day FROM listening_days WHERE play_count > 0 ORDER BY day ASC")
     fun observeListeningDays(): Flow<List<String>>
+
+    // ---- Smart playlists: all-time history across every month (songs no longer in the library drop out of the join).
+    // [limit] -1 means all songs.
+
+    /** Songs by total plays, most played first; ties by the latest play, then title and id. */
+    @Query(
+        """
+        SELECT s.* FROM songs s
+        INNER JOIN listening_stats st ON st.song_id = s.id
+        GROUP BY s.id
+        HAVING SUM(st.play_count) > 0
+        ORDER BY SUM(st.play_count) DESC,
+            MAX(CASE WHEN st.play_count > 0 THEN st.last_played_at END) DESC,
+            s.title COLLATE NOCASE ASC, s.id ASC
+        LIMIT :limit
+        """,
+    )
+    fun observeMostPlayedSongs(limit: Int): Flow<List<SongEntity>>
+
+    /** Songs by their latest play, most recent first; ties by title and id. */
+    @Query(
+        """
+        SELECT s.* FROM songs s
+        INNER JOIN listening_stats st ON st.song_id = s.id AND st.play_count > 0
+        GROUP BY s.id
+        ORDER BY MAX(st.last_played_at) DESC, s.title COLLATE NOCASE ASC, s.id ASC
+        LIMIT :limit
+        """,
+    )
+    fun observeRecentlyPlayedSongs(limit: Int): Flow<List<SongEntity>>
+
+    /** Songs without a single counted play, by title. */
+    @Query(
+        """
+        SELECT * FROM songs
+        WHERE id NOT IN (SELECT song_id FROM listening_stats WHERE play_count > 0)
+        ORDER BY title COLLATE NOCASE ASC, id ASC
+        LIMIT :limit
+        """,
+    )
+    fun observeNeverPlayedSongs(limit: Int): Flow<List<SongEntity>>
 }
