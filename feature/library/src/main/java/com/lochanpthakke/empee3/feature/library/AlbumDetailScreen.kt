@@ -92,6 +92,8 @@ private const val MINUTES_PER_HOUR = 60L
 private class AlbumDetailData(
     val album: Album?,
     val songs: List<Song>,
+    /** False while only the tapped album is known (its tracks are still being read). */
+    val loaded: Boolean = true,
 )
 
 /**
@@ -111,9 +113,7 @@ fun AlbumDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val detail by remember(albumId) {
-        combine(viewModel.observeAlbum(albumId), viewModel.observeAlbumSongs(albumId), ::AlbumDetailData)
-    }.collectAsState(initial = null)
+    val detail = rememberAlbumDetail(albumId, viewModel)
     // Only the playing song's id: position ticks must not recompose this page.
     val currentSongId by viewModel.currentSongId.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
@@ -180,6 +180,8 @@ fun AlbumDetailScreen(
                 val setFocusedArtwork = LocalSetFocusedArtworkUri.current
                 val albumArtUri = album.artworkUri ?: songs.firstOrNull()?.artworkUri ?: songs.firstOrNull()?.uri
                 LaunchedEffect(albumArtUri) {
+                    // At once (the tapped album's cover is known): an artwork-based theme re-colours
+                    // the app as the page arrives, not as a separate step after it.
                     setFocusedArtwork(albumArtUri)
                 }
                 DisposableEffect(Unit) {
@@ -197,15 +199,16 @@ fun AlbumDetailScreen(
                     // The cover starts at the very top, under the status bar and the floating header.
                     contentPadding = PaddingValues(bottom = Spacing.lg + scroll.contentBottom),
                 ) {
-                    item(key = HERO_KEY) { AlbumHero(album = album, songs = songs, listState = listState) }
+                    item(key = HERO_KEY) { AlbumHero(album = album, songs = songs.takeIf { data.loaded }, listState = listState) }
                     item(key = "actions") {
                         AlbumActions(
-                            enabled = songs.isNotEmpty(),
+                            // Enabled while the tracks load too (no flicker); an empty album disables them.
+                            enabled = !data.loaded || songs.isNotEmpty(),
                             onPlay = { viewModel.playInOrder(songs) },
                             onShuffle = { viewModel.playShuffled(songs) },
                         )
                     }
-                    if (songs.isEmpty()) {
+                    if (songs.isEmpty() && data.loaded) {
                         item(key = "empty") {
                             EmptyState(message = "This album has no tracks.", modifier = Modifier.padding(top = Spacing.xl))
                         }
@@ -247,6 +250,28 @@ fun AlbumDetailScreen(
 }
 
 /**
+ * The album page's data. The album that was tapped is already known: the page enters
+ * complete (cover, title, artist, buttons) on its first frame, and Room then keeps it
+ * current and adds the tracks. Null only when nothing is known yet.
+ */
+@Composable
+private fun rememberAlbumDetail(
+    albumId: Long,
+    viewModel: LibraryViewModel,
+): AlbumDetailData? {
+    val opening =
+        remember(albumId) {
+            viewModel.openingAlbum(albumId)?.let { (album, songs) ->
+                AlbumDetailData(album, songs.orEmpty(), loaded = songs != null)
+            }
+        }
+    val loaded by remember(albumId) {
+        combine(viewModel.observeAlbum(albumId), viewModel.observeAlbumSongs(albumId)) { album, songs -> AlbumDetailData(album, songs) }
+    }.collectAsState(initial = null)
+    return loaded ?: opening
+}
+
+/**
  * The cover, edge to edge, fading into the page at the bottom where the title,
  * artist and facts sit. While the page scrolls the cover moves at half speed and
  * fades, and the title fades out (read in the draw phase: no recomposition).
@@ -254,7 +279,7 @@ fun AlbumDetailScreen(
 @Composable
 private fun AlbumHero(
     album: Album,
-    songs: List<Song>,
+    songs: List<Song>?,
     listState: LazyListState,
 ) {
     // The opaque colour the track list sits on (the theme background is translucent under glass).
@@ -278,7 +303,9 @@ private fun AlbumHero(
             contentDescription = "Album artwork",
             modifier =
                 Modifier
-                    .sharedArtwork(albumArtworkKey(album.id))
+                    // In place, not in the transition overlay: the title, artist and fade drawn
+                    // over the cover stay visible while it travels in from the grid.
+                    .sharedArtwork(albumArtworkKey(album.id), renderInOverlay = false)
                     .fillMaxSize()
                     .graphicsLayer {
                         val scrolled = heroScroll(listState, size.height)
@@ -313,7 +340,7 @@ private fun AlbumHero(
 @Composable
 private fun AlbumTitleBlock(
     album: Album,
-    songs: List<Song>,
+    songs: List<Song>?,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -343,7 +370,8 @@ private fun AlbumTitleBlock(
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            text = albumFacts(songs),
+            // Empty while the tracks load: the line keeps its height, nothing below moves.
+            text = songs?.let(::albumFacts).orEmpty(),
             style = TextStyles.metadata,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

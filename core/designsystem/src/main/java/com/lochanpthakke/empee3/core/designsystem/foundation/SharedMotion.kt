@@ -39,10 +39,16 @@ private val ArtworkBounds = BoundsTransform { _, _ -> tween(Motion.HERO, easing 
  * Marks this artwork as the shared element [key]: when one screen with the key
  * leaves and another with the same key arrives, the artwork moves and resizes
  * between the two positions instead of disappearing and reappearing.
+ *
+ * [renderInOverlay] false keeps the artwork in its own place in the layout while it
+ * travels, so content drawn over it (a title on a cover) stays on top throughout.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun Modifier.sharedArtwork(key: Any): Modifier {
+fun Modifier.sharedArtwork(
+    key: Any,
+    renderInOverlay: Boolean = true,
+): Modifier {
     val shared = LocalSharedTransitionScope.current
     val scope = LocalMotionScope.current
     if (shared == null || scope == null) return this
@@ -51,6 +57,7 @@ fun Modifier.sharedArtwork(key: Any): Modifier {
             sharedContentState = rememberSharedContentState(key),
             animatedVisibilityScope = scope,
             boundsTransform = ArtworkBounds,
+            renderInOverlayDuringTransition = renderInOverlay,
         )
     }
 }

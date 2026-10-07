@@ -53,8 +53,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -88,7 +90,6 @@ import com.lochanpthakke.empee3.core.designsystem.theme.DominantColorExtractor
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
-import com.lochanpthakke.empee3.core.designsystem.theme.LocalFocusedArtworkUri
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
@@ -142,6 +143,9 @@ import com.lochanpthakke.empee3.navigation.navPopExit
 import com.lochanpthakke.empee3.ui.components.ExpandingPlayer
 import com.lochanpthakke.empee3.ui.components.MiniPlayer
 import com.lochanpthakke.empee3.ui.components.WriteAccessRequestEffect
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 private class DrawerDestination(
@@ -179,21 +183,26 @@ fun MainScaffold() {
     val currentSong = playbackState.currentSong
     val context = LocalContext.current
 
-    var focusedArtworkUri by remember { mutableStateOf<String?>(null) }
-    val currentFocusedUri = focusedArtworkUri ?: currentSong?.artworkUri ?: currentSong?.uri
+    // The artwork of the page in focus (album / artist) is not read here during composition:
+    // only the artwork-colour themes watch it, so a page reporting its artwork does not
+    // recompose the shell (and the screens under it) for any other theme.
+    val focusedArtworkUri = remember { mutableStateOf<String?>(null) }
+    val latestSong by rememberUpdatedState(currentSong)
 
     val dynamicTheme by produceState<ThemeManifest>(
         initialValue = BuiltInThemes.DOMINANT_COLOR,
-        key1 = currentFocusedUri,
-        key2 = selectedThemeId,
+        key1 = selectedThemeId,
     ) {
         if (selectedThemeId == BuiltInThemes.DOMINANT_COLOR_ID || selectedThemeId == BuiltInThemes.GRADIENT_UI_ID) {
-            val uri = currentFocusedUri
-            val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 48) }
-            val isGradient = selectedThemeId == BuiltInThemes.GRADIENT_UI_ID
-            val colors = DominantColorExtractor.extractColors(bitmap)
-            val accentColor = if (isGradient) colors.topColor else colors.primary
-            value = DominantColorExtractor.createThemeFromAccent(accentColor, isGradient = isGradient)
+            snapshotFlow { focusedArtworkUri.value ?: latestSong?.artworkUri ?: latestSong?.uri }
+                .distinctUntilChanged()
+                .collectLatest { uri ->
+                    val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 48) }
+                    val isGradient = selectedThemeId == BuiltInThemes.GRADIENT_UI_ID
+                    val colors = DominantColorExtractor.extractColors(bitmap)
+                    val accentColor = if (isGradient) colors.topColor else colors.primary
+                    value = DominantColorExtractor.createThemeFromAccent(accentColor, isGradient = isGradient)
+                }
         }
     }
 
@@ -214,10 +223,11 @@ fun MainScaffold() {
     val writeAccessRequest by libraryViewModel.writeAccessRequest.collectAsState()
     WriteAccessRequestEffect(request = writeAccessRequest, onResult = libraryViewModel::onWriteAccessResult)
 
-    CompositionLocalProvider(
-        LocalFocusedArtworkUri provides focusedArtworkUri,
-        LocalSetFocusedArtworkUri provides { focusedArtworkUri = it },
-    ) {
+    // One setter for the whole app: a static local whose value changed on every recomposition
+    // of this shell (a new lambda each time) recomposed every screen below it, e.g. on each
+    // track change or when a detail page reported its artwork mid-transition.
+    val setFocusedArtwork = remember { { uri: String? -> focusedArtworkUri.value = uri } }
+    CompositionLocalProvider(LocalSetFocusedArtworkUri provides setFocusedArtwork) {
         EmPee3Theme(
             themeManifest = currentTheme,
             skinManifest = currentSkin,
@@ -278,6 +288,17 @@ fun MainScaffold() {
             val scope = rememberCoroutineScope()
             val openDrawer: () -> Unit = { scope.launch { drawerState.open() } }
             val openPlayer: () -> Unit = { scope.launch { player.expand() } }
+            // The tapped album and its tracks go with the navigation: Album Detail enters complete
+            // on its first frame. A newer tap replaces one still preparing.
+            var albumOpening by remember { mutableStateOf<Job?>(null) }
+            val openAlbum: (Album) -> Unit = { album ->
+                albumOpening?.cancel()
+                albumOpening =
+                    scope.launch {
+                        libraryViewModel.prepareAlbum(album)
+                        navController.navigate(AlbumDetail(album.id))
+                    }
+            }
             val minimizePlayer: () -> Unit = { scope.launch { player.collapse() } }
 
             var songForPlaylist by remember { mutableStateOf<Song?>(null) }
@@ -413,7 +434,7 @@ fun MainScaffold() {
                                                         section = librarySection,
                                                         onOpenDrawer = openDrawer,
                                                         onContentShownChange = { isLibraryContentShown = it },
-                                                        onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                                        onOpenAlbum = { openAlbum(it) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                         onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
                                                         onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it.name)) },
@@ -443,7 +464,7 @@ fun MainScaffold() {
                                                         viewModel = libraryViewModel,
                                                         playlistsViewModel = playlistsViewModel,
                                                         onBack = { navController.popBackStack() },
-                                                        onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                                        onOpenAlbum = { openAlbum(it) },
                                                     )
                                                 }
                                             }
@@ -475,7 +496,7 @@ fun MainScaffold() {
                                                     SoundCapsuleScreen(
                                                         viewModel = hiltViewModel(),
                                                         onOpenDrawer = openDrawer,
-                                                        onOpenAlbum = { navController.navigate(AlbumDetail(it.id)) },
+                                                        onOpenAlbum = { openAlbum(it) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                     )
                                                 }

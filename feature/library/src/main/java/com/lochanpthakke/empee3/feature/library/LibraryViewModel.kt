@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 data class RepairQueueItem(
@@ -677,6 +678,20 @@ class LibraryViewModel
         /** The album, or null once it is gone from the library (e.g. after a rescan). */
         fun observeAlbum(albumId: Long): Flow<Album?> = libraryRepository.getAlbumById(albumId)
 
+        /**
+         * The album last tapped in a list, with its tracks: its page is complete on its first
+         * frame (before Room's own flows answer), so nothing is added while it slides in.
+         */
+        private var openingAlbum: Pair<Album, List<Song>?>? = null
+
+        /** Reads the tapped album's tracks (briefly: navigation waits for them), then remembers both. */
+        suspend fun prepareAlbum(album: Album) {
+            val songs = withTimeoutOrNull(PREPARE_ALBUM_TIMEOUT_MS) { libraryRepository.getSongsByAlbumId(album.id).first() }
+            openingAlbum = album to songs
+        }
+
+        fun openingAlbum(albumId: Long): Pair<Album, List<Song>?>? = openingAlbum?.takeIf { it.first.id == albumId }
+
         /** The album's songs in album order (disc, track, title). */
         fun observeAlbumSongs(albumId: Long): Flow<List<Song>> = libraryRepository.getSongsByAlbumId(albumId)
 
@@ -833,6 +848,9 @@ class LibraryViewModel
         )
 
         companion object {
+            /** Opening an album waits at most this long for its tracks (then they load as before). */
+            const val PREPARE_ALBUM_TIMEOUT_MS = 150L
+
             private const val SCAN_INDICATOR_DELAY_MS = 1000L
             private const val REPAIR_DELAY_MS = 600L
             private const val SEARCH_DEBOUNCE_MS = 250L
