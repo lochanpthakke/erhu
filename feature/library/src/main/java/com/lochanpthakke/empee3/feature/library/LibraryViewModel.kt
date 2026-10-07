@@ -252,11 +252,15 @@ class LibraryViewModel
                 .flatMapLatest { id -> id?.let { libraryRepository.observeIsFavorite(it) } ?: flowOf(false) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
-        /** Lyrics embedded in the playing file's tags, if any. */
-        val currentSongLyrics: StateFlow<String?> =
+        /**
+         * Lyrics embedded in the playing file's tags, with the song they belong to (so a new
+         * song never shows the previous song's lyrics while its own are read).
+         */
+        val currentSongLyrics: StateFlow<SongLyrics?> =
             currentSongId
-                .flatMapLatest { id -> id?.let { libraryRepository.observeEmbeddedLyrics(it) } ?: flowOf(null) }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+                .flatMapLatest { id ->
+                    id?.let { songId -> libraryRepository.observeEmbeddedLyrics(songId).map { SongLyrics(songId, it) } } ?: flowOf(null)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
         private val _writeAccessRequest = MutableStateFlow<WriteAuthorization?>(null)
 

@@ -21,9 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -126,7 +124,7 @@ private val REVEAL_RISE = 24.dp
 fun NowPlayingScreen(
     playbackRepository: PlaybackRepository,
     isFavorite: Boolean,
-    lyrics: String?,
+    lyrics: SongLyrics?,
     onBackClick: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onAddToPlaylist: (Song) -> Unit,
@@ -462,7 +460,14 @@ fun NowPlayingScreen(
                 }
 
                 if (showLyrics && song != null) {
-                    LyricsOverlay(lyrics = lyrics, onClose = { showLyrics = false })
+                    LyricsOverlay(
+                        songId = song.id,
+                        lyrics = lyrics,
+                        position = position,
+                        isPlaying = isPlaying,
+                        onSeek = { playbackRepository.seekTo(it) },
+                        onClose = { showLyrics = false },
+                    )
                 }
             }
         }
@@ -556,39 +561,6 @@ private fun ToggleIconButton(
                 content()
             }
         }
-    }
-}
-
-@Composable
-private fun LyricsOverlay(
-    lyrics: String?,
-    onClose: () -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(Spacing.xl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "Lyrics", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            IconButton(onClick = onClose) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close lyrics")
-            }
-        }
-        Spacer(modifier = Modifier.height(Spacing.lg))
-        Text(
-            text = lyrics ?: "This file has no embedded lyrics.",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = if (lyrics == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-        )
     }
 }
 
