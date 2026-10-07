@@ -300,7 +300,7 @@ fun NowPlayingScreen(
                                                     Radius.pillShape,
                                                     level = GlassLevel.Strong,
                                                     optics = NOW_PLAYING_OPTICS,
-                                                    environmentLens = true,
+                                                    environmentLens = false,
                                                 ).padding(vertical = Spacing.sm)
                                         } else {
                                             Modifier

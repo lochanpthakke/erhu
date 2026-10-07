@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.designsystem.component
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -67,6 +68,7 @@ fun OverlayHeader(
     navigation: TopBarNavigation,
     modifier: Modifier = Modifier,
     title: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     val scrim = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background)
     Box(
@@ -123,8 +125,12 @@ fun OverlayHeader(
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
+            actions()
         }
     }
 }
