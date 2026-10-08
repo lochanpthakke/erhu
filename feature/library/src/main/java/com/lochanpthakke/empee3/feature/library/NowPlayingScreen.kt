@@ -1,6 +1,5 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -16,6 +15,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -93,7 +93,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
-import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
@@ -112,9 +111,6 @@ private const val INACTIVE_ALPHA = 0.6f
 
 /** The blurred artwork background is fully there over the first part of the expansion. */
 private const val BACKDROP_REVEAL_END = 0.4f
-
-/** Environment glass of the controls pill: a little less than the mini player's. */
-private const val NOW_PLAYING_OPTICS = 0.7f
 
 /** "Previous" restarts the current song past this position (the player's own rule). */
 private const val RESTART_THRESHOLD_MS = 3_000L
@@ -143,7 +139,6 @@ fun NowPlayingScreen(
         playbackState.status == PlaybackStatus.PLAYING ||
             playbackState.status == PlaybackStatus.BUFFERING
 
-    var showLyrics by remember { mutableStateOf(false) }
     // The player is one object (PlayerTransitionState): dragging the artwork / title
     // down collapses it into the mini player; sideways swipes change the track.
     val transition = LocalPlayerTransition.current
@@ -163,9 +158,6 @@ fun NowPlayingScreen(
         )
     val gestureRegion = collapseDrag.then(trackSwipe)
     var showQueue by remember { mutableStateOf(false) }
-    val glass = EmPee3Glass.isActive
-
-    BackHandler(enabled = showLyrics) { showLyrics = false }
 
     // The backdrop sits behind the whole scaffold, so it also fills the area
     // behind the status and gesture bars.
@@ -213,7 +205,7 @@ fun NowPlayingScreen(
                                 .fillMaxSize()
                                 .padding(horizontal = Spacing.heroGutter, vertical = Spacing.lg),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(Spacing.lg, Alignment.CenterVertically),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md, Alignment.CenterVertically),
                     ) {
                         TrackCarousel(
                             state = carousel,
@@ -279,73 +271,72 @@ fun NowPlayingScreen(
                             }
                         }
 
-                        // Favorite & Add to Playlist quick actions above the progress bar
-                        Row(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = Spacing.md)
-                                    .revealWithPlayer(transition, start = 0.40f, end = 0.84f),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                        // Progress bar + Quick actions tightly grouped
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                         ) {
-                            PressIconButton(onClick = { onToggleFavorite(song) }) {
-                                val heartColor =
-                                    animatedStateColor(
-                                        if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                        label = "favoriteTint",
-                                    )
-                                SwapIcon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder) {
-                                    Icon(
-                                        imageVector = it,
-                                        contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
-                                        tint = heartColor,
-                                    )
+                            PlaybackProgress(
+                                position = position,
+                                totalDurationMs = totalDurationMs,
+                                queueLabel =
+                                    if (playbackState.queue.size > 1) {
+                                        "${playbackState.currentIndex + 1} / ${playbackState.queue.size}"
+                                    } else {
+                                        null
+                                    },
+                                onSeek = { playbackRepository.seekTo(it) },
+                                modifier = Modifier.revealWithPlayer(transition, start = 0.40f, end = 0.84f),
+                            )
+
+                            // Favorite & Add to Playlist quick actions aligned below the progress bar
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .revealWithPlayer(transition, start = 0.44f, end = 0.88f),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                PressIconButton(
+                                    onClick = { onToggleFavorite(song) },
+                                    modifier = Modifier.offset(x = (-12).dp),
+                                ) {
+                                    val heartColor =
+                                        animatedStateColor(
+                                            if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            label = "favoriteTint",
+                                        )
+                                    SwapIcon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder) {
+                                        Icon(
+                                            imageVector = it,
+                                            contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                            tint = heartColor,
+                                        )
+                                    }
                                 }
-                            }
-                            PressIconButton(onClick = { onAddToPlaylist(song) }) {
-                                Icon(imageVector = Icons.Default.Add, contentDescription = "Add to playlist")
+                                PressIconButton(
+                                    onClick = { onAddToPlaylist(song) },
+                                    modifier = Modifier.offset(x = 12.dp),
+                                ) {
+                                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add to playlist")
+                                }
                             }
                         }
 
-                        PlaybackProgress(
-                            position = position,
-                            totalDurationMs = totalDurationMs,
-                            queueLabel =
-                                if (playbackState.queue.size > 1) {
-                                    "${playbackState.currentIndex + 1} / ${playbackState.queue.size}"
-                                } else {
-                                    null
-                                },
-                            onSeek = { playbackRepository.seekTo(it) },
-                            modifier = Modifier.revealWithPlayer(transition, start = 0.42f, end = 0.86f),
-                        )
-
-                        // Main playback controls moved to the lower section
+                        // Main playback controls (SpaceBetween, outer edge-aligned)
                         Row(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
-                                    .revealWithPlayer(transition, start = 0.48f, end = 0.92f)
-                                    .then(
-                                        if (glass) {
-                                            Modifier
-                                                .glassPanel(
-                                                    Radius.pillShape,
-                                                    level = GlassLevel.Strong,
-                                                    optics = NOW_PLAYING_OPTICS,
-                                                    environmentLens = false,
-                                                ).padding(vertical = Spacing.sm)
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
+                                    .revealWithPlayer(transition, start = 0.48f, end = 0.92f),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             ToggleIconButton(
                                 active = playbackState.shuffleModeEnabled,
                                 onClick = { playbackRepository.setShuffleModeEnabled(!playbackState.shuffleModeEnabled) },
+                                modifier = Modifier.offset(x = (-12).dp),
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Shuffle,
@@ -408,6 +399,7 @@ fun NowPlayingScreen(
                             ToggleIconButton(
                                 active = playbackState.repeatMode != RepeatMode.OFF,
                                 onClick = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
+                                modifier = Modifier.offset(x = 12.dp),
                             ) {
                                 SwapIcon(
                                     if (playbackState.repeatMode ==
@@ -488,6 +480,20 @@ private fun PlaybackProgress(
     val displayPositionMs = (if (isDragging) dragPositionMs.toLong() else position.value).coerceIn(0L, totalDurationMs)
 
     Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = formatMs(displayPositionMs), style = TextStyles.metadata)
+            if (queueLabel != null) {
+                Text(
+                    text = queueLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(text = formatMs(totalDurationMs), style = TextStyles.metadata)
+        }
         Slider(
             value = displayPositionMs.toFloat(),
             onValueChange = {
@@ -520,20 +526,6 @@ private fun PlaybackProgress(
                     .fillMaxWidth()
                     .semantics { contentDescription = "Seek" },
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(text = formatMs(displayPositionMs), style = TextStyles.metadata)
-            if (queueLabel != null) {
-                Text(
-                    text = queueLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(text = formatMs(totalDurationMs), style = TextStyles.metadata)
-        }
     }
 }
 
@@ -541,6 +533,7 @@ private fun PlaybackProgress(
 private fun ToggleIconButton(
     active: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     // On/off is a colour change that fades, never a jump.
@@ -554,7 +547,7 @@ private fun ToggleIconButton(
             if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = INACTIVE_ALPHA),
             label = "toggleForeground",
         )
-    PressIconButton(onClick = onClick) {
+    PressIconButton(onClick = onClick, modifier = modifier) {
         Box(
             modifier =
                 Modifier
