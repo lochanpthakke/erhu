@@ -43,6 +43,13 @@ data class Song(
                 mimeType?.contains("eac3", ignoreCase = true) == true ||
                 mimeType?.contains("ac4", ignoreCase = true) == true ||
                 mimeType?.contains("spatial", ignoreCase = true) == true ||
+                mimeType?.contains("atmos", ignoreCase = true) == true ||
                 filePath?.contains("atmos", ignoreCase = true) == true ||
-                filePath?.contains("spatial", ignoreCase = true) == true
+                filePath?.contains("dolby", ignoreCase = true) == true ||
+                filePath?.contains("spatial", ignoreCase = true) == true ||
+                album.contains("atmos", ignoreCase = true) ||
+                album.contains("dolby", ignoreCase = true) ||
+                album.contains("spatial", ignoreCase = true) ||
+                title.contains("atmos", ignoreCase = true) ||
+                title.contains("dolby", ignoreCase = true)
 }

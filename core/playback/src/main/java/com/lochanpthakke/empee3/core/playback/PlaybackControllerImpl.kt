@@ -286,8 +286,9 @@ class PlaybackControllerImpl
                     restored.startIndex,
                     restored.startPositionMs,
                 )
-                player.shuffleModeEnabled = saved.shuffleModeEnabled
+                player.shuffleModeEnabled = false
                 player.repeatMode = saved.repeatMode.toPlayerRepeatMode()
+                _playbackState.update { it.copy(shuffleModeEnabled = saved.shuffleModeEnabled) }
                 player.prepare()
                 refreshQueueAndCurrent()
                 refreshPosition()
@@ -321,7 +322,7 @@ class PlaybackControllerImpl
                     queueSongIds = List(player.mediaItemCount) { player.getMediaItemAt(it).mediaId.toLongOrNull() ?: -1L },
                     currentIndex = player.currentMediaItemIndex,
                     positionMs = player.currentPosition.coerceAtLeast(0L),
-                    shuffleModeEnabled = player.shuffleModeEnabled,
+                    shuffleModeEnabled = _playbackState.value.shuffleModeEnabled,
                     repeatMode = player.repeatMode.toDomainRepeatMode(),
                 )
             scope.launch {
@@ -364,7 +365,20 @@ class PlaybackControllerImpl
             val requested = songs.getOrNull(startIndex)
             val index = playable.indexOf(requested).takeIf { it >= 0 } ?: 0
             consecutiveErrors = 0
-            player.setMediaItems(playable.map { it.toMediaItem() }, index, 0L)
+
+            val isShuffleActive = _playbackState.value.shuffleModeEnabled
+            val finalItems =
+                if (isShuffleActive && playable.size > 1) {
+                    val firstSong = playable[index]
+                    val remaining = playable.filterIndexed { i, _ -> i != index }.shuffled()
+                    listOf(firstSong) + remaining
+                } else {
+                    playable
+                }
+            val playIndex = if (isShuffleActive && playable.size > 1) 0 else index
+
+            player.shuffleModeEnabled = false
+            player.setMediaItems(finalItems.map { it.toMediaItem() }, playIndex, 0L)
             player.prepare()
             play()
         }
@@ -397,7 +411,11 @@ class PlaybackControllerImpl
         }
 
         override fun setShuffleModeEnabled(enabled: Boolean) {
-            player.shuffleModeEnabled = enabled
+            player.shuffleModeEnabled = false
+            _playbackState.update { it.copy(shuffleModeEnabled = enabled) }
+            if (enabled) {
+                queue.shuffleFullQueueFromCurrent()
+            }
         }
 
         override fun setRepeatMode(mode: RepeatMode) {

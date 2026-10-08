@@ -171,8 +171,8 @@ fun ArtistDetailScreen(
                     }
 
                     val lps = albums.filter { it.songCount >= 7 }
-                    val eps = albums.filter { it.songCount in 4..6 }
-                    val singles = albums.filter { it.songCount in 1..3 }
+                    val eps = albums.filter { it.songCount in 3..6 }
+                    val singles = albums.filter { it.songCount in 1..2 }
 
                     if (lps.isNotEmpty()) {
                         item(key = "lps_section") {
