@@ -19,4 +19,37 @@ data class Song(
     val isFavorite: Boolean = false,
     val trackNumber: Int = 0,
     val discNumber: Int = 1,
-)
+    val filePath: String? = null,
+    val mimeType: String? = null,
+    val sampleRate: Int = 0,
+    val bitrate: Int = 0,
+    val channels: Int = 2,
+) {
+    val isLossless: Boolean
+        get() =
+            mimeType?.contains("flac", ignoreCase = true) == true ||
+                mimeType?.contains("wav", ignoreCase = true) == true ||
+                mimeType?.contains("alac", ignoreCase = true) == true ||
+                uri.contains(".flac", ignoreCase = true) ||
+                uri.contains(".wav", ignoreCase = true) ||
+                filePath?.endsWith(".flac", ignoreCase = true) == true ||
+                filePath?.endsWith(".wav", ignoreCase = true) == true ||
+                filePath?.endsWith(".alac", ignoreCase = true) == true
+
+    val isDolbyAtmos: Boolean
+        get() =
+            channels > 2 ||
+                mimeType?.contains("ac3", ignoreCase = true) == true ||
+                mimeType?.contains("eac3", ignoreCase = true) == true ||
+                mimeType?.contains("ac4", ignoreCase = true) == true ||
+                mimeType?.contains("spatial", ignoreCase = true) == true ||
+                mimeType?.contains("atmos", ignoreCase = true) == true ||
+                filePath?.contains("atmos", ignoreCase = true) == true ||
+                filePath?.contains("dolby", ignoreCase = true) == true ||
+                filePath?.contains("spatial", ignoreCase = true) == true ||
+                album.contains("atmos", ignoreCase = true) ||
+                album.contains("dolby", ignoreCase = true) ||
+                album.contains("spatial", ignoreCase = true) ||
+                title.contains("atmos", ignoreCase = true) ||
+                title.contains("dolby", ignoreCase = true)
+}

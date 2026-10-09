@@ -181,7 +181,7 @@ fun Modifier.glassPanel(
     val clippedFrost = frost?.takeIf { environment == null }
     val position = remember { GlassPosition() }
     val surfaceFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted)
-    val shadowModifier = Modifier.glassElevation(elevated, shape, glass)
+    val shadowModifier = Modifier.glassElevation(elevated && !level.floats, shape, glass)
     val floatShadow = Modifier.glassFloatShadow(enabled = level.floats && !bar, shape = shape, color = Color(glass.floatShadow))
     val tracked = if (frost != null) Modifier.onGloballyPositioned { position.offset = it.positionInRoot() } else Modifier
     return this

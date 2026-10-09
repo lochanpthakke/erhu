@@ -107,7 +107,28 @@ internal fun LyricsOverlay(
 }
 
 @Composable
-private fun LyricsContent(
+internal fun SongLyricsView(
+    songId: Long,
+    lyrics: SongLyrics?,
+    position: State<Long>,
+    isPlaying: Boolean,
+    onSeek: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        key(songId) {
+            val current = lyrics?.takeIf { it.songId == songId }
+            if (current != null) {
+                LyricsContent(current, position, isPlaying, onSeek)
+            } else {
+                NoLyrics()
+            }
+        }
+    }
+}
+
+@Composable
+internal fun LyricsContent(
     lyrics: SongLyrics,
     position: State<Long>,
     isPlaying: Boolean,

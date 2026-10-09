@@ -59,6 +59,7 @@ import com.lochanpthakke.empee3.core.model.Song
 
 /** Same proportions as the album page header. */
 private const val COVER_WIDTH_FRACTION = 0.62f
+private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
 private const val MS_PER_MINUTE = 60_000L
 
 /**
@@ -103,7 +104,19 @@ fun PlaylistDetailScreen(
         )
 
     AppScaffold(
-        topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
+        topBar = {
+            OverlayHeader(
+                navigation = TopBarNavigation.Detail(onBack),
+                actions = {
+                    playlist?.takeIf { it.id == playlistId }?.let {
+                        PlaylistMenu(
+                            onEdit = { showEditor = true },
+                            onDelete = { confirmDelete = true },
+                        )
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { innerPadding ->
@@ -123,8 +136,6 @@ fun PlaylistDetailScreen(
                     songs = songs,
                     onPlay = { viewModel.playOpenPlaylist() },
                     onShuffle = { viewModel.shuffleOpenPlaylist() },
-                    onEdit = { showEditor = true },
-                    onDelete = { confirmDelete = true },
                 )
             }
             if (songs.isEmpty()) {
@@ -198,14 +209,11 @@ fun PlaylistDetailScreen(
 }
 
 @Composable
-@Suppress("LongParameterList")
 private fun PlaylistHeader(
     playlist: Playlist,
     songs: List<Song>,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
 ) {
     Column(
         modifier =
@@ -241,7 +249,7 @@ private fun PlaylistHeader(
         )
         Spacer(modifier = Modifier.height(Spacing.lg))
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(ACTION_PAIR_WIDTH_FRACTION),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -255,7 +263,6 @@ private fun PlaylistHeader(
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Text("Shuffle", maxLines = 1, softWrap = false)
             }
-            PlaylistMenu(onEdit = onEdit, onDelete = onDelete)
         }
     }
 }

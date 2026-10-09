@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
@@ -53,6 +55,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
+import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
@@ -369,15 +372,55 @@ private fun AlbumTitleBlock(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
-        Text(
-            // Empty while the tracks load: the line keeps its height, nothing below moves.
-            text = songs?.let(::albumFacts).orEmpty(),
-            style = TextStyles.metadata,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        val factsText = songs?.let(::albumFacts).orEmpty()
+        val isLossless = songs?.any { it.isLossless } == true
+        val isDolbyAtmos = songs?.any { it.isDolbyAtmos } == true
+
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (isLossless && factsText.isNotBlank()) "$factsText · Lossless" else factsText,
+                style = TextStyles.metadata,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (isDolbyAtmos) {
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                DolbyAtmosBadge()
+            }
+        }
+    }
+}
+
+@Composable
+private fun DolbyAtmosBadge() {
+    Surface(
+        shape = Radius.pillShape,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(start = 2.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "DD",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-1).sp,
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = "Atmos",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 

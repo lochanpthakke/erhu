@@ -5,9 +5,13 @@ import android.os.Build
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
@@ -41,15 +45,45 @@ internal fun Modifier.glassFloatShadow(
         val outline = shape.createOutline(size, layoutDirection, this)
         val surface = Path().apply { addOutline(outline) }
         val shadow = Path().apply { addPath(surface, Offset(0f, FLOAT_SHADOW_OFFSET.toPx())) }
+
+        val blurPx = FLOAT_SHADOW_BLUR.toPx()
+        val outerRect =
+            Rect(
+                -blurPx,
+                -blurPx + FLOAT_SHADOW_OFFSET.toPx(),
+                size.width + blurPx,
+                size.height + blurPx + FLOAT_SHADOW_OFFSET.toPx(),
+            )
+        val cornerRadius =
+            when (outline) {
+                is Outline.Rounded -> outline.roundRect.topLeftCornerRadius
+                else -> CornerRadius(size.height / 2f)
+            }
+        val outerPill =
+            Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        rect = outerRect,
+                        cornerRadius =
+                            CornerRadius(
+                                cornerRadius.x + blurPx,
+                                cornerRadius.y + blurPx,
+                            ),
+                    ),
+                )
+            }
+
         val paint =
             Paint().asFrameworkPaint().apply {
                 isAntiAlias = true
                 this.color = color.toArgb()
-                maskFilter = BlurMaskFilter(FLOAT_SHADOW_BLUR.toPx(), BlurMaskFilter.Blur.NORMAL)
+                maskFilter = BlurMaskFilter(blurPx, BlurMaskFilter.Blur.NORMAL)
             }
         onDrawBehind {
-            clipPath(surface, ClipOp.Difference) {
-                drawIntoCanvas { it.nativeCanvas.drawPath(shadow.asAndroidPath(), paint) }
+            clipPath(outerPill) {
+                clipPath(surface, ClipOp.Difference) {
+                    drawIntoCanvas { it.nativeCanvas.drawPath(shadow.asAndroidPath(), paint) }
+                }
             }
         }
     }

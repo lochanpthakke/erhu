@@ -20,4 +20,5 @@ fun SongEntity.toDomainModel(): Song =
         isFavorite = isFavorite,
         trackNumber = trackNumber,
         discNumber = discNumber,
+        filePath = filePath,
     )
