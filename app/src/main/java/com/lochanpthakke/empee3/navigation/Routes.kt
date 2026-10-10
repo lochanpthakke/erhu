@@ -41,6 +41,10 @@ object MetadataEditor
 @Serializable
 object ArtworkManager
 
+/** Wi-Fi Transfer: receive music from a computer's browser over the local network. */
+@Serializable
+object WifiTransfer
+
 @Serializable
 object Settings
 

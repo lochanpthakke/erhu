@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
 import androidx.compose.material3.DrawerValue
@@ -126,6 +127,7 @@ import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
+import com.lochanpthakke.empee3.feature.transfer.WifiTransferScreen
 import com.lochanpthakke.empee3.navigation.AlbumDetail
 import com.lochanpthakke.empee3.navigation.ArtistDetail
 import com.lochanpthakke.empee3.navigation.ArtworkManager
@@ -137,6 +139,7 @@ import com.lochanpthakke.empee3.navigation.Settings
 import com.lochanpthakke.empee3.navigation.SettingsCategory
 import com.lochanpthakke.empee3.navigation.SmartPlaylistDetail
 import com.lochanpthakke.empee3.navigation.SoundCapsule
+import com.lochanpthakke.empee3.navigation.WifiTransfer
 import com.lochanpthakke.empee3.navigation.navEnter
 import com.lochanpthakke.empee3.navigation.navExit
 import com.lochanpthakke.empee3.navigation.navPopEnter
@@ -161,6 +164,7 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Sound Capsule", Icons.Default.Insights, SoundCapsule),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
         DrawerDestination("Metadata Editor", Icons.Default.EditNote, MetadataEditor),
+        DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
     )
 
@@ -538,6 +542,11 @@ fun MainScaffold() {
                                                             navController.navigate(Library)
                                                         },
                                                     )
+                                                }
+                                            }
+                                            composable<WifiTransfer> {
+                                                ProvideMotionScope(this) {
+                                                    WifiTransferScreen(onOpenDrawer = openDrawer)
                                                 }
                                             }
                                             composable<Settings> {
