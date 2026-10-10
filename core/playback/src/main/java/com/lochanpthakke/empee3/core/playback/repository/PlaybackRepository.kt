@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.playback.repository
 
 import com.lochanpthakke.empee3.core.common.result.AppResult
+import com.lochanpthakke.empee3.core.model.AbLoopEdit
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
@@ -53,7 +54,26 @@ interface PlaybackRepository {
 
     suspend fun addToQueue(song: Song): AppResult<Unit>
 
+    /** Removes the entry at [index]; [undoQueueRemoval] puts it back. */
     suspend fun removeFromQueue(index: Int): AppResult<Unit>
+
+    /** Restores the most recently removed queue entry at its original position; false if none. */
+    fun undoQueueRemoval(): Boolean
+
+    /** Shuffles only the upcoming entries (after the current one); false when fewer than two are upcoming. */
+    fun shuffleUpcoming(): Boolean
+
+    /** Plays a session-history entry again, right after the current entry. */
+    fun playFromHistory(entryId: Long)
+
+    /** A–B loop of the current track: A / B at the playback position, on / off, clear. */
+    fun setLoopStart(): AbLoopEdit
+
+    fun setLoopEnd(): AbLoopEdit
+
+    fun setLoopEnabled(enabled: Boolean): AbLoopEdit
+
+    fun clearLoop()
 
     suspend fun reorder(
         from: Int,

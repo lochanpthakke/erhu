@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.playback
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import kotlin.random.Random
 
 /**
  * Queue mutations on top of the Media3 playlist. The player's own playlist is
@@ -36,9 +37,37 @@ internal class PlaybackQueue(
         player.moveMediaItem(from, to)
     }
 
-    fun removeAt(index: Int) {
+    /** Removes the entry at [index] and returns that exact item (metadata included) for undo. */
+    fun removeAt(index: Int): MediaItem {
         require(index in 0 until player.mediaItemCount) { "Invalid queue index: $index" }
+        val item = player.getMediaItemAt(index)
         player.removeMediaItem(index)
+        return item
+    }
+
+    /**
+     * Puts [item] back at [index] (clamped to the current queue). Inserting before or after
+     * the current item never changes which item is playing or its position.
+     */
+    fun insertAt(
+        index: Int,
+        item: MediaItem,
+    ) {
+        player.addMediaItem(index.coerceIn(0, player.mediaItemCount), item)
+    }
+
+    /**
+     * Shuffles only the entries after the current one, in the player's own playlist. The current
+     * item and everything before it (already played) keep their places, so playback is not
+     * interrupted. Returns false when fewer than two entries are upcoming.
+     */
+    fun shuffleUpcoming(random: Random = Random.Default): Boolean {
+        val count = player.mediaItemCount
+        val current = player.currentMediaItemIndex.coerceIn(0, (count - 1).coerceAtLeast(0))
+        val items = List(count) { player.getMediaItemAt(it) }
+        val upcoming = shuffledUpcoming(items, current, random) ?: return false
+        player.replaceMediaItems(current + 1, count, upcoming)
+        return true
     }
 
     /**

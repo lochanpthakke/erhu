@@ -3,10 +3,12 @@ package com.lochanpthakke.empee3.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.lochanpthakke.empee3.core.database.EmPee3Database
+import com.lochanpthakke.empee3.core.database.MIGRATION_10_11
 import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
 import com.lochanpthakke.empee3.core.database.MIGRATION_6_7
 import com.lochanpthakke.empee3.core.database.MIGRATION_7_8
 import com.lochanpthakke.empee3.core.database.MIGRATION_8_9
+import com.lochanpthakke.empee3.core.database.MIGRATION_9_10
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
@@ -15,6 +17,8 @@ import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
 import com.lochanpthakke.empee3.core.database.dao.RecentlyPlayedDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
+import com.lochanpthakke.empee3.core.database.dao.TrackBookmarkDao
+import com.lochanpthakke.empee3.core.database.dao.WaveformCacheDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,7 +40,7 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
@@ -61,6 +65,12 @@ object DatabaseModule {
 
     @Provides
     fun provideListeningStatsDao(database: EmPee3Database): ListeningStatsDao = database.listeningStatsDao()
+
+    @Provides
+    fun provideTrackBookmarkDao(database: EmPee3Database): TrackBookmarkDao = database.trackBookmarkDao()
+
+    @Provides
+    fun provideWaveformCacheDao(database: EmPee3Database): WaveformCacheDao = database.waveformCacheDao()
 
     @Provides
     fun provideMetadataProcessingDao(database: EmPee3Database): MetadataProcessingDao = database.metadataProcessingDao()

@@ -146,7 +146,8 @@ fun PlaylistDetailScreen(
                     )
                 }
             } else {
-                itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+                // A playlist can hold the same song twice (a saved queue): the position makes the key unique.
+                itemsIndexed(songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
                     LibrarySongRow(
                         song = song,
                         isCurrent = song.id == currentSongId,

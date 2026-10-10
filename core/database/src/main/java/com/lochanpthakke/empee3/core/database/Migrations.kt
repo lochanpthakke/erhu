@@ -88,6 +88,57 @@ val MIGRATION_8_9 =
         }
     }
 
+/**
+ * v10 → v11: timestamp bookmarks and the waveform cache. Two new tables only; no existing table,
+ * row or column is touched.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_10_11 =
+    object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_10_11.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_10_11 =
+    listOf(
+        "CREATE TABLE IF NOT EXISTS `track_bookmarks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `song_id` INTEGER NOT NULL, " +
+            "`position_ms` INTEGER NOT NULL, `label` TEXT NOT NULL, `created_at` INTEGER NOT NULL)",
+        "CREATE INDEX IF NOT EXISTS `index_track_bookmarks_song_id` ON `track_bookmarks` (`song_id`)",
+        "CREATE TABLE IF NOT EXISTS `waveform_cache` (`song_id` INTEGER NOT NULL, `source_uri` TEXT NOT NULL, " +
+            "`file_size` INTEGER NOT NULL, " +
+            "`date_modified` INTEGER NOT NULL, `format_version` INTEGER NOT NULL, `levels` BLOB NOT NULL, `created_at` INTEGER NOT NULL, " +
+            "PRIMARY KEY(`song_id`))",
+    )
+
+/**
+ * v9 → v10: playlist entries are keyed by (playlist, position) instead of (playlist, song), so a
+ * playlist can hold the same song more than once (a saved queue). Every existing entry is kept in
+ * its order; positions are renumbered 0..n-1 per playlist (a correlated count: SQLite on older
+ * Android has no window functions). Nothing else changes.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_9_10 =
+    object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_9_10.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_9_10 =
+    listOf(
+        "CREATE TABLE IF NOT EXISTS `playlist_song_cross_ref_new` (`playlist_id` INTEGER NOT NULL, `song_id` INTEGER NOT NULL, " +
+            "`position` INTEGER NOT NULL, PRIMARY KEY(`playlist_id`, `position`))",
+        "INSERT INTO `playlist_song_cross_ref_new` (`playlist_id`, `song_id`, `position`) " +
+            "SELECT o.`playlist_id`, o.`song_id`, (SELECT COUNT(*) FROM `playlist_song_cross_ref` p " +
+            "WHERE p.`playlist_id` = o.`playlist_id` AND (p.`position` < o.`position` OR " +
+            "(p.`position` = o.`position` AND p.`song_id` < o.`song_id`))) FROM `playlist_song_cross_ref` o",
+        "DROP TABLE `playlist_song_cross_ref`",
+        "ALTER TABLE `playlist_song_cross_ref_new` RENAME TO `playlist_song_cross_ref`",
+        "CREATE INDEX IF NOT EXISTS `index_playlist_song_cross_ref_playlist_id` ON `playlist_song_cross_ref` (`playlist_id`)",
+        "CREATE INDEX IF NOT EXISTS `index_playlist_song_cross_ref_song_id` ON `playlist_song_cross_ref` (`song_id`)",
+    )
+
 private val STATEMENTS_8_9 =
     listOf(
         "CREATE TABLE IF NOT EXISTS `listening_stats` (`month_key` TEXT NOT NULL, `song_id` INTEGER NOT NULL, " +

@@ -52,7 +52,8 @@ fun Eq8CurveCanvas(
     val textMeasurer = rememberTextMeasurer()
     val primaryColor = MaterialTheme.colorScheme.primary
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
-    val containerBgColor = MaterialTheme.colorScheme.surfaceVariant
+    // A faint inset well inside the settings panel (the panel already provides the surface).
+    val containerBgColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
     val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
     val selectionHaloColor = MaterialTheme.colorScheme.primaryContainer
 

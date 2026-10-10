@@ -1,10 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,22 +17,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOn
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
@@ -43,23 +36,16 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,14 +56,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.lochanpthakke.empee3.core.designsystem.artwork.GlassArtworkBackdrop
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
@@ -96,14 +80,15 @@ import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
+import com.lochanpthakke.empee3.core.model.AbLoopState
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.model.Waveform
+import com.lochanpthakke.empee3.core.model.WaveformLoad
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
-import kotlinx.coroutines.launch
 import java.util.Locale
-import kotlin.math.roundToInt
 
 private const val MS_PER_SECOND = 1000
 private const val SECONDS_PER_MINUTE = 60
@@ -128,6 +113,10 @@ fun NowPlayingScreen(
     onBackClick: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onAddToPlaylist: (Song) -> Unit,
+    /** Saves the given queue entries as a new playlist; the callback receives the message to show. */
+    onSaveQueueAsPlaylist: (name: String, songs: List<Song>, onResult: (String) -> Unit) -> Unit,
+    /** Waveform and bookmarks of the current track. */
+    extras: PlayerExtrasViewModel,
     modifier: Modifier = Modifier,
 ) {
     // Stable state only; the position is read by PlaybackProgress alone, so the
@@ -157,7 +146,12 @@ fun NowPlayingScreen(
             skip = { direction -> if (direction > 0) playbackRepository.skipNext() else playbackRepository.skipToPreviousItem() },
         )
     val gestureRegion = collapseDrag.then(trackSwipe)
-    var showQueue by remember { mutableStateOf(false) }
+    // Which tab of the queue sheet is open, or null when it is closed.
+    var queueSheetPage by remember { mutableStateOf<Int?>(null) }
+    val waveformLoad by extras.waveform.collectAsState()
+    val bookmarks by extras.bookmarks.collectAsState()
+    val bookmarkPositions = remember(bookmarks) { bookmarks.map { it.positionMs } }
+    val context = LocalContext.current
 
     // The backdrop sits behind the whole scaffold, so it also fills the area
     // behind the status and gesture bars.
@@ -279,6 +273,9 @@ fun NowPlayingScreen(
                             PlaybackProgress(
                                 position = position,
                                 totalDurationMs = totalDurationMs,
+                                waveform = (waveformLoad as? WaveformLoad.Ready)?.waveform,
+                                bookmarkPositions = bookmarkPositions,
+                                loop = playbackState.abLoop,
                                 queueLabel =
                                     if (playbackState.queue.size > 1) {
                                         "${playbackState.currentIndex + 1} / ${playbackState.queue.size}"
@@ -312,6 +309,38 @@ fun NowPlayingScreen(
                                             imageVector = it,
                                             contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                                             tint = heartColor,
+                                        )
+                                    }
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    PressIconButton(
+                                        onClick = {
+                                            extras.addBookmarkAtCurrentPosition { error ->
+                                                error?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                                            }
+                                        },
+                                    ) {
+                                        Icon(imageVector = Icons.Default.BookmarkAdd, contentDescription = "Bookmark this moment")
+                                    }
+                                    PressIconButton(onClick = { queueSheetPage = QUEUE_SHEET_PAGE_MARKS }) {
+                                        Icon(
+                                            imageVector =
+                                                if (playbackState.abLoop?.enabled ==
+                                                    true
+                                                ) {
+                                                    Icons.Default.RepeatOn
+                                                } else {
+                                                    Icons.Default.Bookmarks
+                                                },
+                                            contentDescription = "Bookmarks and A-B loop",
+                                            tint =
+                                                if (playbackState.abLoop?.enabled ==
+                                                    true
+                                                ) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    LocalContentColor.current
+                                                },
                                         )
                                     }
                                 }
@@ -425,14 +454,14 @@ fun NowPlayingScreen(
 
                         // Up Arrow trigger for Queue & Lyrics Sheet
                         PressIconButton(
-                            onClick = { showQueue = true },
+                            onClick = { queueSheetPage = QUEUE_SHEET_PAGE_QUEUE },
                             modifier =
                                 Modifier
                                     .revealWithPlayer(transition, start = 0.54f, end = 0.98f)
                                     .pointerInput(Unit) {
                                         detectVerticalDragGestures { _, dragAmount ->
                                             if (dragAmount < -10f) {
-                                                showQueue = true
+                                                queueSheetPage = QUEUE_SHEET_PAGE_QUEUE
                                             }
                                         }
                                     },
@@ -450,41 +479,45 @@ fun NowPlayingScreen(
         }
     }
 
-    if (showQueue) {
+    queueSheetPage?.let { page ->
         QueueSheet(
             playbackState = playbackState,
             playbackRepository = playbackRepository,
             lyrics = lyrics,
             position = position,
             isPlaying = isPlaying,
-            onDismiss = { showQueue = false },
+            onSaveQueueAsPlaylist = onSaveQueueAsPlaylist,
+            extras = extras,
+            initialPage = page,
+            onDismiss = { queueSheetPage = null },
         )
     }
 }
 
 /**
- * Seek bar with elapsed / total time. The only part of Now Playing that reads
- * the playback position, so position ticks recompose just this composable.
+ * The track's waveform as the seek bar, with elapsed / total time. Playback ticks only reach
+ * [ElapsedTime] (recomposed) and the waveform (redrawn); a drag previews the position until release.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("LongParameterList")
 private fun PlaybackProgress(
     position: State<Long>,
     totalDurationMs: Long,
+    waveform: Waveform?,
+    bookmarkPositions: List<Long>,
+    loop: AbLoopState?,
     queueLabel: String?,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var isDragging by remember { mutableStateOf(false) }
-    var dragPositionMs by remember { mutableFloatStateOf(0f) }
-    val displayPositionMs = (if (isDragging) dragPositionMs.toLong() else position.value).coerceIn(0L, totalDurationMs)
+    var previewMs by remember { mutableStateOf<Long?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(text = formatMs(displayPositionMs), style = TextStyles.metadata)
+            ElapsedTime(position = position, previewMs = previewMs, totalDurationMs = totalDurationMs)
             if (queueLabel != null) {
                 Text(
                     text = queueLabel,
@@ -494,39 +527,27 @@ private fun PlaybackProgress(
             }
             Text(text = formatMs(totalDurationMs), style = TextStyles.metadata)
         }
-        Slider(
-            value = displayPositionMs.toFloat(),
-            onValueChange = {
-                isDragging = true
-                dragPositionMs = it
-            },
-            onValueChangeFinished = {
-                onSeek(dragPositionMs.toLong())
-                isDragging = false
-            },
-            valueRange = 0f..totalDurationMs.toFloat(),
-            track = { sliderState ->
-                SliderDefaults.Track(
-                    sliderState = sliderState,
-                    modifier = Modifier.height(3.dp),
-                    drawStopIndicator = null,
-                    thumbTrackGapSize = 0.dp,
-                )
-            },
-            thumb = {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(12.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape),
-                )
-            },
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = "Seek" },
+        WaveformSeekBar(
+            waveform = waveform,
+            position = position,
+            previewPositionMs = previewMs,
+            durationMs = totalDurationMs,
+            bookmarkPositions = bookmarkPositions,
+            loop = loop,
+            onPreview = { previewMs = it },
+            onSeek = onSeek,
         )
     }
+}
+
+/** Elapsed time (the drag preview while scrubbing). The one text that follows playback ticks. */
+@Composable
+private fun ElapsedTime(
+    position: State<Long>,
+    previewMs: Long?,
+    totalDurationMs: Long,
+) {
+    Text(text = formatMs((previewMs ?: position.value).coerceIn(0L, totalDurationMs)), style = TextStyles.metadata)
 }
 
 @Composable
@@ -558,202 +579,6 @@ private fun ToggleIconButton(
             CompositionLocalProvider(LocalContentColor provides foreground) {
                 content()
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-@Suppress("LongMethod")
-private fun QueueSheet(
-    playbackState: PlaybackState,
-    playbackRepository: PlaybackRepository,
-    lyrics: SongLyrics?,
-    position: State<Long>,
-    isPlaying: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
-    val queue = playbackState.queue
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val pagerState = rememberPagerState(pageCount = { 2 })
-
-    LaunchedEffect(Unit) {
-        if (playbackState.currentIndex > 0) {
-            listState.scrollToItem(playbackState.currentIndex)
-        }
-    }
-
-    var draggingIndex by remember { mutableStateOf<Int?>(null) }
-    var draggingOffset by remember { mutableFloatStateOf(0f) }
-    val density = LocalDensity.current
-    val rowHeightPx = with(density) { 68.dp.toPx() }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "Queue (${queue.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal,
-                    color = if (pagerState.currentPage == 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable { scope.launch { pagerState.animateScrollToPage(0) } },
-                )
-                Spacer(modifier = Modifier.width(Spacing.xl))
-                Text(
-                    text = "Lyrics",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal,
-                    color = if (pagerState.currentPage == 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable { scope.launch { pagerState.animateScrollToPage(1) } },
-                )
-            }
-
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.weight(1f),
-            ) { page ->
-                if (page == 0) {
-                    if (queue.isEmpty()) {
-                        Text(
-                            text = "The queue is empty.",
-                            modifier = Modifier.padding(Spacing.lg),
-                        )
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            itemsIndexed(
-                                items = queue,
-                                key = { index, song -> "${song.id}_$index" },
-                            ) { index, queuedSong ->
-                                val isDragging = draggingIndex == index
-                                val activeDragIndex = draggingIndex
-
-                                val displacement =
-                                    if (activeDragIndex != null && !isDragging) {
-                                        val targetIndex =
-                                            (activeDragIndex + (draggingOffset / rowHeightPx).roundToInt()).coerceIn(0, queue.lastIndex)
-                                        when {
-                                            activeDragIndex < targetIndex && index in (activeDragIndex + 1)..targetIndex -> -rowHeightPx
-                                            activeDragIndex > targetIndex && index in targetIndex..<activeDragIndex -> rowHeightPx
-                                            else -> 0f
-                                        }
-                                    } else {
-                                        0f
-                                    }
-
-                                val animatedDisplacement by animateFloatAsState(
-                                    targetValue = displacement,
-                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                                    label = "queueItemDisplacement",
-                                )
-
-                                val itemModifier =
-                                    if (isDragging) {
-                                        Modifier
-                                            .zIndex(2f)
-                                            .graphicsLayer {
-                                                translationY = draggingOffset
-                                                scaleX = 1.04f
-                                                scaleY = 1.04f
-                                                shadowElevation = 8.dp.toPx()
-                                            }
-                                    } else {
-                                        Modifier
-                                            .zIndex(1f)
-                                            .graphicsLayer {
-                                                translationY = animatedDisplacement
-                                            }
-                                    }
-
-                                SongRow(
-                                    song = queuedSong,
-                                    isHighlighted = index == playbackState.currentIndex,
-                                    onClick = { playbackRepository.skipToQueueItem(index) },
-                                    modifier = itemModifier,
-                                ) {
-                                    IconButton(
-                                        onClick = {},
-                                        modifier =
-                                            Modifier.pointerInput(queue) {
-                                                detectVerticalDragGestures(
-                                                    onDragStart = {
-                                                        draggingIndex = index
-                                                        draggingOffset = 0f
-                                                    },
-                                                    onDragEnd = {
-                                                        val from = draggingIndex
-                                                        if (from != null) {
-                                                            val to = (from + (draggingOffset / rowHeightPx).roundToInt()).coerceIn(0, queue.lastIndex)
-                                                            if (from != to) {
-                                                                scope.launch { playbackRepository.reorder(from, to) }
-                                                            }
-                                                        }
-                                                        draggingIndex = null
-                                                        draggingOffset = 0f
-                                                    },
-                                                    onDragCancel = {
-                                                        draggingIndex = null
-                                                        draggingOffset = 0f
-                                                    },
-                                                    onVerticalDrag = { change, dragAmount ->
-                                                        change.consume()
-                                                        draggingOffset += dragAmount
-                                                    },
-                                                )
-                                            },
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.DragHandle,
-                                            contentDescription = "Drag to reorder",
-                                            tint = if (isDragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    IconButton(onClick = { scope.launch { playbackRepository.removeFromQueue(index) } }) {
-                                        Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from queue")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    val currentSong = playbackState.currentSong
-                    if (currentSong != null) {
-                        SongLyricsView(
-                            songId = currentSong.id,
-                            lyrics = lyrics,
-                            position = position,
-                            isPlaying = isPlaying,
-                            onSeek = { playbackRepository.seekTo(it) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "No track playing",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(Spacing.md))
         }
     }
 }

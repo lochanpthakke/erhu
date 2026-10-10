@@ -29,6 +29,12 @@ interface PlaylistRepository {
 
     suspend fun createPlaylist(name: String): AppResult<Long>
 
+    /** Creates a playlist with [songIds] in this order, duplicates kept (e.g. the play queue). */
+    suspend fun createPlaylistWithSongs(
+        name: String,
+        songIds: List<Long>,
+    ): AppResult<Long>
+
     suspend fun renamePlaylist(
         playlistId: Long,
         name: String,
@@ -87,6 +93,17 @@ class PlaylistRepositoryImpl
             if (trimmed.isEmpty()) return emptyNameError()
             return appResultOf(mapError = { AppError.DatabaseError("Could not create playlist", it) }) {
                 playlistDao.insertPlaylist(PlaylistEntity(name = trimmed))
+            }
+        }
+
+        override suspend fun createPlaylistWithSongs(
+            name: String,
+            songIds: List<Long>,
+        ): AppResult<Long> {
+            val trimmed = name.trim()
+            if (trimmed.isEmpty()) return emptyNameError()
+            return appResultOf(mapError = { AppError.DatabaseError("Could not save the playlist", it) }) {
+                playlistDao.createPlaylistWithSongs(PlaylistEntity(name = trimmed), songIds)
             }
         }
 

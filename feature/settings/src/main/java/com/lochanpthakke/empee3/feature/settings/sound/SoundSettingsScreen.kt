@@ -2,41 +2,33 @@
 
 package com.lochanpthakke.empee3.feature.settings.sound
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Equalizer
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SaveAs
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -47,24 +39,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
-import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
-import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.dsp.FilterType
 import com.lochanpthakke.empee3.core.sound.model.BandConfig
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
+import com.lochanpthakke.empee3.feature.settings.component.SettingsGroup
+import com.lochanpthakke.empee3.feature.settings.component.SettingsPage
+import com.lochanpthakke.empee3.feature.settings.component.SettingsPanel
+import com.lochanpthakke.empee3.feature.settings.component.SettingsSection
+import com.lochanpthakke.empee3.feature.settings.component.SettingsSegmentedControl
+import com.lochanpthakke.empee3.feature.settings.component.SettingsSwitchRow
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Suppress("MagicNumber", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
 fun SoundSettingsScreen(
@@ -80,85 +77,65 @@ fun SoundSettingsScreen(
     val selectedBandIndex = soundSettings.selectedBandIndex.coerceIn(0, soundSettings.activeBandCount - 1)
     val selectedBand = soundSettings.bands.getOrElse(selectedBandIndex) { SoundSettings.defaultBands()[selectedBandIndex] }
 
-    AppScaffold(
-        topBar = {
-            AppTopBar(
-                navigation = navigation,
-                title = title,
-                actions = {
-                    Switch(
-                        checked = soundSettings.isEqEnabled,
-                        onCheckedChange = { viewModel.setEqEnabled(it) },
-                    )
-                },
-            )
-        },
-        modifier = modifier,
-    ) { innerPadding ->
-        val scroll = innerPadding.forScrollingContent()
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(scroll.container)
-                    .verticalScroll(rememberScrollState())
-                    .padding(top = scroll.contentTop)
-                    .padding(Spacing.screenGutter)
-                    .padding(bottom = scroll.contentBottom),
-        ) {
-            // Preset, Reset, and Interactive EQ Graph Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Column(modifier = Modifier.padding(Spacing.md)) {
-                    PresetAndResetHeader(
-                        soundSettings = soundSettings,
-                        onPresetSelected = { viewModel.applyPreset(it) },
-                        onSaveCustomClick = { showSaveDialog = true },
-                        onDeleteCustomClick = { viewModel.deleteCustomPreset(it) },
-                        onResetClick = { viewModel.resetToFlat() },
-                    )
-
-                    Spacer(modifier = Modifier.height(Spacing.sm))
-
-                    Eq8CurveCanvas(
-                        bands = soundSettings.bands,
-                        activeBandCount = soundSettings.activeBandCount,
-                        selectedBandIndex = selectedBandIndex,
-                        customEqAudioProcessor = viewModel.customEqAudioProcessor,
-                        onNodeDrag = { index, freqHz, gainDb ->
-                            viewModel.setBandFrequencyAndGain(index, freqHz, gainDb)
-                        },
-                        onNodeSelect = { index ->
-                            viewModel.setSelectedBandIndex(index)
-                        },
-                    )
-                }
+    SettingsPage(title = title, navigation = navigation, modifier = modifier) {
+        SettingsGroup {
+            row {
+                SettingsSwitchRow(
+                    title = "Equalizer",
+                    summary = if (soundSettings.isEqEnabled) "On" else "Off",
+                    icon = Icons.Default.Equalizer,
+                    checked = soundSettings.isEqEnabled,
+                    onCheckedChange = { viewModel.setEqEnabled(it) },
+                )
             }
+        }
 
-            Spacer(modifier = Modifier.height(Spacing.md))
+        SettingsSection(title = "Preset & curve") {
+            SettingsPanel {
+                PresetAndResetHeader(
+                    soundSettings = soundSettings,
+                    onPresetSelected = { viewModel.applyPreset(it) },
+                    onSaveCustomClick = { showSaveDialog = true },
+                    onDeleteCustomClick = { viewModel.deleteCustomPreset(it) },
+                    onResetClick = { viewModel.resetToFlat() },
+                )
 
-            // Active Band Count Stepper (- N +)
-            BandCountSelectorRow(
-                activeCount = soundSettings.activeBandCount,
-                enabled = soundSettings.isEqEnabled,
-                onCountSelected = { viewModel.setActiveBandCount(it) },
-            )
+                Spacer(modifier = Modifier.height(Spacing.md))
 
-            Spacer(modifier = Modifier.height(Spacing.md))
+                Eq8CurveCanvas(
+                    bands = soundSettings.bands,
+                    activeBandCount = soundSettings.activeBandCount,
+                    selectedBandIndex = selectedBandIndex,
+                    customEqAudioProcessor = viewModel.customEqAudioProcessor,
+                    onNodeDrag = { index, freqHz, gainDb ->
+                        viewModel.setBandFrequencyAndGain(index, freqHz, gainDb)
+                    },
+                    onNodeSelect = { index ->
+                        viewModel.setSelectedBandIndex(index)
+                    },
+                )
+            }
+        }
 
-            // Band Indicator Row (Active bands only, outline pill for selected)
-            BandSelectorRow(
-                activeCount = soundSettings.activeBandCount,
-                selectedIndex = selectedBandIndex,
-                onSelectBand = { viewModel.setSelectedBandIndex(it) },
-            )
+        SettingsSection(title = "Bands") {
+            SettingsPanel {
+                BandCountSelectorRow(
+                    activeCount = soundSettings.activeBandCount,
+                    enabled = soundSettings.isEqEnabled,
+                    onCountSelected = { viewModel.setActiveBandCount(it) },
+                )
+                Spacer(modifier = Modifier.height(Spacing.md))
+                SettingsSegmentedControl(
+                    options = List(soundSettings.activeBandCount) { "${it + 1}" },
+                    selectedIndex = selectedBandIndex,
+                    onSelect = { viewModel.setSelectedBandIndex(it) },
+                    describe = { "Band ${it + 1}" },
+                )
+            }
+        }
 
-            Spacer(modifier = Modifier.height(Spacing.md))
-
-            // Selected Band Primary Controls Card
-            SelectedBandCard(
+        SettingsSection(title = "Band ${selectedBandIndex + 1}") {
+            SelectedBandPanel(
                 selectedBandIndex = selectedBandIndex,
                 activeBandCount = soundSettings.activeBandCount,
                 band = selectedBand,
@@ -168,8 +145,6 @@ fun SoundSettingsScreen(
                 onQChange = { viewModel.setBandQ(selectedBandIndex, it) },
                 onFilterTypeChange = { viewModel.setFilterType(selectedBandIndex, it) },
             )
-
-            Spacer(modifier = Modifier.height(Spacing.xl))
         }
     }
 
@@ -193,94 +168,36 @@ private fun BandCountSelectorRow(
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = "Active Bands",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
+            text = "Active bands",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        FilledTonalIconButton(
+            onClick = { if (activeCount > CustomEqAudioProcessor.MIN_BAND_COUNT) onCountSelected(activeCount - 1) },
+            enabled = enabled && activeCount > CustomEqAudioProcessor.MIN_BAND_COUNT,
         ) {
-            IconButton(
-                onClick = { if (activeCount > CustomEqAudioProcessor.MIN_BAND_COUNT) onCountSelected(activeCount - 1) },
-                enabled = enabled && activeCount > CustomEqAudioProcessor.MIN_BAND_COUNT,
-            ) {
-                Text("−", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-            Text(
-                text = "$activeCount",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            IconButton(
-                onClick = { if (activeCount < CustomEqAudioProcessor.BAND_COUNT) onCountSelected(activeCount + 1) },
-                enabled = enabled && activeCount < CustomEqAudioProcessor.BAND_COUNT,
-            ) {
-                Text("+", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
+            Icon(imageVector = Icons.Default.Remove, contentDescription = "Fewer bands")
         }
-    }
-}
-
-@Composable
-private fun BandSelectorRow(
-    activeCount: Int,
-    selectedIndex: Int,
-    onSelectBand: (Int) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        for (i in 0 until activeCount) {
-            val isSelected = i == selectedIndex
-            val label = "${i + 1}"
-
-            if (isSelected) {
-                Surface(
-                    onClick = { onSelectBand(i) },
-                    shape = CircleShape,
-                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .clickable { onSelectBand(i) }
-                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+        Text(
+            text = "$activeCount",
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(36.dp),
+        )
+        FilledTonalIconButton(
+            onClick = { if (activeCount < CustomEqAudioProcessor.BAND_COUNT) onCountSelected(activeCount + 1) },
+            enabled = enabled && activeCount < CustomEqAudioProcessor.BAND_COUNT,
+        ) {
+            Icon(imageVector = Icons.Default.Add, contentDescription = "More bands")
         }
     }
 }
 
 @Composable
 @Suppress("MagicNumber", "LongMethod")
-private fun SelectedBandCard(
+private fun SelectedBandPanel(
     selectedBandIndex: Int,
     activeBandCount: Int,
     band: BandConfig,
@@ -293,91 +210,59 @@ private fun SelectedBandCard(
     val isFirstBand = selectedBandIndex == 0
     val isLastBand = selectedBandIndex == activeBandCount - 1
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.md)) {
-            Text(
-                text = "Band ${selectedBandIndex + 1}  —  ${formatFrequency(band.frequencyHz)}, ${formatGain(band.gainDb)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-
+    SettingsPanel {
+        // Filter type: only the first and last active band can be a shelf.
+        if (isFirstBand || isLastBand) {
+            val shelfType = if (isFirstBand) FilterType.LOW_SHELF else FilterType.HIGH_SHELF
+            Text("Filter type", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(Spacing.sm))
-
-            // Filter Type Selector for first and last active band
-            if (isFirstBand || isLastBand) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Filter Type", style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                        val shelfType = if (isFirstBand) FilterType.LOW_SHELF else FilterType.HIGH_SHELF
-
-                        FilterChip(
-                            selected = band.filterType == FilterType.PEAKING,
-                            onClick = { onFilterTypeChange(FilterType.PEAKING) },
-                            enabled = enabled,
-                            label = { Text("Bell") },
-                        )
-                        FilterChip(
-                            selected = band.filterType == shelfType,
-                            onClick = { onFilterTypeChange(shelfType) },
-                            enabled = enabled,
-                            label = { Text("Shelf") },
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(Spacing.sm))
-            }
-
-            // 1. Logarithmic Center Frequency Slider
-            Text(
-                text = "Center Frequency: ${formatFrequency(band.frequencyHz)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            val normalizedFreq = frequencyToNormalized(band.frequencyHz)
-            Slider(
-                value = normalizedFreq,
-                onValueChange = { norm ->
-                    val newFreq = normalizedToFrequency(norm)
-                    onFreqChange(newFreq)
-                },
-                valueRange = 0f..1f,
+            SettingsSegmentedControl(
+                options = listOf("Bell", "Shelf"),
+                selectedIndex = if (band.filterType == shelfType) 1 else 0,
+                onSelect = { onFilterTypeChange(if (it == 1) shelfType else FilterType.PEAKING) },
                 enabled = enabled,
             )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            // 2. Gain Slider
-            Text(
-                text = "Gain: ${formatGain(band.gainDb)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = band.gainDb,
-                onValueChange = onGainChange,
-                valueRange = -15f..15f,
-                enabled = enabled,
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xs))
-
-            // 3. Q Factor Slider
-            Text(
-                text = "Q-Factor (Sharpness): ${String.format("%.2f", band.q)}",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Slider(
-                value = band.q,
-                onValueChange = onQChange,
-                valueRange = CustomEqAudioProcessor.MIN_Q..CustomEqAudioProcessor.MAX_Q,
-                enabled = enabled,
-            )
+            Spacer(modifier = Modifier.height(Spacing.lg))
         }
+
+        // 1. Logarithmic Center Frequency Slider
+        SliderLabel(label = "Center frequency", value = formatFrequency(band.frequencyHz))
+        Slider(
+            value = frequencyToNormalized(band.frequencyHz),
+            onValueChange = { norm -> onFreqChange(normalizedToFrequency(norm)) },
+            valueRange = 0f..1f,
+            enabled = enabled,
+        )
+
+        // 2. Gain Slider
+        SliderLabel(label = "Gain", value = formatGain(band.gainDb))
+        Slider(
+            value = band.gainDb,
+            onValueChange = onGainChange,
+            valueRange = -15f..15f,
+            enabled = enabled,
+        )
+
+        // 3. Q Factor Slider
+        SliderLabel(label = "Q-factor (sharpness)", value = String.format("%.2f", band.q))
+        Slider(
+            value = band.q,
+            onValueChange = onQChange,
+            valueRange = CustomEqAudioProcessor.MIN_Q..CustomEqAudioProcessor.MAX_Q,
+            enabled = enabled,
+        )
+    }
+}
+
+/** A slider's name with its current value on the right, in the accent. */
+@Composable
+private fun SliderLabel(
+    label: String,
+    value: String,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(value, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -399,7 +284,6 @@ private fun PresetAndResetHeader(
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         ExposedDropdownMenuBox(
             expanded = expanded,
@@ -410,13 +294,20 @@ private fun PresetAndResetHeader(
                 value = activePreset.name,
                 onValueChange = {},
                 readOnly = true,
+                singleLine = true,
                 label = { Text("Preset") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
             )
             ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
+                // Glass on: the frosted menu role. Off: the theme's own surface (the Material
+                // container roles are not part of the app's themes).
+                containerColor =
+                    if (EmPee3Glass.isActive) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
+                shape = MaterialTheme.shapes.medium,
             ) {
                 for (preset in soundSettings.allPresets) {
                     DropdownMenuItem(
@@ -447,23 +338,13 @@ private fun PresetAndResetHeader(
             }
         }
 
-        Spacer(modifier = Modifier.width(Spacing.xs))
+        Spacer(modifier = Modifier.width(Spacing.sm))
 
-        IconButton(onClick = onSaveCustomClick) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Save Custom Preset",
-            )
+        FilledTonalIconButton(onClick = onSaveCustomClick) {
+            Icon(imageVector = Icons.Default.SaveAs, contentDescription = "Save Custom Preset")
         }
-
-        TextButton(onClick = onResetClick) {
-            Icon(
-                imageVector = Icons.Default.RestartAlt,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("Reset")
+        FilledTonalIconButton(onClick = onResetClick) {
+            Icon(imageVector = Icons.Default.RestartAlt, contentDescription = "Reset to flat", modifier = Modifier.size(IconSize.standard))
         }
     }
 }
@@ -484,6 +365,8 @@ private fun SavePresetDialog(
                 onValueChange = { presetName = it },
                 label = { Text("Preset Name") },
                 singleLine = true,
+                shape = MaterialTheme.shapes.small,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             )
         },
         confirmButton = {

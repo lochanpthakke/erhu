@@ -79,6 +79,25 @@ class PlaylistsViewModel
             }
         }
 
+        /**
+         * Saves [songs] (the current and upcoming queue entries, in queue order, duplicates kept) as a
+         * new playlist named [name]. [onResult] receives the message to show, on the main thread.
+         */
+        fun saveQueueAsPlaylist(
+            name: String,
+            songs: List<Song>,
+            onResult: (String) -> Unit,
+        ) {
+            viewModelScope.launch {
+                val message =
+                    when (val result = playlistRepository.createPlaylistWithSongs(name, songs.map { it.id })) {
+                        is AppResult.Success -> "Saved ${countLabel(songs.size, "song")} to \"${name.trim()}\""
+                        is AppResult.Error -> result.error.message
+                    }
+                onResult(message)
+            }
+        }
+
         fun deletePlaylist(playlist: Playlist) {
             viewModelScope.launch {
                 when (val result = playlistRepository.deletePlaylist(playlist.id)) {

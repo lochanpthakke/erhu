@@ -15,6 +15,10 @@ data class PlaybackState(
     val nextIndex: Int = -1,
     /** Index in [queue] of the song before this one in physical play order, or -1. */
     val previousIndex: Int = -1,
+    /** Tracks that started playing this session, most recent first (not part of [queue]). */
+    val history: List<QueueHistoryEntry> = emptyList(),
+    /** The current track's A–B loop markers, or null when none are set. */
+    val abLoop: AbLoopState? = null,
 ) {
     val nextSong: Song? get() = queue.getOrNull(nextIndex)
     val previousSong: Song? get() = queue.getOrNull(previousIndex)

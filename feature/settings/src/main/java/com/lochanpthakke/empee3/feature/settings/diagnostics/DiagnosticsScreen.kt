@@ -3,29 +3,26 @@ package com.lochanpthakke.empee3.feature.settings.diagnostics
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,13 +32,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.common.logging.CrashLogEntry
-import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
-import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.feature.settings.component.SettingsGroup
+import com.lochanpthakke.empee3.feature.settings.component.SettingsIcon
+import com.lochanpthakke.empee3.feature.settings.component.SettingsPage
+import com.lochanpthakke.empee3.feature.settings.component.SettingsPanel
+import com.lochanpthakke.empee3.feature.settings.component.SettingsSection
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 @Suppress("LongMethod")
 fun DiagnosticsScreen(
@@ -55,96 +56,78 @@ fun DiagnosticsScreen(
     val latestRelease by viewModel.latestRelease.collectAsState()
     val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
 
-    AppScaffold(
-        topBar = {
-            AppTopBar(
-                navigation = TopBarNavigation.Detail(onBack),
-                title = title,
-                actions = {
-                    if (crashLogs.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearLogs() }) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear crash logs")
-                        }
-                    }
-                },
-            )
-        },
+    SettingsPage(
+        title = title,
+        navigation = TopBarNavigation.Detail(onBack),
         modifier = modifier,
-    ) { innerPadding ->
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(Spacing.lg),
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Column(modifier = Modifier.padding(Spacing.lg)) {
+        actions = {
+            if (crashLogs.isNotEmpty()) {
+                IconButton(onClick = { viewModel.clearLogs() }) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear crash logs")
+                }
+            }
+        },
+    ) {
+        SettingsSection(title = "Updates") {
+            SettingsPanel {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SettingsIcon(Icons.Default.SystemUpdate)
+                    Spacer(modifier = Modifier.width(Spacing.lg))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("App Update Checker", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            text = "Current Version: 1.0.0 (GitHub Release Monthly Auto-Check)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(Spacing.md))
+                val release = latestRelease
+                if (release != null) {
                     Text(
-                        text = "App Update Checker",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "New Release Available: ${release.tagName}",
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
-                        text = "Current Version: 1.0.0 (GitHub Release Monthly Auto-Check)",
+                        text = release.body,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
                     )
                     Spacer(modifier = Modifier.height(Spacing.md))
-
-                    if (latestRelease != null) {
-                        Text(
-                            text = "New Release Available: ${latestRelease?.tagName}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text(
-                            text = latestRelease?.body ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 3,
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.sm))
-                        Button(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(latestRelease?.htmlUrl))
-                                context.startActivity(intent)
-                            },
-                        ) {
-                            Text("Download Latest APK")
+                    Button(
+                        onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.htmlUrl))) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(IconSize.small))
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                        Text("Download Latest APK")
+                    }
+                } else {
+                    FilledTonalButton(
+                        onClick = { viewModel.checkForUpdates() },
+                        enabled = !isCheckingUpdate,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isCheckingUpdate) {
+                            CircularProgressIndicator(modifier = Modifier.size(IconSize.small), strokeWidth = 2.dp)
+                        } else {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(IconSize.small))
                         }
-                    } else {
-                        OutlinedButton(
-                            onClick = { viewModel.checkForUpdates() },
-                            enabled = !isCheckingUpdate,
-                        ) {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(Spacing.sm))
-                            Text(if (isCheckingUpdate) "Checking GitHub..." else "Check for Updates Now")
-                        }
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                        Text(if (isCheckingUpdate) "Checking GitHub..." else "Check for Updates Now")
                     }
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(Spacing.xl))
-
-            Text(
-                text = "Local Crash Log History",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(Spacing.sm))
-
+        SettingsSection(title = "Local crash log history") {
             if (crashLogs.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
+                SettingsPanel {
                     Text(
                         text = "No crash logs recorded. App has been running stably!",
                         style = MaterialTheme.typography.bodyMedium,
@@ -152,15 +135,11 @@ fun DiagnosticsScreen(
                     )
                 }
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                ) {
-                    items(crashLogs) { entry ->
-                        CrashLogCard(
-                            entry = entry,
-                            onCopy = { viewModel.copyLogToClipboard(entry) },
-                        )
+                SettingsGroup {
+                    crashLogs.forEach { entry ->
+                        row {
+                            CrashLogRow(entry = entry, onCopy = { viewModel.copyLogToClipboard(entry) })
+                        }
                     }
                 }
             }
@@ -169,37 +148,33 @@ fun DiagnosticsScreen(
 }
 
 @Composable
-private fun CrashLogCard(
+private fun CrashLogRow(
     entry: CrashLogEntry,
     onCopy: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = entry.timestamp,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                IconButton(onClick = onCopy) {
-                    Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy Stack Trace")
-                }
-            }
-            Spacer(modifier = Modifier.height(Spacing.sm))
+    Column(modifier = Modifier.padding(start = Spacing.lg, end = Spacing.xs, top = Spacing.xs, bottom = Spacing.md)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = entry.content,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                maxLines = 10,
+                text = entry.timestamp,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = onCopy) {
+                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy Stack Trace")
+            }
         }
+        Text(
+            text = entry.content,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 10,
+            modifier = Modifier.padding(end = Spacing.md),
+        )
     }
 }

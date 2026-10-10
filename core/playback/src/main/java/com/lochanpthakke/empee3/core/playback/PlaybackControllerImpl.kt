@@ -14,6 +14,7 @@ import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.common.result.onError
 import com.lochanpthakke.empee3.core.database.repository.ListeningStatsRepository
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistence
+import com.lochanpthakke.empee3.core.model.AbLoopEdit
 import com.lochanpthakke.empee3.core.model.PersistedPlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
@@ -61,6 +62,31 @@ class PlaybackControllerImpl
         private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
 
+        /** Removed queue entries, for undo. Cleared whenever the queue is replaced as a whole. */
+        private val removals = QueueRemovals<MediaItem>()
+
+        /** Tracks played this session (in memory), from the player's own transitions. */
+        private val history = SessionHistory(now = System::currentTimeMillis)
+
+        /**
+         * A–B loop of the current entry, enforced here (player messages), not by any screen, so it
+         * keeps looping with Now Playing closed or the display off.
+         */
+        private val abLoop =
+            AbLoopController(
+                scheduler = (player as? ExoPlayer)?.let(::PlayerMessageLoopScheduler),
+                player =
+                    object : LoopPlayer {
+                        override val currentSongId: Long? get() = player.currentMediaItem?.mediaId?.toLongOrNull()
+                        override val currentIndex: Int get() = player.currentMediaItemIndex
+                        override val positionMs: Long get() = player.currentPosition.coerceAtLeast(0L)
+                        override val durationMs: Long get() = currentDurationMs()
+
+                        override fun seekTo(positionMs: Long) = player.seekTo(positionMs)
+                    },
+                onStateChanged = { loop -> _playbackState.update { it.copy(abLoop = loop) } },
+            )
+
         private val _playbackState = MutableStateFlow(PlaybackState())
         override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
@@ -82,6 +108,7 @@ class PlaybackControllerImpl
             object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     listening.onPlayingChanged(isPlaying, currentDurationMs())
+                    if (isPlaying && history.onPlaybackStarted()) publishHistory()
                     updateStatus()
                     if (isPlaying) {
                         consecutiveErrors = 0
@@ -103,6 +130,9 @@ class PlaybackControllerImpl
                     reason: Int,
                 ) {
                     listening.onItemChanged(mediaItem?.mediaId?.toLongOrNull(), currentDurationMs(), player.isPlaying)
+                    if (history.onItemBecameCurrent(mediaItem?.toSongOrNull(), player.isPlaying)) publishHistory()
+                    // Markers belong to the entry that was playing: another track never loops on them.
+                    abLoop.onEntryChanged(sameEntryRepeated = reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT)
                     refreshQueueAndCurrent()
                     _playbackState.update { it.copy(positionMs = player.currentPosition.coerceAtLeast(0L)) }
                     persistState()
@@ -154,6 +184,20 @@ class PlaybackControllerImpl
                 soundRepository.attachAudioSession(it)
             }
             scope.launch { restorePersistedState() }
+        }
+
+        private fun publishHistory() {
+            _playbackState.update { it.copy(history = history.entries) }
+        }
+
+        /** Replaces the whole queue; positions of earlier removals no longer apply. */
+        private fun setQueue(
+            items: List<MediaItem>,
+            startIndex: Int,
+            startPositionMs: Long,
+        ) {
+            removals.clear()
+            player.setMediaItems(items, startIndex, startPositionMs)
         }
 
         private fun updateStatus() {
@@ -281,7 +325,7 @@ class PlaybackControllerImpl
                 val restored = buildRestoredQueue(saved, songLookup.getSongsByIds(saved.queueSongIds.distinct()))
                 // The user may have started playback while we were reading from disk.
                 if (restored == null || player.mediaItemCount > 0) return
-                player.setMediaItems(
+                setQueue(
                     restored.songs.map { it.toMediaItem() },
                     restored.startIndex,
                     restored.startPositionMs,
@@ -378,7 +422,7 @@ class PlaybackControllerImpl
             val playIndex = if (isShuffleActive && playable.size > 1) 0 else index
 
             player.shuffleModeEnabled = false
-            player.setMediaItems(finalItems.map { it.toMediaItem() }, playIndex, 0L)
+            setQueue(finalItems.map { it.toMediaItem() }, playIndex, 0L)
             player.prepare()
             play()
         }
@@ -414,6 +458,7 @@ class PlaybackControllerImpl
             player.shuffleModeEnabled = false
             _playbackState.update { it.copy(shuffleModeEnabled = enabled) }
             if (enabled) {
+                removals.clear()
                 queue.shuffleFullQueueFromCurrent()
             }
         }
@@ -435,7 +480,36 @@ class PlaybackControllerImpl
         }
 
         override fun removeFromQueue(index: Int) {
-            queue.removeAt(index)
+            removals.push(index, queue.removeAt(index))
+        }
+
+        override fun undoQueueRemoval(): Boolean {
+            val removal = removals.pop() ?: return false
+            val wasEmpty = player.mediaItemCount == 0
+            queue.insertAt(removal.index, removal.item)
+            if (wasEmpty) player.prepare()
+            return true
+        }
+
+        override fun shuffleUpcoming(): Boolean = queue.shuffleUpcoming()
+
+        override fun setLoopStart(): AbLoopEdit = abLoop.setStart()
+
+        override fun setLoopEnd(): AbLoopEdit = abLoop.setEnd()
+
+        override fun setLoopEnabled(enabled: Boolean): AbLoopEdit = abLoop.setEnabled(enabled)
+
+        override fun clearLoop() = abLoop.clear()
+
+        override fun playFromHistory(entryId: Long) {
+            val song = history.find(entryId)?.song?.takeIf { it.uri.isNotBlank() } ?: return
+            if (player.mediaItemCount == 0) {
+                playSong(song)
+            } else {
+                val target = (player.currentMediaItemIndex + 1).coerceIn(0, player.mediaItemCount)
+                queue.insertAt(target, song.toMediaItem())
+                skipToQueueItem(target)
+            }
         }
 
         override fun setVolume(volume: Float) {

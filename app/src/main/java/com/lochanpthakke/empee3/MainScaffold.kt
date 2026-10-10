@@ -111,6 +111,7 @@ import com.lochanpthakke.empee3.feature.library.LibraryViewModel
 import com.lochanpthakke.empee3.feature.library.LocalPlayerTransition
 import com.lochanpthakke.empee3.feature.library.MetadataEditorScreen
 import com.lochanpthakke.empee3.feature.library.NowPlayingScreen
+import com.lochanpthakke.empee3.feature.library.PlayerExtrasViewModel
 import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
 import com.lochanpthakke.empee3.feature.library.SmartPlaylistDetailScreen
@@ -171,6 +172,7 @@ fun MainScaffold() {
     val diagnosticsViewModel: DiagnosticsViewModel = hiltViewModel()
     val libraryViewModel: LibraryViewModel = hiltViewModel()
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
+    val playerExtrasViewModel: PlayerExtrasViewModel = hiltViewModel()
     val playbackRepository = libraryViewModel.playbackRepository
 
     val selectedTheme by themeViewModel.appTheme.collectAsState()
@@ -578,6 +580,10 @@ fun MainScaffold() {
                                         onBackClick = minimizePlayer,
                                         onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
                                         onAddToPlaylist = { songForPlaylist = it },
+                                        onSaveQueueAsPlaylist = { name, songs, onResult ->
+                                            playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
+                                        },
+                                        extras = playerExtrasViewModel,
                                     )
                                 }
                             }

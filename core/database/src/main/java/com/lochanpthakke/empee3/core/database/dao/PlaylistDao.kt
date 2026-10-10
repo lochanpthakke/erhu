@@ -78,8 +78,17 @@ interface PlaylistDao {
         timestamp: Long,
     ): Int
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertPlaylistSongCrossRef(crossRef: PlaylistSongCrossRefEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertPlaylistSongCrossRefs(crossRefs: List<PlaylistSongCrossRefEntity>)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM playlist_song_cross_ref WHERE playlist_id = :playlistId AND song_id = :songId)")
+    suspend fun containsSong(
+        playlistId: Long,
+        songId: Long,
+    ): Boolean
 
     @Query("SELECT COALESCE(MAX(position), -1) FROM playlist_song_cross_ref WHERE playlist_id = :playlistId")
     suspend fun getMaxPosition(playlistId: Long): Int
@@ -91,10 +100,24 @@ interface PlaylistDao {
         songId: Long,
         timestamp: Long,
     ): Boolean {
-        val nextPosition = getMaxPosition(playlistId) + 1
-        val inserted = insertPlaylistSongCrossRef(PlaylistSongCrossRefEntity(playlistId, songId, nextPosition)) != -1L
-        if (inserted) touchPlaylist(playlistId, timestamp)
-        return inserted
+        if (containsSong(playlistId, songId)) return false
+        insertPlaylistSongCrossRef(PlaylistSongCrossRefEntity(playlistId, songId, getMaxPosition(playlistId) + 1))
+        touchPlaylist(playlistId, timestamp)
+        return true
+    }
+
+    /**
+     * Creates a playlist holding [songIds] in exactly this order, duplicates included (a saved
+     * queue), in one transaction: either the whole playlist exists afterwards or nothing does.
+     */
+    @Transaction
+    suspend fun createPlaylistWithSongs(
+        playlist: PlaylistEntity,
+        songIds: List<Long>,
+    ): Long {
+        val playlistId = insertPlaylist(playlist)
+        insertPlaylistSongCrossRefs(songIds.mapIndexed { position, songId -> PlaylistSongCrossRefEntity(playlistId, songId, position) })
+        return playlistId
     }
 
     @Query("DELETE FROM playlist_song_cross_ref WHERE playlist_id = :playlistId AND song_id = :songId")

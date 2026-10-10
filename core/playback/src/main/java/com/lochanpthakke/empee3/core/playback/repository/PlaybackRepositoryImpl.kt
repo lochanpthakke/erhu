@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.playback.repository
 import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
+import com.lochanpthakke.empee3.core.model.AbLoopEdit
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
@@ -67,6 +68,20 @@ class PlaybackRepositoryImpl
             appResultOf(mapError = { AppError.ValidationError(it.message ?: "Invalid queue index") }) {
                 playbackController.removeFromQueue(index)
             }
+
+        override fun undoQueueRemoval(): Boolean = playbackController.undoQueueRemoval()
+
+        override fun shuffleUpcoming(): Boolean = playbackController.shuffleUpcoming()
+
+        override fun playFromHistory(entryId: Long) = playbackController.playFromHistory(entryId)
+
+        override fun setLoopStart(): AbLoopEdit = playbackController.setLoopStart()
+
+        override fun setLoopEnd(): AbLoopEdit = playbackController.setLoopEnd()
+
+        override fun setLoopEnabled(enabled: Boolean): AbLoopEdit = playbackController.setLoopEnabled(enabled)
+
+        override fun clearLoop() = playbackController.clearLoop()
 
         override suspend fun reorder(
             from: Int,

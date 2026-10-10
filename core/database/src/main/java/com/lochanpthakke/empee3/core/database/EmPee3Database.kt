@@ -11,6 +11,8 @@ import com.lochanpthakke.empee3.core.database.dao.PlaylistDao
 import com.lochanpthakke.empee3.core.database.dao.RecentlyPlayedDao
 import com.lochanpthakke.empee3.core.database.dao.SongArtistCrossRefDao
 import com.lochanpthakke.empee3.core.database.dao.SongDao
+import com.lochanpthakke.empee3.core.database.dao.TrackBookmarkDao
+import com.lochanpthakke.empee3.core.database.dao.WaveformCacheDao
 import com.lochanpthakke.empee3.core.database.entity.AlbumArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.AlbumEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistAliasEntity
@@ -24,7 +26,9 @@ import com.lochanpthakke.empee3.core.database.entity.PlaylistSongCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.RecentlyPlayedEntity
 import com.lochanpthakke.empee3.core.database.entity.SongArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
+import com.lochanpthakke.empee3.core.database.entity.TrackBookmarkEntity
 import com.lochanpthakke.empee3.core.database.entity.UnverifiedCreditSegmentEntity
+import com.lochanpthakke.empee3.core.database.entity.WaveformCacheEntity
 
 @Database(
     entities = [
@@ -42,12 +46,18 @@ import com.lochanpthakke.empee3.core.database.entity.UnverifiedCreditSegmentEnti
         RecentlyPlayedEntity::class,
         ListeningStatsEntity::class,
         ListeningDayEntity::class,
+        TrackBookmarkEntity::class,
+        WaveformCacheEntity::class,
     ],
-    version = 9,
+    version = 11,
     exportSchema = true,
 )
 abstract class EmPee3Database : RoomDatabase() {
     abstract fun songDao(): SongDao
+
+    abstract fun trackBookmarkDao(): TrackBookmarkDao
+
+    abstract fun waveformCacheDao(): WaveformCacheDao
 
     abstract fun albumDao(): AlbumDao
 
