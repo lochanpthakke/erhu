@@ -117,6 +117,7 @@ import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
 import com.lochanpthakke.empee3.feature.library.SmartPlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.SoundCapsuleScreen
+import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
 import com.lochanpthakke.empee3.feature.library.rememberPlayerTransitionState
@@ -177,6 +178,7 @@ fun MainScaffold() {
     val libraryViewModel: LibraryViewModel = hiltViewModel()
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
     val playerExtrasViewModel: PlayerExtrasViewModel = hiltViewModel()
+    val visualizerViewModel: VisualizerViewModel = hiltViewModel()
     val playbackRepository = libraryViewModel.playbackRepository
 
     val selectedTheme by themeViewModel.appTheme.collectAsState()
@@ -570,6 +572,7 @@ fun MainScaffold() {
                                                         soundViewModel = soundViewModel,
                                                         diagnosticsViewModel = diagnosticsViewModel,
                                                         libraryViewModel = libraryViewModel,
+                                                        visualizerViewModel = visualizerViewModel,
                                                     )
                                                 }
                                             }
@@ -593,6 +596,7 @@ fun MainScaffold() {
                                             playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
                                         },
                                         extras = playerExtrasViewModel,
+                                        visualizer = visualizerViewModel,
                                     )
                                 }
                             }

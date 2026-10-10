@@ -27,6 +27,16 @@ message PlaybackStateProto {
   bool is_custom_scan_location_enabled = 18;
   bool scan_location_configured = 19;
   string default_start_section = 20;
+  // Absent until the user changes a visualizer preference; absence means "use defaults".
+  VisualizerSettingsProto visualizer_settings = 21;
+}
+
+// Enum names are stored as strings, so unknown values from other versions fall back to defaults.
+message VisualizerSettingsProto {
+  string mode = 1;
+  string sensitivity = 2;
+  string smoothing = 3;
+  bool reduce_motion = 4;
 }
 
 message EqPresetProto {

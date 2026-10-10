@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
@@ -24,13 +25,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.model.VisualizerMode
+import com.lochanpthakke.empee3.core.model.VisualizerSensitivity
+import com.lochanpthakke.empee3.core.model.VisualizerSmoothing
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
+import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.settings.component.SettingsChoiceRow
 import com.lochanpthakke.empee3.feature.settings.component.SettingsGroup
 import com.lochanpthakke.empee3.feature.settings.component.SettingsIcon
 import com.lochanpthakke.empee3.feature.settings.component.SettingsNavigationRow
 import com.lochanpthakke.empee3.feature.settings.component.SettingsPage
 import com.lochanpthakke.empee3.feature.settings.component.SettingsSection
+import com.lochanpthakke.empee3.feature.settings.component.SettingsSegmentedControl
+import com.lochanpthakke.empee3.feature.settings.component.SettingsSwitchRow
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
 import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
@@ -72,6 +79,13 @@ private val SETTING_CATEGORIES =
             "Audio & Equalizer",
             "8-band equalizer, presets and audio effects",
             Icons.Default.Equalizer,
+            SECTION_SOUND,
+        ),
+        SettingCategory(
+            "visualizer",
+            "Visualizer",
+            "Style and feel of the Now Playing visualizer",
+            Icons.Default.GraphicEq,
             SECTION_SOUND,
         ),
         SettingCategory(
@@ -142,6 +156,7 @@ fun SettingsCategoryScreen(
     soundViewModel: SoundViewModel,
     diagnosticsViewModel: DiagnosticsViewModel,
     libraryViewModel: LibraryViewModel,
+    visualizerViewModel: VisualizerViewModel,
 ) {
     val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
     when (categoryId) {
@@ -159,6 +174,7 @@ fun SettingsCategoryScreen(
                 title = title,
                 onBack = onBack,
             )
+        "visualizer" -> VisualizerSettingsSubPage(viewModel = visualizerViewModel, title = title, onBack = onBack)
         "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel, title = title, onBack = onBack)
         else -> MetadataSettingsSubPage(title = title, onBack = onBack, onNavigateToMetadataEditor = onNavigateToMetadataEditor)
     }
@@ -274,6 +290,61 @@ private fun LibrarySettingsSubPage(
                             },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** Visualizer preferences: style, how strongly and how smoothly it moves, and a calmer option. */
+@Composable
+private fun VisualizerSettingsSubPage(
+    viewModel: VisualizerViewModel,
+    title: String,
+    onBack: () -> Unit,
+) {
+    val settings by viewModel.settings.collectAsState()
+    SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
+        SettingsSection(title = "Style", footer = "Open it from the visualizer button at the top of Now Playing.") {
+            SettingsGroup(selectable = true) {
+                listOf(
+                    Triple(VisualizerMode.SPECTRUM_BARS, "Bars", "Bass to treble, left to right"),
+                    Triple(VisualizerMode.CIRCULAR_SPECTRUM, "Circle", "The spectrum around the artwork"),
+                    Triple(VisualizerMode.OSCILLOSCOPE, "Waveform", "The sound wave itself"),
+                ).forEach { (mode, label, summary) ->
+                    row {
+                        SettingsChoiceRow(
+                            title = label,
+                            summary = summary,
+                            selected = settings.mode == mode,
+                            onClick = { viewModel.setMode(mode) },
+                        )
+                    }
+                }
+            }
+        }
+        SettingsSection(title = "Sensitivity", footer = "Higher shows more movement in quiet passages.") {
+            SettingsSegmentedControl(
+                options = listOf("Low", "Normal", "High"),
+                selectedIndex = settings.sensitivity.ordinal,
+                onSelect = { viewModel.setSensitivity(VisualizerSensitivity.entries[it]) },
+                describe = { "Sensitivity " + listOf("low", "normal", "high")[it] },
+            )
+        }
+        SettingsSection(title = "Movement") {
+            SettingsSegmentedControl(
+                options = listOf("Responsive", "Balanced", "Smooth"),
+                selectedIndex = settings.smoothing.ordinal,
+                onSelect = { viewModel.setSmoothing(VisualizerSmoothing.entries[it]) },
+            )
+        }
+        SettingsGroup {
+            row {
+                SettingsSwitchRow(
+                    title = "Reduce motion",
+                    summary = "Fewer frames and gentler movement; also saves battery",
+                    checked = settings.reduceMotion,
+                    onCheckedChange = viewModel::setReduceMotion,
+                )
             }
         }
     }

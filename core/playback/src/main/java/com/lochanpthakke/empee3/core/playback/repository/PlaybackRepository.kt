@@ -75,6 +75,9 @@ interface PlaybackRepository {
 
     fun clearLoop()
 
+    /** The player's exact media position right now (call on the main thread). Read-only. */
+    fun currentPositionMs(): Long
+
     suspend fun reorder(
         from: Int,
         to: Int,

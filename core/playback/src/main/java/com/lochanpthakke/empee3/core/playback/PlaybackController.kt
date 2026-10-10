@@ -73,6 +73,9 @@ interface PlaybackController {
     /** Removes both markers and stops looping. */
     fun clearLoop()
 
+    /** The player's exact media position right now (main thread), finer than [playbackState]'s periodic position. */
+    fun currentPositionMs(): Long
+
     fun setVolume(volume: Float)
 
     fun reorder(

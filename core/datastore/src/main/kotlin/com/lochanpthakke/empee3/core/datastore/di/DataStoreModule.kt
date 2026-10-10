@@ -8,6 +8,8 @@ import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.PlaybackStateProtoSerializer
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistenceImpl
+import com.lochanpthakke.empee3.core.datastore.VisualizerSettingsPersistence
+import com.lochanpthakke.empee3.core.datastore.VisualizerSettingsPersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.proto.PlaybackStateProto
 import dagger.Module
 import dagger.Provides
@@ -49,4 +51,9 @@ object DataStoreModule {
     @Singleton
     fun provideSoundSettingsPersistence(dataStore: DataStore<PlaybackStateProto>): SoundSettingsPersistence =
         SoundSettingsPersistenceImpl(dataStore)
+
+    @Provides
+    @Singleton
+    fun provideVisualizerSettingsPersistence(dataStore: DataStore<PlaybackStateProto>): VisualizerSettingsPersistence =
+        VisualizerSettingsPersistenceImpl(dataStore)
 }

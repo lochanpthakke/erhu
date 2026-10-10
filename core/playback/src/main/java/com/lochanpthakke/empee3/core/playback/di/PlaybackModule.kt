@@ -9,9 +9,11 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.lochanpthakke.empee3.core.playback.PlaybackController
 import com.lochanpthakke.empee3.core.playback.PlaybackControllerImpl
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
+import com.lochanpthakke.empee3.core.sound.visualizer.PlaybackAudioTap
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -29,6 +31,7 @@ object PlayerProviderModule {
     fun providePlayer(
         @ApplicationContext context: Context,
         customEqAudioProcessor: CustomEqAudioProcessor,
+        audioTap: PlaybackAudioTap,
     ): Player {
         val renderersFactory =
             object : DefaultRenderersFactory(context) {
@@ -39,7 +42,8 @@ object PlayerProviderModule {
                 ): AudioSink =
                     DefaultAudioSink
                         .Builder(context)
-                        .setAudioProcessors(arrayOf(customEqAudioProcessor))
+                        // The tee only copies what is about to be played (after the EQ) to the visualizer's tap.
+                        .setAudioProcessors(arrayOf(customEqAudioProcessor, TeeAudioProcessor(VisualizerTapSink(audioTap))))
                         .setEnableFloatOutput(enableFloatOutput)
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                         .build()
@@ -68,4 +72,35 @@ abstract class PlaybackBindModule {
     @Binds
     @Singleton
     abstract fun bindPlaybackController(impl: PlaybackControllerImpl): PlaybackController
+}
+
+/**
+ * Feeds the visualizer's tap from the audio chain. Runs on the playback thread: the tap only copies
+ * samples (when a visualizer is open), and any failure there is contained so it can never reach playback.
+ */
+@androidx.annotation.OptIn(UnstableApi::class)
+private class VisualizerTapSink(
+    private val tap: PlaybackAudioTap,
+) : TeeAudioProcessor.AudioBufferSink {
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    override fun flush(
+        sampleRateHz: Int,
+        channelCount: Int,
+        encoding: Int,
+    ) {
+        try {
+            tap.onFormat(sampleRateHz, channelCount, pcm16 = encoding == C.ENCODING_PCM_16BIT, pcmFloat = encoding == C.ENCODING_PCM_FLOAT)
+        } catch (e: RuntimeException) {
+            // Never let the visualizer disturb playback.
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    override fun handleBuffer(buffer: java.nio.ByteBuffer) {
+        try {
+            tap.write(buffer)
+        } catch (e: RuntimeException) {
+            // Never let the visualizer disturb playback.
+        }
+    }
 }

@@ -83,6 +83,8 @@ class PlaybackRepositoryImpl
 
         override fun clearLoop() = playbackController.clearLoop()
 
+        override fun currentPositionMs(): Long = playbackController.currentPositionMs()
+
         override suspend fun reorder(
             from: Int,
             to: Int,

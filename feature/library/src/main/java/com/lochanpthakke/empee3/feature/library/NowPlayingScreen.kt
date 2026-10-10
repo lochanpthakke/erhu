@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -117,6 +119,8 @@ fun NowPlayingScreen(
     onSaveQueueAsPlaylist: (name: String, songs: List<Song>, onResult: (String) -> Unit) -> Unit,
     /** Waveform and bookmarks of the current track. */
     extras: PlayerExtrasViewModel,
+    /** The audio visualizer's preferences and playback reading. */
+    visualizer: VisualizerViewModel,
     modifier: Modifier = Modifier,
 ) {
     // Stable state only; the position is read by PlaybackProgress alone, so the
@@ -148,6 +152,7 @@ fun NowPlayingScreen(
     val gestureRegion = collapseDrag.then(trackSwipe)
     // Which tab of the queue sheet is open, or null when it is closed.
     var queueSheetPage by remember { mutableStateOf<Int?>(null) }
+    var showVisualizer by remember { mutableStateOf(false) }
     val waveformLoad by extras.waveform.collectAsState()
     val bookmarks by extras.bookmarks.collectAsState()
     val bookmarkPositions = remember(bookmarks) { bookmarks.map { it.positionMs } }
@@ -173,6 +178,11 @@ fun NowPlayingScreen(
                 AppTopBar(
                     navigation = TopBarNavigation.Detail(onBackClick),
                     title = "Now Playing",
+                    actions = {
+                        IconButton(onClick = { showVisualizer = true }, enabled = song != null) {
+                            Icon(imageVector = Icons.Default.GraphicEq, contentDescription = "Open visualizer")
+                        }
+                    },
                     glass = false,
                     containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
                     modifier = Modifier.revealWithPlayer(transition, start = 0.45f, end = 0.9f, rise = -REVEAL_RISE),
@@ -476,6 +486,16 @@ fun NowPlayingScreen(
                     }
                 }
             }
+        }
+        if (showVisualizer) {
+            VisualizerScreen(
+                playbackState = playbackState,
+                viewModel = visualizer,
+                onPlayPause = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
+                onPrevious = { playbackRepository.skipPrevious() },
+                onNext = { playbackRepository.skipNext() },
+                onClose = { showVisualizer = false },
+            )
         }
     }
 

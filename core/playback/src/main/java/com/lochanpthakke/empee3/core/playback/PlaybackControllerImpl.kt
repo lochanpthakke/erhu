@@ -501,6 +501,8 @@ class PlaybackControllerImpl
 
         override fun clearLoop() = abLoop.clear()
 
+        override fun currentPositionMs(): Long = player.currentPosition.coerceAtLeast(0L)
+
         override fun playFromHistory(entryId: Long) {
             val song = history.find(entryId)?.song?.takeIf { it.uri.isNotBlank() } ?: return
             if (player.mediaItemCount == 0) {
