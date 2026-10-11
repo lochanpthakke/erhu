@@ -30,6 +30,8 @@ data class DeezerTrackDto(
     val id: Long,
     val title: String,
     val duration: Long? = null,
+    @SerialName("bpm")
+    val bpm: Float? = null,
     val artist: DeezerArtistDto? = null,
     val album: DeezerAlbumDto? = null,
 )

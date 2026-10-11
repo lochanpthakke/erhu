@@ -40,13 +40,14 @@ fun FixTagsDialog(
     song: Song,
     candidates: List<MetadataCandidate>,
     onDismiss: () -> Unit,
-    onSaveTags: (title: String, artist: String, album: String, year: Int, genre: String) -> Unit,
+    onSaveTags: (title: String, artist: String, album: String, year: Int, genre: String, bpm: Int) -> Unit,
 ) {
     var title by remember { mutableStateOf(song.title) }
     var artist by remember { mutableStateOf(song.artist) }
     var album by remember { mutableStateOf(song.album) }
     var yearStr by remember { mutableStateOf("") }
     var genre by remember { mutableStateOf("") }
+    var bpmStr by remember { mutableStateOf("") }
 
     val topCandidate = candidates.firstOrNull()
     val topScorePercent = topCandidate?.let { (it.confidenceScore * 100).roundToInt() } ?: 0
@@ -91,6 +92,7 @@ fun FixTagsDialog(
                                         album = candidate.album
                                         if (candidate.year in 1900..2099) yearStr = candidate.year.toString()
                                         candidate.genre?.let { genre = it }
+                                        candidate.bpm?.let { bpmStr = it.toString() }
                                     },
                             colors =
                                 CardDefaults.cardColors(
@@ -154,11 +156,20 @@ fun FixTagsDialog(
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
-                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Spacer(modifier = Modifier.width(Spacing.xs))
                     OutlinedTextField(
                         value = genre,
                         onValueChange = { genre = it },
                         label = { Text("Genre") },
+                        placeholder = { Text("Keep") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                    OutlinedTextField(
+                        value = bpmStr,
+                        onValueChange = { bpmStr = it },
+                        label = { Text("BPM") },
                         placeholder = { Text("Keep") },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -176,7 +187,8 @@ fun FixTagsDialog(
             Button(
                 onClick = {
                     val year = (yearStr.toIntOrNull() ?: 0).takeIf { it in 1900..2099 } ?: 0
-                    onSaveTags(title, artist, album, year, genre)
+                    val bpm = (bpmStr.toIntOrNull() ?: 0).takeIf { it in 1..999 } ?: 0
+                    onSaveTags(title, artist, album, year, genre, bpm)
                 },
                 enabled = title.isNotBlank() && artist.isNotBlank(),
             ) {

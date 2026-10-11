@@ -38,6 +38,7 @@ class DeezerProvider
                         title = dto.title,
                         artist = dto.artist?.name ?: "Unknown Artist",
                         album = dto.album?.title ?: "Unknown Album",
+                        bpm = dto.bpm?.toInt()?.takeIf { it > 0 },
                         coverArtUrl = dto.album?.coverXl ?: dto.album?.coverBig ?: dto.album?.coverMedium,
                         sourceName = providerName,
                     )

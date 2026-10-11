@@ -249,8 +249,8 @@ fun AlbumDetailScreen(
             song = song,
             candidates = candidates,
             onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artist, albumName, year, genre ->
-                viewModel.writeTags(song, title, artist, albumName, year, genre)
+            onSaveTags = { title, artist, albumName, year, genre, bpm ->
+                viewModel.writeTags(song, title, artist, albumName, year, genre, bpm)
                 songForFixTags = null
             },
         )

@@ -26,12 +26,15 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -205,6 +208,79 @@ fun MetadataEditorScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            var providerExpanded by remember { mutableStateOf(false) }
+            var actionExpanded by remember { mutableStateOf(false) }
+
+            val selectedProvider by viewModel.selectedProvider.collectAsState()
+            val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+
+            val providerOptions = listOf("ALL" to "All Sources", "Deezer" to "Deezer", "MusicBrainz" to "MusicBrainz", "LastFm" to "Last.fm")
+            val actionOptions = com.lochanpthakke.empee3.core.model.MetadataFixAction.entries
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { providerExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Source: ${providerOptions.find { it.first == selectedProvider }?.second ?: selectedProvider} ▾",
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = providerExpanded,
+                        onDismissRequest = { providerExpanded = false },
+                    ) {
+                        providerOptions.forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    viewModel.setSelectedProvider(key)
+                                    providerExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { actionExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Fix: ${selectedFixAction.displayName} ▾",
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = actionExpanded,
+                        onDismissRequest = { actionExpanded = false },
+                    ) {
+                        actionOptions.forEach { action ->
+                            DropdownMenuItem(
+                                text = { Text(action.displayName) },
+                                onClick = {
+                                    viewModel.setSelectedFixAction(action)
+                                    actionExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(Spacing.md))
 
             Row(
@@ -327,6 +403,16 @@ fun MetadataEditorScreen(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                             )
+                                            if (queueItem.status == "FAILED") {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "⚠️ ${formatFailureReason(queueItem.failureReason)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
                                         }
                                     }
 
@@ -351,11 +437,24 @@ fun MetadataEditorScreen(
                                                     tint = MaterialTheme.colorScheme.secondary,
                                                 )
                                             "FAILED" ->
-                                                Icon(
-                                                    imageVector = Icons.Default.Error,
-                                                    contentDescription = "Failed",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Error,
+                                                        contentDescription = "Failed",
+                                                        tint = MaterialTheme.colorScheme.error,
+                                                    )
+                                                    IconButton(
+                                                        onClick = {
+                                                            viewModel.retryRepairQueueItem(queueItem.song)
+                                                        },
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Refresh,
+                                                            contentDescription = "Retry track repair",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                        )
+                                                    }
+                                                }
                                             else ->
                                                 Text(
                                                     text = "Pending",
@@ -396,7 +495,12 @@ fun MetadataEditorScreen(
                     }
                     if (failedCount > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("❌ $failedCount tracks failed")
+                        Text("❌ $failedCount tracks failed:", fontWeight = FontWeight.Bold)
+                        val failedReasons = repairQueue.filter { it.status == "FAILED" }
+                            .groupBy { formatFailureReason(it.failureReason) }
+                        failedReasons.forEach { (reason, items) ->
+                            Text("  • ${items.size} × $reason", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             },
@@ -419,6 +523,17 @@ fun MetadataEditorScreen(
         )
     }
 }
+
+private fun formatFailureReason(reason: String?): String =
+    when {
+        reason.isNullOrBlank() -> "No online match found"
+        reason == "NO_MATCH" -> "No online match found"
+        reason == "FILE_NOT_FOUND" -> "File not found on storage"
+        reason == "NETWORK_ERROR" -> "Network error / Offline"
+        reason.contains("permission", ignoreCase = true) || reason.contains("writeAccess", ignoreCase = true) -> "Storage write permission denied"
+        reason.contains("read-only", ignoreCase = true) -> "File is read-only"
+        else -> reason
+    }
 
 @Composable
 private fun ArtistSquareRow(

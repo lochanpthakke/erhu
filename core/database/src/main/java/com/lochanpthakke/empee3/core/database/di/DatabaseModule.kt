@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.MIGRATION_10_11
+import com.lochanpthakke.empee3.core.database.MIGRATION_11_12
 import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
 import com.lochanpthakke.empee3.core.database.MIGRATION_6_7
 import com.lochanpthakke.empee3.core.database.MIGRATION_7_8
@@ -11,6 +12,7 @@ import com.lochanpthakke.empee3.core.database.MIGRATION_8_9
 import com.lochanpthakke.empee3.core.database.MIGRATION_9_10
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
+import com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.dao.ListeningStatsDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
@@ -40,7 +42,7 @@ object DatabaseModule {
                 context,
                 EmPee3Database::class.java,
                 "empee3.db",
-            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            ).addMigrations(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
@@ -74,4 +76,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMetadataProcessingDao(database: EmPee3Database): MetadataProcessingDao = database.metadataProcessingDao()
+
+    @Provides
+    fun provideLearnedWatermarkDao(database: EmPee3Database): LearnedWatermarkDao = database.learnedWatermarkDao()
 }

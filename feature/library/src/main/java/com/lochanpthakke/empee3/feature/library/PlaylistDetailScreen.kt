@@ -210,8 +210,8 @@ fun PlaylistDetailScreen(
             song = song,
             candidates = candidates,
             onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artist, album, year, genre ->
-                libraryViewModel.writeTags(song, title, artist, album, year, genre)
+            onSaveTags = { title, artist, album, year, genre, bpm ->
+                libraryViewModel.writeTags(song, title, artist, album, year, genre, bpm)
                 songForFixTags = null
             },
         )

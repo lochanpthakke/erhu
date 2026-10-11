@@ -303,8 +303,8 @@ fun LibraryScreen(
             song = song,
             candidates = candidates,
             onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artist, album, year, genre ->
-                viewModel.writeTags(song, title, artist, album, year, genre)
+            onSaveTags = { title, artist, album, year, genre, bpm ->
+                viewModel.writeTags(song, title, artist, album, year, genre, bpm)
                 songForFixTags = null
             },
         )

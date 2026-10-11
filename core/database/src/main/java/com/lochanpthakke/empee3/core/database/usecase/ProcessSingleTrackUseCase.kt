@@ -4,12 +4,15 @@ package com.lochanpthakke.empee3.core.database.usecase
 
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
+import com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
 import com.lochanpthakke.empee3.core.database.entity.CURRENT_METADATA_PROCESSING_VERSION
 import com.lochanpthakke.empee3.core.database.entity.MetadataFailureReason
 import com.lochanpthakke.empee3.core.database.entity.MetadataProcessingEntity
 import com.lochanpthakke.empee3.core.database.entity.ProcessingStatus
+import com.lochanpthakke.empee3.core.model.MetadataFixAction
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.network.cleaner.FilenameCleaner
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
@@ -24,12 +27,16 @@ class ProcessSingleTrackUseCase
     constructor(
         private val metadataRepository: MetadataRepository,
         private val metadataProcessingDao: MetadataProcessingDao,
+        private val learnedWatermarkDao: LearnedWatermarkDao,
+        private val filenameCleaner: FilenameCleaner,
     ) {
         suspend operator fun invoke(
             song: Song,
             filePath: String,
             forceScan: Boolean = false,
             customBlocklist: List<String> = emptyList(),
+            sourceProvider: String = "ALL",
+            fixAction: MetadataFixAction = MetadataFixAction.ALL_FIELDS,
         ): MetadataProcessingEntity {
             val file = File(filePath)
             if (!file.exists()) {
@@ -63,15 +70,23 @@ class ProcessSingleTrackUseCase
             }
 
             val rawFilename = file.name
-            val cleaned = metadataRepository.cleanFilename(rawFilename, customBlocklist)
-            val searchTitle = cleaned.title.ifBlank { song.title }
-            val searchArtist = cleaned.artistGuess ?: song.artist.takeIf { it != "Unknown Artist" }
+            val activeLearnedTokens = learnedWatermarkDao.getAllActiveTokensSync()
+            val cleanerResult = filenameCleaner.cleanFilenameAndExtractJunk(rawFilename, customBlocklist + activeLearnedTokens)
+            
+            // Auto-persist extracted junk tokens from filename cleaning
+            cleanerResult.extractedJunkTokens.forEach { junkToken ->
+                learnedWatermarkDao.insertOrIncrement(junkToken)
+            }
+
+            val searchTitle = cleanerResult.cleaned.title.ifBlank { song.title }
+            val searchArtist = cleanerResult.cleaned.artistGuess ?: song.artist.takeIf { it != "Unknown Artist" }
 
             val searchResult =
                 metadataRepository.searchAndScoreTrack(
                     title = searchTitle,
                     artist = searchArtist,
                     durationMs = song.durationMs,
+                    sourceProvider = sourceProvider,
                 )
 
             val candidates = searchResult.getOrDefault(emptyList())
@@ -83,13 +98,17 @@ class ProcessSingleTrackUseCase
                         TagWriteRequest(
                             contentUri = song.uri,
                             filePath = filePath,
-                            title = bestCandidate.title,
-                            artist = bestCandidate.artist,
-                            album = bestCandidate.album,
+                            title = bestCandidate.title.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.TITLE_ONLY },
+                            artist = bestCandidate.artist.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.ARTIST_ONLY },
+                            album = bestCandidate.album.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.ALBUM_ONLY },
+                            bpm = bestCandidate.bpm.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.BPM_ONLY },
                         )
                     val writeResult = metadataRepository.writeTagsToFile(writeRequest)
 
                     if (writeResult is AppResult.Success<*>) {
+                        // Extract title difference between raw local title and verified clean API title
+                        extractAndLearnJunkFromTitles(song.title, bestCandidate.title)
+
                         MetadataProcessingEntity(
                             filePath = filePath,
                             fileSize = file.length(),
@@ -141,5 +160,25 @@ class ProcessSingleTrackUseCase
 
             metadataProcessingDao.upsertProcessingRecord(record)
             return record
+        }
+
+        private suspend fun extractAndLearnJunkFromTitles(
+            rawTitle: String,
+            cleanTitle: String,
+        ) {
+            if (rawTitle.equals(cleanTitle, ignoreCase = true)) return
+            var remainder = rawTitle
+            cleanTitle.split(" ").forEach { word ->
+                if (word.length >= 3) {
+                    remainder = remainder.replace(word, "", ignoreCase = true)
+                }
+            }
+            remainder = remainder.replace('_', ' ').replace('-', ' ').trim()
+            remainder.split(" ", "(", ")", "[", "]").forEach { token ->
+                val cleanedToken = token.trim(' ', '.', '-', '_', '[', ']', '(', ')')
+                if (cleanedToken.length >= 3 && !cleanedToken.equals(cleanTitle, ignoreCase = true)) {
+                    learnedWatermarkDao.insertOrIncrement(cleanedToken)
+                }
+            }
         }
     }

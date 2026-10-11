@@ -8,6 +8,7 @@ data class MetadataCandidate(
     val year: Int = 0,
     val genre: String? = null,
     val trackNumber: Int = 0,
+    val bpm: Int? = null,
     val coverArtUrl: String? = null,
     val confidenceScore: Float = 0f,
     val sourceName: String = "",

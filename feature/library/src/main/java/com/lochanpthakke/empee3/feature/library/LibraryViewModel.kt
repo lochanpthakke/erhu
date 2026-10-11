@@ -86,6 +86,7 @@ class LibraryViewModel
         recentlyPlayed: RecentlyPlayedRecorder,
         smartPlaylistRepository: SmartPlaylistRepository,
         private val onlineLyrics: OnlineLyricsRepository,
+        private val learnedWatermarkDao: com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -176,6 +177,20 @@ class LibraryViewModel
 
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
+
+        private val _selectedProvider = MutableStateFlow("ALL") // "ALL", "Deezer", "MusicBrainz", "LastFm"
+        val selectedProvider: StateFlow<String> = _selectedProvider.asStateFlow()
+
+        private val _selectedFixAction = MutableStateFlow(com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS)
+        val selectedFixAction: StateFlow<com.lochanpthakke.empee3.core.model.MetadataFixAction> = _selectedFixAction.asStateFlow()
+
+        fun setSelectedProvider(provider: String) {
+            _selectedProvider.value = provider
+        }
+
+        fun setSelectedFixAction(action: com.lochanpthakke.empee3.core.model.MetadataFixAction) {
+            _selectedFixAction.value = action
+        }
 
         // Library search (title / artist / album), live-updating with the database.
         private val _librarySearchQuery = MutableStateFlow("")
@@ -548,6 +563,7 @@ class LibraryViewModel
                 _isFindingBadTracks.value = true
                 val allSongs = libraryRepository.getAllSongs().first()
                 val force = _forceFixTags.value
+                val activeLearnedWatermarks = learnedWatermarkDao.getAllActiveTokensSync()
                 val badTracks =
                     if (force) {
                         allSongs
@@ -560,8 +576,9 @@ class LibraryViewModel
                                 song.album == "Unknown Album" ||
                                 song.title.contains("mp3", ignoreCase = true) ||
                                 song.title.contains(".com", ignoreCase = true) ||
-                                song.title.contains("pagalworld", ignoreCase = true) ||
-                                song.title.contains("[320kbps]", ignoreCase = true)
+                                activeLearnedWatermarks.any { token ->
+                                    song.title.contains(token, ignoreCase = true)
+                                }
                         }
                     }
                 _repairQueue.value = badTracks.map { RepairQueueItem(song = it, status = "PENDING") }
@@ -612,6 +629,17 @@ class LibraryViewModel
             _repairQueue.value = currentQueue
         }
 
+        fun retryRepairQueueItem(song: Song) {
+            val currentQueue = _repairQueue.value.toMutableList()
+            val index = currentQueue.indexOfFirst { it.song.id == song.id }
+            if (index != -1) {
+                currentQueue[index] = currentQueue[index].copy(status = "PENDING", failureReason = null)
+                _repairQueue.value = currentQueue
+            } else {
+                enqueueSongForRepair(song)
+            }
+        }
+
         fun enqueueAlbumForRepair(album: Album) {
             viewModelScope.launch {
                 val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
@@ -646,6 +674,8 @@ class LibraryViewModel
                 _isFixingQueue.value = true
                 val queue = _repairQueue.value.toMutableList()
                 val writes = mutableMapOf<Int, TagWriteRequest>()
+                val provider = _selectedProvider.value
+                val action = _selectedFixAction.value
 
                 for (i in queue.indices) {
                     val item = queue[i]
@@ -658,7 +688,7 @@ class LibraryViewModel
                         try {
                             val best =
                                 metadataRepository
-                                    .searchTrack(item.song.title, item.song.artist, "ALL")
+                                    .searchTrack(item.song.title, item.song.artist, provider)
                                     .getOrDefault(emptyList())
                                     .firstOrNull()
                             val filePath = libraryRepository.getSongFilePath(item.song.id)
@@ -673,11 +703,12 @@ class LibraryViewModel
                                             contentUri = item.song.uri,
                                             filePath = filePath,
                                             current = EditableTags(item.song.title, item.song.artist, item.song.album),
-                                            title = best.title,
-                                            artist = best.artist,
-                                            album = best.album,
+                                            title = best.title.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.TITLE_ONLY } ?: "",
+                                            artist = best.artist.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ARTIST_ONLY } ?: "",
+                                            album = best.album.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALBUM_ONLY } ?: "",
                                             year = 0,
                                             genre = "",
+                                            bpm = best.bpm.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.BPM_ONLY } ?: 0,
                                         )
                                     if (request == null) {
                                         item.copy(status = "DONE") // tags already match
@@ -885,6 +916,7 @@ class LibraryViewModel
             album: String,
             year: Int,
             genre: String,
+            bpm: Int = 0,
         ) {
             viewModelScope.launch {
                 val filePath = libraryRepository.getSongFilePath(song.id)
@@ -902,6 +934,7 @@ class LibraryViewModel
                         album = album,
                         year = year,
                         genre = genre,
+                        bpm = bpm,
                     )
                 if (request == null) {
                     _userMessage.value = "Nothing changed"

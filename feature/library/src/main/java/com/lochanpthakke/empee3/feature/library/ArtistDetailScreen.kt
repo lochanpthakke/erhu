@@ -295,8 +295,8 @@ fun ArtistDetailScreen(
             song = song,
             candidates = candidates,
             onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artistName, albumName, year, genre ->
-                viewModel.writeTags(song, title, artistName, albumName, year, genre)
+            onSaveTags = { title, artistName, albumName, year, genre, bpm ->
+                viewModel.writeTags(song, title, artistName, albumName, year, genre, bpm)
                 songForFixTags = null
             },
         )

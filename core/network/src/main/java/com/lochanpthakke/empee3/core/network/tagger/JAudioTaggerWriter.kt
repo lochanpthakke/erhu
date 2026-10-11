@@ -96,6 +96,7 @@ class JAudioTaggerWriter
             request.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
             request.genre?.let { tag.setField(FieldKey.GENRE, it) }
             request.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
+            request.bpm?.let { tag.setField(FieldKey.BPM, it.toString()) }
             request.lyrics?.let { tag.setField(FieldKey.LYRICS, it) }
 
             request.artworkBytes?.let { bytes ->

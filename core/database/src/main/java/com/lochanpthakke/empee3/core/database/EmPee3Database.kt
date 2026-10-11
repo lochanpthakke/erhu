@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
+import com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.dao.ListeningStatsDao
 import com.lochanpthakke.empee3.core.database.dao.MetadataProcessingDao
@@ -18,6 +19,7 @@ import com.lochanpthakke.empee3.core.database.entity.AlbumEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistAliasEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistArtworkEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
+import com.lochanpthakke.empee3.core.database.entity.LearnedWatermarkEntity
 import com.lochanpthakke.empee3.core.database.entity.ListeningDayEntity
 import com.lochanpthakke.empee3.core.database.entity.ListeningStatsEntity
 import com.lochanpthakke.empee3.core.database.entity.MetadataProcessingEntity
@@ -48,8 +50,9 @@ import com.lochanpthakke.empee3.core.database.entity.WaveformCacheEntity
         ListeningDayEntity::class,
         TrackBookmarkEntity::class,
         WaveformCacheEntity::class,
+        LearnedWatermarkEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class EmPee3Database : RoomDatabase() {
@@ -66,6 +69,8 @@ abstract class EmPee3Database : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
 
     abstract fun metadataProcessingDao(): MetadataProcessingDao
+
+    abstract fun learnedWatermarkDao(): LearnedWatermarkDao
 
     abstract fun songArtistCrossRefDao(): SongArtistCrossRefDao
 
