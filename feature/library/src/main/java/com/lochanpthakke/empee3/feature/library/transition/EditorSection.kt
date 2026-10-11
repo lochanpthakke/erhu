@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,20 +89,19 @@ internal fun PreviewButton(
     modifier: Modifier = Modifier,
 ) {
     val playing = state is PreviewState.Playing
-    Surface(
-        onClick = onToggle,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.size(width = 64.dp, height = 44.dp),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                if (playing) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = if (playing) "Stop preview" else "Preview transition (your queue is not changed)",
-            )
-        }
+    // Just the symbol, no container: it sits in the gap between the two waveforms.
+    IconButton(onClick = onToggle, modifier = modifier.size(PREVIEW_TOUCH)) {
+        Icon(
+            if (playing) Icons.Default.Stop else Icons.Default.PlayArrow,
+            contentDescription = if (playing) "Stop preview" else "Preview transition (your queue is not changed)",
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(PREVIEW_ICON),
+        )
     }
 }
+
+private val PREVIEW_TOUCH = 56.dp
+private val PREVIEW_ICON = 40.dp
 
 @Composable
 internal fun DurationPill(
