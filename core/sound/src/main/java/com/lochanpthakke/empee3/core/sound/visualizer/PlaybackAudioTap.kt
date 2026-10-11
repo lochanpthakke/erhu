@@ -69,6 +69,26 @@ class PlaybackAudioTap
 
         val isCollecting: Boolean get() = enabled
 
+        // ---- Peak meter (post-EQ sample peaks, only while collecting) ----
+
+        @Volatile private var meterPeak = 0f
+
+        @Volatile private var meterFullScaleSamples = 0L
+
+        @Volatile private var meterFrames = 0L
+
+        /**
+         * Sample peaks of the audio sent to the output (after the EQ), measured since [resetMeter], while
+         * collecting. Sample peaks only: peaks between samples (true peak) are not measured.
+         */
+        fun meterReading(): PeakReading = PeakReading(meterPeak, meterFullScaleSamples, meterFrames, if (supported) sampleRate else 0)
+
+        fun resetMeter() {
+            meterPeak = 0f
+            meterFullScaleSamples = 0L
+            meterFrames = 0L
+        }
+
         // ---- Audio thread ----
 
         /** New stream format, also on every flush. Only 16-bit and float PCM can be read. */
@@ -109,11 +129,22 @@ class PlaybackAudioTap
             ch: Int,
         ) {
             val float = floatPcm
+            var peak = 0f
+            var fullScale = 0L
             for (frame in 0 until frames) {
                 var sum = 0f
-                repeat(ch) { sum += if (float) data.float else data.short / PCM16_SCALE }
+                repeat(ch) {
+                    val sample = if (float) data.float else data.short / PCM16_SCALE
+                    val magnitude = kotlin.math.abs(sample)
+                    if (magnitude > peak) peak = magnitude
+                    if (magnitude >= FULL_SCALE) fullScale++
+                    sum += sample
+                }
                 ring[((first + frame) and MASK).toInt()] = sum / ch
             }
+            if (peak > meterPeak) meterPeak = peak
+            meterFullScaleSamples += fullScale
+            meterFrames += frames
         }
 
         // ---- Reader ----
@@ -152,5 +183,23 @@ class PlaybackAudioTap
             const val CAPACITY = 1 shl 17
             private const val MASK = (CAPACITY - 1).toLong()
             private const val PCM16_SCALE = 32_768f
+
+            /** A 16-bit sample at its largest value (32767/32768) counts as full scale. */
+            private const val FULL_SCALE = 32_767f / 32_768f
         }
     }
+
+/** What the peak meter saw: the largest sample magnitude (0..1), samples at full scale, frames measured. */
+data class PeakReading(
+    val peak: Float,
+    val fullScaleSamples: Long,
+    val frames: Long,
+    val sampleRateHz: Int,
+) {
+    /** Peak in dBFS, or null when nothing was measured. */
+    val peakDbfs: Float? get() = if (frames == 0L || peak <= 0f) null else (DB_PER_DECADE * kotlin.math.log10(peak.toDouble())).toFloat()
+
+    val secondsMeasured: Float get() = if (sampleRateHz > 0) frames.toFloat() / sampleRateHz else 0f
+}
+
+private const val DB_PER_DECADE = 20

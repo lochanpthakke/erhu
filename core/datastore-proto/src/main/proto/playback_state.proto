@@ -29,6 +29,55 @@ message PlaybackStateProto {
   string default_start_section = 20;
   // Absent until the user changes a visualizer preference; absence means "use defaults".
   VisualizerSettingsProto visualizer_settings = 21;
+  // Per-album / per-playlist transition settings, keyed by "album:<id>" or "playlist:<id>".
+  // A collection without an entry uses the defaults (transitions off).
+  map<string, CollectionTransitionProto> collection_transitions = 22;
+  // The collection (and occurrence) each queue entry was started from, parallel to queue_song_ids
+  // ("" = none), e.g. "playlist:5#s12@3".
+  repeated string queue_collection_keys = 23;
+  // Per-transition overrides, keyed "<collection>|<from occurrence>><to occurrence>". Absent = inherit.
+  map<string, CollectionTransitionProto> pair_transitions = 24;
+  // App-wide master switch and default. Absent = defaults (master on, default off).
+  GlobalTransitionProto global_transitions = 25;
+}
+
+message GlobalTransitionProto {
+  optional bool master_enabled = 1;
+  // "OFF" or "CUSTOM" (with default_spec).
+  string default_mode = 2;
+  TransitionSpecProto default_spec = 3;
+}
+
+// A transition exactly as the engine plays it. Enum names are strings; unknown values fall back.
+message TransitionSpecProto {
+  int32 duration_ms = 1;
+  string preset = 2;
+  string curve = 3;
+  // Custom curves: parallel time / gain lists.
+  repeated float out_t = 4;
+  repeated float out_gain = 5;
+  repeated float in_t = 6;
+  repeated float in_gain = 7;
+  bool bass_swap = 8;
+  float bass_swap_at = 9;
+  // TransitionFilter name; empty / unknown = no filter.
+  string filter = 10;
+  // Cue points of a pair: ms skipped at the outgoing track's end, and where the incoming track starts.
+  int32 outgoing_cut_ms = 11;
+  int32 incoming_start_ms = 12;
+}
+
+// Curve names are stored as strings, so unknown values from other versions fall back to defaults.
+// Used for collections and for pairs. Version 1 had only enabled / duration_ms / curve
+// (enabled = a crossfade with those values, otherwise inherit); version 2 uses mode and spec.
+message CollectionTransitionProto {
+  bool enabled = 1;
+  int32 duration_ms = 2;
+  string curve = 3;
+  int32 schema_version = 4;
+  // "INHERIT", "OFF" or "CUSTOM" (version 2).
+  string mode = 5;
+  TransitionSpecProto spec = 6;
 }
 
 // Enum names are stored as strings, so unknown values from other versions fall back to defaults.

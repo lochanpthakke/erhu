@@ -7,6 +7,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
 import android.os.Build
+import com.lochanpthakke.empee3.core.model.BandLevels
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -27,14 +28,36 @@ internal class WaveformDecoder(
     private val context: Context,
 ) {
     /** Levels 0..1 ([bins] values), or null when the track holds no audio frames. */
-    @Suppress("TooGenericExceptionCaught")
     suspend fun decode(
         uri: Uri,
         bins: Int,
         fallbackDurationMs: Long,
-    ): FloatArray? =
+    ): FloatArray? = decodeGuarded(uri, fallbackDurationMs, null) { durationUs -> WaveformAccumulator(bins, durationUs) }.finish()
+
+    /**
+     * Three-band levels of [bins] equal slices of [startMs, endMs) only: the decoder seeks to the
+     * range and stops after it, so a few seconds cost a few seconds of decoding.
+     */
+    suspend fun decodeBands(
+        uri: Uri,
+        startMs: Long,
+        endMs: Long,
+        bins: Int,
+    ): BandLevels? {
+        val range = LongRange(startMs * MICROS_PER_MS, endMs * MICROS_PER_MS)
+        val length = (range.last - range.first).coerceAtLeast(1L)
+        return decodeGuarded(uri, 0L, range) { BandWaveformAccumulator(bins, length, range.first) }.finish()
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun <S : PcmSink> decodeGuarded(
+        uri: Uri,
+        fallbackDurationMs: Long,
+        rangeUs: LongRange?,
+        sinkFor: (durationUs: Long) -> S,
+    ): S =
         try {
-            decodeOrFail(uri, bins, fallbackDurationMs)
+            decodeOrFail(uri, fallbackDurationMs, rangeUs, sinkFor)
         } catch (e: CancellationException) {
             // Cancellation is a RuntimeException too: it must stay a cancellation.
             throw e
@@ -45,11 +68,12 @@ internal class WaveformDecoder(
         }
 
     @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "LongMethod")
-    private suspend fun decodeOrFail(
+    private suspend fun <S : PcmSink> decodeOrFail(
         uri: Uri,
-        bins: Int,
         fallbackDurationMs: Long,
-    ): FloatArray? {
+        rangeUs: LongRange?,
+        sinkFor: (durationUs: Long) -> S,
+    ): S {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
         try {
@@ -66,13 +90,14 @@ internal class WaveformDecoder(
             val durationUs =
                 (if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L)
                     .takeIf { it > 0 } ?: (fallbackDurationMs * MICROS_PER_MS)
-            require(durationUs > 0) { "Unknown duration" }
+            require(durationUs > 0 || rangeUs != null) { "Unknown duration" }
+            if (rangeUs != null) extractor.seekTo(rangeUs.first, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
 
             val decoder = MediaCodec.createDecoderByType(mime).also { codec = it }
             decoder.configure(format, null, null, 0)
             decoder.start()
 
-            val accumulator = WaveformAccumulator(bins, durationUs)
+            val accumulator = sinkFor(durationUs)
             var channels = format.integerOr(MediaFormat.KEY_CHANNEL_COUNT, 2)
             var sampleRate = format.integerOr(MediaFormat.KEY_SAMPLE_RATE, DEFAULT_SAMPLE_RATE)
             var floatPcm = false
@@ -87,7 +112,8 @@ internal class WaveformDecoder(
                     if (inIndex >= 0) {
                         val buffer = checkNotNull(decoder.getInputBuffer(inIndex)) { "No input buffer" }
                         val size = extractor.readSampleData(buffer, 0)
-                        if (size < 0) {
+                        val pastRange = rangeUs != null && extractor.sampleTime > rangeUs.last
+                        if (size < 0 || pastRange) {
                             decoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             inputDone = true
                         } else {
@@ -128,7 +154,7 @@ internal class WaveformDecoder(
                     }
                 }
             }
-            return accumulator.finish()
+            return accumulator
         } finally {
             codec?.let { decoder ->
                 runCatching { decoder.stop() }

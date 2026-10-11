@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 internal class WaveformAccumulator(
     private val bins: Int,
     private val durationUs: Long,
-) {
+) : PcmSink {
     private val sumSquares = DoubleArray(bins)
     private val counts = IntArray(bins)
     private var frames = 0L
@@ -23,7 +23,7 @@ internal class WaveformAccumulator(
     }
 
     /** Interleaved 16-bit samples: [sampleCount] values, [channels] per frame, first frame at [ptsUs]. */
-    fun addPcm16(
+    override fun addPcm16(
         samples: ShortArray,
         sampleCount: Int,
         channels: Int,
@@ -32,7 +32,7 @@ internal class WaveformAccumulator(
     ) = addFrames(sampleCount, channels, sampleRate, ptsUs) { samples[it] / PCM16_SCALE }
 
     /** Interleaved float samples (nominally -1..1). */
-    fun addPcmFloat(
+    override fun addPcmFloat(
         samples: FloatArray,
         sampleCount: Int,
         channels: Int,

@@ -15,6 +15,7 @@ import com.lochanpthakke.empee3.core.database.repository.SmartPlaylistRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
@@ -643,11 +644,13 @@ class LibraryViewModel
             }
         }
 
+        /** [origin]: the album or playlist page this was started from (its transition settings apply), or null. */
         fun playSongsFromQueue(
             songs: List<Song>,
             startIndex: Int,
+            origin: CollectionRef? = null,
         ) {
-            playbackRepository.playSongsFromQueue(songs, startIndex)
+            playbackRepository.playCollection(songs, startIndex, origin)
         }
 
         fun playNext(song: Song) {
@@ -719,17 +722,23 @@ class LibraryViewModel
             }
 
         /** Plays [songs] in their order from the first track, with shuffle turned off. */
-        fun playInOrder(songs: List<Song>) {
+        fun playInOrder(
+            songs: List<Song>,
+            origin: CollectionRef? = null,
+        ) {
             if (songs.isEmpty()) return
             playbackRepository.setShuffleModeEnabled(false)
-            playbackRepository.playSongsFromQueue(songs, 0)
+            playbackRepository.playCollection(songs, 0, origin)
         }
 
         /** Plays [songs] shuffled: the same shuffle mode the playlists use. */
-        fun playShuffled(songs: List<Song>) {
+        fun playShuffled(
+            songs: List<Song>,
+            origin: CollectionRef? = null,
+        ) {
             if (songs.isEmpty()) return
             playbackRepository.setShuffleModeEnabled(true)
-            playbackRepository.playSongsFromQueue(songs, songs.indices.random())
+            playbackRepository.playCollection(songs, songs.indices.random(), origin)
         }
 
         fun playArtist(artist: Artist) {

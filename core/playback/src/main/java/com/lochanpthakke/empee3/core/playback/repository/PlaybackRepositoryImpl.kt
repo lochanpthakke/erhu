@@ -4,6 +4,7 @@ import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
 import com.lochanpthakke.empee3.core.model.AbLoopEdit
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
@@ -37,6 +38,13 @@ class PlaybackRepositoryImpl
             songs: List<Song>,
             startIndex: Int,
         ) = playbackController.playSongsFromQueue(songs, startIndex)
+
+        override fun playCollection(
+            songs: List<Song>,
+            startIndex: Int,
+            origin: CollectionRef?,
+            slots: List<Int>?,
+        ) = playbackController.playCollection(songs, startIndex, origin, slots)
 
         override fun seekTo(positionMs: Long) = playbackController.seekTo(positionMs)
 

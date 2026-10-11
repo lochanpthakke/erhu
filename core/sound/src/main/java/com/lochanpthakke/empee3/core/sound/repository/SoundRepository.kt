@@ -51,4 +51,7 @@ interface SoundRepository {
     suspend fun saveCustomPreset(name: String): AppResult<EqPreset>
 
     suspend fun deleteCustomPreset(presetId: String): AppResult<Unit>
+
+    /** What the equalizer processor is doing right now (read-only, for the audio inspector). */
+    fun eqRuntimeState(): com.lochanpthakke.empee3.core.sound.dsp.EqRuntimeState
 }

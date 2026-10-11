@@ -10,6 +10,7 @@ import com.lochanpthakke.empee3.core.database.entity.PlaylistEntity
 import com.lochanpthakke.empee3.core.database.entity.RecentlyPlayedEntity
 import com.lochanpthakke.empee3.core.database.mapper.toDomainModel
 import com.lochanpthakke.empee3.core.model.Playlist
+import com.lochanpthakke.empee3.core.model.PlaylistEntry
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -23,6 +24,9 @@ interface PlaylistRepository {
     fun observePlaylist(playlistId: Long): Flow<Playlist?>
 
     fun observePlaylistSongs(playlistId: Long): Flow<List<Song>>
+
+    /** The playlist's entries in order, each with its position (its stable identity within the playlist). */
+    fun observePlaylistEntries(playlistId: Long): Flow<List<PlaylistEntry>>
 
     /** Playlists played most recently first (only ones actually played from a playlist). */
     fun observeRecentPlaylists(limit: Int): Flow<List<Playlist>>
@@ -84,6 +88,9 @@ class PlaylistRepositoryImpl
 
         override fun observePlaylistSongs(playlistId: Long): Flow<List<Song>> =
             playlistDao.getSongsForPlaylist(playlistId).map { songs -> songs.map { it.toDomainModel() } }
+
+        override fun observePlaylistEntries(playlistId: Long): Flow<List<PlaylistEntry>> =
+            playlistDao.getEntriesForPlaylist(playlistId).map { rows -> rows.map { PlaylistEntry(it.song.toDomainModel(), it.position) } }
 
         override fun observeRecentPlaylists(limit: Int): Flow<List<Playlist>> =
             recentlyPlayedDao.observeRecentPlaylists(limit).map { rows -> rows.map { it.toPlaylist() } }

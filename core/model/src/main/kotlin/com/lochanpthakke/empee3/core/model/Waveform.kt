@@ -50,3 +50,32 @@ object WaveformTimeline {
         durationMs: Long,
     ): Long = if (width <= 0f) 0L else positionAt(x / width, durationMs)
 }
+
+/**
+ * Levels of a short window of a track split into three frequency bands (lows below ~250 Hz, mids,
+ * highs above ~4 kHz), as absolute RMS (full scale = 1) so two tracks compare honestly. Bins are
+ * evenly spaced over the window.
+ */
+class BandLevels(
+    val low: FloatArray,
+    val mid: FloatArray,
+    val high: FloatArray,
+) {
+    val size: Int get() = low.size
+
+    override fun equals(other: Any?): Boolean =
+        other is BandLevels && low.contentEquals(other.low) && mid.contentEquals(other.mid) && high.contentEquals(other.high)
+
+    override fun hashCode(): Int = 31 * (31 * low.contentHashCode() + mid.contentHashCode()) + high.contentHashCode()
+}
+
+/** Loading state of a band waveform window. Playback never depends on it. */
+sealed interface BandWaveformLoad {
+    data object Loading : BandWaveformLoad
+
+    data class Ready(
+        val levels: BandLevels,
+    ) : BandWaveformLoad
+
+    data object Unavailable : BandWaveformLoad
+}

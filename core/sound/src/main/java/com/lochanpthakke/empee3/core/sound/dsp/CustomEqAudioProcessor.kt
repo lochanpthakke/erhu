@@ -234,6 +234,20 @@ class CustomEqAudioProcessor
             outputBuffer.flip()
         }
 
+        /**
+         * Read-only view of what the processor is doing now, for diagnostics. [configured]: the player
+         * configured it for the current stream (it only accepts 16-bit PCM); processing happens only
+         * when it is also enabled and not all gains are 0 (otherwise audio is passed through unchanged).
+         */
+        fun runtimeState(): EqRuntimeState =
+            EqRuntimeState(
+                enabled = isEqEnabled,
+                configured = isActive,
+                sampleRateHz = inputAudioFormat.sampleRate.takeIf { it > 0 },
+                channelCount = inputAudioFormat.channelCount.takeIf { it > 0 },
+                allGainsZero = isFlat(),
+            )
+
         private fun isFlat(): Boolean = synchronized(this) { bandGains.all { it == 0.0f } }
 
         private fun applyPendingChanges() {

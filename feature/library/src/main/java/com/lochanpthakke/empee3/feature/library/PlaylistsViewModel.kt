@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.database.repository.PlaylistRepository
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.Playlist
+import com.lochanpthakke.empee3.core.model.PlaylistEntry
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,9 +48,15 @@ class PlaylistsViewModel
                 .flatMapLatest { id -> id?.let { playlistRepository.observePlaylist(it) } ?: flowOf(null) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
-        val openPlaylistSongs: StateFlow<List<Song>> =
+        /** The open playlist's entries with their positions (each entry's identity, duplicates included). */
+        val openPlaylistEntries: StateFlow<List<PlaylistEntry>> =
             openPlaylistId
-                .flatMapLatest { id -> id?.let { playlistRepository.observePlaylistSongs(it) } ?: flowOf(emptyList()) }
+                .flatMapLatest { id -> id?.let { playlistRepository.observePlaylistEntries(it) } ?: flowOf(emptyList()) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        val openPlaylistSongs: StateFlow<List<Song>> =
+            openPlaylistEntries
+                .map { entries -> entries.map { it.song } }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
         private val _userMessage = MutableStateFlow<String?>(null)
@@ -171,17 +180,28 @@ class PlaylistsViewModel
         }
 
         fun playOpenPlaylist(startIndex: Int = 0) {
-            val songs = openPlaylistSongs.value
-            if (songs.isEmpty()) return
-            playbackRepository.playSongsFromQueue(songs, startIndex.coerceIn(0, songs.lastIndex))
+            val entries = openPlaylistEntries.value
+            if (entries.isEmpty()) return
+            val origin = openPlaylistId.value?.let(CollectionRef::playlist)
+            playbackRepository.playCollection(
+                entries.map { it.song },
+                startIndex.coerceIn(0, entries.lastIndex),
+                origin,
+                entries.map { it.position },
+            )
             markOpenPlaylistPlayed()
         }
 
         fun shuffleOpenPlaylist() {
-            val songs = openPlaylistSongs.value
-            if (songs.isEmpty()) return
+            val entries = openPlaylistEntries.value
+            if (entries.isEmpty()) return
             playbackRepository.setShuffleModeEnabled(true)
-            playbackRepository.playSongsFromQueue(songs, songs.indices.random())
+            playbackRepository.playCollection(
+                entries.map { it.song },
+                entries.indices.random(),
+                openPlaylistId.value?.let(CollectionRef::playlist),
+                entries.map { it.position },
+            )
             markOpenPlaylistPlayed()
         }
 

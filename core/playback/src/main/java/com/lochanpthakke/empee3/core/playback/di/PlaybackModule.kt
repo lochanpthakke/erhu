@@ -13,6 +13,7 @@ import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.lochanpthakke.empee3.core.playback.PlaybackController
 import com.lochanpthakke.empee3.core.playback.PlaybackControllerImpl
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
+import com.lochanpthakke.empee3.core.sound.dsp.TransitionGainProcessor
 import com.lochanpthakke.empee3.core.sound.visualizer.PlaybackAudioTap
 import dagger.Binds
 import dagger.Module
@@ -32,6 +33,7 @@ object PlayerProviderModule {
         @ApplicationContext context: Context,
         customEqAudioProcessor: CustomEqAudioProcessor,
         audioTap: PlaybackAudioTap,
+        transitionGain: TransitionGainProcessor,
     ): Player {
         val renderersFactory =
             object : DefaultRenderersFactory(context) {
@@ -42,9 +44,11 @@ object PlayerProviderModule {
                 ): AudioSink =
                     DefaultAudioSink
                         .Builder(context)
+                        // The transition gain is unity except while a Smooth Transition fades the incoming track in.
                         // The tee only copies what is about to be played (after the EQ) to the visualizer's tap.
-                        .setAudioProcessors(arrayOf(customEqAudioProcessor, TeeAudioProcessor(VisualizerTapSink(audioTap))))
-                        .setEnableFloatOutput(enableFloatOutput)
+                        .setAudioProcessors(
+                            arrayOf(transitionGain, customEqAudioProcessor, TeeAudioProcessor(VisualizerTapSink(audioTap))),
+                        ).setEnableFloatOutput(enableFloatOutput)
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                         .build()
             }
@@ -64,6 +68,11 @@ object PlayerProviderModule {
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
     }
+
+    /** The main player's transition gain stage (see TransitionCoordinator). */
+    @Provides
+    @Singleton
+    fun provideTransitionGain(): TransitionGainProcessor = TransitionGainProcessor()
 }
 
 @Module

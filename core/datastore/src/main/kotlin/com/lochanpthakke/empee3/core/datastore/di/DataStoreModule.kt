@@ -8,6 +8,8 @@ import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.PlaybackStateProtoSerializer
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistenceImpl
+import com.lochanpthakke.empee3.core.datastore.TransitionSettingsPersistence
+import com.lochanpthakke.empee3.core.datastore.TransitionSettingsPersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.VisualizerSettingsPersistence
 import com.lochanpthakke.empee3.core.datastore.VisualizerSettingsPersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.proto.PlaybackStateProto
@@ -56,4 +58,9 @@ object DataStoreModule {
     @Singleton
     fun provideVisualizerSettingsPersistence(dataStore: DataStore<PlaybackStateProto>): VisualizerSettingsPersistence =
         VisualizerSettingsPersistenceImpl(dataStore)
+
+    @Provides
+    @Singleton
+    fun provideTransitionSettingsPersistence(dataStore: DataStore<PlaybackStateProto>): TransitionSettingsPersistence =
+        TransitionSettingsPersistenceImpl(dataStore)
 }

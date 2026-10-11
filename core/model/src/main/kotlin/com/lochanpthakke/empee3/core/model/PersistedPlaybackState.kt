@@ -13,4 +13,9 @@ data class PersistedPlaybackState(
     val positionMs: Long,
     val shuffleModeEnabled: Boolean,
     val repeatMode: RepeatMode,
+    /**
+     * The collection each queue entry was started from ([CollectionRef.key]), parallel to
+     * [queueSongIds]; "" for entries added outside an album or playlist. Empty for older snapshots.
+     */
+    val queueCollectionKeys: List<String> = emptyList(),
 )

@@ -54,8 +54,15 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.Playlist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.model.TrackOccurrence
+import com.lochanpthakke.empee3.feature.library.transition.StudioInput
+import com.lochanpthakke.empee3.feature.library.transition.StudioTrack
+import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioHost
+import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioRow
+import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioViewModel
 
 /** Same proportions as the album page header. */
 private const val COVER_WIDTH_FRACTION = 0.62f
@@ -73,6 +80,7 @@ fun PlaylistDetailScreen(
     playlistId: Long,
     viewModel: PlaylistsViewModel,
     libraryViewModel: LibraryViewModel,
+    transitionsViewModel: TransitionStudioViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -83,6 +91,8 @@ fun PlaylistDetailScreen(
     val candidates by libraryViewModel.metadataCandidates.collectAsState()
 
     var showEditor by remember { mutableStateOf(false) }
+    var showStudio by remember { mutableStateOf(false) }
+    val entries by viewModel.openPlaylistEntries.collectAsState()
     var confirmDelete by remember { mutableStateOf(false) }
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
@@ -137,6 +147,9 @@ fun PlaylistDetailScreen(
                     onPlay = { viewModel.playOpenPlaylist() },
                     onShuffle = { viewModel.shuffleOpenPlaylist() },
                 )
+            }
+            item(key = "transitions") {
+                TransitionStudioRow(CollectionRef.playlist(playlistId), transitionsViewModel, onOpen = { showStudio = true })
             }
             if (songs.isEmpty()) {
                 item(key = "empty") {
@@ -201,6 +214,17 @@ fun PlaylistDetailScreen(
                 libraryViewModel.writeTags(song, title, artist, album, year, genre)
                 songForFixTags = null
             },
+        )
+    }
+
+    val studioPlaylist = playlist?.takeIf { it.id == playlistId }
+    if (showStudio && studioPlaylist != null) {
+        // Playlist order; each entry's position is its identity, so duplicates are separate tracks here.
+        val tracks = entries.map { StudioTrack(it.song, TrackOccurrence(it.song.id, it.position)) }
+        TransitionStudioHost(
+            StudioInput(CollectionRef.playlist(playlistId), studioPlaylist.name, tracks),
+            transitionsViewModel,
+            onClose = { showStudio = false },
         )
     }
 

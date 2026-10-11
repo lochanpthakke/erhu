@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -121,6 +122,10 @@ fun NowPlayingScreen(
     extras: PlayerExtrasViewModel,
     /** The audio visualizer's preferences and playback reading. */
     visualizer: VisualizerViewModel,
+    /** The audio inspector (Audio details). */
+    audioDetails: AudioDetailsViewModel,
+    /** Opens the equalizer's own controls (from Audio details). */
+    onOpenEqualizer: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Stable state only; the position is read by PlaybackProgress alone, so the
@@ -153,6 +158,7 @@ fun NowPlayingScreen(
     // Which tab of the queue sheet is open, or null when it is closed.
     var queueSheetPage by remember { mutableStateOf<Int?>(null) }
     var showVisualizer by remember { mutableStateOf(false) }
+    var showAudioDetails by remember { mutableStateOf(false) }
     val waveformLoad by extras.waveform.collectAsState()
     val bookmarks by extras.bookmarks.collectAsState()
     val bookmarkPositions = remember(bookmarks) { bookmarks.map { it.positionMs } }
@@ -179,6 +185,9 @@ fun NowPlayingScreen(
                     navigation = TopBarNavigation.Detail(onBackClick),
                     title = "Now Playing",
                     actions = {
+                        IconButton(onClick = { showAudioDetails = true }, enabled = song != null) {
+                            Icon(imageVector = Icons.Outlined.Info, contentDescription = "Audio details")
+                        }
                         IconButton(onClick = { showVisualizer = true }, enabled = song != null) {
                             Icon(imageVector = Icons.Default.GraphicEq, contentDescription = "Open visualizer")
                         }
@@ -495,6 +504,16 @@ fun NowPlayingScreen(
                 onPrevious = { playbackRepository.skipPrevious() },
                 onNext = { playbackRepository.skipNext() },
                 onClose = { showVisualizer = false },
+            )
+        }
+        if (showAudioDetails) {
+            AudioDetailsScreen(
+                viewModel = audioDetails,
+                onOpenEqualizer = {
+                    showAudioDetails = false
+                    onOpenEqualizer()
+                },
+                onClose = { showAudioDetails = false },
             )
         }
     }

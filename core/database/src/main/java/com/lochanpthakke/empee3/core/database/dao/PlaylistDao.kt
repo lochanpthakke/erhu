@@ -1,6 +1,8 @@
 package com.lochanpthakke.empee3.core.database.dao
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -15,6 +17,12 @@ data class PlaylistWithCount(
     val name: String,
     val songCount: Int,
     val artworkUri: String? = null,
+)
+
+/** A playlist entry row: the song and its playlist position. */
+data class PlaylistEntryRow(
+    @Embedded val song: SongEntity,
+    @ColumnInfo(name = "entry_position") val position: Int,
 )
 
 @Dao
@@ -135,4 +143,15 @@ interface PlaylistDao {
         """,
     )
     fun getSongsForPlaylist(playlistId: Long): Flow<List<SongEntity>>
+
+    /** Like [getSongsForPlaylist], with each entry's position (duplicates are separate entries). */
+    @Query(
+        """
+        SELECT s.*, ref.position AS entry_position FROM songs s
+        INNER JOIN playlist_song_cross_ref ref ON s.id = ref.song_id
+        WHERE ref.playlist_id = :playlistId
+        ORDER BY ref.position ASC
+        """,
+    )
+    fun getEntriesForPlaylist(playlistId: Long): Flow<List<PlaylistEntryRow>>
 }

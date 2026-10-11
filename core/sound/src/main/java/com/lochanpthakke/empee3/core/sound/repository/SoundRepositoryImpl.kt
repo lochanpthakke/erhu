@@ -10,6 +10,7 @@ import com.lochanpthakke.empee3.core.common.result.onError
 import com.lochanpthakke.empee3.core.datastore.SoundSettingsPersistence
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.dsp.FilterType
+import com.lochanpthakke.empee3.core.sound.dsp.applySettings
 import com.lochanpthakke.empee3.core.sound.model.BandConfig
 import com.lochanpthakke.empee3.core.sound.model.EqPreset
 import com.lochanpthakke.empee3.core.sound.model.SoundSettings
@@ -91,14 +92,7 @@ class SoundRepositoryImpl
         }
 
         private fun applyToPipeline(settings: SoundSettings) {
-            customEqAudioProcessor.configureParametricState(
-                gainsDb = settings.currentBandGains,
-                frequenciesHz = settings.currentBandFrequencies,
-                qs = settings.currentBandQs,
-                types = settings.currentFilterTypes,
-                activeCount = settings.activeBandCount,
-            )
-            customEqAudioProcessor.setEqEnabled(settings.isEqEnabled)
+            customEqAudioProcessor.applySettings(settings)
         }
 
         private fun onUserChange() {
@@ -108,6 +102,8 @@ class SoundRepositoryImpl
         private fun requestSave() {
             pendingSave.value = _soundSettings.value
         }
+
+        override fun eqRuntimeState() = customEqAudioProcessor.runtimeState()
 
         override fun attachAudioSession(audioSessionId: Int) {
             // No-op (previously attached OEM AudioEffect instances)

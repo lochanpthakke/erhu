@@ -62,7 +62,14 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.model.TrackOccurrence
+import com.lochanpthakke.empee3.feature.library.transition.StudioInput
+import com.lochanpthakke.empee3.feature.library.transition.StudioTrack
+import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioHost
+import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioRow
+import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioViewModel
 import kotlinx.coroutines.flow.combine
 
 /** The hero artwork moves at this share of the scroll speed (parallax) as the page scrolls. */
@@ -113,10 +120,13 @@ fun AlbumDetailScreen(
     albumId: Long,
     viewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
+    transitionsViewModel: TransitionStudioViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val detail = rememberAlbumDetail(albumId, viewModel)
+    val albumRef = remember(albumId) { CollectionRef.album(albumId) }
+    var showStudio by remember { mutableStateOf(false) }
     // Only the playing song's id: position ticks must not recompose this page.
     val currentSongId by viewModel.currentSongId.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
@@ -207,9 +217,12 @@ fun AlbumDetailScreen(
                         AlbumActions(
                             // Enabled while the tracks load too (no flicker); an empty album disables them.
                             enabled = !data.loaded || songs.isNotEmpty(),
-                            onPlay = { viewModel.playInOrder(songs) },
-                            onShuffle = { viewModel.playShuffled(songs) },
+                            onPlay = { viewModel.playInOrder(songs, albumRef) },
+                            onShuffle = { viewModel.playShuffled(songs, albumRef) },
                         )
+                    }
+                    item(key = "transitions") {
+                        TransitionStudioRow(albumRef, transitionsViewModel, onOpen = { showStudio = true })
                     }
                     if (songs.isEmpty() && data.loaded) {
                         item(key = "empty") {
@@ -220,7 +233,7 @@ fun AlbumDetailScreen(
                             LibrarySongRow(
                                 song = song,
                                 isCurrent = song.id == currentSongId,
-                                onClick = { viewModel.playSongsFromQueue(songs, index) },
+                                onClick = { viewModel.playSongsFromQueue(songs, index, albumRef) },
                                 actions = actions,
                                 showTrackNumber = true,
                             )
@@ -242,6 +255,8 @@ fun AlbumDetailScreen(
             },
         )
     }
+
+    if (showStudio) AlbumStudio(albumRef, detail, transitionsViewModel, onClose = { showStudio = false })
 
     songsForPlaylist?.let { songs ->
         AddToPlaylistDialog(
@@ -479,3 +494,24 @@ private fun albumFacts(songs: List<Song>): String {
 }
 
 private const val HERO_KEY = "hero"
+
+/** The Transition Studio for this album, in album order (disc, track, title); album tracks are unique, so the song id is the occurrence. */
+@Composable
+private fun AlbumStudio(
+    albumRef: CollectionRef,
+    detail: AlbumDetailData?,
+    viewModel: TransitionStudioViewModel,
+    onClose: () -> Unit,
+) {
+    val album = detail?.album ?: return
+    val tracks =
+        remember(detail.songs) {
+            detail.songs
+                .sortedWith(
+                    compareBy<Song> { it.discNumber }
+                        .thenBy { if (it.trackNumber > 0) it.trackNumber else Int.MAX_VALUE }
+                        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
+                ).map { StudioTrack(it, TrackOccurrence(it.id)) }
+        }
+    TransitionStudioHost(StudioInput(albumRef, album.title, tracks), viewModel, onClose)
+}

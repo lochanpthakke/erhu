@@ -19,6 +19,8 @@ data class PlaybackState(
     val history: List<QueueHistoryEntry> = emptyList(),
     /** The current track's A–B loop markers, or null when none are set. */
     val abLoop: AbLoopState? = null,
+    /** The album or playlist the current entry was started from, or null for an ordinary queue entry. */
+    val currentCollection: CollectionRef? = null,
 ) {
     val nextSong: Song? get() = queue.getOrNull(nextIndex)
     val previousSong: Song? get() = queue.getOrNull(previousIndex)

@@ -105,6 +105,7 @@ import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
 import com.lochanpthakke.empee3.feature.library.ArtistDetailScreen
 import com.lochanpthakke.empee3.feature.library.ArtworkManagerScreen
+import com.lochanpthakke.empee3.feature.library.AudioDetailsViewModel
 import com.lochanpthakke.empee3.feature.library.LibraryBottomChrome
 import com.lochanpthakke.empee3.feature.library.LibraryScreen
 import com.lochanpthakke.empee3.feature.library.LibrarySection
@@ -179,6 +180,7 @@ fun MainScaffold() {
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
     val playerExtrasViewModel: PlayerExtrasViewModel = hiltViewModel()
     val visualizerViewModel: VisualizerViewModel = hiltViewModel()
+    val audioDetailsViewModel: AudioDetailsViewModel = hiltViewModel()
     val playbackRepository = libraryViewModel.playbackRepository
 
     val selectedTheme by themeViewModel.appTheme.collectAsState()
@@ -460,6 +462,7 @@ fun MainScaffold() {
                                                         albumId = route.albumId,
                                                         viewModel = libraryViewModel,
                                                         playlistsViewModel = playlistsViewModel,
+                                                        transitionsViewModel = hiltViewModel(),
                                                         onBack = { navController.popBackStack() },
                                                     )
                                                 }
@@ -495,6 +498,7 @@ fun MainScaffold() {
                                                         playlistId = route.playlistId,
                                                         viewModel = playlistsViewModel,
                                                         libraryViewModel = libraryViewModel,
+                                                        transitionsViewModel = hiltViewModel(),
                                                         onBack = { navController.popBackStack() },
                                                     )
                                                 }
@@ -597,6 +601,11 @@ fun MainScaffold() {
                                         },
                                         extras = playerExtrasViewModel,
                                         visualizer = visualizerViewModel,
+                                        audioDetails = audioDetailsViewModel,
+                                        onOpenEqualizer = {
+                                            minimizePlayer()
+                                            navController.navigate(SettingsCategory("audio"))
+                                        },
                                     )
                                 }
                             }

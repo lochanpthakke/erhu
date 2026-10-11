@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.playback.repository
 
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.model.AbLoopEdit
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
@@ -31,6 +32,15 @@ interface PlaybackRepository {
     fun playSongsFromQueue(
         songs: List<Song>,
         startIndex: Int,
+    )
+
+    /** Plays [songs] as the album or playlist [origin] (its transition settings apply); null = an ordinary queue. */
+    fun playCollection(
+        songs: List<Song>,
+        startIndex: Int,
+        origin: CollectionRef?,
+        /** Playlist positions of [songs] (parallel), so duplicates stay distinct; null for albums. */
+        slots: List<Int>? = null,
     )
 
     fun seekTo(positionMs: Long)

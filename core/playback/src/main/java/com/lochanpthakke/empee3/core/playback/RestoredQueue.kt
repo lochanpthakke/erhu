@@ -1,12 +1,15 @@
 package com.lochanpthakke.empee3.core.playback
 
 import com.lochanpthakke.empee3.core.model.PersistedPlaybackState
+import com.lochanpthakke.empee3.core.model.QueueOrigin
 import com.lochanpthakke.empee3.core.model.Song
 
 internal data class RestoredQueue(
     val songs: List<Song>,
     val startIndex: Int,
     val startPositionMs: Long,
+    /** Where each restored entry was started from (parallel to [songs]); null = an ordinary entry. */
+    val origins: List<QueueOrigin?> = emptyList(),
 )
 
 /**
@@ -26,6 +29,7 @@ internal fun buildRestoredQueue(
     val byId = available.associateBy { it.id }
 
     val songs = ArrayList<Song>(state.queueSongIds.size)
+    val origins = ArrayList<QueueOrigin?>(state.queueSongIds.size)
     var restoredCurrentIndex = -1
     var nextSurvivingIndex = -1
     state.queueSongIds.forEachIndexed { originalIndex, id ->
@@ -36,12 +40,14 @@ internal fun buildRestoredQueue(
             nextSurvivingIndex = songs.size
         }
         songs += song
+        // Older snapshots have no keys: those entries come back without a collection context.
+        origins += QueueOrigin.fromKey(state.queueCollectionKeys.getOrNull(originalIndex), id)
     }
     if (songs.isEmpty()) return null
 
     return if (restoredCurrentIndex >= 0) {
-        RestoredQueue(songs, restoredCurrentIndex, state.positionMs.coerceAtLeast(0L))
+        RestoredQueue(songs, restoredCurrentIndex, state.positionMs.coerceAtLeast(0L), origins)
     } else {
-        RestoredQueue(songs, nextSurvivingIndex.coerceAtLeast(0), 0L)
+        RestoredQueue(songs, nextSurvivingIndex.coerceAtLeast(0), 0L, origins)
     }
 }

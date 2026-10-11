@@ -6,6 +6,8 @@ import android.provider.MediaStore
 import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.database.repository.WaveformCacheStore
+import com.lochanpthakke.empee3.core.model.BandLevels
+import com.lochanpthakke.empee3.core.model.BandWaveformLoad
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.Waveform
 import com.lochanpthakke.empee3.core.model.WaveformLoad
@@ -17,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +46,51 @@ class WaveformRepository
         private val decodeDispatcher = dispatcherProvider.io.limitedParallelism(1)
         private val decodes = SingleFlight<SourceFingerprint, Waveform?>(CoroutineScope(SupervisorJob() + decodeDispatcher))
         private val decoder = WaveformDecoder(context)
+
+        /** Recent windows (few hundred floats each), so reopening an editor does not decode again. */
+        private val segments =
+            object : LinkedHashMap<String, BandLevels>(SEGMENT_CACHE_SIZE, LOAD_FACTOR, true) {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, BandLevels>?): Boolean = size > SEGMENT_CACHE_SIZE
+            }
+
+        /**
+         * The window [startMs, endMs) of [song] at [bins] resolution, in three frequency bands, as
+         * absolute levels (full scale = 1) so two tracks' windows compare honestly. Decoded from the
+         * file on the waveform thread (only that window), kept in a small memory cache.
+         */
+        fun segment(
+            song: Song,
+            startMs: Long,
+            endMs: Long,
+            bins: Int,
+        ): Flow<BandWaveformLoad> =
+            flow {
+                emit(BandWaveformLoad.Loading)
+                emit(loadSegment(song, startMs.coerceAtLeast(0L), endMs, bins))
+            }.flowOn(io)
+
+        @Suppress("TooGenericExceptionCaught", "ReturnCount") // early answers: invalid range, unreadable file, cached
+        private suspend fun loadSegment(
+            song: Song,
+            startMs: Long,
+            endMs: Long,
+            bins: Int,
+        ): BandWaveformLoad {
+            if (endMs <= startMs || bins <= 0) return BandWaveformLoad.Unavailable
+            val source = fingerprint(song) ?: return BandWaveformLoad.Unavailable
+            val key = "${source.uri}|${source.sizeBytes}|${source.dateModified}|$startMs|$endMs|$bins"
+            synchronized(segments) { segments[key] }?.let { return BandWaveformLoad.Ready(it) }
+            return try {
+                val levels = withContext(decodeDispatcher) { decoder.decodeBands(Uri.parse(source.uri), startMs, endMs, bins) }
+                levels?.also { synchronized(segments) { segments[key] = it } }?.let { BandWaveformLoad.Ready(it) }
+                    ?: BandWaveformLoad.Unavailable
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.w(TAG, "No waveform window for song ${song.id}: ${e.message}")
+                BandWaveformLoad.Unavailable
+            }
+        }
 
         /** Loading, then Ready or Unavailable. Never throws; cancel by stopping collection. */
         fun waveform(song: Song): Flow<WaveformLoad> =
@@ -124,5 +172,7 @@ class WaveformRepository
 
         private companion object {
             const val TAG = "Waveform"
+            const val SEGMENT_CACHE_SIZE = 16
+            const val LOAD_FACTOR = 0.75f
         }
     }

@@ -5,6 +5,7 @@ import android.os.SystemClock
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
@@ -15,13 +16,22 @@ import com.lochanpthakke.empee3.core.common.result.onError
 import com.lochanpthakke.empee3.core.database.repository.ListeningStatsRepository
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistence
 import com.lochanpthakke.empee3.core.model.AbLoopEdit
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.PersistedPlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
+import com.lochanpthakke.empee3.core.model.QueueOrigin
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.SongLookup
+import com.lochanpthakke.empee3.core.model.TrackOccurrence
 import com.lochanpthakke.empee3.core.playback.service.PlaybackServiceConnector
+import com.lochanpthakke.empee3.core.playback.transition.ExoTailPlayer
+import com.lochanpthakke.empee3.core.playback.transition.PlayerTransitionHost
+import com.lochanpthakke.empee3.core.playback.transition.ProcessorIncomingFade
+import com.lochanpthakke.empee3.core.playback.transition.TransitionCoordinator
+import com.lochanpthakke.empee3.core.playback.transition.TransitionSettingsRepository
+import com.lochanpthakke.empee3.core.sound.dsp.TransitionGainProcessor
 import com.lochanpthakke.empee3.core.sound.repository.SoundRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -58,6 +68,9 @@ class PlaybackControllerImpl
         private val songLookup: SongLookup,
         private val soundRepository: SoundRepository,
         private val listeningStats: ListeningStatsRepository,
+        playerDiagnostics: com.lochanpthakke.empee3.core.playback.diagnostics.PlayerDiagnosticsTracker,
+        private val transitionSettings: TransitionSettingsRepository,
+        transitionGain: TransitionGainProcessor,
     ) : PlaybackController {
         private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
@@ -84,8 +97,29 @@ class PlaybackControllerImpl
 
                         override fun seekTo(positionMs: Long) = player.seekTo(positionMs)
                     },
-                onStateChanged = { loop -> _playbackState.update { it.copy(abLoop = loop) } },
+                onStateChanged = { loop ->
+                    _playbackState.update { it.copy(abLoop = loop) }
+                    transitions?.reevaluate()
+                },
             )
+
+        /**
+         * Smooth Transitions for albums and playlists that have them on (null without an ExoPlayer,
+         * e.g. in tests). Only entries started from such a collection are ever affected.
+         */
+        private val transitions: TransitionCoordinator? =
+            (player as? ExoPlayer)?.let { exo ->
+                TransitionCoordinator(
+                    host =
+                        PlayerTransitionHost(
+                            player = exo,
+                            resolve = transitionSettings::resolve,
+                            abLoopEnabled = { abLoop.state?.enabled == true },
+                        ),
+                    incomingFade = ProcessorIncomingFade(transitionGain),
+                    newTailPlayer = { ExoTailPlayer(context, soundRepository.soundSettings.value) },
+                )
+            }
 
         private val _playbackState = MutableStateFlow(PlaybackState())
         override val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -122,7 +156,27 @@ class PlaybackControllerImpl
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_ENDED) listening.onEnded()
+                    if (playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED) transitions?.release()
                     updateStatus()
+                }
+
+                override fun onPlayWhenReadyChanged(
+                    playWhenReady: Boolean,
+                    reason: Int,
+                ) {
+                    transitions?.onPlayingChanged(tailShouldPlay())
+                }
+
+                override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                    transitions?.onPlayingChanged(tailShouldPlay())
+                }
+
+                override fun onVolumeChanged(volume: Float) {
+                    transitions?.onVolumeChanged(volume)
+                }
+
+                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+                    transitions?.onSpeedChanged(playbackParameters.speed)
                 }
 
                 override fun onMediaItemTransition(
@@ -136,6 +190,7 @@ class PlaybackControllerImpl
                     refreshQueueAndCurrent()
                     _playbackState.update { it.copy(positionMs = player.currentPosition.coerceAtLeast(0L)) }
                     persistState()
+                    transitions?.reevaluate()
                 }
 
                 override fun onTimelineChanged(
@@ -146,6 +201,8 @@ class PlaybackControllerImpl
                         refreshQueueAndCurrent()
                         persistState()
                     }
+                    // Also when a duration becomes known (source update).
+                    transitions?.reevaluate()
                 }
 
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
@@ -159,6 +216,7 @@ class PlaybackControllerImpl
                     _playbackState.update { it.copy(repeatMode = repeatMode.toDomainRepeatMode()) }
                     refreshQueueAndCurrent()
                     persistState()
+                    transitions?.reevaluate()
                 }
 
                 override fun onPositionDiscontinuity(
@@ -167,6 +225,9 @@ class PlaybackControllerImpl
                     reason: Int,
                 ) {
                     refreshPosition()
+                    if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
+                        transitions?.onSeek()
+                    }
                 }
 
                 override fun onAudioSessionIdChanged(audioSessionId: Int) {
@@ -180,11 +241,18 @@ class PlaybackControllerImpl
 
         init {
             player.addListener(playerListener)
+            // Records what the player reports about the audio (decoder, formats) for the audio inspector.
+            playerDiagnostics.start()
             (player as? ExoPlayer)?.audioSessionId?.takeIf { it != C.AUDIO_SESSION_ID_UNSET }?.let {
                 soundRepository.attachAudioSession(it)
             }
             scope.launch { restorePersistedState() }
+            // Turning a collection's transitions on or off (or changing them) applies to the boundary ahead.
+            scope.launch { transitionSettings.config.collect { transitions?.reevaluate() } }
         }
+
+        private fun tailShouldPlay(): Boolean =
+            player.playWhenReady && player.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
 
         private fun publishHistory() {
             _playbackState.update { it.copy(history = history.entries) }
@@ -227,6 +295,7 @@ class PlaybackControllerImpl
                     queue = songs,
                     currentIndex = currentIndex,
                     currentSong = current,
+                    currentCollection = player.currentMediaItem?.collectionRef(),
                     nextIndex = player.nextMediaItemIndex.takeIf { songs.isNotEmpty() && it in songs.indices } ?: -1,
                     previousIndex = player.previousMediaItemIndex.takeIf { songs.isNotEmpty() && it in songs.indices } ?: -1,
                     durationMs = resolveDuration(current),
@@ -326,7 +395,7 @@ class PlaybackControllerImpl
                 // The user may have started playback while we were reading from disk.
                 if (restored == null || player.mediaItemCount > 0) return
                 setQueue(
-                    restored.songs.map { it.toMediaItem() },
+                    restored.songs.mapIndexed { i, song -> song.toMediaItem(restored.origins.getOrNull(i)) },
                     restored.startIndex,
                     restored.startPositionMs,
                 )
@@ -368,6 +437,14 @@ class PlaybackControllerImpl
                     positionMs = player.currentPosition.coerceAtLeast(0L),
                     shuffleModeEnabled = _playbackState.value.shuffleModeEnabled,
                     repeatMode = player.repeatMode.toDomainRepeatMode(),
+                    queueCollectionKeys =
+                        List(player.mediaItemCount) {
+                            player
+                                .getMediaItemAt(it)
+                                .queueOrigin()
+                                ?.key
+                                .orEmpty()
+                        },
                 )
             scope.launch {
                 persistence.save(snapshot).onError { logger.w(TAG, "Failed to persist playback state: ${it.message}") }
@@ -400,29 +477,40 @@ class PlaybackControllerImpl
         override fun playSongsFromQueue(
             songs: List<Song>,
             startIndex: Int,
+        ) = playCollection(songs, startIndex, origin = null)
+
+        override fun playCollection(
+            songs: List<Song>,
+            startIndex: Int,
+            origin: CollectionRef?,
+            slots: List<Int>?,
         ) {
-            val playable = songs.filter { it.uri.isNotBlank() }
+            // Indices, not songs: the same song can be in the list twice, and each entry keeps its own occurrence.
+            val playable = songs.indices.filter { songs[it].uri.isNotBlank() }
             if (playable.isEmpty()) {
                 logger.w(TAG, "Ignoring request to play an empty queue")
                 return
             }
-            val requested = songs.getOrNull(startIndex)
-            val index = playable.indexOf(requested).takeIf { it >= 0 } ?: 0
+            val index = playable.indexOf(startIndex).takeIf { it >= 0 } ?: 0
             consecutiveErrors = 0
 
             val isShuffleActive = _playbackState.value.shuffleModeEnabled
-            val finalItems =
+            val order =
                 if (isShuffleActive && playable.size > 1) {
-                    val firstSong = playable[index]
-                    val remaining = playable.filterIndexed { i, _ -> i != index }.shuffled()
-                    listOf(firstSong) + remaining
+                    listOf(playable[index]) + playable.filterIndexed { i, _ -> i != index }.shuffled()
                 } else {
                     playable
                 }
             val playIndex = if (isShuffleActive && playable.size > 1) 0 else index
 
             player.shuffleModeEnabled = false
-            setQueue(finalItems.map { it.toMediaItem() }, playIndex, 0L)
+            // Every entry carries where it was started from; a new queue replaces the old context.
+            val items =
+                order.map { i ->
+                    val song = songs[i]
+                    song.toMediaItem(origin?.let { QueueOrigin(it, TrackOccurrence(song.id, slots?.getOrNull(i))) })
+                }
+            setQueue(items, playIndex, 0L)
             player.prepare()
             play()
         }

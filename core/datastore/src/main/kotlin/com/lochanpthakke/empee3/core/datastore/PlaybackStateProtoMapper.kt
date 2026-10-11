@@ -35,6 +35,8 @@ fun PersistedPlaybackState.applyTo(existing: PlaybackStateProto): PlaybackStateP
         .setPositionMs(positionMs)
         .setShuffleModeEnabled(shuffleModeEnabled)
         .setRepeatMode(repeatMode.toProto())
+        .clearQueueCollectionKeys()
+        .addAllQueueCollectionKeys(queueCollectionKeys)
         .build()
 
 fun PlaybackStateProto.toDomain(): PersistedPlaybackState =
@@ -44,4 +46,5 @@ fun PlaybackStateProto.toDomain(): PersistedPlaybackState =
         positionMs = positionMs,
         shuffleModeEnabled = shuffleModeEnabled,
         repeatMode = repeatMode.toDomain(),
+        queueCollectionKeys = queueCollectionKeysList,
     )

@@ -1,8 +1,11 @@
 package com.lochanpthakke.empee3.core.playback
 
+import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.PersistedPlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
+import com.lochanpthakke.empee3.core.model.QueueOrigin
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.model.TrackOccurrence
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -75,5 +78,22 @@ class RestoredQueueTest {
     fun negativePosition_isClamped() {
         val restored = buildRestoredQueue(state(listOf(1), 0, position = -5), listOf(song(1)))!!
         assertEquals(0L, restored.startPositionMs)
+    }
+
+    @Test
+    fun collectionContext_followsTheEntries_whenSongsAreGone() {
+        val album = CollectionRef.album(9)
+        val saved =
+            state(listOf(1, 2, 3, 4), 0).copy(queueCollectionKeys = listOf(album.key, album.key, "", "playlist:4#s4@7"))
+        // Song 2 was deleted: the remaining entries keep their own context, nothing shifts.
+        val restored = buildRestoredQueue(saved, listOf(song(1), song(3), song(4)))!!
+        assertEquals(listOf(1L, 3L, 4L), restored.songs.map { it.id })
+        assertEquals(listOf(QueueOrigin(album, TrackOccurrence(1)), null, QueueOrigin(CollectionRef.playlist(4), TrackOccurrence(4, 7))), restored.origins)
+    }
+
+    @Test
+    fun olderSnapshots_restoreWithoutContext() {
+        val restored = buildRestoredQueue(state(listOf(1, 2), 0), listOf(song(1), song(2)))!!
+        assertEquals(listOf(null, null), restored.origins)
     }
 }
