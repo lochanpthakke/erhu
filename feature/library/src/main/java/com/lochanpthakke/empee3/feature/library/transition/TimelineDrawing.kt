@@ -1,9 +1,7 @@
 package com.lochanpthakke.empee3.feature.library.transition
 
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -19,23 +17,16 @@ import kotlin.math.ln
 
 // Drawing of the transition timeline (see TransitionTimelineCanvas).
 
-/** The darker window behind the transition, spanning both lanes (a hairline at the boundary when there is no transition). */
+/** Without a transition, a hairline where the tracks meet. */
 internal fun DrawScope.drawWindow(
     geometry: TimelineGeometry,
     color: Color,
     hasTransition: Boolean,
 ) {
+    // With a transition the window is a glass panel behind the canvas (TransitionWindowGlass).
+    if (hasTransition) return
     val left = geometry.xOfT(0f)
-    if (!hasTransition) {
-        drawLine(color, Offset(left, 0f), Offset(left, size.height), PLAYHEAD_WIDTH)
-        return
-    }
-    drawRoundRect(
-        color = color.copy(alpha = WINDOW_ALPHA),
-        topLeft = Offset(left, 0f),
-        size = Size(geometry.xOfT(1f) - left, size.height),
-        cornerRadius = CornerRadius(WINDOW_CORNER, WINDOW_CORNER),
-    )
+    drawLine(color, Offset(left, 0f), Offset(left, size.height), PLAYHEAD_WIDTH)
 }
 
 /** The level the track plays at, at transition time [ms] (outside the window: before = start level, after = end level). */
@@ -170,8 +161,6 @@ private fun logPosition(
     closed: Float,
 ): Float = (ln(hz / open) / ln(closed / open)).coerceIn(0f, 1f)
 
-private const val WINDOW_ALPHA = 0.9f
-private const val WINDOW_CORNER = 28f
 private const val DIM_ALPHA = 0.28f
 private const val BAR_OVERLAP = 1.6f
 private const val WAVE_SCALE = 4f

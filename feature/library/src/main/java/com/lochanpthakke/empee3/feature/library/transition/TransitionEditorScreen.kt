@@ -3,16 +3,20 @@ package com.lochanpthakke.empee3.feature.library.transition
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,8 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
+import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.TransitionCurve
 import com.lochanpthakke.empee3.core.model.TransitionSpec
 import com.lochanpthakke.empee3.core.playback.transition.PreviewState
@@ -114,6 +122,7 @@ private fun TimelineBlock(
     val pair = (draft.target as? EditorTarget.Pair)?.pair
     val shown = draft.shown
     Box(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
+        if (shown != null) TransitionWindowGlass(effectiveMs.coerceAtLeast(1))
         TransitionTimelineCanvas(
             spec = shown,
             durationMs = effectiveMs.coerceAtLeast(1),
@@ -168,6 +177,28 @@ private fun DurationBlock(
         (preview as? PreviewState.Unavailable)?.let {
             Text(it.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
+    }
+}
+
+/**
+ * The transition window as a Liquid Glass panel behind the waveforms (rim, edge light and tint,
+ * without blurring the waveforms drawn over it); a soft tint when the Glass Effect is off.
+ */
+@Composable
+private fun TransitionWindowGlass(durationMs: Int) {
+    val context = contextFor(durationMs)
+    val span = (durationMs + 2f * context).coerceAtLeast(1f)
+    val shape = RoundedCornerShape(WINDOW_CORNER)
+    val fallback = if (EmPee3Glass.isActive) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = FALLBACK_ALPHA)
+    BoxWithConstraints(Modifier.fillMaxWidth().height(TIMELINE_HEIGHT)) {
+        Box(
+            Modifier
+                .offset(x = maxWidth * (context / span))
+                .width(maxWidth * (durationMs / span))
+                .fillMaxHeight()
+                .glassPanel(shape, level = GlassLevel.Medium, elevated = false, backdrop = null)
+                .background(fallback, shape),
+        )
     }
 }
 
@@ -240,3 +271,5 @@ private fun cueLabel(
     }
 
 private val TIMELINE_HEIGHT = 300.dp
+private val WINDOW_CORNER = 20.dp
+private const val FALLBACK_ALPHA = 0.35f
