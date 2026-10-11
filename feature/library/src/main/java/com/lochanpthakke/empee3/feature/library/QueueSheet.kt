@@ -104,6 +104,7 @@ internal fun QueueSheet(
     extras: PlayerExtrasViewModel,
     initialPage: Int,
     onDismiss: () -> Unit,
+    lyricsActions: LyricsActions? = null,
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -166,7 +167,7 @@ internal fun QueueSheet(
                                 },
                                 onSaveAsPlaylist = { showSaveDialog = true },
                             )
-                        PAGE_LYRICS -> LyricsPage(playbackState, playbackRepository, lyrics, position, isPlaying)
+                        PAGE_LYRICS -> LyricsPage(playbackState, playbackRepository, lyrics, position, isPlaying, lyricsActions)
                         PAGE_MARKS -> {
                             val bookmarks by extras.bookmarks.collectAsState()
 
@@ -448,6 +449,7 @@ private fun LyricsPage(
     lyrics: SongLyrics?,
     position: State<Long>,
     isPlaying: Boolean,
+    lyricsActions: LyricsActions?,
 ) {
     val currentSong = playbackState.currentSong
     if (currentSong != null) {
@@ -458,6 +460,8 @@ private fun LyricsPage(
             isPlaying = isPlaying,
             onSeek = { playbackRepository.seekTo(it) },
             modifier = Modifier.fillMaxSize(),
+            actions = lyricsActions,
+            searchQuery = listOf(currentSong.title, currentSong.artist).filter { it.isNotBlank() }.joinToString(" "),
         )
     } else {
         Box(

@@ -31,10 +31,13 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.jaudiotagger)
+    // Reads LRCLIB's Lyricsfile (YAML) for word-timed lyrics; data only, no class instantiation.
+    implementation(libs.snakeyaml.engine)
     implementation(libs.androidx.core.ktx)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

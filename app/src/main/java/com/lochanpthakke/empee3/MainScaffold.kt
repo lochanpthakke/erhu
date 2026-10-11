@@ -593,6 +593,7 @@ fun MainScaffold() {
                                         playbackRepository = playbackRepository,
                                         isFavorite = isFavorite,
                                         lyrics = lyrics,
+                                        lyricsActions = libraryViewModel.lyricsActions,
                                         onBackClick = minimizePlayer,
                                         onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
                                         onAddToPlaylist = { songForPlaylist = it },

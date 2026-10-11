@@ -59,6 +59,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -114,14 +115,44 @@ internal fun SongLyricsView(
     isPlaying: Boolean,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    actions: LyricsActions? = null,
+    searchQuery: String = "",
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
+    // Showing the page is what asks for lyrics: once per song, never per position update.
+    if (actions != null) LaunchedEffect(songId) { actions.onShown(songId) }
+    Column(modifier = modifier.fillMaxSize()) {
         key(songId) {
             val current = lyrics?.takeIf { it.songId == songId }
-            if (current != null) {
-                LyricsContent(current, position, isPlaying, onSeek)
-            } else {
-                NoLyrics()
+            var searching by remember { mutableStateOf(false) }
+            if (current != null && actions != null) LyricsSourceBar(current, actions) { searching = true }
+            Box(Modifier.weight(1f)) {
+                when {
+                    current?.text != null -> LyricsContent(current, position, isPlaying, onSeek)
+                    current != null -> LyricsLookupStatus(current.lookup, actions, onSearch = { searching = true })
+                    else -> NoLyrics()
+                }
+            }
+            if (searching && current != null && actions != null) {
+                ManualLyricsSearchDialog(
+                    initialQuery = searchQuery,
+                    search = current.search,
+                    actions =
+                        LyricsActions(
+                            onShown = actions.onShown,
+                            refresh = actions.refresh,
+                            search = actions.search,
+                            choose = {
+                                actions.choose(it)
+                                searching = false
+                            },
+                            useFileLyrics = actions.useFileLyrics,
+                            closeSearch = actions.closeSearch,
+                        ),
+                    onDismiss = {
+                        searching = false
+                        actions.closeSearch()
+                    },
+                )
             }
         }
     }
@@ -142,10 +173,20 @@ internal fun LyricsContent(
     }
 }
 
-/** The lyrics text of one song (null when the file has none). */
+/**
+ * The lyrics of one song as shown (null [text]: none yet), where they come from ([origin],
+ * [provider], [timing]), the online lookup state and any manual search.
+ */
 data class SongLyrics(
     val songId: Long,
     val text: String?,
+    val origin: LyricsOrigin = LyricsOrigin.FILE,
+    val provider: String? = null,
+    val timing: LyricsTiming? = null,
+    val lookup: LyricsLookup = LyricsLookup.Idle,
+    /** The file has readable lyrics of its own. */
+    val hasFileLyrics: Boolean = false,
+    val search: ManualLyricsSearch = ManualLyricsSearch.Idle,
 )
 
 @Composable

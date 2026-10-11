@@ -113,6 +113,8 @@ fun NowPlayingScreen(
     playbackRepository: PlaybackRepository,
     isFavorite: Boolean,
     lyrics: SongLyrics?,
+    /** Online lyrics lookup and choice for the lyrics page; null keeps it to the file's lyrics. */
+    lyricsActions: LyricsActions?,
     onBackClick: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onAddToPlaylist: (Song) -> Unit,
@@ -529,6 +531,7 @@ fun NowPlayingScreen(
             extras = extras,
             initialPage = page,
             onDismiss = { queueSheetPage = null },
+            lyricsActions = lyricsActions,
         )
     }
 }

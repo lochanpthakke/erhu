@@ -1,0 +1,87 @@
+package com.lochanpthakke.empee3.feature.library
+
+import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
+import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
+import com.lochanpthakke.empee3.core.network.lyrics.Lyricsfile
+import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsResult
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class OnlineLyricsChoiceTest {
+    private val fileLyrics = "[00:01.00]From the file"
+    private val wordTimed =
+        LyricsCandidate(
+            provider = "LRCLIB",
+            providerId = 1,
+            trackName = "Song",
+            artistName = "Artist",
+            syncedLyrics = "[00:12.00]Hello world",
+            wordSyncedLrc =
+                Lyricsfile.toEnhancedLrc(
+                    "lines:\n- text: Hello world\n  start_ms: 12000\n  words:\n  - text: 'Hello '\n    start_ms: 12000\n  - text: world\n    start_ms: 12650",
+                ),
+        )
+
+    private fun online(
+        candidate: LyricsCandidate? = wordTimed,
+        chosen: Boolean = false,
+        songId: Long = 7,
+        lookup: LyricsLookup = LyricsLookup.Idle,
+    ) = OnlineLyricsView(songId, lookup, candidate, fromCache = false, userChosen = chosen)
+
+    @Test
+    fun `the file's own lyrics take priority over an automatic online result`() {
+        val shown = chooseLyrics(7, fileLyrics, online(), ManualLyricsSearch.Idle)
+        assertEquals(fileLyrics, shown.text)
+        assertEquals(LyricsOrigin.FILE, shown.origin)
+        assertTrue(shown.hasFileLyrics)
+    }
+
+    @Test
+    fun `a result the user chose replaces the file's lyrics, and online fills in when the file has none`() {
+        val chosen = chooseLyrics(7, fileLyrics, online(chosen = true), ManualLyricsSearch.Idle)
+        assertEquals(LyricsOrigin.ONLINE, chosen.origin)
+        assertEquals("LRCLIB", chosen.provider)
+        assertTrue(chosen.hasFileLyrics) // so "Use the file's lyrics" is offered
+        val noFile = chooseLyrics(7, null, online(), ManualLyricsSearch.Idle)
+        assertEquals(wordTimed.wordSyncedLrc, noFile.text)
+        assertEquals(LyricsTiming.WORD, noFile.timing)
+        // Unreadable file lyrics count as none.
+        assertEquals(LyricsOrigin.ONLINE, chooseLyrics(7, "   ", online(), ManualLyricsSearch.Idle).origin)
+    }
+
+    @Test
+    fun `another song's lookup is never shown, and the lookup state shows when nothing is found`() {
+        val stale = chooseLyrics(8, null, online(songId = 7), ManualLyricsSearch.Idle)
+        assertNull(stale.text)
+        assertEquals(LyricsLookup.Idle, stale.lookup)
+        val searching = chooseLyrics(7, null, online(candidate = null, lookup = LyricsLookup.Searching), ManualLyricsSearch.Idle)
+        assertNull(searching.text)
+        assertEquals(LyricsLookup.Searching, searching.lookup)
+        // While a refresh runs, the previous online lyrics stay on screen.
+        assertEquals(wordTimed.wordSyncedLrc, chooseLyrics(7, null, online(lookup = LyricsLookup.Searching), ManualLyricsSearch.Idle).text)
+    }
+
+    @Test
+    fun `online word timing reaches the karaoke parser, line timing stays line level`() {
+        val words = LyricsParser.parse(wordTimed.bestText) as Lyrics.Synced
+        assertTrue(words.hasWordTiming)
+        assertEquals(listOf("Hello ", "world"), words.lines.single().words!!.map { it.text })
+        assertEquals(listOf(12_000L, 12_650L), words.lines.single().words!!.map { it.timeMs })
+        val lineOnly = LyricsParser.parse(wordTimed.copy(wordSyncedLrc = null).bestText) as Lyrics.Synced
+        assertFalse(lineOnly.hasWordTiming)
+        assertTrue(LyricsParser.parse(wordTimed.copy(wordSyncedLrc = null, syncedLyrics = null, plainLyrics = "Just text").bestText) is Lyrics.Plain)
+    }
+
+    @Test
+    fun `results map to what the page shows`() {
+        assertEquals(LyricsLookup.Instrumental, OnlineLyricsResult.Instrumental.toView(7, null).lookup)
+        assertEquals(LyricsLookup.Offline, OnlineLyricsResult.Offline.toView(7, wordTimed).lookup)
+        assertEquals(wordTimed, OnlineLyricsResult.Offline.toView(7, wordTimed).candidate) // keeps what was shown
+        val needs = OnlineLyricsResult.NeedsChoice(listOf(wordTimed)).toView(7, null).lookup
+        assertTrue(needs is LyricsLookup.NeedsChoice)
+    }
+}

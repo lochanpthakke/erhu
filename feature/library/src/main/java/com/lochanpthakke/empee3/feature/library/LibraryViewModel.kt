@@ -19,6 +19,9 @@ import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
+import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsRepository
+import com.lochanpthakke.empee3.core.network.lyrics.ProviderResponse
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
@@ -31,6 +34,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,6 +85,7 @@ class LibraryViewModel
         private val artistArtworkUpdater: ArtistArtworkUpdater,
         recentlyPlayed: RecentlyPlayedRecorder,
         smartPlaylistRepository: SmartPlaylistRepository,
+        private val onlineLyrics: OnlineLyricsRepository,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -253,15 +258,119 @@ class LibraryViewModel
                 .flatMapLatest { id -> id?.let { libraryRepository.observeIsFavorite(it) } ?: flowOf(false) }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
+        private val onlineLyricsView = MutableStateFlow<OnlineLyricsView?>(null)
+        private val manualLyricsSearch = MutableStateFlow<ManualLyricsSearch>(ManualLyricsSearch.Idle)
+        private var lyricsLookupJob: Job? = null
+
         /**
-         * Lyrics embedded in the playing file's tags, with the song they belong to (so a new
-         * song never shows the previous song's lyrics while its own are read).
+         * Lyrics of the playing song, with the song they belong to (so a new song never shows the
+         * previous song's lyrics while its own are read): the file's own lyrics when it has readable
+         * ones, otherwise what was found online (see [chooseLyrics]).
          */
         val currentSongLyrics: StateFlow<SongLyrics?> =
             currentSongId
                 .flatMapLatest { id ->
-                    id?.let { songId -> libraryRepository.observeEmbeddedLyrics(songId).map { SongLyrics(songId, it) } } ?: flowOf(null)
+                    id?.let { songId ->
+                        combine(
+                            libraryRepository.observeEmbeddedLyrics(songId),
+                            onlineLyricsView,
+                            manualLyricsSearch,
+                        ) { embedded, online, search ->
+                            chooseLyrics(songId, embedded, online, search)
+                        }
+                    } ?: flowOf(null)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+        /** What the lyrics page can do: automatic lookup, refresh, manual search and choice, back to the file's lyrics. */
+        val lyricsActions =
+            LyricsActions(
+                onShown = { songId -> if (onlineLyricsView.value?.songId != songId) startLyricsLookup(songId, refresh = false) },
+                refresh = { currentSongId.value?.let { startLyricsLookup(it, refresh = true) } },
+                search = ::searchLyricsOnline,
+                choose = ::chooseOnlineLyrics,
+                useFileLyrics = ::useFileLyrics,
+                closeSearch = { manualLyricsSearch.value = ManualLyricsSearch.Idle },
+            )
+
+        private fun currentTrack(songId: Long) =
+            playbackRepository.playbackState.value.currentSong
+                ?.takeIf { it.id == songId }
+                ?.toLyricsTrack()
+
+        /**
+         * Looks the playing song's lyrics up online when the page shows it, unless the file has readable
+         * lyrics of its own (and the user did not pick an online result instead). A newer song cancels
+         * the wait for an older one; the shared request still finishes and is cached.
+         */
+        private fun startLyricsLookup(
+            songId: Long,
+            refresh: Boolean,
+        ) {
+            val track = currentTrack(songId) ?: return
+            lyricsLookupJob?.cancel()
+            manualLyricsSearch.value = ManualLyricsSearch.Idle
+            lyricsLookupJob =
+                viewModelScope.launch {
+                    val previous = onlineLyricsView.value?.takeIf { it.songId == songId }
+                    if (!refresh) {
+                        val fileLyrics = libraryRepository.observeEmbeddedLyrics(songId).first()
+                        val chosen = onlineLyrics.cached(track)?.userChosen == true
+                        if (LyricsParser.parse(fileLyrics) != null && !chosen) {
+                            onlineLyricsView.value = OnlineLyricsView(songId, LyricsLookup.Idle)
+                            return@launch
+                        }
+                    }
+                    onlineLyricsView.value =
+                        OnlineLyricsView(
+                            songId,
+                            LyricsLookup.Searching,
+                            previous?.candidate,
+                            previous?.fromCache == true,
+                            previous?.userChosen == true,
+                        )
+                    val result = onlineLyrics.lookup(track, refresh)
+                    if (currentSongId.value == songId) onlineLyricsView.value = result.toView(songId, previous?.candidate)
+                }
+        }
+
+        private fun searchLyricsOnline(text: String) {
+            val songId = currentSongId.value ?: return
+            val track = currentTrack(songId) ?: return
+            manualLyricsSearch.value = ManualLyricsSearch.Searching
+            viewModelScope.launch {
+                manualLyricsSearch.value =
+                    when (val response = onlineLyrics.search(track, text)) {
+                        is ProviderResponse.Success -> ManualLyricsSearch.Results(response.value)
+                        ProviderResponse.NotFound -> ManualLyricsSearch.Results(emptyList())
+                        ProviderResponse.Offline -> ManualLyricsSearch.Error("You are offline.")
+                        is ProviderResponse.RateLimited -> ManualLyricsSearch.Error("LRCLIB asked to wait a moment. Try again shortly.")
+                        is ProviderResponse.Failed -> ManualLyricsSearch.Error("The search failed (${response.reason}).")
+                    }
+            }
+        }
+
+        /** The user picked a result: it is shown, kept, and preferred for this song (the file is never changed). */
+        private fun chooseOnlineLyrics(candidate: LyricsCandidate) {
+            val songId = currentSongId.value ?: return
+            val track = currentTrack(songId) ?: return
+            lyricsLookupJob?.cancel()
+            manualLyricsSearch.value = ManualLyricsSearch.Idle
+            viewModelScope.launch {
+                val found = onlineLyrics.choose(track, candidate)
+                onlineLyricsView.value = found.toView(songId, null)
+            }
+        }
+
+        /** Back to the file's own lyrics: the online result for this song is forgotten. */
+        private fun useFileLyrics() {
+            val songId = currentSongId.value ?: return
+            val track = currentTrack(songId) ?: return
+            lyricsLookupJob?.cancel()
+            viewModelScope.launch {
+                onlineLyrics.forget(track)
+                onlineLyricsView.value = OnlineLyricsView(songId, LyricsLookup.Idle)
+            }
+        }
 
         private val _writeAccessRequest = MutableStateFlow<WriteAuthorization?>(null)
 
