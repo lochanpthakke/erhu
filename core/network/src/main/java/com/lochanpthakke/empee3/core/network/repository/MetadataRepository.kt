@@ -5,9 +5,15 @@ package com.lochanpthakke.empee3.core.network.repository
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.model.LyricsResult
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
+import com.lochanpthakke.empee3.core.model.ProviderOutcome
 import com.lochanpthakke.empee3.core.network.cleaner.CleanedFilename
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
+
+data class DetailedSearchResponse(
+    val candidates: List<MetadataCandidate>,
+    val providerOutcomes: List<ProviderOutcome>,
+)
 
 interface MetadataRepository {
     fun cleanFilename(
@@ -18,15 +24,25 @@ interface MetadataRepository {
     suspend fun searchTrack(
         title: String,
         artist: String?,
+        album: String? = null,
         sourceProvider: String = "ALL",
     ): AppResult<List<MetadataCandidate>>
 
     suspend fun searchAndScoreTrack(
         title: String,
         artist: String?,
+        album: String? = null,
         durationMs: Long? = null,
         sourceProvider: String = "ALL",
     ): AppResult<List<MetadataCandidate>>
+
+    suspend fun searchAndScoreTrackDetailed(
+        title: String,
+        artist: String?,
+        album: String? = null,
+        durationMs: Long? = null,
+        sourceProvider: String = "ALL",
+    ): AppResult<DetailedSearchResponse>
 
     suspend fun fetchAlbumArt(
         albumTitle: String,

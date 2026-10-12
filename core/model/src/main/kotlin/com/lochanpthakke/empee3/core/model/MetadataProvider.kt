@@ -6,6 +6,7 @@ interface MetadataProvider {
     suspend fun searchTrack(
         title: String,
         artist: String?,
+        album: String? = null,
     ): List<MetadataCandidate>
 
     suspend fun fetchAlbumArt(

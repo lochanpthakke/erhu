@@ -16,8 +16,9 @@ class MetadataScorer
             candidate: MetadataCandidate,
             targetTitle: String,
             targetArtist: String?,
+            targetAlbum: String? = null,
             targetDurationMs: Long? = null,
-            candidateDurationMs: Long? = null,
+            candidateDurationMs: Long? = candidate.durationMs,
         ): MetadataCandidate {
             val titleSim =
                 jaroWinklerDistance(
@@ -26,19 +27,50 @@ class MetadataScorer
                 )
 
             val artistSim =
-                if (!targetArtist.isNullOrBlank() && candidate.artist.isNotBlank()) {
+                if (!targetArtist.isNullOrBlank() &&
+                    !targetArtist.equals("Unknown Artist", ignoreCase = true) &&
+                    candidate.artist.isNotBlank() &&
+                    !candidate.artist.equals("Unknown Artist", ignoreCase = true)
+                ) {
                     jaroWinklerDistance(
                         candidate.artist.lowercase().trim(),
                         targetArtist.lowercase().trim(),
                     )
                 } else {
-                    titleSim
+                    null
                 }
 
-            var totalScore = (titleSim * 0.6f) + (artistSim * 0.4f)
+            val albumSim =
+                if (!targetAlbum.isNullOrBlank() &&
+                    !targetAlbum.equals("Unknown Album", ignoreCase = true) &&
+                    candidate.album.isNotBlank() &&
+                    !candidate.album.equals("Unknown Album", ignoreCase = true)
+                ) {
+                    jaroWinklerDistance(
+                        candidate.album.lowercase().trim(),
+                        targetAlbum.lowercase().trim(),
+                    )
+                } else {
+                    null
+                }
 
-            if (targetDurationMs != null && targetDurationMs > 0 && candidateDurationMs != null && candidateDurationMs > 0) {
-                val deltaSec = abs(targetDurationMs - candidateDurationMs) / 1000
+            val hasArtist = artistSim != null
+            val hasAlbum = albumSim != null
+
+            var totalScore =
+                when {
+                    hasArtist && hasAlbum -> (titleSim * 0.5f) + (artistSim!! * 0.3f) + (albumSim!! * 0.2f)
+                    hasArtist && !hasAlbum -> (titleSim * 0.625f) + (artistSim!! * 0.375f)
+                    !hasArtist && hasAlbum -> (titleSim * 0.714f) + (albumSim!! * 0.286f)
+                    else -> {
+                        // When neither artist nor album confirmation is available, cap unverified title matches at < 0.85
+                        if (titleSim >= 1.0f) 0.80f else (titleSim * 0.80f)
+                    }
+                }
+
+            val effectiveCandidateDuration = candidateDurationMs ?: candidate.durationMs
+            if (targetDurationMs != null && targetDurationMs > 0 && effectiveCandidateDuration != null && effectiveCandidateDuration > 0) {
+                val deltaSec = abs(targetDurationMs - effectiveCandidateDuration) / 1000
                 if (deltaSec > 30) {
                     totalScore *= 0.7f
                 } else if (deltaSec > 15) {

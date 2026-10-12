@@ -30,7 +30,7 @@ dependencies {
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
-    implementation(libs.jaudiotagger)
+    api(libs.jaudiotagger)
     // Reads LRCLIB's Lyricsfile (YAML) for word-timed lyrics; data only, no class instantiation.
     implementation(libs.snakeyaml.engine)
     implementation(libs.androidx.core.ktx)

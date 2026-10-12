@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -208,6 +209,7 @@ fun SmartPlaylistDetailScreen(
     val candidates by libraryViewModel.metadataCandidates.collectAsState()
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
+    var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     UserMessageEffect(libraryViewModel.userMessage, snackbarHostState, libraryViewModel::consumeUserMessage)
@@ -222,6 +224,9 @@ fun SmartPlaylistDetailScreen(
             onFixTags = { song ->
                 songForFixTags = song
                 libraryViewModel.searchMetadataForSong(song)
+            },
+            onViewMetadata = { song ->
+                songForViewMetadata = song
             },
         )
 
@@ -274,6 +279,15 @@ fun SmartPlaylistDetailScreen(
                 libraryViewModel.writeTags(song, title, artist, album, year, genre, bpm)
                 songForFixTags = null
             },
+        )
+    }
+
+    songForViewMetadata?.let { song ->
+        ViewMetadataScreen(
+            song = song,
+            viewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+            libraryViewModel = libraryViewModel,
+            onDismiss = { songForViewMetadata = null },
         )
     }
 

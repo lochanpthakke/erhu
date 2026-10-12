@@ -48,6 +48,8 @@ interface LibraryRepository {
 
     fun searchSongs(query: String): Flow<List<Song>>
 
+    suspend fun updateFilePath(songId: Long, newPath: String): AppResult<Unit>
+
     /** Emits false when the song is not a favorite or no longer exists. */
     fun observeIsFavorite(songId: Long): Flow<Boolean>
 

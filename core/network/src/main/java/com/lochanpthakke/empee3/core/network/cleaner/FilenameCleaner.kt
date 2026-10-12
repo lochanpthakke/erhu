@@ -35,6 +35,16 @@ class FilenameCleaner
                 clean = clean.replace(LEADING_TRACK_NUMBER_REGEX, "")
             }
 
+            // Extract attribution watermark patterns first before blocklist word stripping
+            ATTRIBUTION_WATERMARK_REGEX.findAll(clean).forEach { match ->
+                val rawToken = match.value.trim(' ', '-', '_', '[', ']', '(', ')')
+                val token = rawToken.replace('_', ' ').replace(EXTRA_WHITESPACE_REGEX, " ").trim()
+                if (token.length >= 3) {
+                    extractedJunk.add(token)
+                }
+            }
+            clean = clean.replace(ATTRIBUTION_WATERMARK_REGEX, "")
+
             // Extract domain and website watermark patterns
             DOMAIN_WATERMARK_REGEX.findAll(clean).forEach { match ->
                 val token = match.value.trim('[', ']', '(', ')', ' ')
@@ -113,5 +123,6 @@ class FilenameCleaner
             private val DOMAIN_WATERMARK_REGEX = Regex("(?i)[a-zA-Z0-9-]+\\.(com|in|org|net|co|site|xyz|cc|io|club|mobi|audio|mp3)")
             private val BITRATE_REGEX = Regex("(?i)\\[?\\d{2,3}\\s*kbps]?|\\(128kbps\\)|\\(320kbps\\)|320kbps|128kbps|vbr|flac\\s*hd")
             private val BRACKET_NOISE_REGEX = Regex("(?i)\\[(official|video|audio|lyric|hd|4k|clean|remastered|mp3|download|single)]")
+            private val ATTRIBUTION_WATERMARK_REGEX = Regex("(?i)[_\\s-]+(tagged|downloaded|uploaded|ripped)[_\\s]+(by|from)[_\\s]+[a-zA-Z0-9._-]+$")
         }
     }

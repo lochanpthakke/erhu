@@ -60,6 +60,8 @@ import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 
+import androidx.hilt.navigation.compose.hiltViewModel
+
 /** Actions offered for a single song wherever it is listed. */
 internal class SongActions(
     val onToggleFavorite: (Song) -> Unit,
@@ -67,6 +69,7 @@ internal class SongActions(
     val onAddToQueue: (Song) -> Unit,
     val onAddToPlaylist: (Song) -> Unit,
     val onFixTags: (Song) -> Unit,
+    val onViewMetadata: (Song) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,6 +114,7 @@ fun LibraryScreen(
     val currentSongId by viewModel.currentSongId.collectAsState()
 
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
+    var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -126,6 +130,9 @@ fun LibraryScreen(
             onFixTags = { song ->
                 songForFixTags = song
                 viewModel.searchMetadataForSong(song)
+            },
+            onViewMetadata = { song ->
+                songForViewMetadata = song
             },
         )
 
@@ -310,6 +317,15 @@ fun LibraryScreen(
         )
     }
 
+    songForViewMetadata?.let { song ->
+        ViewMetadataScreen(
+            song = song,
+            viewModel = hiltViewModel(),
+            libraryViewModel = viewModel,
+            onDismiss = { songForViewMetadata = null },
+        )
+    }
+
     if (showNewPlaylist) {
         PlaylistNameDialog(
             title = "New playlist",
@@ -436,6 +452,13 @@ internal fun LibrarySongRow(
                     onClick = {
                         menuExpanded = false
                         actions.onFixTags(song)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("View metadata") },
+                    onClick = {
+                        menuExpanded = false
+                        actions.onViewMetadata(song)
                     },
                 )
                 if (onRemoveFromPlaylist != null) {

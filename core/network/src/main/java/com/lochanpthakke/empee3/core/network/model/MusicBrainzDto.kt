@@ -23,6 +23,8 @@ data class MusicBrainzRecordingDto(
 @Serializable
 data class MusicBrainzArtistCreditDto(
     val name: String,
+    @SerialName("joinphrase")
+    val joinPhrase: String? = null,
 )
 
 @Serializable

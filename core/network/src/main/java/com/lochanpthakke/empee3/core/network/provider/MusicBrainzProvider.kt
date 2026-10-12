@@ -21,18 +21,33 @@ class MusicBrainzProvider
         override suspend fun searchTrack(
             title: String,
             artist: String?,
+            album: String?,
         ): List<MetadataCandidate> {
             val query =
-                if (!artist.isNullOrBlank()) {
-                    "recording:\"$title\" AND artist:\"$artist\""
-                } else {
-                    "recording:\"$title\""
+                when {
+                    !artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true) ->
+                        "recording:\"$title\" AND artist:\"$artist\""
+                    !album.isNullOrBlank() && !album.equals("Unknown Album", ignoreCase = true) ->
+                        "recording:\"$title\" AND release:\"$album\""
+                    else -> "recording:\"$title\""
                 }
 
             return try {
                 val response = musicBrainzApi.searchRecording(query)
                 response.recordings.map { dto ->
-                    val artistName = dto.artistCredit.firstOrNull()?.name ?: "Unknown Artist"
+                    val artistName =
+                        if (dto.artistCredit.isNotEmpty()) {
+                            val hasJoinPhrases = dto.artistCredit.any { !it.joinPhrase.isNullOrBlank() }
+                            if (hasJoinPhrases) {
+                                dto.artistCredit.joinToString("") { credit ->
+                                    credit.name + (credit.joinPhrase ?: "")
+                                }.trim()
+                            } else {
+                                dto.artistCredit.joinToString(", ") { it.name }.trim()
+                            }
+                        } else {
+                            "Unknown Artist"
+                        }
                     val firstRelease = dto.releases.firstOrNull()
                     val albumTitle = firstRelease?.title ?: "Unknown Album"
                     val yearStr = firstRelease?.date?.take(4)
@@ -44,6 +59,7 @@ class MusicBrainzProvider
                         artist = artistName,
                         album = albumTitle,
                         year = year,
+                        durationMs = dto.length,
                         coverArtUrl = null,
                         sourceName = providerName,
                     )
