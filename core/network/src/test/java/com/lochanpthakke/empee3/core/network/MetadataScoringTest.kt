@@ -142,4 +142,25 @@ class MetadataScoringTest {
         assertEquals("My Song", cleaned.title)
         assertNull(cleaned.artistGuess)
     }
+
+    @Test
+    fun separatorsApostrophesAndFeaturedCredits_dontLowerTheScore() {
+        val scorer = MetadataScorer()
+        val tyler =
+            MetadataCandidate(
+                id = "1",
+                title = "IGOR\u2019S THEME",
+                artist = "Tyler, The Creator",
+                album = "IGOR",
+            )
+        val score = scorer.scoreCandidate(tyler, "IGOR'S THEME", "Tyler/ The Creator", "Igor").confidenceScore
+        assertEquals(1.0f, score, 0.001f)
+
+        val runaway = tyler.copy(title = "Runaway", artist = "Kanye West feat. Pusha T", album = "")
+        assertEquals(1.0f, scorer.scoreCandidate(runaway, "Runaway", "Kanye West").confidenceScore, 0.001f)
+
+        // A different artist still scores low.
+        val other = tyler.copy(title = "Thank You", artist = "Dido", album = "No Angel")
+        assertTrue(scorer.scoreCandidate(other, "Thank You", "Tyler/ The Creator", "IGOR").confidenceScore < 0.85f)
+    }
 }

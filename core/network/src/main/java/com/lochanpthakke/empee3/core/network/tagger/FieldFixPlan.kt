@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.network.tagger
 
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataFixAction
+import com.lochanpthakke.empee3.core.network.scorer.foldForMatch
 
 /** A tag a metadata fix can change. */
 enum class FixField { TITLE, ARTIST, ALBUM, YEAR, GENRE, ARTWORK }
@@ -53,7 +54,7 @@ data class FieldFixPlan(
  * - only the action's fields are considered;
  * - a missing, blank or placeholder value ("Unknown Artist", …) is never written;
  * - an artist credit that already contains the match's artist (e.g. with "feat.") is kept;
- * - All Fields replaces the title, but fills artist, album, genre and artwork only where the file
+ * - All Fields replaces the title (unless it differs only in case or punctuation), but fills artist, album, genre and artwork only where the file
  *   has none, so a valid artist or album (and the library's grouping by them) or cover is never
  *   replaced; the single-field actions replace explicitly;
  * - the year counts as missing when blank or 1970 (a downloader placeholder): All Fields fills it
@@ -94,7 +95,14 @@ fun planFieldFix(
         }
     }
 
-    val title = text(FixField.TITLE, "title", local.title, match.title, keepValidLocal = false)
+    val sameTitleSpelling = isUsableTag(local.title) && foldForMatch(local.title) == foldForMatch(match.title)
+    val title =
+        if (fillOnly && FixField.TITLE in fields && sameTitleSpelling) {
+            // Same title apart from case or punctuation ("IGOR'S" vs "IGOR’S"): the file's spelling stays.
+            null.also { if (local.title.trim() != match.title.trim()) notes += "Kept the existing title \"${local.title.trim()}\"" }
+        } else {
+            text(FixField.TITLE, "title", local.title, match.title, keepValidLocal = false)
+        }
     val artist =
         if (FixField.ARTIST in fields && isUsableTag(local.artist) && creditContains(local.artist, match.artist)) {
             null.also { if (!sameText(local.artist, match.artist)) notes += "Kept the existing artist credit \"${local.artist.trim()}\"" }

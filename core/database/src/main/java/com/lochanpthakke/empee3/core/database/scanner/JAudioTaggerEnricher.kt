@@ -24,6 +24,22 @@ class JAudioTaggerEnricher
                 .level = Level.OFF
         }
 
+        /** One text field as the file's own tag stores it, or null when it can't be read. */
+        @Suppress("TooGenericExceptionCaught")
+        fun readTextTag(
+            filePath: String,
+            key: FieldKey,
+        ): String? =
+            try {
+                File(filePath)
+                    .takeIf { it.exists() }
+                    ?.let { AudioFileIO.read(it).tag?.getFirst(key) }
+                    ?.takeIf { it.isNotBlank() }
+            } catch (e: Exception) {
+                logger.w(TAG, "Couldn't read $key from $filePath: ${e.message}")
+                null
+            }
+
         @Suppress("TooGenericExceptionCaught")
         fun extractYearFromId3Header(filePath: String): Int {
             val file = File(filePath)

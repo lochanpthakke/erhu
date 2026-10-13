@@ -183,6 +183,14 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   ("1970-11-19"); the writer now deletes YEAR first and verifies the exact read-back. ID3v2.3 can't
   store year-month (it invents "-01"), so those are saved as the year with a note.
 
+### 5.7 Mojibake + matching (2026-10-13, UNCOMMITTED, not installed)
+- "IGORâ€™S THEME": the file's UTF-16 TIT2 is correct; Android's MediaStore misreads it (string-dependent
+  charset guess; "WHAT’S GOOD" in an identical tag is fine). Scanner now keeps the file tag's title when
+  MediaStore's value is exactly its Windows-1252 misreading (`MojibakeText.correctedFromTag`). No file rewrite.
+- Matching: `TrackMatcher` searches tag title/artist first, file-name variants after, dedupes, and scores
+  against the embedded identity (not the query text); ties that would write different tags -> NEEDS_REVIEW.
+- Library audit (read-only, 153 songs): 1 misread title, 0 corrupted files, 75 year-1970, 142 no genre.
+
 ## 6. Last known state
 - `kshitij` == `origin/kshitij` == `4485552`, working tree clean (this file is new and untracked).
 - Last APK installed on the S23: 2026-10-11 21:01 (preview-icon build). The merged build with

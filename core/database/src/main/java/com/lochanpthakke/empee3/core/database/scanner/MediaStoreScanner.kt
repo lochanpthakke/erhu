@@ -13,6 +13,7 @@ import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import androidx.datastore.core.DataStore
 import com.lochanpthakke.empee3.core.common.logging.Logger
+import com.lochanpthakke.empee3.core.common.text.MojibakeText
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
 import com.lochanpthakke.empee3.core.database.entity.SongEntity
 import com.lochanpthakke.empee3.core.database.library.LibraryModelBuilder
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import org.jaudiotagger.tag.FieldKey
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -145,7 +147,7 @@ class MediaStoreScanner
                                 continue
                             }
 
-                            val title = c.getString(titleColumn)?.takeIf { it.isNotBlank() } ?: "Unknown Title"
+                            val indexedTitle = c.getString(titleColumn)?.takeIf { it.isNotBlank() } ?: "Unknown Title"
                             val rawArtist =
                                 c
                                     .getString(artistColumn)
@@ -166,6 +168,12 @@ class MediaStoreScanner
                                 scannedCount++
                                 continue
                             }
+                            // Android's scanner misreads some UTF-8 titles as Windows-1252 ("IGORâ€™S THEME"):
+                            // when the file's own tag proves it, keep the tag's text.
+                            val title =
+                                MojibakeText.correctedFromTag(indexedTitle) {
+                                    jaudioTaggerEnricher.readTextTag(filePath, FieldKey.TITLE)
+                                }
                             val rawTrackValue = c.getInt(trackColumn)
                             val trackNumber = rawTrackValue % 1000
 

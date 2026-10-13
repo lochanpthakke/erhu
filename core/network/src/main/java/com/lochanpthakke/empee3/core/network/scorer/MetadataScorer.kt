@@ -21,11 +21,7 @@ class MetadataScorer
             targetDurationMs: Long? = null,
             candidateDurationMs: Long? = candidate.durationMs,
         ): MetadataCandidate {
-            val titleSim =
-                jaroWinklerDistance(
-                    candidate.title.lowercase().trim(),
-                    targetTitle.lowercase().trim(),
-                )
+            val titleSim = textSimilarity(candidate.title, targetTitle)
 
             val artistSim =
                 if (!targetArtist.isNullOrBlank() &&
@@ -33,9 +29,10 @@ class MetadataScorer
                     candidate.artist.isNotBlank() &&
                     !candidate.artist.equals("Unknown Artist", ignoreCase = true)
                 ) {
-                    jaroWinklerDistance(
-                        candidate.artist.lowercase().trim(),
-                        targetArtist.lowercase().trim(),
+                    // "A feat. B" against "A": the credited artist is the same.
+                    max(
+                        textSimilarity(candidate.artist, targetArtist),
+                        textSimilarity(primaryArtist(candidate.artist), primaryArtist(targetArtist)),
                     )
                 } else {
                     null
@@ -47,10 +44,7 @@ class MetadataScorer
                     candidate.album.isNotBlank() &&
                     !candidate.album.equals("Unknown Album", ignoreCase = true)
                 ) {
-                    jaroWinklerDistance(
-                        candidate.album.lowercase().trim(),
-                        targetAlbum.lowercase().trim(),
-                    )
+                    textSimilarity(candidate.album, targetAlbum)
                 } else {
                     null
                 }
@@ -88,6 +82,20 @@ class MetadataScorer
 
             return candidate.copy(confidenceScore = totalScore.coerceIn(0.0f, 1.0f))
         }
+
+        /**
+         * Similarity that ignores spelling noise: case, accents, typographic quotes and dashes, and
+         * separators ("Tyler/ The Creator" = "Tyler, The Creator", "IGOR’S" = "IGOR'S"). The plain
+         * comparison is kept as a floor, so this can only find two spellings closer, never further.
+         */
+        private fun textSimilarity(
+            a: String,
+            b: String,
+        ): Float =
+            max(
+                jaroWinklerDistance(a.lowercase().trim(), b.lowercase().trim()),
+                jaroWinklerDistance(foldForMatch(a), foldForMatch(b)),
+            )
 
         private fun jaroWinklerDistance(
             s1: String,
@@ -147,3 +155,21 @@ class MetadataScorer
             const val VERSION_MISMATCH_FACTOR = 0.5f
         }
     }
+
+private val ACCENTS = Regex("""\p{Mn}+""")
+private val APOSTROPHES = Regex("""['‘’ʼ`´]""")
+private val NOT_WORD = Regex("""[^\p{L}\p{N}]+""")
+private val FEATURING = Regex("""\s+(?:feat\.?|ft\.?|featuring)\s+.*$""", RegexOption.IGNORE_CASE)
+
+/** Lowercase, accents and apostrophes removed, every other separator a single space. */
+internal fun foldForMatch(text: String): String =
+    java.text.Normalizer
+        .normalize(text, java.text.Normalizer.Form.NFKD)
+        .replace(ACCENTS, "")
+        .lowercase()
+        .replace(APOSTROPHES, "")
+        .replace(NOT_WORD, " ")
+        .trim()
+
+/** The credit without its "feat." part: "Kanye West feat. Pusha T" -> "Kanye West". */
+internal fun primaryArtist(credit: String): String = credit.replace(FEATURING, "").trim()

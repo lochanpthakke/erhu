@@ -347,4 +347,21 @@ class JAudioTaggerWriterTest {
         assertTrue("$result", (result as AppResult.Error).error is AppError.TagWriteError)
         assertArrayEquals(before, store.files.getValue(mp3Uri))
     }
+
+    // ---- Unicode text survives a write (the corruption seen on the phone is not from this path)
+
+    @Test
+    fun id3v23_unicodeTitleRoundTrips_andOtherTagsAreKept() {
+        seedMp3With1970()
+        val titles = listOf("IGOR\u2019S THEME", "Beyonc\u00e9 \u2014 D\u00e9j\u00e0 Vu", "\u6771\u4eac \ud83c\udfb5", "\u0416\u0438\u0437\u043d\u044c")
+        for (title in titles) {
+            val result = write(TagWriteRequest(mp3Uri, mp3Path, title = title))
+            assertTrue("$title: $result", result is AppResult.Success)
+            val tag = storedMp3Tag()
+            assertEquals(title, tag.getFirst(FieldKey.TITLE))
+            assertEquals("Kanye West", tag.getFirst(FieldKey.ARTIST))
+            assertEquals("Rap", tag.getFirst(FieldKey.GENRE))
+            assertEquals("1970", tag.getFirst(FieldKey.YEAR))
+        }
+    }
 }

@@ -237,4 +237,19 @@ class FieldFixPlanTest {
         assertEquals("Runaway", title.newValue)
         assertNull("a placeholder is shown as empty", result.changes.single { it.field == FixField.ARTIST }.oldValue)
     }
+
+    // ---- titles that differ only in spelling
+
+    @Test
+    fun allFields_keepsATitleThatDiffersOnlyInPunctuationOrCase() {
+        // The file said IGOR'S THEME; MusicBrainz spells it IGOR’S THEME.
+        val local = messy.copy(title = "IGOR'S THEME")
+        val curly = match.copy(title = "IGOR\u2019S THEME")
+        val result = plan(MetadataFixAction.ALL_FIELDS, local = local, candidate = curly)
+        assertNull(result.request?.title)
+        assertTrue(result.notes.contains("Kept the existing title \"IGOR'S THEME\""))
+        assertNull(plan(MetadataFixAction.ALL_FIELDS, local = messy.copy(title = "earfquake"), candidate = match.copy(title = "EARFQUAKE")).request?.title)
+        // Asked for explicitly, the provider's spelling is written.
+        assertEquals("IGOR\u2019S THEME", plan(MetadataFixAction.TITLE_ONLY, local = local, candidate = curly).request?.title)
+    }
 }

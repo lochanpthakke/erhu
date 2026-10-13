@@ -24,8 +24,13 @@ import com.lochanpthakke.empee3.core.model.TagChange
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsRepository
 import com.lochanpthakke.empee3.core.network.lyrics.ProviderResponse
+import com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse
 import com.lochanpthakke.empee3.core.network.repository.GenreLookup
+import com.lochanpthakke.empee3.core.network.repository.MatchDecision
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
+import com.lochanpthakke.empee3.core.network.repository.TrackIdentity
+import com.lochanpthakke.empee3.core.network.repository.TrackMatcher
+import com.lochanpthakke.empee3.core.network.repository.usableIdentityText
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
 import com.lochanpthakke.empee3.core.network.tagger.EditableTags
@@ -107,6 +112,7 @@ class LibraryViewModel
         private val fileRenamer: com.lochanpthakke.empee3.core.network.tagger.FileRenamer,
         private val titleCandidateGenerator: com.lochanpthakke.empee3.core.network.cleaner.TitleCandidateGenerator,
         private val embeddedTagReader: EmbeddedTagReader,
+        private val trackMatcher: TrackMatcher,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -777,82 +783,81 @@ class LibraryViewModel
                             val cleanerResult = (metadataRepository as? com.lochanpthakke.empee3.core.network.repository.MetadataRepositoryImpl)?.let {
                                 metadataRepository.cleanFilename(rawFileName, activeLearnedTokens)
                             }
-                            val searchTitle = cleanerResult?.title?.ifBlank { item.song.title } ?: item.song.title
-                            val searchArtist = cleanerResult?.artistGuess ?: item.song.artist.takeIf { it != "Unknown Artist" }
-
-                            val candidateTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens)
-                            var detailedResponse: com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse? = null
-                            var best: com.lochanpthakke.empee3.core.model.MetadataCandidate? = null
-                            var successfulTitle: String = searchTitle
-
-                            for (queryTitle in candidateTitles) {
-                                val queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
-                                val res = metadataRepository.searchAndScoreTrackDetailed(
-                                    title = queryTitle,
-                                    artist = queryArtist,
-                                    album = item.song.album,
-                                    durationMs = item.song.durationMs,
-                                    sourceProvider = provider,
-                                ).getOrDefault(com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse(emptyList(), emptyList()))
-
-                                val top = res.candidates.firstOrNull()
-                                if (top != null) {
-                                    if (best == null || top.confidenceScore > best.confidenceScore) {
-                                        best = top
-                                        detailedResponse = res
-                                        successfulTitle = queryTitle
-                                    }
-                                    if (top.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
-                                        break
-                                    }
-                                } else if (detailedResponse == null) {
-                                    detailedResponse = res
+                            // The file's own tags are the track's identity; the file name is only a fallback
+                            // (downloaders shorten it: "THANK YOU.mp3" holds "GONE, GONE / THANK YOU").
+                            val embedded = filePath?.let { embeddedTagReader.readEmbeddedTags(it) }
+                            val identity =
+                                TrackIdentity(
+                                    title = usableIdentityText(embedded?.title) ?: usableIdentityText(item.song.title),
+                                    artist = usableIdentityText(embedded?.artist) ?: usableIdentityText(item.song.artist),
+                                    album = usableIdentityText(embedded?.album) ?: usableIdentityText(item.song.album),
+                                    durationMs = item.song.durationMs.takeIf { it > 0 },
+                                    fileTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens),
+                                    fileArtist = usableIdentityText(cleanerResult?.artistGuess),
+                                )
+                            val result =
+                                trackMatcher.match(identity) { query ->
+                                    metadataRepository
+                                        .searchAndScoreTrackDetailed(
+                                            title = query.title,
+                                            artist = query.artist?.takeUnless { it.equals(query.title, ignoreCase = true) },
+                                            album = identity.album,
+                                            durationMs = identity.durationMs,
+                                            sourceProvider = provider,
+                                        ).getOrDefault(DetailedSearchResponse(emptyList(), emptyList()))
                                 }
-                            }
-
-                            val candidates = detailedResponse?.candidates ?: emptyList()
-                            val outcomes = detailedResponse?.providerOutcomes ?: emptyList()
+                            val candidates = result.candidates
+                            val outcomes = result.providerOutcomes
 
                             val finalStatus: String
                             val finalReason: String?
                             val tagRequest: TagWriteRequest?
 
-                            when {
-                                filePath == null -> {
-                                    finalStatus = "FAILED"
-                                    finalReason = "FILE_NOT_FOUND"
-                                    tagRequest = null
-                                }
-                                best == null || best.confidenceScore < UNCERTAIN_THRESHOLD -> {
-                                    finalStatus = "FAILED"
-                                    finalReason = (if (best == null) providerFailureSummary(outcomes) else null) ?: "NO_MATCH"
-                                    tagRequest = null
-                                }
-                                best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> {
-                                    finalStatus = "NEEDS_REVIEW"
-                                    finalReason = "LOW_CONFIDENCE"
-                                    tagRequest = null
-                                }
-                                else -> {
-                                    val plan = planFix(item.song, filePath, best, candidates, action)
-                                    plans[i] = plan
-                                    if (plan.request == null) {
-                                        // Nothing to write is not a fix: say why instead of reporting success.
-                                        finalStatus = "UNCHANGED"
-                                        finalReason = plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
+                            val decision = result.decision
+                            if (filePath == null) {
+                                finalStatus = "FAILED"
+                                finalReason = "FILE_NOT_FOUND"
+                                tagRequest = null
+                            } else {
+                                when (decision) {
+                                    is MatchDecision.NoMatch -> {
+                                        finalStatus = "FAILED"
+                                        val providerFailure = if (candidates.isEmpty()) providerFailureSummary(outcomes) else null
+                                        finalReason = providerFailure ?: decision.reason ?: "NO_MATCH"
                                         tagRequest = null
-                                    } else {
-                                        finalStatus = "FIXING"
-                                        finalReason = null
-                                        tagRequest = plan.request
+                                    }
+                                    is MatchDecision.LowConfidence -> {
+                                        finalStatus = "NEEDS_REVIEW"
+                                        finalReason = decision.reason
+                                        tagRequest = null
+                                    }
+                                    is MatchDecision.Ambiguous -> {
+                                        finalStatus = "NEEDS_REVIEW"
+                                        finalReason = decision.reason
+                                        tagRequest = null
+                                    }
+                                    is MatchDecision.Confident -> {
+                                        val plan = planFix(item.song, filePath, decision.match, candidates, action)
+                                        plans[i] = plan
+                                        if (plan.request == null) {
+                                            // Nothing to write is not a fix: say why instead of reporting success.
+                                            finalStatus = "UNCHANGED"
+                                            finalReason =
+                                                plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
+                                            tagRequest = null
+                                        } else {
+                                            finalStatus = "FIXING"
+                                            finalReason = null
+                                            tagRequest = plan.request
+                                        }
                                     }
                                 }
                             }
 
                             val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
                                 originalFilename = rawFileName,
-                                searchTitle = successfulTitle,
-                                searchArtist = searchArtist,
+                                searchTitle = result.queries.joinToString("\" · \"") { it.title },
+                                searchArtist = result.queries.firstOrNull()?.artist,
                                 targetDurationMs = item.song.durationMs.takeIf { it > 0 },
                                 providerOutcomes = outcomes,
                                 topCandidates = candidates.take(3),
@@ -1117,10 +1122,12 @@ class LibraryViewModel
             checkDateFormat: Boolean,
         ): LocalTrackTags {
             val embedded = embeddedTagReader.readEmbeddedTags(filePath)
+            // What the file says, which is what a write changes (the library's copy can differ, e.g.
+            // a title Android misread); the library's values only stand in for missing tags.
             return LocalTrackTags(
-                title = song.title,
-                artist = song.artist,
-                album = song.album,
+                title = embedded.title ?: song.title,
+                artist = embedded.artist ?: song.artist,
+                album = embedded.album ?: song.album,
                 genre = embedded.genre,
                 hasArtwork = embedded.artworkBytes != null,
                 tagsReadable = embedded.hasEmbeddedTag,
