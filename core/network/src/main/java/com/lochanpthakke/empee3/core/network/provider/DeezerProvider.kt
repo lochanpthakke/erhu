@@ -6,6 +6,7 @@ import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataProvider
 import com.lochanpthakke.empee3.core.network.api.DeezerApi
+import com.lochanpthakke.empee3.core.network.model.DeezerSearchResponse
 import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,24 +34,22 @@ class DeezerProvider
                     else -> title
                 }
 
-            return try {
-                val response = deezerApi.searchTrack(query)
-                response.data.map { dto ->
-                    MetadataCandidate(
-                        id = "deezer_${dto.id}",
-                        title = dto.title,
-                        artist = dto.artist?.name ?: "Unknown Artist",
-                        album = dto.album?.title ?: "Unknown Album",
-                        bpm = dto.bpm?.toInt()?.takeIf { it > 0 },
-                        durationMs = dto.duration?.times(1000L),
-                        coverArtUrl = dto.album?.coverXl ?: dto.album?.coverBig ?: dto.album?.coverMedium,
-                        sourceName = providerName,
-                    )
-                }
-            } catch (e: Exception) {
-                logger.w(TAG, "Deezer search failed: ${e.message}", e)
-                emptyList()
-            }
+            // Failures propagate: the repository reports them as FAILED, not as "no results".
+            return deezerTrackCandidates(deezerApi.searchTrack(query), providerName)
+        }
+
+        /**
+         * Genres of Deezer album [albumId] (Deezer has no per-track genre). Empty when the album
+         * lists none; throws when the lookup itself fails.
+         */
+        suspend fun fetchAlbumGenres(albumId: Long): List<String> {
+            val album = deezerApi.getAlbum(albumId)
+            album.error?.let { throw ProviderUnavailableException("Deezer: ${it.message ?: "album lookup failed"}") }
+            return album.genres
+                ?.data
+                .orEmpty()
+                .map { it.name.trim() }
+                .filter { it.isNotEmpty() }
         }
 
         override suspend fun fetchAlbumArt(
@@ -147,4 +146,36 @@ sealed interface ArtistArtworkLookup {
 
     /** The search itself failed; try again later. */
     data object Failed : ArtistArtworkLookup
+}
+
+/**
+ * Maps a track search response. Throws [ProviderUnavailableException] when Deezer answered with an
+ * error, or counted matches but returned none (results withheld in this country), so neither is
+ * reported as "no such track". Unknown names are left blank rather than set to a placeholder.
+ */
+internal fun deezerTrackCandidates(
+    response: DeezerSearchResponse,
+    providerName: String,
+): List<MetadataCandidate> {
+    response.error?.let { throw ProviderUnavailableException("Deezer: ${it.message ?: "search failed"}") }
+    if (response.data.isEmpty() && response.total > 0) {
+        throw ProviderUnavailableException(
+            "Deezer found ${response.total} matches but returned none: track search isn't available in this country",
+        )
+    }
+    return response.data.map { dto ->
+        MetadataCandidate(
+            id = "deezer_${dto.id}",
+            title = dto.title,
+            artist = dto.artist?.name.orEmpty(),
+            album = dto.album?.title.orEmpty(),
+            // Search results carry no BPM; track lookups report 0 for most tracks. Only a real value is kept.
+            bpm = dto.bpm?.toInt()?.takeIf { it > 0 },
+            durationMs = dto.duration?.times(1000L),
+            coverArtUrl = dto.album?.coverXl ?: dto.album?.coverBig ?: dto.album?.coverMedium,
+            sourceName = providerName,
+            deezerAlbumId = dto.album?.id,
+            versionNote = dto.titleVersion?.trim()?.takeIf { it.isNotEmpty() && !dto.title.contains(it, ignoreCase = true) },
+        )
+    }
 }

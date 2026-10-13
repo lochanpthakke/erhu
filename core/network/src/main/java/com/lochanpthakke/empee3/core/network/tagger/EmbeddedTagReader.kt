@@ -4,7 +4,10 @@ import com.lochanpthakke.empee3.core.common.logging.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.audio.mp3.MP3File
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.aiff.AiffTag
+import org.jaudiotagger.tag.id3.ID3v24Tag
 import java.io.File
 import java.util.logging.Level
 import javax.inject.Inject
@@ -127,6 +130,28 @@ class EmbeddedTagReader
                 } catch (e: Exception) {
                     logger.w(TAG, "Failed to read embedded tags for $filePath: ${e.message}", e)
                     EmbeddedTagData(hasEmbeddedTag = false)
+                }
+            }
+
+        /**
+         * Whether the file's tag can hold a year and month without a day. ID3v2.3 (and v2.2), which
+         * jaudiotagger also creates for untagged MP3s, stores a date as TYER + TDAT (day and month):
+         * "2010-11" becomes "2010-11-01". ID3v2.4, Vorbis comments, MP4 and WAV keep any precision.
+         * False when the file can't be read (the safe answer).
+         */
+        suspend fun canStoreYearMonth(filePath: String): Boolean =
+            withContext(Dispatchers.IO) {
+                try {
+                    val audioFile = AudioFileIO.read(File(filePath))
+                    val tag = audioFile.tag
+                    when {
+                        audioFile is MP3File -> audioFile.iD3v2Tag is ID3v24Tag
+                        tag is AiffTag -> tag.iD3Tag is ID3v24Tag
+                        else -> true
+                    }
+                } catch (e: Exception) {
+                    logger.w(TAG, "Couldn't check the tag format of $filePath: ${e.message}", e)
+                    false
                 }
             }
 

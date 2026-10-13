@@ -69,6 +69,12 @@ class ThemeRepositoryImpl
         private val _defaultStartSection = MutableStateFlow("TRACKS")
         override val defaultStartSection: StateFlow<String> = _defaultStartSection.asStateFlow()
 
+        private val _metadataProvider = MutableStateFlow("")
+        override val metadataProvider: StateFlow<String> = _metadataProvider.asStateFlow()
+
+        private val _metadataFixAction = MutableStateFlow("")
+        override val metadataFixAction: StateFlow<String> = _metadataFixAction.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -84,6 +90,8 @@ class ThemeRepositoryImpl
                 _isCustomScanLocationEnabled.value = proto.isCustomScanLocationEnabled
                 _scanLocationConfigured.value = proto.scanLocationConfigured
                 _defaultStartSection.value = proto.defaultStartSection.ifBlank { "TRACKS" }
+                _metadataProvider.value = proto.metadataProvider
+                _metadataFixAction.value = proto.metadataFixAction
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
@@ -132,6 +140,18 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setDefaultStartSection(section).build() }
                 _defaultStartSection.value = section
+            }
+
+        override suspend fun setMetadataProvider(provider: String): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setMetadataProvider(provider).build() }
+                _metadataProvider.value = provider
+            }
+
+        override suspend fun setMetadataFixAction(action: String): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setMetadataFixAction(action).build() }
+                _metadataFixAction.value = action
             }
 
         override suspend fun setCustomScanLocation(

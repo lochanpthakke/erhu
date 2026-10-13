@@ -15,6 +15,39 @@ data class DetailedSearchResponse(
     val providerOutcomes: List<ProviderOutcome>,
 )
 
+/** Outcome of a genre lookup for a matched track. */
+sealed interface GenreLookup {
+    data class Found(
+        val genre: String,
+        val source: String,
+    ) : GenreLookup
+
+    /** The lookup worked but gave no single genre; [reason] says why. */
+    data class NotFound(
+        val reason: String,
+    ) : GenreLookup
+
+    data class Failed(
+        val reason: String,
+    ) : GenreLookup
+}
+
+/** Provider names as stored in settings ("ALL", "Deezer", "MusicBrainz", …). */
+object MetadataSources {
+    const val ALL = "ALL"
+    const val MUSICBRAINZ = "MusicBrainz"
+    const val DEEZER = "Deezer"
+    const val LAST_FM = "LastFm"
+
+    /** Whether provider [providerName] is selected by [selection]; "Last.fm" and "LastFm" are the same. */
+    fun matches(
+        providerName: String,
+        selection: String,
+    ): Boolean = selection == ALL || key(providerName) == key(selection)
+
+    private fun key(name: String): String = name.lowercase().filter { it.isLetterOrDigit() }
+}
+
 interface MetadataRepository {
     fun cleanFilename(
         rawFilename: String,
@@ -62,6 +95,15 @@ interface MetadataRepository {
         album: String? = null,
         durationSec: Int? = null,
     ): AppResult<LyricsResult?>
+
+    /**
+     * The genre of a confident match: MusicBrainz's top-voted curated genre of the release group,
+     * or the first genre of the Deezer album. Album-level, never invented.
+     */
+    suspend fun lookupGenre(match: MetadataCandidate): GenreLookup
+
+    /** Downloads an image for embedding (artwork); fails rather than returning a non-image. */
+    suspend fun downloadArtwork(url: String): AppResult<ByteArray>
 
     /** Writes tags through the file's content URI; requires [checkTagWriteAccess] to be Granted. */
     suspend fun writeTagsToFile(request: TagWriteRequest): AppResult<Unit>

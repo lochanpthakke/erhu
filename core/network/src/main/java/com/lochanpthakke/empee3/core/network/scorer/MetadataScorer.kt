@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.network.scorer
 
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
+import com.lochanpthakke.empee3.core.network.lyrics.LyricsMatcher
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -78,6 +79,13 @@ class MetadataScorer
                 }
             }
 
+            // A live / remix / acoustic / … recording is a different version, however similar the
+            // names: such a candidate drops below the uncertain threshold and is never applied.
+            val candidateVersion = LyricsMatcher.strictTags("${candidate.title} ${candidate.versionNote.orEmpty()}")
+            if (candidateVersion != LyricsMatcher.strictTags(targetTitle)) {
+                totalScore *= VERSION_MISMATCH_FACTOR
+            }
+
             return candidate.copy(confidenceScore = totalScore.coerceIn(0.0f, 1.0f))
         }
 
@@ -132,5 +140,10 @@ class MetadataScorer
             }
 
             return jaro + prefix * 0.1f * (1.0f - jaro)
+        }
+
+        companion object {
+            /** Applied when version markers differ; keeps even a perfect name match below [UNCERTAIN_THRESHOLD]. */
+            const val VERSION_MISMATCH_FACTOR = 0.5f
         }
     }

@@ -93,7 +93,12 @@ class JAudioTaggerWriter
             request.title?.let { tag.setField(FieldKey.TITLE, it) }
             request.artist?.let { tag.setField(FieldKey.ARTIST, it) }
             request.album?.let { tag.setField(FieldKey.ALBUM, it) }
-            request.year?.let { tag.setField(FieldKey.YEAR, it.toString()) }
+            yearTagValue(request)?.let { value ->
+                // Without removing the old value first, ID3v2.3 keeps the old TYER: writing
+                // "2010-11-19" over "1970" read back as "1970-11-19" (jaudiotagger 3.0.1).
+                tag.deleteField(FieldKey.YEAR)
+                tag.setField(FieldKey.YEAR, value)
+            }
             request.genre?.let { tag.setField(FieldKey.GENRE, it) }
             request.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
             request.bpm?.let { tag.setField(FieldKey.BPM, it.toString()) }
@@ -131,10 +136,15 @@ class JAudioTaggerWriter
                 val actual = tag.getFirst(key)
                 if (actual != value) throw CannotWriteException("Verification failed for $key: '$actual'")
             }
-            if (request.year != null && !tag.getFirst(FieldKey.YEAR).startsWith(request.year.toString())) {
-                throw CannotWriteException("Verification failed for YEAR")
+            // The date must read back exactly: a format that changes it (ID3v2.3 turns "2010-11" into
+            // "2010-11-01") would store a date nobody gave, so the write is refused instead.
+            yearTagValue(request)?.let { expected ->
+                val actual = tag.getFirst(FieldKey.YEAR)
+                if (actual != expected) throw CannotWriteException("Verification failed for YEAR: wrote '$expected', file reads '$actual'")
             }
         }
+
+        private fun yearTagValue(request: TagWriteRequest): String? = request.releaseDate ?: request.year?.toString()
 
         private fun writeBack(
             contentUri: String,

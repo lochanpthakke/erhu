@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LastFmSearchResponse(
     val results: LastFmResultsDto? = null,
+    /** Set instead of [results] on failure, e.g. 10 = "Invalid API key". */
+    val error: Int? = null,
+    val message: String? = null,
 )
 
 @Serializable

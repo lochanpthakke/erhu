@@ -136,6 +136,12 @@ object LyricsMatcher {
         return (STRICT_TAGS + SOFT_TAGS).filterValues { it.containsMatchIn(text) }.keys
     }
 
+    /** Markers of a different recording (live, remix, acoustic, …) found in [text], normalised. */
+    fun strictTags(text: String): Set<String> {
+        val folded = fold(text)
+        return STRICT_TAGS.filterValues { it.containsMatchIn(folded) }.keys
+    }
+
     /** The title without bracketed notes, " - …" suffixes or credits, folded for comparison. */
     fun baseTitle(title: String): String {
         val withoutNotes = title.replace(BRACKETED, " ").replace(DASH_SUFFIX, "")

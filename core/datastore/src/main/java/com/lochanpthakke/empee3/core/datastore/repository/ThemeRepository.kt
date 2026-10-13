@@ -32,6 +32,12 @@ interface ThemeRepository {
     val scanLocationConfigured: StateFlow<Boolean>
     val defaultStartSection: StateFlow<String>
 
+    /** Metadata & Artwork provider choice as stored ("" until the user picks one). */
+    val metadataProvider: StateFlow<String>
+
+    /** Metadata & Artwork fix action name as stored ("" until the user picks one). */
+    val metadataFixAction: StateFlow<String>
+
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
     suspend fun setWidgetTheme(themeId: String): AppResult<Unit>
@@ -41,6 +47,10 @@ interface ThemeRepository {
     suspend fun setGlassEffectEnabled(enabled: Boolean): AppResult<Unit>
 
     suspend fun setDefaultStartSection(section: String): AppResult<Unit>
+
+    suspend fun setMetadataProvider(provider: String): AppResult<Unit>
+
+    suspend fun setMetadataFixAction(action: String): AppResult<Unit>
 
     suspend fun setCustomScanLocation(
         uri: String,

@@ -15,6 +15,11 @@ data class TagWriteRequest(
     val artist: String? = null,
     val album: String? = null,
     val year: Int? = null,
+    /**
+     * A full or partial release date ("2010-11-19", "2010-11", "2010") written as the file's year
+     * tag; takes the place of [year]. Only ever a value [ReleaseDate.tagValue] produced.
+     */
+    val releaseDate: String? = null,
     val genre: String? = null,
     val trackNumber: Int? = null,
     val bpm: Int? = null,
@@ -27,6 +32,7 @@ data class TagWriteRequest(
                 artist != null ||
                 album != null ||
                 year != null ||
+                releaseDate != null ||
                 genre != null ||
                 trackNumber != null ||
                 bpm != null ||
@@ -43,6 +49,7 @@ data class TagWriteRequest(
             artist == other.artist &&
             album == other.album &&
             year == other.year &&
+            releaseDate == other.releaseDate &&
             genre == other.genre &&
             trackNumber == other.trackNumber &&
             lyrics == other.lyrics &&
@@ -57,6 +64,7 @@ data class TagWriteRequest(
         result = 31 * result + (artist?.hashCode() ?: 0)
         result = 31 * result + (album?.hashCode() ?: 0)
         result = 31 * result + (year ?: 0)
+        result = 31 * result + (releaseDate?.hashCode() ?: 0)
         result = 31 * result + (genre?.hashCode() ?: 0)
         result = 31 * result + (trackNumber ?: 0)
         result = 31 * result + (lyrics?.hashCode() ?: 0)

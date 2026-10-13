@@ -47,6 +47,20 @@ class ThemeSelectionPersistenceTest {
     }
 
     @Test
+    fun metadataSourceAndFixAction_surviveRestart_andOtherSaves() {
+        assertEquals("", stored("default_dark").afterRestart().metadataProvider)
+        val chosen =
+            stored("default_dark")
+                .toBuilder()
+                .setMetadataProvider("MusicBrainz")
+                .setMetadataFixAction("GENRE_ONLY")
+                .build()
+        val afterPlayback = PersistedPlaybackState(listOf(1L), 0, 10L, false, RepeatMode.OFF).applyTo(chosen).afterRestart()
+        assertEquals("MusicBrainz", afterPlayback.metadataProvider)
+        assertEquals("GENRE_ONLY", afterPlayback.metadataFixAction)
+    }
+
+    @Test
     fun switchingThemes_persistsTheLatestChoice() {
         var proto = stored(BuiltInThemes.SYSTEM_DEFAULT_ID)
         proto = proto.toBuilder().setAppThemeId("default_dark").build().afterRestart()

@@ -2,7 +2,8 @@ package com.lochanpthakke.empee3.core.vybe
 
 /**
  * The text VYBE knows about a song, taken from the library as it is (no fetching):
- * blank or unknown fields are simply left out of its description.
+ * blank or unknown fields are simply left out of its description. [genre] is the file's genre tag;
+ * the metadata fixer writes it only from a provider (MusicBrainz / Deezer album genre), never a guess.
  */
 data class SongText(
     val songId: Long,
@@ -15,7 +16,13 @@ data class SongText(
     val lyrics: String? = null,
 )
 
-/** Builds the one-paragraph description of a song that VYBE embeds. Pure and deterministic. */
+/**
+ * Builds the one-paragraph description of a song that VYBE embeds. Pure and deterministic.
+ *
+ * The album name is left out on purpose: on the real library its words dominated mood queries
+ * (Experiment 3, 2026-10-09: "late night music" put 7 *Late Registration* songs in the top 10;
+ * without album names, 1). Albums are still found exactly through [VybeQueryRouter].
+ */
 object SongDescriber {
     /** Lyrics beyond this many characters are cut (at a word boundary). */
     const val LYRICS_EXCERPT_CHARS = 240
@@ -32,7 +39,6 @@ object SongDescriber {
         listOfNotNull(
             field("Title", song.title),
             field("Artist", song.artist),
-            field("Album", song.album),
             field("Genre", song.genre),
             song.year.takeIf { it in MIN_YEAR..MAX_YEAR }?.let { "Year: $it" },
             lyricsExcerpt(song.lyrics)?.let { "Lyrics: $it" },

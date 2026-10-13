@@ -39,6 +39,10 @@ message PlaybackStateProto {
   map<string, CollectionTransitionProto> pair_transitions = 24;
   // App-wide master switch and default. Absent = defaults (master on, default off).
   GlobalTransitionProto global_transitions = 25;
+  // Metadata & Artwork: provider ("ALL", "MusicBrainz", "Deezer") and MetadataFixAction name.
+  // Empty = defaults (all providers, all fields).
+  string metadata_provider = 26;
+  string metadata_fix_action = 27;
 }
 
 message GlobalTransitionProto {

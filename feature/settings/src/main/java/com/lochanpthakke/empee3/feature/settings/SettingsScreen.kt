@@ -29,6 +29,9 @@ import com.lochanpthakke.empee3.core.model.VisualizerMode
 import com.lochanpthakke.empee3.core.model.VisualizerSensitivity
 import com.lochanpthakke.empee3.core.model.VisualizerSmoothing
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
+import com.lochanpthakke.empee3.feature.library.METADATA_SOURCE_OPTIONS
+import com.lochanpthakke.empee3.feature.library.UNSUPPORTED_FIX_ACTIONS_NOTE
+import com.lochanpthakke.empee3.feature.library.summary
 import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.settings.component.SettingsChoiceRow
 import com.lochanpthakke.empee3.feature.settings.component.SettingsGroup
@@ -378,8 +381,9 @@ private fun MetadataSettingsSubPage(
         SettingsSection(
             title = "Tags",
             footer =
-                "Lookups use MusicBrainz, Deezer, Last.fm and LRCLIB. Tag writing needs write access to the file, " +
-                    "which Android may deny for files other apps created.",
+                "Tag fixes look up MusicBrainz and Deezer and write into the audio file itself; the library " +
+                    "updates after the rescan. Android asks before empee3 may modify files other apps created. " +
+                    "Online lyrics (LRCLIB) are separate: they're found on the Lyrics page and never written to files.",
         ) {
             SettingsGroup {
                 row {
@@ -393,34 +397,31 @@ private fun MetadataSettingsSubPage(
             }
         }
 
-        SettingsSection(title = "Primary Source Provider") {
+        SettingsSection(
+            title = "Primary Source Provider",
+            footer = "Last.fm isn't offered: it rejects the app's API key, and its search has no album, genre or year.",
+        ) {
             SettingsGroup(selectable = true) {
-                listOf(
-                    "ALL" to ("All Providers" to "Query Deezer, MusicBrainz, Last.fm and LRCLIB"),
-                    "Deezer" to ("Deezer" to "Query Deezer API exclusively"),
-                    "MusicBrainz" to ("MusicBrainz" to "Query MusicBrainz API exclusively"),
-                    "LastFm" to ("Last.fm" to "Query Last.fm API exclusively"),
-                ).forEach { (key, info) ->
-                    val (label, summary) = info
+                METADATA_SOURCE_OPTIONS.forEach { option ->
                     row {
                         SettingsChoiceRow(
-                            title = label,
-                            summary = summary,
-                            selected = selectedProvider.equals(key, ignoreCase = true),
-                            onClick = { viewModel.setSelectedProvider(key) },
+                            title = option.label,
+                            summary = option.summary,
+                            selected = selectedProvider == option.key,
+                            onClick = { viewModel.setSelectedProvider(option.key) },
                         )
                     }
                 }
             }
         }
 
-        SettingsSection(title = "Primary Fix Action") {
+        SettingsSection(title = "Primary Fix Action", footer = UNSUPPORTED_FIX_ACTIONS_NOTE) {
             SettingsGroup(selectable = true) {
-                com.lochanpthakke.empee3.core.model.MetadataFixAction.entries.forEach { action ->
+                com.lochanpthakke.empee3.core.model.MetadataFixAction.supported.forEach { action ->
                     row {
                         SettingsChoiceRow(
                             title = action.displayName,
-                            summary = if (action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS) "Fix title, artist, album, genre, bpm and artwork" else "Only update ${action.displayName.lowercase()} field",
+                            summary = action.summary(),
                             selected = selectedFixAction == action,
                             onClick = { viewModel.setSelectedFixAction(action) },
                         )

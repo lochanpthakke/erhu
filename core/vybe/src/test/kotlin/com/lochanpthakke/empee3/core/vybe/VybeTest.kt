@@ -60,10 +60,10 @@ class VybeTest {
     // ---- song descriptions
 
     @Test
-    fun `description uses the known fields only`() {
+    fun `description uses the known fields only and leaves the album name out`() {
         val song = SongText(1, "Lost In The World", "Kanye West", "My Beautiful Dark Twisted Fantasy", genre = "Hip-Hop", year = 2010)
         assertEquals(
-            "Title: Lost In The World. Artist: Kanye West. Album: My Beautiful Dark Twisted Fantasy. Genre: Hip-Hop. Year: 2010",
+            "Title: Lost In The World. Artist: Kanye West. Genre: Hip-Hop. Year: 2010",
             SongDescriber.describe(song),
         )
         val sparse = SongText(2, "Track 01", "<unknown>", " ", genre = null, year = 0)

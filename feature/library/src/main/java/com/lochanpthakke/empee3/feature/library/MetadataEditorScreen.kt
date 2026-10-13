@@ -98,12 +98,14 @@ fun MetadataEditorScreen(
     val searchAlbums by viewModel.searchAlbums.collectAsState()
     val searchArtists by viewModel.searchArtists.collectAsState()
 
-    val doneCount = repairQueue.count { it.status == "DONE" || it.status == "SUCCESS" }
+    val doneCount = repairQueue.count { it.status == "DONE" || it.status == "SUCCESS" || it.status == "PARTIAL_SUCCESS" }
+    val unchangedCount = repairQueue.count { it.status == "UNCHANGED" }
     val reviewCount = repairQueue.count { it.status == "NEEDS_REVIEW" }
     val failedCount = repairQueue.count { it.status == "FAILED" }
     val totalCount = repairQueue.size
-    val isQueueComplete = totalCount > 0 && repairQueue.none { it.status == "PENDING" || it.status == "FIXING" }
-    val progressFloat = if (totalCount > 0) doneCount.toFloat() / totalCount.toFloat() else 0f
+    val processedCount = repairQueue.count { it.status != "PENDING" && it.status != "FIXING" }
+    val isQueueComplete = totalCount > 0 && processedCount == totalCount
+    val progressFloat = if (totalCount > 0) processedCount.toFloat() / totalCount.toFloat() else 0f
 
     LaunchedEffect(isQueueComplete) {
         if (isQueueComplete) {
@@ -223,8 +225,8 @@ fun MetadataEditorScreen(
             val selectedProvider by viewModel.selectedProvider.collectAsState()
             val selectedFixAction by viewModel.selectedFixAction.collectAsState()
 
-            val providerOptions = listOf("ALL" to "All Sources", "Deezer" to "Deezer", "MusicBrainz" to "MusicBrainz", "LastFm" to "Last.fm")
-            val actionOptions = com.lochanpthakke.empee3.core.model.MetadataFixAction.entries
+            val providerOptions = METADATA_SOURCE_OPTIONS.map { it.key to it.label }
+            val actionOptions = com.lochanpthakke.empee3.core.model.MetadataFixAction.supported
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -332,7 +334,7 @@ fun MetadataEditorScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "IN QUEUE FOR FIXING ($doneCount / $totalCount Tracks)",
+                    text = "IN QUEUE FOR FIXING ($processedCount / $totalCount Tracks)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -446,6 +448,16 @@ fun MetadataEditorScreen(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                             )
+                                            if (queueItem.status == "UNCHANGED") {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Not changed: ${queueItem.failureReason.orEmpty()}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 3,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
                                             if (queueItem.status == "FAILED") {
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
@@ -467,11 +479,17 @@ fun MetadataEditorScreen(
                                                     contentDescription = "Fixing",
                                                     tint = MaterialTheme.colorScheme.primary,
                                                 )
-                                            "DONE", "SUCCESS" ->
+                                            "DONE", "SUCCESS", "PARTIAL_SUCCESS" ->
                                                 Icon(
                                                     imageVector = Icons.Default.CheckCircle,
                                                     contentDescription = "Done",
                                                     tint = MaterialTheme.colorScheme.primary,
+                                                )
+                                            "UNCHANGED" ->
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "Not changed",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             "NEEDS_REVIEW" ->
                                                 Icon(
@@ -661,6 +679,10 @@ fun MetadataEditorScreen(
             text = {
                 Column {
                     Text("✓ $doneCount tracks fixed successfully", fontWeight = FontWeight.Bold)
+                    if (unchangedCount > 0) {
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Text("• $unchangedCount tracks matched but nothing was written (see each track)")
+                    }
                     if (reviewCount > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         Text("🔍 $reviewCount tracks need manual review")

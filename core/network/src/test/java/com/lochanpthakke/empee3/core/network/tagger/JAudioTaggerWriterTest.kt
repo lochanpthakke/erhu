@@ -163,6 +163,27 @@ class JAudioTaggerWriterTest {
     }
 
     @Test
+    fun genreOnlyFix_writesTheGenreIntoTheFile_andKeepsEveryOtherTag() {
+        seedWithTags()
+        val match =
+            com.lochanpthakke.empee3.core.model
+                .MetadataCandidate("mb_1", "Some Other Title", "Some Other Artist", "Some Other Album", sourceName = "MusicBrainz")
+        val local = LocalTrackTags("Old Title", "Original Artist", "Original Album", genre = "Jazz")
+        val plan =
+            planFieldFix(uri, path, com.lochanpthakke.empee3.core.model.MetadataFixAction.GENRE_ONLY, local, match, "hip hop", null)
+
+        val result = write(plan.request!!)
+
+        assertTrue("$result", result is AppResult.Success)
+        val tag = storedTag()
+        assertEquals("hip hop", tag.getFirst(FieldKey.GENRE))
+        assertEquals("Old Title", tag.getFirst(FieldKey.TITLE))
+        assertEquals("Original Artist", tag.getFirst(FieldKey.ARTIST))
+        assertEquals("Original Album", tag.getFirst(FieldKey.ALBUM))
+        assertEquals(listOf(path), rescans)
+    }
+
+    @Test
     fun deniedWriteAccess_isReportedAsRecoverable_andFileIsUntouched() {
         seedWithTags()
         val before = store.files.getValue(uri).copyOf()
@@ -224,5 +245,106 @@ class JAudioTaggerWriterTest {
         write(TagWriteRequest(uri, path, title = "denied"))
 
         assertTrue(workDir.listFiles().orEmpty().isEmpty())
+    }
+
+    // ---- year / release date
+
+    @Test
+    fun releaseDate_replacesTheYear_withFullPrecision_andKeepsOtherTags() {
+        seedWithTags()
+        assertTrue(write(TagWriteRequest(uri, path, year = 1970)) is AppResult.Success)
+
+        val result = write(TagWriteRequest(uri, path, releaseDate = "2010-11-19"))
+
+        assertTrue("$result", result is AppResult.Success)
+        val tag = storedTag()
+        assertEquals("2010-11-19", tag.getFirst(FieldKey.YEAR))
+        assertEquals("Old Title", tag.getFirst(FieldKey.TITLE))
+        assertEquals("Original Artist", tag.getFirst(FieldKey.ARTIST))
+        assertEquals("Original Album", tag.getFirst(FieldKey.ALBUM))
+        assertEquals("Jazz", tag.getFirst(FieldKey.GENRE))
+    }
+
+    @Test
+    fun aLaterYearOnlyWrite_leavesNoPartOfTheOldDate() {
+        seedWithTags()
+        write(TagWriteRequest(uri, path, releaseDate = "2010-11-19"))
+
+        assertTrue(write(TagWriteRequest(uri, path, releaseDate = "2005")) is AppResult.Success)
+
+        assertEquals("2005", storedTag().getFirst(FieldKey.YEAR))
+    }
+
+    @Test
+    fun deniedWriteAccess_forAYearFix_isReported_andTheFileIsUntouched() {
+        seedWithTags()
+        val before = store.files.getValue(uri).copyOf()
+        store.denyWrites = true
+
+        val result = write(TagWriteRequest(uri, path, releaseDate = "2010-11-19"))
+
+        assertTrue("$result", (result as AppResult.Error).error is AppError.WriteAccessRequired)
+        assertArrayEquals(before, store.files.getValue(uri))
+        assertTrue(rescans.isEmpty())
+    }
+
+    // An MP3 with an ID3v2.3 tag (jaudiotagger's default, and what the library's files carry).
+
+    private val mp3Uri = "content://media/external/audio/media/43"
+    private val mp3Path = "/storage/emulated/0/Music/test.mp3"
+
+    /** Silent MPEG-1 Layer III frames (128 kbit/s, 44.1 kHz): enough audio for jaudiotagger to read. */
+    private fun mp3Bytes(): ByteArray {
+        val frameLength = 417
+        val frames = 40
+        return ByteArray(frameLength * frames).also { bytes ->
+            for (f in 0 until frames) {
+                val at = f * frameLength
+                bytes[at] = 0xFF.toByte()
+                bytes[at + 1] = 0xFB.toByte()
+                bytes[at + 2] = 0x90.toByte()
+                bytes[at + 3] = 0x64.toByte()
+            }
+        }
+    }
+
+    private fun storedMp3Tag(): org.jaudiotagger.tag.Tag {
+        val file = File(tmp.root, "readback-${System.nanoTime()}.mp3").apply { writeBytes(store.files.getValue(mp3Uri)) }
+        return AudioFileIO.read(file).tag
+    }
+
+    private fun seedMp3With1970() {
+        store.files[mp3Uri] = mp3Bytes()
+        val seeded = write(TagWriteRequest(mp3Uri, mp3Path, title = "Runaway", artist = "Kanye West", genre = "Rap", year = 1970))
+        assertTrue("seeding failed: $seeded", seeded is AppResult.Success)
+        assertTrue(storedMp3Tag() is org.jaudiotagger.tag.id3.ID3v23Tag)
+        assertEquals("1970", storedMp3Tag().getFirst(FieldKey.YEAR))
+    }
+
+    /** jaudiotagger alone read "2010-11-19" back as "1970-11-19" here: the old year frame survived. */
+    @Test
+    fun id3v23_fullDateReplacesThe1970Year() {
+        seedMp3With1970()
+
+        val result = write(TagWriteRequest(mp3Uri, mp3Path, releaseDate = "2010-11-19"))
+
+        assertTrue("$result", result is AppResult.Success)
+        val tag = storedMp3Tag()
+        assertEquals("2010-11-19", tag.getFirst(FieldKey.YEAR))
+        assertEquals("Runaway", tag.getFirst(FieldKey.TITLE))
+        assertEquals("Kanye West", tag.getFirst(FieldKey.ARTIST))
+        assertEquals("Rap", tag.getFirst(FieldKey.GENRE))
+    }
+
+    /** ID3v2.3 would store "2010-11" as "2010-11-01", a day nobody gave: the write is refused instead. */
+    @Test
+    fun id3v23_yearMonthIsRefused_notStoredWithAnInventedDay() {
+        seedMp3With1970()
+        val before = store.files.getValue(mp3Uri).copyOf()
+
+        val result = write(TagWriteRequest(mp3Uri, mp3Path, releaseDate = "2010-11"))
+
+        assertTrue("$result", (result as AppResult.Error).error is AppError.TagWriteError)
+        assertArrayEquals(before, store.files.getValue(mp3Uri))
     }
 }

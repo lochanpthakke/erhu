@@ -17,15 +17,29 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
+import com.lochanpthakke.empee3.core.model.MetadataFixAction
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.model.TagChange
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsRepository
 import com.lochanpthakke.empee3.core.network.lyrics.ProviderResponse
+import com.lochanpthakke.empee3.core.network.repository.GenreLookup
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
 import com.lochanpthakke.empee3.core.network.tagger.EditableTags
+import com.lochanpthakke.empee3.core.network.tagger.EmbeddedTagReader
+import com.lochanpthakke.empee3.core.network.tagger.FieldFixPlan
+import com.lochanpthakke.empee3.core.network.tagger.FixField
+import com.lochanpthakke.empee3.core.network.tagger.LocalTrackTags
+import com.lochanpthakke.empee3.core.network.tagger.ReleaseDate
+import com.lochanpthakke.empee3.core.network.tagger.ReleaseDateDecision
+import com.lochanpthakke.empee3.core.network.tagger.fields
+import com.lochanpthakke.empee3.core.network.tagger.isUsableTag
+import com.lochanpthakke.empee3.core.network.tagger.isUsableYearTag
+import com.lochanpthakke.empee3.core.network.tagger.planFieldFix
+import com.lochanpthakke.empee3.core.network.tagger.releaseDateFor
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
 import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
@@ -51,6 +65,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalDate
 import javax.inject.Inject
 
 data class RepairQueueItem(
@@ -91,6 +106,7 @@ class LibraryViewModel
         private val learnedWatermarkDao: com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao,
         private val fileRenamer: com.lochanpthakke.empee3.core.network.tagger.FileRenamer,
         private val titleCandidateGenerator: com.lochanpthakke.empee3.core.network.cleaner.TitleCandidateGenerator,
+        private val embeddedTagReader: EmbeddedTagReader,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -182,11 +198,17 @@ class LibraryViewModel
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
 
-        private val _selectedProvider = MutableStateFlow("ALL") // "ALL", "Deezer", "MusicBrainz", "LastFm"
-        val selectedProvider: StateFlow<String> = _selectedProvider.asStateFlow()
+        /** Metadata & Artwork source, stored in settings; one of [METADATA_SOURCE_OPTIONS]. */
+        val selectedProvider: StateFlow<String> =
+            themeRepository.metadataProvider
+                .map(::offeredMetadataSource)
+                .stateIn(viewModelScope, SharingStarted.Eagerly, offeredMetadataSource(themeRepository.metadataProvider.value))
 
-        private val _selectedFixAction = MutableStateFlow(com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS)
-        val selectedFixAction: StateFlow<com.lochanpthakke.empee3.core.model.MetadataFixAction> = _selectedFixAction.asStateFlow()
+        /** Metadata & Artwork fix action, stored in settings; always a supported action. */
+        val selectedFixAction: StateFlow<MetadataFixAction> =
+            themeRepository.metadataFixAction
+                .map(MetadataFixAction::fromStored)
+                .stateIn(viewModelScope, SharingStarted.Eagerly, MetadataFixAction.fromStored(themeRepository.metadataFixAction.value))
 
         enum class RepairMode { AUTOMATIC, MANUAL }
 
@@ -198,11 +220,12 @@ class LibraryViewModel
         }
 
         fun setSelectedProvider(provider: String) {
-            _selectedProvider.value = provider
+            viewModelScope.launch { themeRepository.setMetadataProvider(offeredMetadataSource(provider)) }
         }
 
-        fun setSelectedFixAction(action: com.lochanpthakke.empee3.core.model.MetadataFixAction) {
-            _selectedFixAction.value = action
+        fun setSelectedFixAction(action: MetadataFixAction) {
+            if (!action.isSupported) return
+            viewModelScope.launch { themeRepository.setMetadataFixAction(action.name) }
         }
 
         private fun buildSuccessDetails(
@@ -216,6 +239,7 @@ class LibraryViewModel
             newFileName: String?,
             renameError: String? = null,
             isManual: Boolean = false,
+            extraChanges: List<TagChange> = emptyList(),
         ): com.lochanpthakke.empee3.core.model.SuccessDetails {
             val changes = mutableListOf<com.lochanpthakke.empee3.core.model.TagChange>()
             if (oldTitle.trim() != newTitle.trim()) {
@@ -227,6 +251,7 @@ class LibraryViewModel
             if (oldAlbum.trim() != newAlbum.trim()) {
                 changes.add(com.lochanpthakke.empee3.core.model.TagChange("Album", oldAlbum, newAlbum))
             }
+            changes += extraChanges
             val isRenamed = newFileName != null && newFileName != oldFileName
             return com.lochanpthakke.empee3.core.model.SuccessDetails(
                 originalTitle = oldTitle,
@@ -725,12 +750,17 @@ class LibraryViewModel
         @Suppress("MagicNumber", "NestedBlockDepth", "TooGenericExceptionCaught", "LongMethod", "CyclomaticComplexMethod")
         fun startFixingQueue() {
             if (_isFixingQueue.value) return
+            val action = selectedFixAction.value
+            if (!action.isSupported) {
+                _userMessage.value = action.unsupportedReason
+                return
+            }
             viewModelScope.launch {
                 _isFixingQueue.value = true
                 val queue = _repairQueue.value.toMutableList()
                 val writes = mutableMapOf<Int, TagWriteRequest>()
-                val provider = _selectedProvider.value
-                val action = _selectedFixAction.value
+                val plans = mutableMapOf<Int, FieldFixPlan>()
+                val provider = selectedProvider.value
 
                 for (i in queue.indices) {
                     val item = queue[i]
@@ -795,7 +825,7 @@ class LibraryViewModel
                                 }
                                 best == null || best.confidenceScore < UNCERTAIN_THRESHOLD -> {
                                     finalStatus = "FAILED"
-                                    finalReason = "NO_MATCH"
+                                    finalReason = (if (best == null) providerFailureSummary(outcomes) else null) ?: "NO_MATCH"
                                     tagRequest = null
                                 }
                                 best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> {
@@ -804,26 +834,17 @@ class LibraryViewModel
                                     tagRequest = null
                                 }
                                 else -> {
-                                    val request =
-                                        buildTagWriteRequest(
-                                            contentUri = item.song.uri,
-                                            filePath = filePath,
-                                            current = EditableTags(item.song.title, item.song.artist, item.song.album),
-                                            title = best.title.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.TITLE_ONLY } ?: "",
-                                            artist = best.artist.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ARTIST_ONLY } ?: "",
-                                            album = best.album.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALBUM_ONLY } ?: "",
-                                            year = 0,
-                                            genre = "",
-                                            bpm = best.bpm.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.BPM_ONLY } ?: 0,
-                                        )
-                                    if (request == null) {
-                                        finalStatus = "DONE"
-                                        finalReason = null
+                                    val plan = planFix(item.song, filePath, best, candidates, action)
+                                    plans[i] = plan
+                                    if (plan.request == null) {
+                                        // Nothing to write is not a fix: say why instead of reporting success.
+                                        finalStatus = "UNCHANGED"
+                                        finalReason = plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
                                         tagRequest = null
                                     } else {
                                         finalStatus = "FIXING"
                                         finalReason = null
-                                        tagRequest = request
+                                        tagRequest = plan.request
                                     }
                                 }
                             }
@@ -865,9 +886,13 @@ class LibraryViewModel
                                     is AppResult.Success -> {
                                         wroteAny = true
                                         ArtworkLoader.invalidate(request.contentUri)
-                                        val ext = request.filePath.substringAfterLast('.', "mp3")
-                                        val targetFileName = fileRenamer.buildTargetFileName(request.title ?: item.song.title, ext)
-                                        val renameRes = fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
+                                        // The file is named after the title: rename only when the title changed.
+                                        val renameRes =
+                                            request.title?.let { newTitle ->
+                                                val ext = request.filePath.substringAfterLast('.', "mp3")
+                                                val targetFileName = fileRenamer.buildTargetFileName(newTitle, ext)
+                                                fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
+                                            }
                                         val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
                                         val newName = (renameRes as? AppResult.Success)?.data?.newFileName
                                         if (newPath != null) {
@@ -884,6 +909,7 @@ class LibraryViewModel
                                             newFileName = newName,
                                             renameError = (renameRes as? AppResult.Error)?.error?.message,
                                             isManual = (_repairMode.value == RepairMode.MANUAL),
+                                            extraChanges = plans[index]?.let(::nonTextChanges).orEmpty(),
                                         )
                                         val itemStatus = if (renameRes is AppResult.Error) "PARTIAL_SUCCESS" else "DONE"
                                         item.copy(status = itemStatus, successDetails = successDetails)
@@ -1045,8 +1071,125 @@ class LibraryViewModel
         fun searchMetadataForSong(song: Song) {
             _metadataCandidates.value = emptyList()
             viewModelScope.launch {
-                val result = metadataRepository.searchTrack(song.title, song.artist, "ALL")
+                val result =
+                    metadataRepository.searchTrack(
+                        title = song.title,
+                        artist = song.artist,
+                        album = song.album,
+                        sourceProvider = selectedProvider.value,
+                    )
                 _metadataCandidates.value = result.getOrDefault(emptyList())
+            }
+        }
+
+        /**
+         * Plans the tag edit for a confident [match]: reads the file's current genre and cover, looks
+         * up a genre and downloads the cover only when [action] could use them, then lets
+         * [planFieldFix] decide field by field. Lookup failures become notes, never empty values.
+         */
+        private suspend fun planFix(
+            song: Song,
+            filePath: String,
+            match: MetadataCandidate,
+            candidates: List<MetadataCandidate>,
+            action: MetadataFixAction,
+        ): FieldFixPlan {
+            val fields = action.fields()
+            val fillOnly = action == MetadataFixAction.ALL_FIELDS
+            val local = localTags(song, filePath, checkDateFormat = FixField.YEAR in fields)
+            // Specific reasons found here replace the plan's generic "not found" notes.
+            val notes = mutableMapOf<String, String>()
+            val wantsGenre = FixField.GENRE in fields && (!fillOnly || (local.tagsReadable && !isUsableTag(local.genre)))
+            val genre = if (wantsGenre) onlineGenre(match, notes) else null
+            val wantsArtwork = FixField.ARTWORK in fields && (!fillOnly || (local.tagsReadable && !local.hasArtwork))
+            val artwork = if (wantsArtwork) onlineCover(match, notes) else null
+            val wantsYear = FixField.YEAR in fields && (!fillOnly || (local.tagsReadable && !isUsableYearTag(local.year)))
+            val releaseDate = if (wantsYear) onlineReleaseDate(match, candidates, notes) else null
+
+            val plan = planFieldFix(song.uri, filePath, action, local, match, genre, artwork, releaseDate)
+            return plan.copy(notes = plan.notes.map { notes[it] ?: it })
+        }
+
+        /** What the file has now, read from its embedded tags (the library's title / artist / album). */
+        private suspend fun localTags(
+            song: Song,
+            filePath: String,
+            checkDateFormat: Boolean,
+        ): LocalTrackTags {
+            val embedded = embeddedTagReader.readEmbeddedTags(filePath)
+            return LocalTrackTags(
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                genre = embedded.genre,
+                hasArtwork = embedded.artworkBytes != null,
+                tagsReadable = embedded.hasEmbeddedTag,
+                year = embedded.year,
+                canStoreYearMonth = checkDateFormat && embeddedTagReader.canStoreYearMonth(filePath),
+            )
+        }
+
+        /** The match's release date if it is valid and unambiguous, or null with the reason in [notes]. */
+        private fun onlineReleaseDate(
+            match: MetadataCandidate,
+            candidates: List<MetadataCandidate>,
+            notes: MutableMap<String, String>,
+        ): ReleaseDate? =
+            when (val decision = releaseDateFor(match, candidates, LocalDate.now(), HIGH_CONFIDENCE_THRESHOLD)) {
+                is ReleaseDateDecision.Found -> decision.date
+                is ReleaseDateDecision.Rejected -> null.also { notes[NO_YEAR_NOTE] = "No year: ${decision.reason}" }
+            }
+
+        /** The match's genre, or null with the reason in [notes]. */
+        private suspend fun onlineGenre(
+            match: MetadataCandidate,
+            notes: MutableMap<String, String>,
+        ): String? =
+            when (val lookup = metadataRepository.lookupGenre(match)) {
+                is GenreLookup.Found -> lookup.genre
+                is GenreLookup.NotFound -> null.also { notes[NO_GENRE_NOTE] = "No genre: ${lookup.reason}" }
+                is GenreLookup.Failed -> null.also { notes[NO_GENRE_NOTE] = "Genre lookup failed: ${lookup.reason}" }
+            }
+
+        /** The match's cover image, or null with the reason in [notes]. */
+        private suspend fun onlineCover(
+            match: MetadataCandidate,
+            notes: MutableMap<String, String>,
+        ): ByteArray? {
+            val url =
+                match.coverArtUrl
+                    ?: return null.also { notes[NO_ARTWORK_NOTE] = "No cover: ${match.sourceName} gave none for this match" }
+            return when (val download = metadataRepository.downloadArtwork(url)) {
+                is AppResult.Success -> download.data
+                is AppResult.Error -> null.also { notes[NO_ARTWORK_NOTE] = "No cover: ${download.error.message}" }
+            }
+        }
+
+        private fun nonTextChanges(plan: FieldFixPlan): List<TagChange> =
+            plan.changes
+                .filter { it.field == FixField.YEAR || it.field == FixField.GENRE || it.field == FixField.ARTWORK }
+                .map { change ->
+                    val label =
+                        when (change.field) {
+                            FixField.YEAR -> "Year"
+                            FixField.GENRE -> "Genre"
+                            else -> "Artwork"
+                        }
+                    TagChange(label, change.oldValue, change.newValue)
+                }
+
+        /** When every queried provider failed (not merely found nothing), the failure, so it isn't shown as "no match". */
+        private fun providerFailureSummary(outcomes: List<com.lochanpthakke.empee3.core.model.ProviderOutcome>): String? {
+            val queried = outcomes.filter { it.status != com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED }
+            val failed =
+                queried.filter {
+                    it.status == com.lochanpthakke.empee3.core.model.ProviderStatus.FAILED ||
+                        it.status == com.lochanpthakke.empee3.core.model.ProviderStatus.TIMED_OUT
+                }
+            return when {
+                queried.isEmpty() -> "No provider could be queried for this source"
+                failed.size != queried.size -> null
+                else -> "Lookup failed: " + failed.joinToString("; ") { "${it.providerName}: ${it.errorMessage ?: it.status.label}" }
             }
         }
 
@@ -1156,6 +1299,11 @@ class LibraryViewModel
         )
 
         companion object {
+            // The plan's generic notes, replaced by the specific reason when there is one.
+            private const val NO_GENRE_NOTE = "No genre found online"
+            private const val NO_ARTWORK_NOTE = "No artwork found online"
+            private const val NO_YEAR_NOTE = "No release year found online"
+
             /** Opening an album waits at most this long for its tracks (then they load as before). */
             const val PREPARE_ALBUM_TIMEOUT_MS = 150L
 

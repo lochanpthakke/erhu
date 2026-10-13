@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.network.provider
 
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.network.api.DeezerApi
+import com.lochanpthakke.empee3.core.network.model.DeezerAlbumDetailDto
 import com.lochanpthakke.empee3.core.network.model.DeezerArtistDto
 import com.lochanpthakke.empee3.core.network.model.DeezerArtistSearchResponse
 import com.lochanpthakke.empee3.core.network.model.DeezerErrorDto
@@ -27,6 +28,8 @@ class DeezerArtistArtworkQueryTest {
         val limits = mutableListOf<Int>()
 
         override suspend fun searchTrack(query: String) = DeezerSearchResponse()
+
+        override suspend fun getAlbum(albumId: Long) = DeezerAlbumDetailDto()
 
         override suspend fun searchArtist(
             query: String,

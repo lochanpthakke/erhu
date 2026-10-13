@@ -1,0 +1,151 @@
+{
+ "created": "2026-10-13T16:26:34.506Z",
+ "count": 4,
+ "recordings": [
+  {
+   "id": "dd828cbd-0765-44f5-a244-d81b6f9583f8",
+   "title": "Runaway",
+   "length": 551000,
+   "disambiguation": "\"recordforhype.zip\" demo",
+   "first-release-date": "2020-07-26",
+   "artist-credit": [
+    {
+     "name": "Kanye West",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "26b017c9-5506-4117-8667-ea981282bab0",
+     "title": "My Beautiful Dark Twisted Fantasy",
+     "status": "Bootleg",
+     "date": "2020-07-26",
+     "release-group": {
+      "id": "3c2d6ffe-61b9-46e5-b935-3b8df01f900d",
+      "title": "My Beautiful Dark Twisted Fantasy",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Demo"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "863bf9be-2854-47a0-a853-83ab3e3a7d28",
+   "title": "Runaway",
+   "length": 270093,
+   "first-release-date": "2010-11-01",
+   "artist-credit": [
+    {
+     "name": "Kanye West",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "3af06e43-8df5-4246-bb57-48ca4552cd7d",
+     "title": "CD POOL - HITS 26 - November 10",
+     "status": "Official",
+     "date": "2010-11-01",
+     "release-group": {
+      "id": "699b2867-6c80-46f0-9ba8-b58317cf1e7b",
+      "title": "CD POOL - HITS 26 - November 10",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "a24f67ff-a81e-4a95-817d-c0b4e5af3e6b",
+   "title": "Runaway",
+   "length": 548200,
+   "disambiguation": "explicit",
+   "first-release-date": "2010-11-19",
+   "artist-credit": [
+    {
+     "name": "Kanye West",
+     "joinphrase": " feat. "
+    },
+    {
+     "name": "Pusha T",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "936085b3-ded4-4ebd-a6d8-eb8e9a5fea06",
+     "title": "My Beautiful Dark Twisted Fantasy",
+     "status": "Official",
+     "date": "2010-11-22",
+     "release-group": {
+      "id": "5d6e21e1-deb5-428e-bb42-c2a567f3619b",
+      "title": "My Beautiful Dark Twisted Fantasy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "cd474271-bd7a-4d53-ba9e-e9d5bd7958cb",
+     "title": "My Beautiful Dark Twisted Fantasy",
+     "status": "Official",
+     "date": "2010-11-19",
+     "release-group": {
+      "id": "5d6e21e1-deb5-428e-bb42-c2a567f3619b",
+      "title": "My Beautiful Dark Twisted Fantasy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "90bd7e27-d9c3-4b28-9058-0d55f74ab497",
+     "title": "My Beautiful Dark Twisted Fantasy",
+     "status": "Official",
+     "date": "2010-11",
+     "release-group": {
+      "id": "5d6e21e1-deb5-428e-bb42-c2a567f3619b",
+      "title": "My Beautiful Dark Twisted Fantasy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    }
+   ]
+  },
+  {
+   "id": "ae2b80fa-80ab-4dae-9b9a-a29a74502e6f",
+   "title": "Runaway",
+   "length": 371040,
+   "disambiguation": "live, 2011-04-17: Coachella, Empire Polo Club, Indio, CA, USA",
+   "first-release-date": "2011-04-17",
+   "artist-credit": [
+    {
+     "name": "Kanye West",
+     "joinphrase": " feat "
+    },
+    {
+     "name": "Pusha T",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "63f70c62-1665-4775-b086-400a1f3c7cfc",
+     "title": "Live at Coachella 2011",
+     "status": "Bootleg",
+     "date": "2011-04-17",
+     "release-group": {
+      "id": "4f763a97-30ab-4082-9382-6767f4f2eb36",
+      "title": "Live at Coachella 2011",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
