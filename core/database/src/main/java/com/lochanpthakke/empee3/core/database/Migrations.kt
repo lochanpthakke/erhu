@@ -112,6 +112,23 @@ private val STATEMENTS_10_11 =
     )
 
 /**
+ * v11 → v12: learned watermarks/junk tokens table for autonomous metadata cleaning.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_11_12 =
+    object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_11_12.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_11_12 =
+    listOf(
+        "CREATE TABLE IF NOT EXISTS `learned_watermarks` (`token` TEXT NOT NULL, `frequency_count` INTEGER NOT NULL DEFAULT 1, " +
+            "`date_discovered` INTEGER NOT NULL, `is_active` INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(`token`))",
+    )
+
+/**
  * v9 → v10: playlist entries are keyed by (playlist, position) instead of (playlist, song), so a
  * playlist can hold the same song more than once (a saved queue). Every existing entry is kept in
  * its order; positions are renumbered 0..n-1 per playlist (a correlated count: SQLite on older

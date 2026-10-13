@@ -17,6 +17,7 @@ data class TagWriteRequest(
     val year: Int? = null,
     val genre: String? = null,
     val trackNumber: Int? = null,
+    val bpm: Int? = null,
     val lyrics: String? = null,
     val artworkBytes: ByteArray? = null,
 ) {
@@ -28,6 +29,7 @@ data class TagWriteRequest(
                 year != null ||
                 genre != null ||
                 trackNumber != null ||
+                bpm != null ||
                 lyrics != null ||
                 artworkBytes != null
 
@@ -85,6 +87,7 @@ fun buildTagWriteRequest(
     album: String,
     year: Int,
     genre: String,
+    bpm: Int = 0,
 ): TagWriteRequest? {
     fun changed(
         edited: String,
@@ -100,6 +103,7 @@ fun buildTagWriteRequest(
             album = changed(album, current.album),
             year = year.takeIf { it in MIN_YEAR..MAX_YEAR },
             genre = genre.trim().takeIf { it.isNotEmpty() },
+            bpm = bpm.takeIf { it in 1..999 },
         )
     return request.takeIf { it.hasChanges }
 }

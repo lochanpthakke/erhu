@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -133,6 +134,7 @@ fun AlbumDetailScreen(
 
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
+    var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     UserMessageEffect(viewModel.userMessage, snackbarHostState, viewModel::consumeUserMessage)
@@ -147,6 +149,9 @@ fun AlbumDetailScreen(
             onFixTags = { song ->
                 songForFixTags = song
                 viewModel.searchMetadataForSong(song)
+            },
+            onViewMetadata = { song ->
+                songForViewMetadata = song
             },
         )
 
@@ -249,10 +254,19 @@ fun AlbumDetailScreen(
             song = song,
             candidates = candidates,
             onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artist, albumName, year, genre ->
-                viewModel.writeTags(song, title, artist, albumName, year, genre)
+            onSaveTags = { title, artist, albumName, year, genre, bpm ->
+                viewModel.writeTags(song, title, artist, albumName, year, genre, bpm)
                 songForFixTags = null
             },
+        )
+    }
+
+    songForViewMetadata?.let { song ->
+        ViewMetadataScreen(
+            song = song,
+            viewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+            libraryViewModel = viewModel,
+            onDismiss = { songForViewMetadata = null },
         )
     }
 

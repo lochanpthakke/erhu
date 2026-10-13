@@ -176,7 +176,7 @@ fun SettingsCategoryScreen(
             )
         "visualizer" -> VisualizerSettingsSubPage(viewModel = visualizerViewModel, title = title, onBack = onBack)
         "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel, title = title, onBack = onBack)
-        else -> MetadataSettingsSubPage(title = title, onBack = onBack, onNavigateToMetadataEditor = onNavigateToMetadataEditor)
+        else -> MetadataSettingsSubPage(viewModel = libraryViewModel, title = title, onBack = onBack, onNavigateToMetadataEditor = onNavigateToMetadataEditor)
     }
 }
 
@@ -366,10 +366,14 @@ private fun parseFolderDisplayName(uri: Uri): String {
 
 @Composable
 private fun MetadataSettingsSubPage(
+    viewModel: LibraryViewModel,
     title: String,
     onBack: () -> Unit,
     onNavigateToMetadataEditor: () -> Unit,
 ) {
+    val selectedProvider by viewModel.selectedProvider.collectAsState()
+    val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
         SettingsSection(
             title = "Tags",
@@ -385,6 +389,42 @@ private fun MetadataSettingsSubPage(
                         icon = Icons.Default.EditNote,
                         onClick = onNavigateToMetadataEditor,
                     )
+                }
+            }
+        }
+
+        SettingsSection(title = "Primary Source Provider") {
+            SettingsGroup(selectable = true) {
+                listOf(
+                    "ALL" to ("All Providers" to "Query Deezer, MusicBrainz, Last.fm and LRCLIB"),
+                    "Deezer" to ("Deezer" to "Query Deezer API exclusively"),
+                    "MusicBrainz" to ("MusicBrainz" to "Query MusicBrainz API exclusively"),
+                    "LastFm" to ("Last.fm" to "Query Last.fm API exclusively"),
+                ).forEach { (key, info) ->
+                    val (label, summary) = info
+                    row {
+                        SettingsChoiceRow(
+                            title = label,
+                            summary = summary,
+                            selected = selectedProvider.equals(key, ignoreCase = true),
+                            onClick = { viewModel.setSelectedProvider(key) },
+                        )
+                    }
+                }
+            }
+        }
+
+        SettingsSection(title = "Primary Fix Action") {
+            SettingsGroup(selectable = true) {
+                com.lochanpthakke.empee3.core.model.MetadataFixAction.entries.forEach { action ->
+                    row {
+                        SettingsChoiceRow(
+                            title = action.displayName,
+                            summary = if (action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS) "Fix title, artist, album, genre, bpm and artwork" else "Only update ${action.displayName.lowercase()} field",
+                            selected = selectedFixAction == action,
+                            onClick = { viewModel.setSelectedFixAction(action) },
+                        )
+                    }
                 }
             }
         }

@@ -21,6 +21,7 @@ class LastFmProvider
         override suspend fun searchTrack(
             title: String,
             artist: String?,
+            album: String?,
         ): List<MetadataCandidate> =
             try {
                 val response =

@@ -57,6 +57,8 @@ data class RepairQueueItem(
     val song: Song,
     val status: String = "PENDING", // PENDING, FIXING, DONE, NEEDS_REVIEW, FAILED
     val failureReason: String? = null,
+    val diagnostics: com.lochanpthakke.empee3.core.model.RepairDiagnostics? = null,
+    val successDetails: com.lochanpthakke.empee3.core.model.SuccessDetails? = null,
 )
 
 /** Which library list a tapped song belongs to â€” that list becomes the play queue. */
@@ -86,6 +88,9 @@ class LibraryViewModel
         recentlyPlayed: RecentlyPlayedRecorder,
         smartPlaylistRepository: SmartPlaylistRepository,
         private val onlineLyrics: OnlineLyricsRepository,
+        private val learnedWatermarkDao: com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao,
+        private val fileRenamer: com.lochanpthakke.empee3.core.network.tagger.FileRenamer,
+        private val titleCandidateGenerator: com.lochanpthakke.empee3.core.network.cleaner.TitleCandidateGenerator,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -176,6 +181,68 @@ class LibraryViewModel
 
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
+
+        private val _selectedProvider = MutableStateFlow("ALL") // "ALL", "Deezer", "MusicBrainz", "LastFm"
+        val selectedProvider: StateFlow<String> = _selectedProvider.asStateFlow()
+
+        private val _selectedFixAction = MutableStateFlow(com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS)
+        val selectedFixAction: StateFlow<com.lochanpthakke.empee3.core.model.MetadataFixAction> = _selectedFixAction.asStateFlow()
+
+        enum class RepairMode { AUTOMATIC, MANUAL }
+
+        private val _repairMode = MutableStateFlow(RepairMode.AUTOMATIC)
+        val repairMode: StateFlow<RepairMode> = _repairMode.asStateFlow()
+
+        fun setRepairMode(mode: RepairMode) {
+            _repairMode.value = mode
+        }
+
+        fun setSelectedProvider(provider: String) {
+            _selectedProvider.value = provider
+        }
+
+        fun setSelectedFixAction(action: com.lochanpthakke.empee3.core.model.MetadataFixAction) {
+            _selectedFixAction.value = action
+        }
+
+        private fun buildSuccessDetails(
+            oldTitle: String,
+            oldArtist: String,
+            oldAlbum: String,
+            newTitle: String,
+            newArtist: String,
+            newAlbum: String,
+            oldFileName: String,
+            newFileName: String?,
+            renameError: String? = null,
+            isManual: Boolean = false,
+        ): com.lochanpthakke.empee3.core.model.SuccessDetails {
+            val changes = mutableListOf<com.lochanpthakke.empee3.core.model.TagChange>()
+            if (oldTitle.trim() != newTitle.trim()) {
+                changes.add(com.lochanpthakke.empee3.core.model.TagChange("Title", oldTitle, newTitle))
+            }
+            if (oldArtist.trim() != newArtist.trim()) {
+                changes.add(com.lochanpthakke.empee3.core.model.TagChange("Artist", oldArtist, newArtist))
+            }
+            if (oldAlbum.trim() != newAlbum.trim()) {
+                changes.add(com.lochanpthakke.empee3.core.model.TagChange("Album", oldAlbum, newAlbum))
+            }
+            val isRenamed = newFileName != null && newFileName != oldFileName
+            return com.lochanpthakke.empee3.core.model.SuccessDetails(
+                originalTitle = oldTitle,
+                originalArtist = oldArtist,
+                originalAlbum = oldAlbum,
+                updatedTitle = newTitle,
+                updatedArtist = newArtist,
+                updatedAlbum = newAlbum,
+                changes = changes,
+                isManualSelection = isManual,
+                isRenamed = isRenamed,
+                oldFilename = oldFileName,
+                newFilename = newFileName,
+                renameError = renameError,
+            )
+        }
 
         // Library search (title / artist / album), live-updating with the database.
         private val _librarySearchQuery = MutableStateFlow("")
@@ -548,6 +615,7 @@ class LibraryViewModel
                 _isFindingBadTracks.value = true
                 val allSongs = libraryRepository.getAllSongs().first()
                 val force = _forceFixTags.value
+                val activeLearnedWatermarks = learnedWatermarkDao.getAllActiveTokensSync()
                 val badTracks =
                     if (force) {
                         allSongs
@@ -560,8 +628,9 @@ class LibraryViewModel
                                 song.album == "Unknown Album" ||
                                 song.title.contains("mp3", ignoreCase = true) ||
                                 song.title.contains(".com", ignoreCase = true) ||
-                                song.title.contains("pagalworld", ignoreCase = true) ||
-                                song.title.contains("[320kbps]", ignoreCase = true)
+                                activeLearnedWatermarks.any { token ->
+                                    song.title.contains(token, ignoreCase = true)
+                                }
                         }
                     }
                 _repairQueue.value = badTracks.map { RepairQueueItem(song = it, status = "PENDING") }
@@ -612,6 +681,20 @@ class LibraryViewModel
             _repairQueue.value = currentQueue
         }
 
+        fun retryRepairQueueItem(song: Song) {
+            val currentQueue = _repairQueue.value.toMutableList()
+            val index = currentQueue.indexOfFirst { it.song.id == song.id }
+            if (index != -1) {
+                currentQueue[index] = currentQueue[index].copy(status = "PENDING", failureReason = null)
+                _repairQueue.value = currentQueue
+            } else {
+                enqueueSongForRepair(song)
+            }
+            if (!_isFixingQueue.value) {
+                startFixingQueue()
+            }
+        }
+
         fun enqueueAlbumForRepair(album: Album) {
             viewModelScope.launch {
                 val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
@@ -646,6 +729,8 @@ class LibraryViewModel
                 _isFixingQueue.value = true
                 val queue = _repairQueue.value.toMutableList()
                 val writes = mutableMapOf<Int, TagWriteRequest>()
+                val provider = _selectedProvider.value
+                val action = _selectedFixAction.value
 
                 for (i in queue.indices) {
                     val item = queue[i]
@@ -656,37 +741,108 @@ class LibraryViewModel
 
                     queue[i] =
                         try {
-                            val best =
-                                metadataRepository
-                                    .searchTrack(item.song.title, item.song.artist, "ALL")
-                                    .getOrDefault(emptyList())
-                                    .firstOrNull()
                             val filePath = libraryRepository.getSongFilePath(item.song.id)
+                            val rawFileName = filePath?.let { java.io.File(it).name } ?: item.song.title
+                            val activeLearnedTokens = learnedWatermarkDao.getAllActiveTokensSync()
+                            val cleanerResult = (metadataRepository as? com.lochanpthakke.empee3.core.network.repository.MetadataRepositoryImpl)?.let {
+                                metadataRepository.cleanFilename(rawFileName, activeLearnedTokens)
+                            }
+                            val searchTitle = cleanerResult?.title?.ifBlank { item.song.title } ?: item.song.title
+                            val searchArtist = cleanerResult?.artistGuess ?: item.song.artist.takeIf { it != "Unknown Artist" }
+
+                            val candidateTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens)
+                            var detailedResponse: com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse? = null
+                            var best: com.lochanpthakke.empee3.core.model.MetadataCandidate? = null
+                            var successfulTitle: String = searchTitle
+
+                            for (queryTitle in candidateTitles) {
+                                val queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
+                                val res = metadataRepository.searchAndScoreTrackDetailed(
+                                    title = queryTitle,
+                                    artist = queryArtist,
+                                    album = item.song.album,
+                                    durationMs = item.song.durationMs,
+                                    sourceProvider = provider,
+                                ).getOrDefault(com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse(emptyList(), emptyList()))
+
+                                val top = res.candidates.firstOrNull()
+                                if (top != null) {
+                                    if (best == null || top.confidenceScore > best.confidenceScore) {
+                                        best = top
+                                        detailedResponse = res
+                                        successfulTitle = queryTitle
+                                    }
+                                    if (top.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
+                                        break
+                                    }
+                                } else if (detailedResponse == null) {
+                                    detailedResponse = res
+                                }
+                            }
+
+                            val candidates = detailedResponse?.candidates ?: emptyList()
+                            val outcomes = detailedResponse?.providerOutcomes ?: emptyList()
+
+                            val finalStatus: String
+                            val finalReason: String?
+                            val tagRequest: TagWriteRequest?
+
                             when {
-                                best == null || best.confidenceScore < UNCERTAIN_THRESHOLD ->
-                                    item.copy(status = "FAILED", failureReason = "NO_MATCH")
-                                best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> item.copy(status = "NEEDS_REVIEW")
-                                filePath == null -> item.copy(status = "FAILED", failureReason = "FILE_NOT_FOUND")
+                                filePath == null -> {
+                                    finalStatus = "FAILED"
+                                    finalReason = "FILE_NOT_FOUND"
+                                    tagRequest = null
+                                }
+                                best == null || best.confidenceScore < UNCERTAIN_THRESHOLD -> {
+                                    finalStatus = "FAILED"
+                                    finalReason = "NO_MATCH"
+                                    tagRequest = null
+                                }
+                                best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> {
+                                    finalStatus = "NEEDS_REVIEW"
+                                    finalReason = "LOW_CONFIDENCE"
+                                    tagRequest = null
+                                }
                                 else -> {
                                     val request =
                                         buildTagWriteRequest(
                                             contentUri = item.song.uri,
                                             filePath = filePath,
                                             current = EditableTags(item.song.title, item.song.artist, item.song.album),
-                                            title = best.title,
-                                            artist = best.artist,
-                                            album = best.album,
+                                            title = best.title.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.TITLE_ONLY } ?: "",
+                                            artist = best.artist.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ARTIST_ONLY } ?: "",
+                                            album = best.album.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALBUM_ONLY } ?: "",
                                             year = 0,
                                             genre = "",
+                                            bpm = best.bpm.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.BPM_ONLY } ?: 0,
                                         )
                                     if (request == null) {
-                                        item.copy(status = "DONE") // tags already match
+                                        finalStatus = "DONE"
+                                        finalReason = null
+                                        tagRequest = null
                                     } else {
-                                        writes[i] = request
-                                        item.copy(status = "FIXING")
+                                        finalStatus = "FIXING"
+                                        finalReason = null
+                                        tagRequest = request
                                     }
                                 }
                             }
+
+                            val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
+                                originalFilename = rawFileName,
+                                searchTitle = successfulTitle,
+                                searchArtist = searchArtist,
+                                targetDurationMs = item.song.durationMs.takeIf { it > 0 },
+                                providerOutcomes = outcomes,
+                                topCandidates = candidates.take(3),
+                                finalReason = finalReason,
+                            )
+
+                            if (tagRequest != null) {
+                                writes[i] = tagRequest
+                            }
+
+                            item.copy(status = finalStatus, failureReason = finalReason, diagnostics = diag)
                         } catch (e: Exception) {
                             item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
                         }
@@ -709,7 +865,28 @@ class LibraryViewModel
                                     is AppResult.Success -> {
                                         wroteAny = true
                                         ArtworkLoader.invalidate(request.contentUri)
-                                        item.copy(status = "DONE")
+                                        val ext = request.filePath.substringAfterLast('.', "mp3")
+                                        val targetFileName = fileRenamer.buildTargetFileName(request.title ?: item.song.title, ext)
+                                        val renameRes = fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
+                                        val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
+                                        val newName = (renameRes as? AppResult.Success)?.data?.newFileName
+                                        if (newPath != null) {
+                                            libraryRepository.updateFilePath(item.song.id, newPath)
+                                        }
+                                        val successDetails = buildSuccessDetails(
+                                            oldTitle = item.song.title,
+                                            oldArtist = item.song.artist,
+                                            oldAlbum = item.song.album,
+                                            newTitle = request.title ?: item.song.title,
+                                            newArtist = request.artist ?: item.song.artist,
+                                            newAlbum = request.album ?: item.song.album,
+                                            oldFileName = java.io.File(request.filePath).name,
+                                            newFileName = newName,
+                                            renameError = (renameRes as? AppResult.Error)?.error?.message,
+                                            isManual = (_repairMode.value == RepairMode.MANUAL),
+                                        )
+                                        val itemStatus = if (renameRes is AppResult.Error) "PARTIAL_SUCCESS" else "DONE"
+                                        item.copy(status = itemStatus, successDetails = successDetails)
                                     }
                                     is AppResult.Error -> item.copy(status = "FAILED", failureReason = result.error.message)
                                 }
@@ -885,6 +1062,7 @@ class LibraryViewModel
             album: String,
             year: Int,
             genre: String,
+            bpm: Int = 0,
         ) {
             viewModelScope.launch {
                 val filePath = libraryRepository.getSongFilePath(song.id)
@@ -902,6 +1080,7 @@ class LibraryViewModel
                         album = album,
                         year = year,
                         genre = genre,
+                        bpm = bpm,
                     )
                 if (request == null) {
                     _userMessage.value = "Nothing changed"
@@ -913,6 +1092,13 @@ class LibraryViewModel
                         when (val result = metadataRepository.writeTagsToFile(request)) {
                             is AppResult.Success -> {
                                 ArtworkLoader.invalidate(request.contentUri)
+                                val ext = request.filePath.substringAfterLast('.', "mp3")
+                                val targetFileName = fileRenamer.buildTargetFileName(request.title ?: song.title, ext)
+                                val renameRes = fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
+                                val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
+                                if (newPath != null) {
+                                    libraryRepository.updateFilePath(song.id, newPath)
+                                }
                                 libraryRepository.requestRescanAfterChange()
                                 _userMessage.value = "Tags saved for \"${request.title ?: song.title}\""
                             }

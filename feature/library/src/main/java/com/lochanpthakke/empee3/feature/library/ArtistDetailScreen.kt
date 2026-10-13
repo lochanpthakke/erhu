@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -101,6 +102,7 @@ fun ArtistDetailScreen(
 
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
+    var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     val customArtworkKeys by viewModel.customArtworkArtistKeys.collectAsState()
 
@@ -117,6 +119,9 @@ fun ArtistDetailScreen(
             onFixTags = { song ->
                 songForFixTags = song
                 viewModel.searchMetadataForSong(song)
+            },
+            onViewMetadata = { song ->
+                songForViewMetadata = song
             },
         )
 
@@ -295,10 +300,19 @@ fun ArtistDetailScreen(
             song = song,
             candidates = candidates,
             onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artistName, albumName, year, genre ->
-                viewModel.writeTags(song, title, artistName, albumName, year, genre)
+            onSaveTags = { title, artistName, albumName, year, genre, bpm ->
+                viewModel.writeTags(song, title, artistName, albumName, year, genre, bpm)
                 songForFixTags = null
             },
+        )
+    }
+
+    songForViewMetadata?.let { song ->
+        ViewMetadataScreen(
+            song = song,
+            viewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+            libraryViewModel = viewModel,
+            onDismiss = { songForViewMetadata = null },
         )
     }
 

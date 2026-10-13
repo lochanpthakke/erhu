@@ -22,12 +22,15 @@ class DeezerProvider
         override suspend fun searchTrack(
             title: String,
             artist: String?,
+            album: String?,
         ): List<MetadataCandidate> {
             val query =
-                if (!artist.isNullOrBlank()) {
-                    "artist:\"$artist\" track:\"$title\""
-                } else {
-                    title
+                when {
+                    !artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true) ->
+                        "artist:\"$artist\" track:\"$title\""
+                    !album.isNullOrBlank() && !album.equals("Unknown Album", ignoreCase = true) ->
+                        "album:\"$album\" track:\"$title\""
+                    else -> title
                 }
 
             return try {
@@ -38,6 +41,8 @@ class DeezerProvider
                         title = dto.title,
                         artist = dto.artist?.name ?: "Unknown Artist",
                         album = dto.album?.title ?: "Unknown Album",
+                        bpm = dto.bpm?.toInt()?.takeIf { it > 0 },
+                        durationMs = dto.duration?.times(1000L),
                         coverArtUrl = dto.album?.coverXl ?: dto.album?.coverBig ?: dto.album?.coverMedium,
                         sourceName = providerName,
                     )

@@ -165,6 +165,11 @@ class LibraryRepositoryImpl
                 )
             }
 
+        override suspend fun updateFilePath(songId: Long, newPath: String): AppResult<Unit> =
+            appResultOf {
+                songDao.updateFilePath(songId, newPath)
+            }
+
         override fun observeIsScanning(): Flow<Boolean> =
             workManager
                 .get()

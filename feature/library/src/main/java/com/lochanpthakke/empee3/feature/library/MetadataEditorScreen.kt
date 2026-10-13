@@ -2,6 +2,11 @@
 
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,15 +28,20 @@ import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -205,6 +215,115 @@ fun MetadataEditorScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(Spacing.xs))
+
+            var providerExpanded by remember { mutableStateOf(false) }
+            var actionExpanded by remember { mutableStateOf(false) }
+
+            val selectedProvider by viewModel.selectedProvider.collectAsState()
+            val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+
+            val providerOptions = listOf("ALL" to "All Sources", "Deezer" to "Deezer", "MusicBrainz" to "MusicBrainz", "LastFm" to "Last.fm")
+            val actionOptions = com.lochanpthakke.empee3.core.model.MetadataFixAction.entries
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { providerExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Source: ${providerOptions.find { it.first == selectedProvider }?.second ?: selectedProvider} ▾",
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = providerExpanded,
+                        onDismissRequest = { providerExpanded = false },
+                    ) {
+                        providerOptions.forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    viewModel.setSelectedProvider(key)
+                                    providerExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { actionExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Fix: ${selectedFixAction.displayName} ▾",
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = actionExpanded,
+                        onDismissRequest = { actionExpanded = false },
+                    ) {
+                        actionOptions.forEach { action ->
+                            DropdownMenuItem(
+                                text = { Text(action.displayName) },
+                                onClick = {
+                                    viewModel.setSelectedFixAction(action)
+                                    actionExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
+            var modeExpanded by remember { mutableStateOf(false) }
+            val repairMode by viewModel.repairMode.collectAsState()
+
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                OutlinedButton(
+                    onClick = { modeExpanded = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = "Mode: ${if (repairMode == LibraryViewModel.RepairMode.AUTOMATIC) "Automatic Tagging" else "Manual Selection"} ▾",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                DropdownMenu(
+                    expanded = modeExpanded,
+                    onDismissRequest = { modeExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Automatic Tagging") },
+                        onClick = {
+                            viewModel.setRepairMode(LibraryViewModel.RepairMode.AUTOMATIC)
+                            modeExpanded = false
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Manual Selection") },
+                        onClick = {
+                            viewModel.setRepairMode(LibraryViewModel.RepairMode.MANUAL)
+                            modeExpanded = false
+                        },
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(Spacing.md))
 
             Row(
@@ -327,6 +446,16 @@ fun MetadataEditorScreen(
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                             )
+                                            if (queueItem.status == "FAILED") {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "⚠️ ${formatFailureReason(queueItem.failureReason)}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
                                         }
                                     }
 
@@ -351,11 +480,24 @@ fun MetadataEditorScreen(
                                                     tint = MaterialTheme.colorScheme.secondary,
                                                 )
                                             "FAILED" ->
-                                                Icon(
-                                                    imageVector = Icons.Default.Error,
-                                                    contentDescription = "Failed",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Error,
+                                                        contentDescription = "Failed",
+                                                        tint = MaterialTheme.colorScheme.error,
+                                                    )
+                                                    IconButton(
+                                                        onClick = {
+                                                            viewModel.retryRepairQueueItem(queueItem.song)
+                                                        },
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Refresh,
+                                                            contentDescription = "Retry track repair",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                        )
+                                                    }
+                                                }
                                             else ->
                                                 Text(
                                                     text = "Pending",
@@ -372,6 +514,135 @@ fun MetadataEditorScreen(
                                             },
                                         ) {
                                             Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from Queue")
+                                        }
+                                    }
+                                }
+
+                                var expanded by remember { mutableStateOf(false) }
+                                val diag = queueItem.diagnostics
+                                if (diag != null) {
+                                    TextButton(
+                                        onClick = { expanded = !expanded },
+                                        modifier = Modifier.padding(horizontal = Spacing.md),
+                                    ) {
+                                        Icon(
+                                            imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(Spacing.xs))
+                                        Text(if (expanded) "Show less" else "Show more", style = MaterialTheme.typography.labelSmall)
+                                    }
+
+                                    AnimatedVisibility(
+                                        visible = expanded,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically(),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Spacing.md)
+                                                .padding(bottom = Spacing.md),
+                                        ) {
+                                            Text("Search Details", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            Text("Original file: ${diag.originalFilename}", style = MaterialTheme.typography.bodySmall)
+                                            Text("Searched title: \"${diag.searchTitle}\"", style = MaterialTheme.typography.bodySmall)
+                                            Text("Searched artist: ${diag.searchArtist ?: "Unknown / not provided"}", style = MaterialTheme.typography.bodySmall)
+                                            diag.targetDurationMs?.let { dur ->
+                                                Text("Target duration: ${dur / 1000}s", style = MaterialTheme.typography.bodySmall)
+                                            }
+
+                                            Spacer(modifier = Modifier.height(Spacing.xs))
+
+                                            Text("Provider Results", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            diag.providerOutcomes.forEach { outcome ->
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                ) {
+                                                    Text("• ${outcome.providerName}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                                    val statusText = when (outcome.status) {
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS -> "✓ Selected candidate"
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.CANDIDATES_FOUND -> "${outcome.candidateCount} candidate(s)"
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.LOW_CONFIDENCE -> "${outcome.candidateCount} low confidence"
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS -> "No results found"
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.TIMED_OUT -> "Request timed out"
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.FAILED -> "Failed: ${outcome.errorMessage ?: "Request failed"}"
+                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED -> "Provider not queried"
+                                                    }
+                                                    Text(statusText, style = MaterialTheme.typography.bodySmall, color = if (outcome.status == com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                            }
+
+                                            if (diag.topCandidates.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(Spacing.xs))
+                                                Text("Candidates Returned", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                                diag.topCandidates.forEach { candidate ->
+                                                    val scorePct = (candidate.confidenceScore * 100).toInt()
+                                                    val isAccepted = scorePct >= 85
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                    ) {
+                                                        Text("${candidate.title} — ${candidate.artist}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                                        Text("$scorePct% (${candidate.sourceName}) ${if (isAccepted) "✓" else "✗"}", style = MaterialTheme.typography.labelSmall, color = if (isAccepted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                                                    }
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(Spacing.xs))
+                                            Text("Final Outcome", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            Text(formatFailureReason(diag.finalReason ?: queueItem.failureReason), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                }
+
+                                val succ = queueItem.successDetails
+                                if (succ != null) {
+                                    var showChangesExpanded by remember { mutableStateOf(false) }
+                                    TextButton(
+                                        onClick = { showChangesExpanded = !showChangesExpanded },
+                                        modifier = Modifier.padding(horizontal = Spacing.md),
+                                    ) {
+                                        Icon(
+                                            imageVector = if (showChangesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(Spacing.xs))
+                                        Text(if (showChangesExpanded) "Show less" else "Show changes", style = MaterialTheme.typography.labelSmall)
+                                    }
+
+                                    AnimatedVisibility(
+                                        visible = showChangesExpanded,
+                                        enter = fadeIn() + expandVertically(),
+                                        exit = fadeOut() + shrinkVertically(),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Spacing.md)
+                                                .padding(bottom = Spacing.md),
+                                        ) {
+                                            Text("Metadata Changes", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            if (succ.changes.isEmpty()) {
+                                                Text("• Tags already up to date (no tag changes needed)", style = MaterialTheme.typography.bodySmall)
+                                            } else {
+                                                succ.changes.forEach { change ->
+                                                    Text("• ${change.fieldName}: ${change.oldValue?.takeIf { it.isNotBlank() } ?: "Blank"} → ${change.newValue}", style = MaterialTheme.typography.bodySmall)
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(Spacing.xs))
+                                            Text("File Renaming Result", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            if (succ.isRenamed && succ.newFilename != null) {
+                                                Text("✓ Renamed: ${succ.oldFilename} → ${succ.newFilename}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                            } else if (succ.renameError != null) {
+                                                Text("⚠️ Rename skipped: ${succ.renameError}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                            } else {
+                                                Text("• Filename unchanged: ${succ.oldFilename}", style = MaterialTheme.typography.bodySmall)
+                                            }
                                         }
                                     }
                                 }
@@ -396,7 +667,12 @@ fun MetadataEditorScreen(
                     }
                     if (failedCount > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("❌ $failedCount tracks failed")
+                        Text("❌ $failedCount tracks failed:", fontWeight = FontWeight.Bold)
+                        val failedReasons = repairQueue.filter { it.status == "FAILED" }
+                            .groupBy { formatFailureReason(it.failureReason) }
+                        failedReasons.forEach { (reason, items) ->
+                            Text("  • ${items.size} × $reason", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             },
@@ -419,6 +695,17 @@ fun MetadataEditorScreen(
         )
     }
 }
+
+private fun formatFailureReason(reason: String?): String =
+    when {
+        reason.isNullOrBlank() -> "No online match found"
+        reason == "NO_MATCH" -> "No online match found"
+        reason == "FILE_NOT_FOUND" -> "File not found on storage"
+        reason == "NETWORK_ERROR" -> "Network error / Offline"
+        reason.contains("permission", ignoreCase = true) || reason.contains("writeAccess", ignoreCase = true) -> "Storage write permission denied"
+        reason.contains("read-only", ignoreCase = true) -> "File is read-only"
+        else -> reason
+    }
 
 @Composable
 private fun ArtistSquareRow(
