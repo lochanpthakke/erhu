@@ -188,6 +188,25 @@ class LibraryViewModel
         private val _selectedFixAction = MutableStateFlow(com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS)
         val selectedFixAction: StateFlow<com.lochanpthakke.empee3.core.model.MetadataFixAction> = _selectedFixAction.asStateFlow()
 
+        private val _selectedFields = MutableStateFlow<Set<com.lochanpthakke.empee3.core.model.MetadataField>>(
+            com.lochanpthakke.empee3.core.model.MetadataField.entries.toSet()
+        )
+        val selectedFields: StateFlow<Set<com.lochanpthakke.empee3.core.model.MetadataField>> = _selectedFields.asStateFlow()
+
+        fun toggleField(field: com.lochanpthakke.empee3.core.model.MetadataField) {
+            val current = _selectedFields.value.toMutableSet()
+            if (current.contains(field)) {
+                if (current.size > 1) current.remove(field)
+            } else {
+                current.add(field)
+            }
+            _selectedFields.value = current
+        }
+
+        fun selectAllFields() {
+            _selectedFields.value = com.lochanpthakke.empee3.core.model.MetadataField.entries.toSet()
+        }
+
         enum class RepairMode { AUTOMATIC, MANUAL }
 
         private val _repairMode = MutableStateFlow(RepairMode.AUTOMATIC)
@@ -748,16 +767,19 @@ class LibraryViewModel
                                 metadataRepository.cleanFilename(rawFileName, activeLearnedTokens)
                             }
                             val searchTitle = cleanerResult?.title?.ifBlank { item.song.title } ?: item.song.title
-                            val searchArtist = cleanerResult?.artistGuess ?: item.song.artist.takeIf { it != "Unknown Artist" }
+                            val rawArtist = cleanerResult?.artistGuess ?: item.song.artist.takeIf { it != "Unknown Artist" }
+                            val searchArtist = com.lochanpthakke.empee3.core.database.library.PrimaryArtistExtractor.extractPrimaryArtist(rawArtist)
 
-                            val candidateTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens)
+                            val candidateTitles = titleCandidateGenerator.generateCandidates(item.song.title.ifBlank { rawFileName }, activeLearnedTokens)
                             var detailedResponse: com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse? = null
                             var best: com.lochanpthakke.empee3.core.model.MetadataCandidate? = null
                             var successfulTitle: String = searchTitle
 
-                            for (queryTitle in candidateTitles) {
-                                val queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
-                                val res = metadataRepository.searchAndScoreTrackDetailed(
+                            for (index in candidateTitles.indices) {
+                                val queryTitle = candidateTitles[index]
+                                var queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
+
+                                var res = metadataRepository.searchAndScoreTrackDetailed(
                                     title = queryTitle,
                                     artist = queryArtist,
                                     album = item.song.album,
@@ -765,84 +787,120 @@ class LibraryViewModel
                                     sourceProvider = provider,
                                 ).getOrDefault(com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse(emptyList(), emptyList()))
 
-                                val top = res.candidates.firstOrNull()
-                                if (top != null) {
-                                    if (best == null || top.confidenceScore > best.confidenceScore) {
-                                        best = top
-                                        detailedResponse = res
-                                        successfulTitle = queryTitle
-                                    }
-                                    if (top.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
-                                        break
-                                    }
-                                } else if (detailedResponse == null) {
-                                    detailedResponse = res
+                                if (res.candidates.isEmpty() && queryArtist != null) {
+                                    queryArtist = null
+                                    res = metadataRepository.searchAndScoreTrackDetailed(
+                                        title = queryTitle,
+                                        artist = null,
+                                        album = item.song.album,
+                                        durationMs = item.song.durationMs,
+                                        sourceProvider = provider,
+                                    ).getOrDefault(com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse(emptyList(), emptyList()))
+                                }
+
+                                val currentTitleLabel = if (index > 0) "$queryTitle (Attempt ${index + 1})" else queryTitle
+                                detailedResponse = res
+                                successfulTitle = currentTitleLabel
+
+                                val returnedCandidates = res.candidates
+                                if (returnedCandidates.isNotEmpty()) {
+                                    best = returnedCandidates.firstOrNull()
+                                    break
                                 }
                             }
 
                             val candidates = detailedResponse?.candidates ?: emptyList()
                             val outcomes = detailedResponse?.providerOutcomes ?: emptyList()
 
-                            val finalStatus: String
-                            val finalReason: String?
-                            val tagRequest: TagWriteRequest?
-
-                            when {
-                                filePath == null -> {
-                                    finalStatus = "FAILED"
-                                    finalReason = "FILE_NOT_FOUND"
-                                    tagRequest = null
-                                }
-                                best == null || best.confidenceScore < UNCERTAIN_THRESHOLD -> {
-                                    finalStatus = "FAILED"
-                                    finalReason = "NO_MATCH"
-                                    tagRequest = null
-                                }
-                                best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> {
-                                    finalStatus = "NEEDS_REVIEW"
-                                    finalReason = "LOW_CONFIDENCE"
-                                    tagRequest = null
-                                }
-                                else -> {
-                                    val request =
-                                        buildTagWriteRequest(
-                                            contentUri = item.song.uri,
-                                            filePath = filePath,
-                                            current = EditableTags(item.song.title, item.song.artist, item.song.album),
-                                            title = best.title.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.TITLE_ONLY } ?: "",
-                                            artist = best.artist.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ARTIST_ONLY } ?: "",
-                                            album = best.album.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALBUM_ONLY } ?: "",
-                                            year = 0,
-                                            genre = "",
-                                            bpm = best.bpm.takeIf { action == com.lochanpthakke.empee3.core.model.MetadataFixAction.ALL_FIELDS || action == com.lochanpthakke.empee3.core.model.MetadataFixAction.BPM_ONLY } ?: 0,
+                            val itemResult =
+                                when {
+                                    filePath == null -> {
+                                        item.copy(status = "FAILED", failureReason = "FILE_NOT_FOUND")
+                                    }
+                                    best == null || best.confidenceScore < UNCERTAIN_THRESHOLD -> {
+                                        val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
+                                            originalFilename = rawFileName,
+                                            searchTitle = successfulTitle,
+                                            searchArtist = searchArtist,
+                                            targetDurationMs = item.song.durationMs.takeIf { it > 0 },
+                                            providerOutcomes = outcomes,
+                                            topCandidates = candidates.take(3),
+                                            finalReason = "NO_MATCH",
                                         )
-                                    if (request == null) {
-                                        finalStatus = "DONE"
-                                        finalReason = null
-                                        tagRequest = null
-                                    } else {
-                                        finalStatus = "FIXING"
-                                        finalReason = null
-                                        tagRequest = request
+                                        item.copy(status = "FAILED", failureReason = "NO_MATCH", diagnostics = diag)
+                                    }
+                                    best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> {
+                                        val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
+                                            originalFilename = rawFileName,
+                                            searchTitle = successfulTitle,
+                                            searchArtist = searchArtist,
+                                            targetDurationMs = item.song.durationMs.takeIf { it > 0 },
+                                            providerOutcomes = outcomes,
+                                            topCandidates = candidates.take(3),
+                                            finalReason = "LOW_CONFIDENCE",
+                                        )
+                                        item.copy(status = "NEEDS_REVIEW", failureReason = "LOW_CONFIDENCE", diagnostics = diag)
+                                    }
+                                    else -> {
+                                        val activeFields = _selectedFields.value
+                                        val request =
+                                            buildTagWriteRequest(
+                                                contentUri = item.song.uri,
+                                                filePath = filePath,
+                                                current = EditableTags(item.song.title, item.song.artist, item.song.album),
+                                                title = best.title.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.TITLE) } ?: "",
+                                                artist = best.artist.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.ARTIST) } ?: "",
+                                                album = best.album.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.ALBUM) } ?: "",
+                                                year = 0,
+                                                genre = "",
+                                                bpm = best.bpm.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.BPM) } ?: 0,
+                                            )
+                                        var itemSuccessDetails: com.lochanpthakke.empee3.core.model.SuccessDetails? = null
+                                        var finalStatus = "FIXING"
+                                        var finalReason: String? = null
+
+                                        if (request == null) {
+                                            if (activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.FILENAME)) {
+                                                val ext = filePath.substringAfterLast('.', "mp3")
+                                                val targetFileName = fileRenamer.buildTargetFileName(best.title, ext)
+                                                val renameRes = fileRenamer.renameAudioFile(item.song.uri, filePath, targetFileName)
+                                                val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
+                                                val newName = (renameRes as? AppResult.Success)?.data?.newFileName
+                                                if (newPath != null) {
+                                                    libraryRepository.updateFilePath(item.song.id, newPath)
+                                                }
+                                                itemSuccessDetails = buildSuccessDetails(
+                                                    oldTitle = item.song.title,
+                                                    oldArtist = item.song.artist,
+                                                    oldAlbum = item.song.album,
+                                                    newTitle = item.song.title,
+                                                    newArtist = item.song.artist,
+                                                    newAlbum = item.song.album,
+                                                    oldFileName = java.io.File(filePath).name,
+                                                    newFileName = newName,
+                                                    renameError = (renameRes as? AppResult.Error)?.error?.message,
+                                                    isManual = (_repairMode.value == RepairMode.MANUAL),
+                                                )
+                                            }
+                                            finalStatus = "DONE"
+                                        } else {
+                                            writes[i] = request
+                                        }
+
+                                        val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
+                                            originalFilename = rawFileName,
+                                            searchTitle = successfulTitle,
+                                            searchArtist = searchArtist,
+                                            targetDurationMs = item.song.durationMs.takeIf { it > 0 },
+                                            providerOutcomes = outcomes,
+                                            topCandidates = candidates.take(3),
+                                            finalReason = finalReason,
+                                        )
+
+                                        item.copy(status = finalStatus, failureReason = finalReason, diagnostics = diag, successDetails = itemSuccessDetails)
                                     }
                                 }
-                            }
-
-                            val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
-                                originalFilename = rawFileName,
-                                searchTitle = successfulTitle,
-                                searchArtist = searchArtist,
-                                targetDurationMs = item.song.durationMs.takeIf { it > 0 },
-                                providerOutcomes = outcomes,
-                                topCandidates = candidates.take(3),
-                                finalReason = finalReason,
-                            )
-
-                            if (tagRequest != null) {
-                                writes[i] = tagRequest
-                            }
-
-                            item.copy(status = finalStatus, failureReason = finalReason, diagnostics = diag)
+                            itemResult
                         } catch (e: Exception) {
                             item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
                         }
@@ -850,6 +908,7 @@ class LibraryViewModel
                 }
 
                 if (writes.isEmpty()) {
+                    libraryRepository.requestRescanAfterChange()
                     _isFixingQueue.value = false
                     return@launch
                 }

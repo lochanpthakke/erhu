@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.feature.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.size
@@ -373,6 +374,12 @@ private fun MetadataSettingsSubPage(
 ) {
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+    val context = LocalContext.current
+    val hasAllFilesAccess = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        android.os.Environment.isExternalStorageManager()
+    } else {
+        true
+    }
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
         SettingsSection(
@@ -388,6 +395,35 @@ private fun MetadataSettingsSubPage(
                         summary = "Edit ID3 tags and clean watermarks",
                         icon = Icons.Default.EditNote,
                         onClick = onNavigateToMetadataEditor,
+                    )
+                }
+            }
+        }
+
+        SettingsSection(
+            title = "Storage Permissions",
+            footer = "Granting Full Storage Access allows empee3 to write ID3 tags and rename music files on external SD cards without permission errors.",
+        ) {
+            SettingsGroup {
+                row {
+                    SettingsNavigationRow(
+                        title = "Full Storage Access",
+                        summary = if (hasAllFilesAccess) "Granted — full read/write access to internal & SD card storage" else "Tap to grant full device storage write permission in System Settings",
+                        icon = Icons.Default.Folder,
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                try {
+                                    val intent = Intent(
+                                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    val intent = Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+                                    context.startActivity(intent)
+                                }
+                            }
+                        },
                     )
                 }
             }

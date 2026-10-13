@@ -24,6 +24,9 @@ class DeezerProvider
             artist: String?,
             album: String?,
         ): List<MetadataCandidate> {
+            val isConstrained = (!artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true)) ||
+                (!album.isNullOrBlank() && !album.equals("Unknown Album", ignoreCase = true))
+
             val query =
                 when {
                     !artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true) ->
@@ -34,7 +37,10 @@ class DeezerProvider
                 }
 
             return try {
-                val response = deezerApi.searchTrack(query)
+                var response = deezerApi.searchTrack(query)
+                if (response.data.isEmpty() && isConstrained) {
+                    response = deezerApi.searchTrack(title)
+                }
                 response.data.map { dto ->
                     MetadataCandidate(
                         id = "deezer_${dto.id}",
@@ -48,6 +54,7 @@ class DeezerProvider
                     )
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 logger.w(TAG, "Deezer search failed: ${e.message}", e)
                 emptyList()
             }

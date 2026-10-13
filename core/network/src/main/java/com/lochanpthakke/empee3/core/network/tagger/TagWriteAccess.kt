@@ -56,6 +56,9 @@ class TagWriteAccessChecker
         }
 
         private fun checkScopedStorage(uris: List<Uri>): WriteAuthorization {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && android.os.Environment.isExternalStorageManager()) {
+                return WriteAuthorization.Granted
+            }
             val missing =
                 uris.filter { uri ->
                     context.checkUriPermission(uri, Process.myPid(), Process.myUid(), Intent.FLAG_GRANT_WRITE_URI_PERMISSION) !=

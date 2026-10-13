@@ -83,15 +83,17 @@ class ProcessSingleTrackUseCase
             }
 
             val searchTitle = cleanerResult.cleaned.title.ifBlank { song.title }
-            val searchArtist = cleanerResult.cleaned.artistGuess ?: song.artist.takeIf { it != "Unknown Artist" }
+            val rawArtist = cleanerResult.cleaned.artistGuess ?: song.artist.takeIf { it != "Unknown Artist" }
+            val searchArtist = com.lochanpthakke.empee3.core.database.library.PrimaryArtistExtractor.extractPrimaryArtist(rawArtist)
 
-            val candidateTitles = titleCandidateGenerator.generateCandidates(rawFilename, customBlocklist + activeLearnedTokens)
+            val candidateTitles = titleCandidateGenerator.generateCandidates(song.title.ifBlank { rawFilename }, customBlocklist + activeLearnedTokens)
             var bestCandidate: com.lochanpthakke.empee3.core.model.MetadataCandidate? = null
             var successfulTitleQuery: String? = null
 
-            for (queryTitle in candidateTitles) {
-                val queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
-                val searchResult =
+            for (index in candidateTitles.indices) {
+                val queryTitle = candidateTitles[index]
+                var queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
+                var searchResult =
                     metadataRepository.searchAndScoreTrack(
                         title = queryTitle,
                         artist = queryArtist,
@@ -100,16 +102,24 @@ class ProcessSingleTrackUseCase
                         sourceProvider = sourceProvider,
                     )
 
-                val candidates = searchResult.getOrDefault(emptyList())
-                val top = candidates.firstOrNull()
-                if (top != null) {
-                    if (bestCandidate == null || top.confidenceScore > bestCandidate.confidenceScore) {
-                        bestCandidate = top
-                        successfulTitleQuery = queryTitle
-                    }
-                    if (top.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
-                        break // Early exit as soon as high confidence match >= 0.85 is found!
-                    }
+                var candidates = searchResult.getOrDefault(emptyList())
+                if (candidates.isEmpty() && queryArtist != null) {
+                    queryArtist = null
+                    searchResult =
+                        metadataRepository.searchAndScoreTrack(
+                            title = queryTitle,
+                            artist = null,
+                            album = song.album,
+                            durationMs = song.durationMs,
+                            sourceProvider = sourceProvider,
+                        )
+                    candidates = searchResult.getOrDefault(emptyList())
+                }
+
+                if (candidates.isNotEmpty()) {
+                    bestCandidate = candidates.firstOrNull()
+                    successfulTitleQuery = if (index > 0) "$queryTitle (Attempt ${index + 1})" else queryTitle
+                    break
                 }
             }
 
@@ -124,7 +134,7 @@ class ProcessSingleTrackUseCase
                             album = bestCandidate.album.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.ALBUM_ONLY },
                             bpm = bestCandidate.bpm.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.BPM_ONLY },
                         )
-                    val writeResult = metadataRepository.writeTagsToFile(writeRequest)
+                    val writeResult = if (writeRequest.hasChanges) metadataRepository.writeTagsToFile(writeRequest) else AppResult.Success(Unit)
 
                     if (writeResult is AppResult.Success<*>) {
                         // Extract title difference between raw local title and verified clean API title

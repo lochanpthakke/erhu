@@ -23,6 +23,9 @@ class MusicBrainzProvider
             artist: String?,
             album: String?,
         ): List<MetadataCandidate> {
+            val isConstrained = (!artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true)) ||
+                (!album.isNullOrBlank() && !album.equals("Unknown Album", ignoreCase = true))
+
             val query =
                 when {
                     !artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true) ->
@@ -33,7 +36,10 @@ class MusicBrainzProvider
                 }
 
             return try {
-                val response = musicBrainzApi.searchRecording(query)
+                var response = musicBrainzApi.searchRecording(query)
+                if (response.recordings.isEmpty() && isConstrained) {
+                    response = musicBrainzApi.searchRecording("recording:\"$title\"")
+                }
                 response.recordings.map { dto ->
                     val artistName =
                         if (dto.artistCredit.isNotEmpty()) {
@@ -65,6 +71,7 @@ class MusicBrainzProvider
                     )
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 logger.w(TAG, "MusicBrainz search failed: ${e.message}", e)
                 emptyList()
             }

@@ -11,47 +11,26 @@ class TitleCandidateGenerator
         private val filenameCleaner: FilenameCleaner,
     ) {
         fun generateCandidates(
-            rawFilename: String,
+            rawFilenameOrTitle: String,
             customBlocklistTokens: List<String> = emptyList(),
         ): List<String> {
-            val primaryResult = filenameCleaner.cleanFilenameAndExtractJunk(rawFilename, customBlocklistTokens).cleaned
-            val primaryTitle = primaryResult.title.trim()
-            val artistGuess = primaryResult.artistGuess?.trim()
-            val rawTitle = rawFilename.substringBeforeLast('.').replace('_', ' ').trim()
-
+            val rawTitle = rawFilenameOrTitle.substringBeforeLast('.').replace('_', ' ').trim()
             val candidates = mutableListOf<String>()
 
-            // 1. Clean head title (artistGuess if split off by " - " e.g. "Diwali" or "Love Me Again")
-            if (!artistGuess.isNullOrBlank() && !artistGuess.equals("Unknown Artist", ignoreCase = true)) {
-                candidates.add(artistGuess)
-            }
-
-            // 2. Strip trailing enclosure suffix [ ... ] or ( ... )
-            val trailingEnclosureRegex = Regex("\\s*[\\[(][^\\])]+[\\])]\\s*$")
-            val rawNoEnclosure = rawTitle.replace(trailingEnclosureRegex, "").trim()
-            if (rawNoEnclosure.isNotBlank() && rawNoEnclosure.length >= 2) {
-                candidates.add(rawNoEnclosure)
-            }
-
-            // 3. Primary cleaned title
-            if (primaryTitle.isNotBlank()) {
-                candidates.add(primaryTitle)
-            }
-
-            // 4. Full raw title
+            // Step 1: Complete original title
             if (rawTitle.isNotBlank()) {
                 candidates.add(rawTitle)
             }
 
-            // 5. Fallback: Strip trailing word if raw title has >= 2 words
-            val words = rawTitle.split("\\s+".toRegex())
-            if (words.size >= 2) {
-                val headWords = words.dropLast(1).joinToString(" ").trim()
-                if (headWords.isNotBlank() && headWords.length >= 2) {
-                    candidates.add(headWords)
+            // Step 2: Fallback to title before any hyphen "-", stripping bracket/enclosure noise
+            if (rawTitle.contains("-")) {
+                val headRaw = rawTitle.substringBefore("-").trim()
+                val cleanHead = headRaw.replace(Regex("""\[.*?\]|\(.*?\)"""), "").replace(Regex("\\s+"), " ").trim(' ', '-', '_', '[', ']', '(', ')')
+                if (cleanHead.isNotBlank() && cleanHead.length >= 2 && cleanHead != rawTitle) {
+                    candidates.add(cleanHead)
                 }
             }
 
-            return candidates.distinct().filter { it.length >= 2 }.take(3)
+            return candidates.distinct().filter { it.isNotBlank() && it.length >= 2 }.take(2)
         }
     }
