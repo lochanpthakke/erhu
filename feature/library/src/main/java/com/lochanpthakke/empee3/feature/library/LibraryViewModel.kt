@@ -87,6 +87,13 @@ enum class SongSource {
     FAVORITES,
 }
 
+/** What the repair queue's "select all" toggle added: [matched] songs for [query] ("" = whole library), [songIds] new to the queue. */
+data class SelectAllSelection(
+    val query: String,
+    val matched: Int,
+    val songIds: Set<Long>,
+)
+
 data class ArtworkQueueItem(
     val album: Album,
     val status: String = "PENDING", // PENDING, SEARCHING, ARTWORK_FOUND, WRITING, COMPLETED, FAILED
@@ -541,6 +548,52 @@ class LibraryViewModel
 
         fun clearRepairQueue() {
             _repairQueue.value = emptyList()
+            _selectAllForRepair.value = null
+        }
+
+        /**
+         * The songs the "select all" toggle added to the repair queue, or null while it is off.
+         * Kept so turning it off removes exactly those (still pending) and nothing added by hand.
+         */
+        private val _selectAllForRepair = MutableStateFlow<SelectAllSelection?>(null)
+        val selectAllForRepair: StateFlow<SelectAllSelection?> = _selectAllForRepair.asStateFlow()
+
+        /**
+         * Adds everything currently available to the repair queue: with a search, the matching
+         * songs plus every song of the matching albums and artists; without one, the whole library.
+         * Turning it off takes those songs out again unless they were already processed.
+         */
+        fun setSelectAllForRepair(
+            enabled: Boolean,
+            query: String,
+        ) {
+            if (_isFixingQueue.value) return
+            if (!enabled) {
+                val added = _selectAllForRepair.value?.songIds.orEmpty()
+                _repairQueue.value = _repairQueue.value.filterNot { it.song.id in added && it.status == "PENDING" }
+                _selectAllForRepair.value = null
+                return
+            }
+            viewModelScope.launch {
+                val text = query.trim()
+                val songs =
+                    if (text.isEmpty()) {
+                        libraryRepository.getAllSongs().first()
+                    } else {
+                        searchResults.value +
+                            searchAlbums.value.flatMap { libraryRepository.getSongsByAlbumId(it.id).first() } +
+                            searchArtists.value.flatMap { libraryRepository.getSongsByArtistId(it.id).first() }
+                    }.distinctBy { it.id }
+                val queued = _repairQueue.value.map { it.song.id }.toSet()
+                val newSongs = songs.filter { it.id !in queued }
+                _repairQueue.value = _repairQueue.value + newSongs.map { RepairQueueItem(song = it, status = "PENDING") }
+                _selectAllForRepair.value =
+                    SelectAllSelection(
+                        query = text,
+                        matched = songs.size,
+                        songIds = newSongs.map { it.id }.toSet(),
+                    )
+            }
         }
 
         fun enqueueAlbumForArtwork(album: Album) {

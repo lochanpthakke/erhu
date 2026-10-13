@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
@@ -45,6 +46,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -97,6 +99,7 @@ fun MetadataEditorScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val searchAlbums by viewModel.searchAlbums.collectAsState()
     val searchArtists by viewModel.searchArtists.collectAsState()
+    val selectAll by viewModel.selectAllForRepair.collectAsState()
 
     val doneCount = repairQueue.count { it.status == "DONE" || it.status == "SUCCESS" || it.status == "PARTIAL_SUCCESS" }
     val unchangedCount = repairQueue.count { it.status == "UNCHANGED" }
@@ -156,7 +159,30 @@ fun MetadataEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("Search tracks, albums, or artists to fix...") },
                 leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    // Selects everything available: the search's songs, albums and artists, or the whole library.
+                    IconToggleButton(
+                        checked = selectAll != null,
+                        onCheckedChange = { viewModel.setSelectAllForRepair(it, searchQuery) },
+                        enabled = !isFixingQueue,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = if (searchQuery.isBlank()) "Select all songs to fix" else "Select all results to fix",
+                            tint = if (selectAll != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
             )
+
+            selectAll?.let { selection ->
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                Text(
+                    text = selectAllSummary(selection),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
 
@@ -716,6 +742,15 @@ fun MetadataEditorScreen(
             },
         )
     }
+}
+
+/** e.g. "All 153 songs in your library selected" or "12 songs matching “igor” selected (3 already queued)". */
+private fun selectAllSummary(selection: SelectAllSelection): String {
+    val scope = if (selection.query.isEmpty()) "in your library" else "matching “${selection.query}”"
+    val already = selection.matched - selection.songIds.size
+    val count = if (selection.query.isEmpty()) "All ${selection.matched}" else "${selection.matched}"
+    val note = if (already > 0) " ($already already queued)" else ""
+    return "$count ${if (selection.matched == 1) "song" else "songs"} $scope selected$note"
 }
 
 private fun formatFailureReason(reason: String?): String =
