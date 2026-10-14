@@ -182,6 +182,13 @@ class LibraryViewModel
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
 
+        private val _confidenceThreshold = MutableStateFlow(0.75f)
+        val confidenceThreshold: StateFlow<Float> = _confidenceThreshold.asStateFlow()
+
+        fun setConfidenceThreshold(threshold: Float) {
+            _confidenceThreshold.value = threshold.coerceIn(0.50f, 0.95f)
+        }
+
         private val _selectedProvider = MutableStateFlow("ALL") // "ALL", "Deezer", "MusicBrainz", "LastFm"
         val selectedProvider: StateFlow<String> = _selectedProvider.asStateFlow()
 
@@ -804,8 +811,18 @@ class LibraryViewModel
 
                                 val returnedCandidates = res.candidates
                                 if (returnedCandidates.isNotEmpty()) {
-                                    best = returnedCandidates.firstOrNull()
-                                    break
+                                    val topCandidate = returnedCandidates.first()
+                                    if (best == null) {
+                                        best = topCandidate
+                                    } else {
+                                        // Compare candidates across attempts using score margin (+0.08)
+                                        if (topCandidate.confidenceScore >= best!!.confidenceScore + 0.08f) {
+                                            best = topCandidate
+                                        }
+                                    }
+                                    if (best!!.confidenceScore >= _confidenceThreshold.value) {
+                                        break
+                                    }
                                 }
                             }
 
@@ -829,7 +846,7 @@ class LibraryViewModel
                                         )
                                         item.copy(status = "FAILED", failureReason = "NO_MATCH", diagnostics = diag)
                                     }
-                                    best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD -> {
+                                    best.confidenceScore < _confidenceThreshold.value -> {
                                         val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
                                             originalFilename = rawFileName,
                                             searchTitle = successfulTitle,
@@ -843,12 +860,24 @@ class LibraryViewModel
                                     }
                                     else -> {
                                         val activeFields = _selectedFields.value
+                                        val featRegex = Regex("(?i)\\s*[(\\[]?(feat|ft|featuring|with)\\.?\\s+[^)\\]]+[)\\]]?")
+                                        val localFeatMatch = featRegex.find(item.song.title)
+                                        val resolvedTitle = if (activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.TITLE)) {
+                                            if (localFeatMatch != null && !featRegex.containsMatchIn(best.title)) {
+                                                best.title + " " + localFeatMatch.value.trim()
+                                            } else {
+                                                best.title
+                                            }
+                                        } else {
+                                            ""
+                                        }
+
                                         val request =
                                             buildTagWriteRequest(
                                                 contentUri = item.song.uri,
                                                 filePath = filePath,
                                                 current = EditableTags(item.song.title, item.song.artist, item.song.album),
-                                                title = best.title.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.TITLE) } ?: "",
+                                                title = resolvedTitle,
                                                 artist = best.artist.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.ARTIST) } ?: "",
                                                 album = best.album.takeIf { activeFields.contains(com.lochanpthakke.empee3.core.model.MetadataField.ALBUM) } ?: "",
                                                 year = 0,

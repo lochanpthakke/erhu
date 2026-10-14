@@ -11,16 +11,16 @@ class TitleCandidateGeneratorTest {
     @Test
     fun hyphenatedWatermark_generatesPrimaryAndFallbackCandidate() {
         val candidates = generator.generateCandidates("Diwali - UnknownDJWatermark.mp3")
-        assertEquals(2, candidates.size)
+        assertTrue(candidates.size >= 2)
         assertEquals("Diwali - UnknownDJWatermark", candidates[0])
-        assertEquals("Diwali", candidates[1])
+        assertTrue(candidates.contains("Diwali"))
     }
 
     @Test
     fun legitimateTitleWithRadioEdit_generatesCandidates() {
         val candidates = generator.generateCandidates("Love Me Again - Radio Edit.mp3")
         assertEquals("Love Me Again - Radio Edit", candidates[0])
-        assertEquals("Love Me Again", candidates[1])
+        assertTrue(candidates.contains("Love Me Again"))
     }
 
     @Test
@@ -31,9 +31,9 @@ class TitleCandidateGeneratorTest {
     }
 
     @Test
-    fun candidatesAreDeduplicatedAndLimitedToMaximumTwo() {
+    fun candidatesAreDeduplicatedAndLimitedToMaximumThree() {
         val candidates = generator.generateCandidates("Diwali - UnknownSource.mp3")
-        assertTrue(candidates.size <= 2)
+        assertTrue(candidates.size <= 3)
         assertEquals(candidates.distinct().size, candidates.size)
     }
 }

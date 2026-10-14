@@ -63,9 +63,16 @@ class FilenameCleaner
 
             val allBlocklist = (DEFAULT_BLOCKLIST + customBlocklistTokens).distinct()
             for (token in allBlocklist) {
-                if (token.isNotBlank() && clean.contains(token, ignoreCase = true)) {
-                    clean = clean.replace(token, "", ignoreCase = true)
-                    extractedJunk.add(token.trim('[', ']', '(', ')', ' '))
+                if (token.isNotBlank()) {
+                    val pattern = if (token.startsWith(".")) {
+                        Regex("(?i)" + Regex.escape(token) + "\\b")
+                    } else {
+                        Regex("(?i)\\b" + Regex.escape(token) + "\\b")
+                    }
+                    if (pattern.containsMatchIn(clean)) {
+                        clean = clean.replace(pattern, "")
+                        extractedJunk.add(token.trim('[', ']', '(', ')', ' '))
+                    }
                 }
             }
 

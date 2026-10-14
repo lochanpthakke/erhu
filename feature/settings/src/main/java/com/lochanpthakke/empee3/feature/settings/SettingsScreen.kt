@@ -5,6 +5,13 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
@@ -18,13 +25,20 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.model.VisualizerMode
 import com.lochanpthakke.empee3.core.model.VisualizerSensitivity
@@ -425,6 +439,34 @@ private fun MetadataSettingsSubPage(
                             }
                         },
                     )
+                }
+            }
+        }
+
+        val confidenceThreshold by viewModel.confidenceThreshold.collectAsState()
+        SettingsSection(
+            title = "Confidence Threshold",
+            footer = "Automated metadata fixes are accepted when search result confidence is at or above this threshold.",
+        ) {
+            SettingsGroup {
+                row {
+                    Column(modifier = Modifier.padding(Spacing.md)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Auto-Accept Threshold", style = MaterialTheme.typography.bodyMedium)
+                            Text("${(confidenceThreshold * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Slider(
+                            value = confidenceThreshold,
+                            onValueChange = { viewModel.setConfidenceThreshold(it) },
+                            valueRange = 0.50f..0.95f,
+                            steps = 8,
+                        )
+                    }
                 }
             }
         }

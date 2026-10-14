@@ -117,9 +117,14 @@ class ProcessSingleTrackUseCase
                 }
 
                 if (candidates.isNotEmpty()) {
-                    bestCandidate = candidates.firstOrNull()
-                    successfulTitleQuery = if (index > 0) "$queryTitle (Attempt ${index + 1})" else queryTitle
-                    break
+                    val top = candidates.first()
+                    if (bestCandidate == null || top.confidenceScore >= bestCandidate!!.confidenceScore + 0.08f) {
+                        bestCandidate = top
+                        successfulTitleQuery = if (index > 0) "$queryTitle (Attempt ${index + 1})" else queryTitle
+                    }
+                    if (bestCandidate!!.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
+                        break
+                    }
                 }
             }
 
@@ -204,16 +209,26 @@ class ProcessSingleTrackUseCase
             cleanTitle: String,
         ) {
             if (rawTitle.equals(cleanTitle, ignoreCase = true)) return
-            var remainder = rawTitle
+            val featRegex = Regex("(?i)[(\\[]?(feat|ft|featuring|with)\\.?\\s+[^)\\]]+[)\\]]?")
+            val titleWithoutFeat = rawTitle.replace(featRegex, "").trim()
+
+            var remainder = titleWithoutFeat
             cleanTitle.split(" ").forEach { word ->
                 if (word.length >= 3) {
                     remainder = remainder.replace(word, "", ignoreCase = true)
                 }
             }
             remainder = remainder.replace('_', ' ').replace('-', ' ').trim()
+            val ignoredWords = setOf(
+                "feat", "featuring", "with", "official", "video", "audio", "radio", "edit",
+                "live", "remastered", "single", "album", "version", "clean", "explicit", "deluxe"
+            )
             remainder.split(" ", "(", ")", "[", "]").forEach { token ->
                 val cleanedToken = token.trim(' ', '.', '-', '_', '[', ']', '(', ')')
-                if (cleanedToken.length >= 3 && !cleanedToken.equals(cleanTitle, ignoreCase = true)) {
+                if (cleanedToken.length >= 4 &&
+                    !cleanedToken.equals(cleanTitle, ignoreCase = true) &&
+                    !ignoredWords.contains(cleanedToken.lowercase())
+                ) {
                     learnedWatermarkDao.insertOrIncrement(cleanedToken)
                 }
             }
