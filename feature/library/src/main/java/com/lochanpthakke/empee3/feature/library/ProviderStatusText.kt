@@ -23,6 +23,7 @@ fun providerStatusText(outcome: ProviderOutcome): String {
         ProviderStatus.NETWORK_ERROR -> withReason("Network unavailable")
         ProviderStatus.TIMED_OUT -> "Request timed out"
         ProviderStatus.RATE_LIMITED -> withReason("Rate limited")
+        ProviderStatus.UNAVAILABLE -> withReason("Not available here")
         ProviderStatus.FAILED -> withReason("Error")
     }
 }

@@ -74,7 +74,7 @@ class FilenameCleaner
             clean = clean.replace(BITRATE_REGEX, "")
             clean = clean.replace('_', ' ')
             clean = clean.replace(BRACKET_NOISE_REGEX, "")
-            clean = clean.replace(EXTRA_WHITESPACE_REGEX, " ").trim(' ', '-', '_', '[', ']', '(', ')')
+            clean = trimUnmatchedBrackets(clean.replace(EXTRA_WHITESPACE_REGEX, " ").trim(' ', '-', '_'))
 
             val cleanedModel =
                 if (clean.contains(" - ")) {
@@ -98,6 +98,23 @@ class FilenameCleaner
         }
 
         companion object {
+            /**
+             * Strips brackets left dangling at either end (e.g. by removed watermarks), but keeps a
+             * balanced one: "Mr. Lonely (feat. Frank Ocean & Steve Lacy)" used to lose its ")".
+             */
+            internal fun trimUnmatchedBrackets(text: String): String {
+                var result = text.trim()
+                while (true) {
+                    val before = result
+                    if (result.endsWith(")") && result.count { it == ')' } > result.count { it == '(' }) result = result.dropLast(1)
+                    if (result.endsWith("]") && result.count { it == ']' } > result.count { it == '[' }) result = result.dropLast(1)
+                    if (result.startsWith("(") && result.count { it == '(' } > result.count { it == ')' }) result = result.drop(1)
+                    if (result.startsWith("[") && result.count { it == '[' } > result.count { it == ']' }) result = result.drop(1)
+                    result = result.trim(' ', '-', '_')
+                    if (result == before) return result
+                }
+            }
+
             val DEFAULT_BLOCKLIST =
                 listOf(
                     "pagalworld",

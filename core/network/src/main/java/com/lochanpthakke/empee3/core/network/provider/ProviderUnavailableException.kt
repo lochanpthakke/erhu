@@ -7,4 +7,6 @@ package com.lochanpthakke.empee3.core.network.provider
  */
 class ProviderUnavailableException(
     message: String,
+    /** True when every request this session will get the same answer (a country restriction): not asked again. */
+    val sessionWide: Boolean = false,
 ) : Exception(message)

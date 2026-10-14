@@ -10,6 +10,8 @@ import com.lochanpthakke.empee3.core.network.model.MusicBrainzGenreDto
 import com.lochanpthakke.empee3.core.network.model.MusicBrainzRecordingDto
 import com.lochanpthakke.empee3.core.network.model.MusicBrainzReleaseDto
 import com.lochanpthakke.empee3.core.network.model.MusicBrainzSearchResponse
+import com.lochanpthakke.empee3.core.network.scorer.artistSearchTerms
+import com.lochanpthakke.empee3.core.network.scorer.escapePhrase
 import com.lochanpthakke.empee3.core.network.tagger.ReleaseDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -38,14 +40,7 @@ class MusicBrainzProvider
             artist: String?,
             album: String?,
         ): List<MetadataCandidate> {
-            val query =
-                when {
-                    !artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true) ->
-                        "recording:\"$title\" AND artist:\"$artist\""
-                    !album.isNullOrBlank() && !album.equals("Unknown Album", ignoreCase = true) ->
-                        "recording:\"$title\" AND release:\"$album\""
-                    else -> "recording:\"$title\""
-                }
+            val query = musicBrainzRecordingQuery(title, artist, album)
             // Failures propagate: the repository reports them as FAILED, not as "no results".
             val response = throttled { musicBrainzApi.searchRecording(query) }
             return musicBrainzCandidates(response, album, providerName)
@@ -84,6 +79,26 @@ class MusicBrainzProvider
             private const val NANOS_PER_MS = 1_000_000L
         }
     }
+
+/**
+ * The Lucene query for a recording search: the title as an escaped phrase, plus the artist credit
+ * as words (`artist:(…)`, so "Tyler/ The Creator/Frank Ocean/ Steve Lacy" still finds "Tyler, The
+ * Creator ft. Frank Ocean & Steve Lacy"), or the album as a phrase when there is no artist.
+ */
+internal fun musicBrainzRecordingQuery(
+    title: String,
+    artist: String?,
+    album: String?,
+): String {
+    val terms = artistSearchTerms(artist?.takeUnless { it.equals("Unknown Artist", ignoreCase = true) })
+    val release = album?.trim()?.takeIf { it.isNotEmpty() && !it.equals("Unknown Album", ignoreCase = true) }
+    val recording = "recording:\"${escapePhrase(title.trim())}\""
+    return when {
+        terms != null -> "$recording AND artist:($terms)"
+        release != null -> "$recording AND release:\"${escapePhrase(release)}\""
+        else -> recording
+    }
+}
 
 /** Front cover of a release group from the Cover Art Archive (MusicBrainz's image store); 404 when it has none. */
 fun coverArtArchiveUrl(releaseGroupId: String): String = "https://coverartarchive.org/release-group/$releaseGroupId/front-500"

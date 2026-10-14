@@ -1087,7 +1087,7 @@ class LibraryViewModel
                             .searchAndScoreTrackDetailed(
                                 title = query.title,
                                 artist = query.artist?.takeUnless { it.equals(query.title, ignoreCase = true) },
-                                album = identity.album,
+                                album = query.album,
                                 durationMs = identity.durationMs,
                                 sourceProvider = provider,
                             ).getOrDefault(DetailedSearchResponse(emptyList(), emptyList()))
@@ -1097,11 +1097,20 @@ class LibraryViewModel
                 val diag =
                     com.lochanpthakke.empee3.core.model.RepairDiagnostics(
                         originalFilename = rawFileName,
-                        searchTitle = result.queries.joinToString("\" · \"") { it.title },
+                        searchTitle =
+                            result.queries
+                                .firstOrNull()
+                                ?.title
+                                .orEmpty(),
                         searchArtist = result.queries.firstOrNull()?.artist,
                         targetDurationMs = item.song.durationMs.takeIf { it > 0 },
                         providerOutcomes = outcomes,
                         topCandidates = candidates.take(TOP_CANDIDATES_SHOWN),
+                        embeddedTitle = embedded?.title,
+                        embeddedArtist = embedded?.artist,
+                        embeddedAlbum = embedded?.album,
+                        fileTitles = identity.fileTitles,
+                        queries = result.attempts,
                     )
 
                 fun concluded(

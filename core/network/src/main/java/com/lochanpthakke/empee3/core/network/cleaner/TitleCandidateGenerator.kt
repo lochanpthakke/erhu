@@ -47,7 +47,9 @@ class TitleCandidateGenerator
             val words = rawTitle.split("\\s+".toRegex())
             if (words.size >= 2) {
                 val headWords = words.dropLast(1).joinToString(" ").trim()
-                if (headWords.isNotBlank() && headWords.length >= 2) {
+                // Dropping a word inside "(feat. A & B)" leaves a broken "(feat. A &": not a title.
+                val balanced = headWords.count { it == '(' } == headWords.count { it == ')' }
+                if (headWords.isNotBlank() && headWords.length >= 2 && balanced) {
                     candidates.add(headWords)
                 }
             }

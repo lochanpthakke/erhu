@@ -1,0 +1,118 @@
+{
+ "created": "2026-10-14T15:04:27.924Z",
+ "query": "recording:\"Mr. Lonely\" AND artist:(Bobby Vinton)",
+ "count": 43,
+ "recordings": [
+  {
+   "id": "64f6863e-08b9-44ac-b68e-9dd2ac8e53d4",
+   "title": "Mr. Lonely",
+   "length": 161466,
+   "first-release-date": "1995",
+   "artist-credit": [
+    {
+     "name": "Bobby Vinton",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "7e2615a6-1bda-44c6-99b1-c143ea5cd419",
+     "title": "De Pre Historie ’60",
+     "status": "Official",
+     "date": "2011-11-25",
+     "release-group": {
+      "id": "61044b02-6b30-442f-9cd8-2fb91df75e9c",
+      "title": "De Pre Historie ’60",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    },
+    {
+     "id": "37d020b3-c00b-497d-8b4a-9ed785e92a46",
+     "title": "Billboard Hottest Hits 1950-1990",
+     "status": "Official",
+     "date": "1995",
+     "release-group": {
+      "id": "847fba8f-e1a0-38f7-8f3f-9f86d2432b64",
+      "title": "Billboard Hottest Hits 1950-1990",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    },
+    {
+     "id": "267292f3-dd10-4fbf-8d64-a8bc59601e4b",
+     "title": "20 All-Time Greatest Hits",
+     "status": "Official",
+     "date": "2002-07-23",
+     "release-group": {
+      "id": "cfed9002-cdb1-35b7-8d42-4a212a69b1e5",
+      "title": "20 All-Time Greatest Hits",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "6fa42c48-4047-4d95-8996-73df329adef0",
+   "title": "Mr. Lonely",
+   "length": 161533,
+   "first-release-date": "2005-01-31",
+   "artist-credit": [
+    {
+     "name": "Bobby Vinton",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "5c74c8aa-7f0d-4584-aadf-e20fc22c6efa",
+     "title": "Edel & Starck 3",
+     "status": "Official",
+     "date": "2005-01-31",
+     "release-group": {
+      "id": "801b9c0a-164e-3431-9f6d-654bda90623e",
+      "title": "Edel & Starck 3",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Soundtrack"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "abd214b3-24c0-461d-a756-37357bcd9ce8",
+   "title": "Mr. Lonely",
+   "length": 163000,
+   "artist-credit": [
+    {
+     "name": "Bobby Vinton",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "79faf67f-2eda-4bfc-8036-c33f51b293a7",
+     "title": "... and the Answer Is, Volume 2",
+     "status": "Official",
+     "date": "",
+     "release-group": {
+      "id": "8ae4368a-7eae-45fa-a9a7-fec291daa342",
+      "title": "... and the Answer Is, Volume 2",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

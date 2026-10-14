@@ -26,6 +26,9 @@ enum class ProviderStatus(val label: String) {
     TIMED_OUT("Request timed out"),
     RATE_LIMITED("Rate limited"),
 
+    /** The provider doesn't serve this request where the phone is (Deezer track search in India). */
+    UNAVAILABLE("Not available here"),
+
     /** Any other provider error (HTTP error, unusable response, service not offered here). */
     FAILED("Provider error"),
     ;
@@ -41,6 +44,19 @@ data class ProviderOutcome(
     val errorMessage: String? = null,
 )
 
+/** One query sent for a track: its separate parts, where the title came from, and each provider's answer. */
+data class QueryAttempt(
+    val title: String,
+    val artist: String?,
+    val album: String?,
+    val source: String,
+    val outcomes: List<ProviderOutcome>,
+)
+
+/**
+ * What a repair lookup saw and did, kept as separate fields so the screen never has to piece
+ * text back together. [searchTitle] / [searchArtist] are the first query's; [queries] has all of them.
+ */
 data class RepairDiagnostics(
     val originalFilename: String,
     val searchTitle: String,
@@ -49,6 +65,11 @@ data class RepairDiagnostics(
     val providerOutcomes: List<ProviderOutcome> = emptyList(),
     val topCandidates: List<MetadataCandidate> = emptyList(),
     val finalReason: String? = null,
+    val embeddedTitle: String? = null,
+    val embeddedArtist: String? = null,
+    val embeddedAlbum: String? = null,
+    val fileTitles: List<String> = emptyList(),
+    val queries: List<QueryAttempt> = emptyList(),
 )
 
 data class TagChange(

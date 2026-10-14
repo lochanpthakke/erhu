@@ -48,7 +48,7 @@ class ProviderSearchTest {
         selection: String = MetadataSources.ALL,
         availability: ProviderAvailability = ProviderAvailability.Available,
         retry: RetryPolicy = noRetry,
-        onAuthFailure: (String) -> Unit = {},
+        onSessionFailure: (ProviderStatus, String) -> Unit = { _, _ -> },
     ) = runBlocking {
         searchProviderScored(
             provider,
@@ -60,7 +60,7 @@ class ProviderSearchTest {
             "My Beautiful Dark Twisted Fantasy",
             548_000L,
             retry = retry,
-            onAuthFailure = onAuthFailure,
+            onSessionFailure = onSessionFailure,
         )
     }
 
@@ -111,7 +111,7 @@ class ProviderSearchTest {
     fun anInvalidKey_isAnAuthFailure_reportedOnce() {
         val rejected = mutableListOf<String>()
         val lastFm = FakeProvider("Last.fm") { throw ProviderAuthException("Last.fm error 10: Invalid API key") }
-        val (candidates, outcome) = search(lastFm, retry = RetryPolicy(maxAttempts = 3, baseDelayMs = 1), onAuthFailure = { rejected += it })
+        val (candidates, outcome) = search(lastFm, retry = RetryPolicy(maxAttempts = 3, baseDelayMs = 1), onSessionFailure = { _, reason -> rejected += reason })
         assertTrue(candidates.isEmpty())
         assertEquals(ProviderStatus.AUTH_FAILED, outcome.status)
         assertEquals("credentials are never retried", 1, lastFm.calls)

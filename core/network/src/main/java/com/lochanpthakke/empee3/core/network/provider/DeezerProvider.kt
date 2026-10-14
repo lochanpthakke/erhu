@@ -25,14 +25,7 @@ class DeezerProvider
             artist: String?,
             album: String?,
         ): List<MetadataCandidate> {
-            val query =
-                when {
-                    !artist.isNullOrBlank() && !artist.equals("Unknown Artist", ignoreCase = true) ->
-                        "artist:\"$artist\" track:\"$title\""
-                    !album.isNullOrBlank() && !album.equals("Unknown Album", ignoreCase = true) ->
-                        "album:\"$album\" track:\"$title\""
-                    else -> title
-                }
+            val query = deezerTrackQuery(title, artist, album)
 
             // Failures propagate: the repository reports them as FAILED, not as "no results".
             return deezerTrackCandidates(deezerApi.searchTrack(query), providerName)
@@ -161,6 +154,7 @@ internal fun deezerTrackCandidates(
     if (response.data.isEmpty() && response.total > 0) {
         throw ProviderUnavailableException(
             "Deezer found ${response.total} matches but returned none: track search isn't available in this country",
+            sessionWide = true,
         )
     }
     return response.data.map { dto ->
@@ -177,5 +171,25 @@ internal fun deezerTrackCandidates(
             deezerAlbumId = dto.album?.id,
             versionNote = dto.titleVersion?.trim()?.takeIf { it.isNotEmpty() && !dto.title.contains(it, ignoreCase = true) },
         )
+    }
+}
+
+/**
+ * Deezer's advanced search for a track. A credit flattened with "/" ("Tyler/ The Creator/Frank
+ * Ocean/ Steve Lacy") is no artist name Deezer knows, so then the album narrows the search instead.
+ * (Not verifiable from India, where Deezer withholds track search results.)
+ */
+internal fun deezerTrackQuery(
+    title: String,
+    artist: String?,
+    album: String?,
+): String {
+    fun phrase(text: String) = "\"${text.trim().replace("\"", "")}\""
+    val usableArtist = artist?.takeUnless { it.isBlank() || it.equals("Unknown Artist", ignoreCase = true) || '/' in it }
+    val usableAlbum = album?.takeUnless { it.isBlank() || it.equals("Unknown Album", ignoreCase = true) }
+    return when {
+        usableArtist != null -> "artist:${phrase(usableArtist)} track:${phrase(title)}"
+        usableAlbum != null -> "album:${phrase(usableAlbum)} track:${phrase(title)}"
+        else -> title.trim()
     }
 }

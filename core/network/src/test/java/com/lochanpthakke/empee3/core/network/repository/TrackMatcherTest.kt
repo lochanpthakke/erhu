@@ -88,13 +88,12 @@ class TrackMatcherTest {
         }
 
     @Test
-    fun theOldFilenameScoring_reproducesTheFailure() {
-        // Before: every candidate was scored against the query text, i.e. the file name.
+    fun theFileNameTitle_isRecognisedAsOneSideOfTheAlbumTitle() {
+        // Before 2026-10-14 this scored below the threshold: "THANK YOU" was compared with the whole
+        // "GONE, GONE / THANK YOU". It is one side of that two-part title, so it now counts as a near match.
         val scored = musicBrainz.map { scorer.scoreCandidate(it, "THANK YOU", "Tyler/ The Creator", "IGOR", 375_000L) }
-        assertTrue(
-            "best was ${scored.maxOf { it.confidenceScore }}",
-            scored.maxOf { it.confidenceScore } < HIGH_CONFIDENCE_THRESHOLD,
-        )
+        assertTrue(scored.single { it.durationMs == 375_000L }.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD)
+        assertTrue("the 4:32 recording is still told apart by length", scored.single { it.durationMs == 272_000L }.confidenceScore < HIGH_CONFIDENCE_THRESHOLD)
     }
 
     @Test
@@ -134,11 +133,17 @@ class TrackMatcherTest {
     }
 
     @Test
-    fun withoutTags_anAbbreviatedFileNameStaysUncertain_andSaysWhy() {
+    fun withoutTags_theAbbreviatedFileNameStillFindsTheAlbumVersion() {
         val decision = runMatch(thankYouFile.copy(title = null), found = musicBrainz).decision
+        assertEquals(375_000L, (decision as MatchDecision.Confident).match.durationMs)
+    }
+
+    @Test
+    fun aRejectedMatch_saysWhy_withTheCandidateDetails() {
+        val decision = runMatch(thankYouFile.copy(title = null, durationMs = 200_000L), found = musicBrainz).decision
         assertFalse(decision is MatchDecision.Confident)
         val reason = (decision as? MatchDecision.LowConfidence)?.reason ?: (decision as MatchDecision.NoMatch).reason.orEmpty()
-        assertTrue(reason, reason.contains("GONE, GONE / THANK YOU") && reason.contains("vs file 6:15") && reason.contains("%"))
+        assertTrue(reason, reason.contains("GONE, GONE / THANK YOU") && reason.contains("vs file 3:20") && reason.contains("%"))
     }
 
     @Test
@@ -168,7 +173,9 @@ class TrackMatcherTest {
         assertEquals(
             listOf(
                 TrackQuery("GONE, GONE / THANK YOU", "Tyler/ The Creator", TrackQuery.Source.TAG),
+                TrackQuery("GONE, GONE / THANK YOU", null, TrackQuery.Source.TAG, album = "IGOR"),
                 TrackQuery("THANK YOU", "Tyler/ The Creator", TrackQuery.Source.FILE_NAME),
+                TrackQuery("THANK YOU", null, TrackQuery.Source.FILE_NAME, album = "IGOR"),
             ),
             planned,
         )

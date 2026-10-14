@@ -60,4 +60,17 @@ class FilenameCleanerTest {
         assertEquals("Drive By", cleaned.title)
         assertEquals("Train", cleaned.artistGuess)
     }
+
+    @Test
+    fun balancedBracketsAtTheEnd_areKept_danglingOnesRemoved() {
+        val cleaner = FilenameCleaner()
+        assertEquals(
+            "Mr. Lonely (feat. Frank Ocean & Steve Lacy)",
+            cleaner.cleanFilename("Mr. Lonely (feat. Frank Ocean & Steve Lacy).mp3").title,
+        )
+        assertEquals("Song", FilenameCleaner.trimUnmatchedBrackets("Song)"))
+        assertEquals("Song", FilenameCleaner.trimUnmatchedBrackets("(Song"))
+        assertEquals("(Intro) Song", FilenameCleaner.trimUnmatchedBrackets("(Intro) Song"))
+        assertEquals("Song [Live]", FilenameCleaner.trimUnmatchedBrackets(" Song [Live] - "))
+    }
 }

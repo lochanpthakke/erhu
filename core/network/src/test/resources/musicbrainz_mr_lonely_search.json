@@ -1,0 +1,282 @@
+{
+ "created": "2026-10-14T15:04:20.223Z",
+ "query": "recording:\"Mr. Lonely\" AND artist:(Tyler The Creator Frank Ocean Steve Lacy)",
+ "count": 38,
+ "recordings": [
+  {
+   "id": "052d311c-c9f5-4e55-b1cb-83e7d058520a",
+   "title": "911 / Mr. Lonely",
+   "length": 255000,
+   "first-release-date": "2017-06-30",
+   "artist-credit": [
+    {
+     "name": "Tyler, The Creator",
+     "joinphrase": " ft. "
+    },
+    {
+     "name": "Frank Ocean",
+     "joinphrase": " & "
+    },
+    {
+     "name": "Steve Lacy",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "904c2d5d-6d86-44d5-99ee-705b79355222",
+     "title": "Who Dat Boy / 911",
+     "status": "Official",
+     "date": "2017-06-30",
+     "release-group": {
+      "id": "ce463ef9-f28e-4194-9c96-74a5acb9891d",
+      "title": "Who Dat Boy / 911",
+      "primary-type": "Single",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "523f5e88-9988-436d-ab60-6d514c1f0e15",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2017-07-21",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "dd09e440-879d-447b-9dfa-8547b369548e",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2017-07-21",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "7b19feb7-2c94-4f49-a887-868cde3c5941",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2017-11-27",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    }
+   ]
+  },
+  {
+   "id": "385a7e19-52c9-4168-a4cc-d56a0632b8d7",
+   "title": "911 / Mr. Lonely",
+   "length": 255653,
+   "disambiguation": "Dolby Atmos mix",
+   "first-release-date": "2022",
+   "artist-credit": [
+    {
+     "name": "Tyler, The Creator",
+     "joinphrase": " ft. "
+    },
+    {
+     "name": "Frank Ocean",
+     "joinphrase": " & "
+    },
+    {
+     "name": "Steve Lacy",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "b62cabfe-9d8c-487a-8a1d-3938d1589a71",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2022",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    }
+   ]
+  },
+  {
+   "id": "59a6490a-364a-4e11-8124-e375d2e1a9ee",
+   "title": "911 / Mr. Lonely",
+   "length": 295000,
+   "disambiguation": "live, 2021‐07‐01: Music Hall of Williamsburg, New York, NY, USA",
+   "artist-credit": [
+    {
+     "name": "Tyler, The Creator",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "7b5d844e-ad48-4613-b35b-12b05fd36d6f",
+     "title": "2021‐07‐01: Music Hall of Williamsburg, New York, NY, USA",
+     "status": "Bootleg",
+     "date": null,
+     "release-group": {
+      "id": "0be0f6d5-9eca-442d-91e4-f89ba7ee2ec0",
+      "title": "2021‐07‐01: Music Hall of Williamsburg, New York, NY, USA",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "01043156-c3d6-491f-9eeb-623229ac1da5",
+   "title": "Mr Lonely",
+   "length": 178000,
+   "first-release-date": "2006-01-27",
+   "artist-credit": [
+    {
+     "name": "Frank B",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "20549cbe-a763-435a-8929-ae5ffe9223cb",
+     "title": "Dance Mania, Volume 1",
+     "status": "Official",
+     "date": "2006-01-27",
+     "release-group": {
+      "id": "f3f8dd83-a16e-35c2-af91-8e8e4f2cb59e",
+      "title": "Dance Mania, Volume 1",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "b728d0bc-e3ab-4992-9eb8-90c6c311cf73",
+   "title": "Mr Lonely",
+   "length": 109000,
+   "disambiguation": "part of “Dance Top 100, Vol. 1” DJ‐mix",
+   "first-release-date": "2005-12-16",
+   "artist-credit": [
+    {
+     "name": "Frank B",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "3b1cd480-32f8-4882-80a6-b7b9b090773a",
+     "title": "Dance Top 100, Vol. 1",
+     "status": "Official",
+     "date": "2005-12-16",
+     "release-group": {
+      "id": "1de1f939-44d0-44a6-9f32-5835f3cf77ac",
+      "title": "Dance Top 100, Vol. 1",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "56d536de-e620-4fc4-832c-f0060fa80011",
+   "title": "Mr. Lonely",
+   "length": 150000,
+   "first-release-date": "2004",
+   "artist-credit": [
+    {
+     "name": "Frank Chacksfield & His Orchestra",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "f7059b26-ad19-4c2b-aa2e-ef6e1526ff1b",
+     "title": "The Million Sellers / Hits of 1965",
+     "status": "Official",
+     "date": "2004",
+     "release-group": {
+      "id": "c903c9d5-318b-481b-b432-89a90103ddad",
+      "title": "The Million Sellers / Hits of 1965",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "5f489e27-3a70-48ac-9951-4449a88c2aa0",
+   "title": "Mr. Lonely",
+   "length": 27000,
+   "first-release-date": "2006-10-31",
+   "artist-credit": [
+    {
+     "name": "The Slugs",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "f706a2a0-5048-46dc-af4b-0e350e767461",
+     "title": "Flushed Away",
+     "status": "Official",
+     "date": "2006-10-31",
+     "release-group": {
+      "id": "ab505edb-9eaf-3b40-ad65-b087966bb24c",
+      "title": "Flushed Away",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation",
+       "Soundtrack"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "f97064ca-3b06-48ee-9707-cd74848efce7",
+   "title": "Mr Lonely",
+   "length": 185000,
+   "first-release-date": "1996-11-19",
+   "artist-credit": [
+    {
+     "name": "The Jamaicans",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "b5d620f5-eb1c-44b0-a5a6-8a9d045be5eb",
+     "title": "Ba Ba Boum Time : 20 Rocksteady / Reggae Hits (1967-1972)",
+     "status": "Official",
+     "date": "1996-11-19",
+     "release-group": {
+      "id": "77237063-dd33-4742-9311-f5dc13731a78",
+      "title": "Ba Ba Boum Time : 20 Rocksteady / Reggae Hits (1967-1972)",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Compilation"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

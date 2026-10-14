@@ -124,16 +124,14 @@ class MetadataRepositoryImpl
                 durationMs = durationMs,
                 retry = retryPolicy,
                 log = { message -> logger.i(TAG, message) },
-                onAuthFailure = { reason -> providerHealth.markRejected(provider.providerName, reason) },
+                onSessionFailure = { status, reason -> providerHealth.markUnusable(provider.providerName, status, reason) },
             )
 
         private fun availabilityOf(provider: MetadataProvider): ProviderAvailability =
             when {
                 provider === lastFmProvider && !lastFmProvider.isConfigured ->
                     ProviderAvailability.NotConfigured(LastFmProvider.NOT_CONFIGURED_MESSAGE)
-                else ->
-                    providerHealth.rejectionOf(provider.providerName)?.let { ProviderAvailability.Rejected(it) }
-                        ?: ProviderAvailability.Available
+                else -> providerHealth.availabilityOf(provider.providerName)
             }
 
         override suspend fun fetchAlbumArt(
@@ -262,26 +260,37 @@ sealed interface ProviderAvailability {
     data class Rejected(
         val reason: String,
     ) : ProviderAvailability
+
+    /** It said earlier this session that it doesn't serve this country: not called again. */
+    data class Unavailable(
+        val reason: String,
+    ) : ProviderAvailability
 }
 
 /**
- * Providers whose credentials were rejected during this session, so an invalid key costs one
- * request rather than one per track. Cleared only by restarting the app (a new key needs a new build).
+ * Providers that can't help for the rest of this session: credentials rejected, or the service
+ * withheld in this country. One request finds out; later tracks get the same truthful status
+ * without asking again. Cleared by restarting the app.
  */
 @Singleton
 class ProviderHealth
     @Inject
     constructor() {
-        private val rejected = java.util.concurrent.ConcurrentHashMap<String, String>()
+        private val unusable = java.util.concurrent.ConcurrentHashMap<String, ProviderAvailability>()
 
-        fun markRejected(
+        fun markUnusable(
             providerName: String,
+            status: ProviderStatus,
             reason: String,
         ) {
-            rejected[providerName] = reason
+            when (status) {
+                ProviderStatus.AUTH_FAILED -> unusable[providerName] = ProviderAvailability.Rejected(reason)
+                ProviderStatus.UNAVAILABLE -> unusable[providerName] = ProviderAvailability.Unavailable(reason)
+                else -> Unit
+            }
         }
 
-        fun rejectionOf(providerName: String): String? = rejected[providerName]
+        fun availabilityOf(providerName: String): ProviderAvailability = unusable[providerName] ?: ProviderAvailability.Available
     }
 
 /**
@@ -291,7 +300,7 @@ class ProviderHealth
  * Retry-After respected) and a failure keeps its real category: network, timeout, rate limit,
  * credentials or other, never "no results". The status reflects the best score, not the first.
  */
-@Suppress("LongParameterList", "TooGenericExceptionCaught", "ReturnCount")
+@Suppress("LongParameterList", "TooGenericExceptionCaught", "ReturnCount", "LongMethod")
 internal suspend fun searchProviderScored(
     provider: MetadataProvider,
     selection: String,
@@ -303,7 +312,7 @@ internal suspend fun searchProviderScored(
     durationMs: Long?,
     retry: RetryPolicy = RetryPolicy(),
     log: (String) -> Unit = {},
-    onAuthFailure: (String) -> Unit = {},
+    onSessionFailure: (ProviderStatus, String) -> Unit = { _, _ -> },
 ): Pair<List<MetadataCandidate>, ProviderOutcome> {
     val name = provider.providerName
     if (!MetadataSources.matches(name, selection)) {
@@ -320,6 +329,11 @@ internal suspend fun searchProviderScored(
             log("provider=$name decision=not-queried reason=credentials-rejected-earlier")
             return emptyList<MetadataCandidate>() to
                 ProviderOutcome(name, status = ProviderStatus.AUTH_FAILED, errorMessage = "${availability.reason} (not retried)")
+        }
+        is ProviderAvailability.Unavailable -> {
+            log("provider=$name decision=not-queried reason=unavailable-here")
+            return emptyList<MetadataCandidate>() to
+                ProviderOutcome(name, status = ProviderStatus.UNAVAILABLE, errorMessage = "${availability.reason} (not asked again)")
         }
         ProviderAvailability.Available -> Unit
     }
@@ -356,7 +370,7 @@ internal suspend fun searchProviderScored(
     } catch (e: Exception) {
         val failure = classifyProviderFailure(e)
         log("provider=$name decision=queried outcome=${failure.status} error=${e.javaClass.simpleName}")
-        if (failure.status == ProviderStatus.AUTH_FAILED) onAuthFailure(failure.message)
+        onSessionFailure(failure.status, failure.message)
         emptyList<MetadataCandidate>() to ProviderOutcome(name, status = failure.status, errorMessage = failure.message)
     }
 }

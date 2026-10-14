@@ -637,11 +637,20 @@ fun MetadataEditorScreen(
                                                 .padding(bottom = Spacing.md),
                                         ) {
                                             Text("Search Details", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                            Text("Original file: ${diag.originalFilename}", style = MaterialTheme.typography.bodySmall)
-                                            Text("Searched title: \"${diag.searchTitle}\"", style = MaterialTheme.typography.bodySmall)
-                                            Text("Searched artist: ${diag.searchArtist ?: "Unknown / not provided"}", style = MaterialTheme.typography.bodySmall)
-                                            diag.targetDurationMs?.let { dur ->
-                                                Text("Target duration: ${dur / 1000}s", style = MaterialTheme.typography.bodySmall)
+                                            // One text per field: a value can never run into the next label.
+                                            searchDetailLines(diag).forEach { line ->
+                                                Row(modifier = Modifier.fillMaxWidth().padding(start = (line.indent * 12).dp)) {
+                                                    Text(
+                                                        "${line.label}: ",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.Medium,
+                                                    )
+                                                    Text(
+                                                        line.value,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        modifier = Modifier.weight(1f),
+                                                    )
+                                                }
                                             }
 
                                             Spacer(modifier = Modifier.height(Spacing.xs))
@@ -668,7 +677,11 @@ fun MetadataEditorScreen(
                                                         modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                     ) {
-                                                        Text("${candidate.title} — ${candidate.artist}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                                        Text(
+                                                            candidateLine(candidate),
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            modifier = Modifier.weight(1f),
+                                                        )
                                                         Text("$scorePct% (${candidate.sourceName}) ${if (isAccepted) "✓" else "✗"}", style = MaterialTheme.typography.labelSmall, color = if (isAccepted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                                                     }
                                                 }

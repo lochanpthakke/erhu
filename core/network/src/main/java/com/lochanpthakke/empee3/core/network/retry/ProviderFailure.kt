@@ -36,7 +36,8 @@ fun classifyProviderFailure(
 ): ProviderFailure =
     when (error) {
         is ProviderAuthException -> ProviderFailure(ProviderStatus.AUTH_FAILED, error.message.orEmpty())
-        is ProviderUnavailableException -> ProviderFailure(ProviderStatus.FAILED, error.message.orEmpty())
+        is ProviderUnavailableException ->
+            ProviderFailure(if (error.sessionWide) ProviderStatus.UNAVAILABLE else ProviderStatus.FAILED, error.message.orEmpty())
         is ProviderRateLimitedException ->
             ProviderFailure(ProviderStatus.RATE_LIMITED, error.message.orEmpty(), error.retryAfterMs, retryable = true)
         is UnknownHostException ->

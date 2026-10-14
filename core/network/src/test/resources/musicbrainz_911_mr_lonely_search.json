@@ -1,0 +1,140 @@
+{
+ "created": "2026-10-14T15:04:16.938Z",
+ "query": "recording:\"911 / Mr. Lonely\" AND artist:(Tyler The Creator Frank Ocean Steve Lacy)",
+ "count": 3,
+ "recordings": [
+  {
+   "id": "052d311c-c9f5-4e55-b1cb-83e7d058520a",
+   "title": "911 / Mr. Lonely",
+   "length": 255000,
+   "first-release-date": "2017-06-30",
+   "artist-credit": [
+    {
+     "name": "Tyler, The Creator",
+     "joinphrase": " ft. "
+    },
+    {
+     "name": "Frank Ocean",
+     "joinphrase": " & "
+    },
+    {
+     "name": "Steve Lacy",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "904c2d5d-6d86-44d5-99ee-705b79355222",
+     "title": "Who Dat Boy / 911",
+     "status": "Official",
+     "date": "2017-06-30",
+     "release-group": {
+      "id": "ce463ef9-f28e-4194-9c96-74a5acb9891d",
+      "title": "Who Dat Boy / 911",
+      "primary-type": "Single",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "523f5e88-9988-436d-ab60-6d514c1f0e15",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2017-07-21",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "dd09e440-879d-447b-9dfa-8547b369548e",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2017-07-21",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    },
+    {
+     "id": "7b19feb7-2c94-4f49-a887-868cde3c5941",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2017-11-27",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    }
+   ]
+  },
+  {
+   "id": "385a7e19-52c9-4168-a4cc-d56a0632b8d7",
+   "title": "911 / Mr. Lonely",
+   "length": 255653,
+   "disambiguation": "Dolby Atmos mix",
+   "first-release-date": "2022",
+   "artist-credit": [
+    {
+     "name": "Tyler, The Creator",
+     "joinphrase": " ft. "
+    },
+    {
+     "name": "Frank Ocean",
+     "joinphrase": " & "
+    },
+    {
+     "name": "Steve Lacy",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "b62cabfe-9d8c-487a-8a1d-3938d1589a71",
+     "title": "Flower Boy",
+     "status": "Official",
+     "date": "2022",
+     "release-group": {
+      "id": "e248e931-c26c-4c94-aba2-2f89ce583901",
+      "title": "Flower Boy",
+      "primary-type": "Album",
+      "secondary-types": []
+     }
+    }
+   ]
+  },
+  {
+   "id": "59a6490a-364a-4e11-8124-e375d2e1a9ee",
+   "title": "911 / Mr. Lonely",
+   "length": 295000,
+   "disambiguation": "live, 2021‐07‐01: Music Hall of Williamsburg, New York, NY, USA",
+   "artist-credit": [
+    {
+     "name": "Tyler, The Creator",
+     "joinphrase": ""
+    }
+   ],
+   "releases": [
+    {
+     "id": "7b5d844e-ad48-4613-b35b-12b05fd36d6f",
+     "title": "2021‐07‐01: Music Hall of Williamsburg, New York, NY, USA",
+     "status": "Bootleg",
+     "date": null,
+     "release-group": {
+      "id": "0be0f6d5-9eca-442d-91e4-f89ba7ee2ec0",
+      "title": "2021‐07‐01: Music Hall of Williamsburg, New York, NY, USA",
+      "primary-type": "Album",
+      "secondary-types": [
+       "Live"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

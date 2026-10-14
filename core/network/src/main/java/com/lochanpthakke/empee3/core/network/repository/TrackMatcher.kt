@@ -4,11 +4,13 @@ import com.lochanpthakke.empee3.core.common.text.MojibakeText
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.ProviderOutcome
 import com.lochanpthakke.empee3.core.model.ProviderStatus
+import com.lochanpthakke.empee3.core.model.QueryAttempt
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.MetadataScorer
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.foldForMatch
 import com.lochanpthakke.empee3.core.network.scorer.primaryArtist
+import com.lochanpthakke.empee3.core.network.scorer.stripFeaturing
 import com.lochanpthakke.empee3.core.network.tagger.isUsableTag
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,11 +29,15 @@ data class TrackIdentity(
     val fileArtist: String? = null,
 )
 
-/** One search sent to the providers, and where its text came from. */
+/**
+ * One search sent to the providers, as separate values (never one string): a title, and the
+ * artist credit or the album to narrow it, plus where the title came from.
+ */
 data class TrackQuery(
     val title: String,
     val artist: String?,
     val source: Source,
+    val album: String? = null,
 ) {
     enum class Source(
         val label: String,
@@ -68,6 +74,8 @@ data class MatchResult(
     val candidates: List<MetadataCandidate>,
     val providerOutcomes: List<ProviderOutcome>,
     val queries: List<TrackQuery>,
+    /** Each query actually sent, with every provider's answer to it, in order. */
+    val attempts: List<QueryAttempt> = emptyList(),
 )
 
 /**
@@ -90,9 +98,11 @@ class TrackMatcher
             val queries = planQueries(identity)
             val found = linkedMapOf<String, MetadataCandidate>()
             val responses = mutableListOf<DetailedSearchResponse>()
+            val attempts = mutableListOf<QueryAttempt>()
             for (query in queries) {
                 val response = search(query)
                 responses += response
+                attempts += QueryAttempt(query.title, query.artist, query.album, query.source.label, response.providerOutcomes)
                 for (candidate in response.candidates) {
                     val scored = rescore(candidate, identity, query)
                     val previous = found[candidate.id]
@@ -102,33 +112,54 @@ class TrackMatcher
                 if (decide(ranked, identity) is MatchDecision.Confident) break
             }
             val ranked = found.values.sortedByDescending { it.confidenceScore }
-            return MatchResult(decide(ranked, identity), ranked, mergeOutcomes(responses, ranked), queries)
+            val sent = queries.take(attempts.size)
+            return MatchResult(decide(ranked, identity), ranked, mergeOutcomes(responses, ranked), sent, attempts)
         }
 
+        /**
+         * Scores [candidate] against the track itself, not the query text: the embedded title,
+         * artist, album and length. File-name titles count as alternates (a little below the tag
+         * title), so a shortened file name can only add evidence, never take it away.
+         */
         private fun rescore(
             candidate: MetadataCandidate,
             identity: TrackIdentity,
             query: TrackQuery,
-        ): MetadataCandidate =
-            scorer.scoreCandidate(
-                candidate = candidate,
-                targetTitle = identity.title ?: query.title,
-                targetArtist = identity.artist ?: query.artist,
-                targetAlbum = identity.album,
-                targetDurationMs = identity.durationMs,
-            )
+        ): MetadataCandidate {
+            val artist = identity.artist ?: identity.fileArtist ?: query.artist
+
+            fun against(title: String) = scorer.scoreCandidate(candidate, title, artist, identity.album, identity.durationMs)
+            val primary = against(identity.title ?: query.title)
+            val alternate =
+                identity.fileTitles
+                    .map { against(it) }
+                    .maxByOrNull { it.confidenceScore }
+                    ?.let { it.copy(confidenceScore = it.confidenceScore * ALTERNATE_TITLE_FACTOR) }
+            return if (alternate != null && alternate.confidenceScore > primary.confidenceScore) alternate else primary
+        }
     }
 
-/** The searches to run, best evidence first: the tagged title and artist, then file-name variants. Duplicates are dropped. */
+/**
+ * The searches to run, best evidence first: the tagged title, then file-name titles. A title is
+ * sent without its featured-artist note (MusicBrainz titles don't carry one, and the names are in
+ * the artist credit), first with the artist credit, then with the album. Duplicates are dropped.
+ */
 fun planQueries(identity: TrackIdentity): List<TrackQuery> {
-    val queries = mutableListOf<TrackQuery>()
-    identity.title?.let { queries += TrackQuery(it, identity.artist, TrackQuery.Source.TAG) }
-    for (fileTitle in identity.fileTitles) {
-        queries += TrackQuery(fileTitle, identity.fileArtist ?: identity.artist, TrackQuery.Source.FILE_NAME)
-    }
-    return queries
-        .filter { it.title.isNotBlank() }
-        .distinctBy { foldForMatch(it.title) to foldForMatch(it.artist.orEmpty()) }
+    val artist = identity.artist ?: identity.fileArtist
+    val titles =
+        (
+            listOfNotNull(identity.title?.let { it to TrackQuery.Source.TAG }) +
+                identity.fileTitles.map { it to TrackQuery.Source.FILE_NAME }
+        ).map { (title, source) -> stripFeaturing(title) to source }
+            .filter { (title, _) -> title.isNotBlank() }
+            .distinctBy { (title, _) -> foldForMatch(title) }
+    return titles
+        .flatMap { (title, source) ->
+            listOfNotNull(
+                artist?.let { TrackQuery(title, it, source) },
+                identity.album?.let { TrackQuery(title, null, source, album = it) },
+            ).ifEmpty { listOf(TrackQuery(title, null, source)) }
+        }.distinctBy { Triple(foldForMatch(it.title), foldForMatch(it.artist.orEmpty()), foldForMatch(it.album.orEmpty())) }
         .take(MAX_QUERIES)
 }
 
@@ -211,7 +242,10 @@ private fun mergeOutcomes(
             }
         }
 
-private const val MAX_QUERIES = 4
+private const val MAX_QUERIES = 6
+
+/** A file-name title is weaker evidence than the tag title. */
+private const val ALTERNATE_TITLE_FACTOR = 0.97f
 private const val TIE_MARGIN = 0.02f
 private const val PERCENT = 100
 private const val MS_PER_SECOND = 1000
