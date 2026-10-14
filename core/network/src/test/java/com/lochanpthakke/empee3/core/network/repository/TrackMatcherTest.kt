@@ -176,6 +176,7 @@ class TrackMatcherTest {
                 TrackQuery("GONE, GONE / THANK YOU", null, TrackQuery.Source.TAG, album = "IGOR"),
                 TrackQuery("THANK YOU", "Tyler/ The Creator", TrackQuery.Source.FILE_NAME),
                 TrackQuery("THANK YOU", null, TrackQuery.Source.FILE_NAME, album = "IGOR"),
+                TrackQuery("GONE, GONE / THANK YOU", null, TrackQuery.Source.TAG),
             ),
             planned,
         )

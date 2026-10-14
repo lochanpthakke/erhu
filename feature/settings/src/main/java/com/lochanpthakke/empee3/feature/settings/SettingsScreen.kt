@@ -2,8 +2,16 @@ package com.lochanpthakke.empee3.feature.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
@@ -17,21 +25,27 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.VisualizerMode
 import com.lochanpthakke.empee3.core.model.VisualizerSensitivity
 import com.lochanpthakke.empee3.core.model.VisualizerSmoothing
+import com.lochanpthakke.empee3.feature.library.FIELD_SELECTION_NOTE
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
-import com.lochanpthakke.empee3.feature.library.UNSUPPORTED_FIX_ACTIONS_NOTE
-import com.lochanpthakke.empee3.feature.library.summary
 import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
+import com.lochanpthakke.empee3.feature.library.summary
 import com.lochanpthakke.empee3.feature.settings.component.SettingsChoiceRow
 import com.lochanpthakke.empee3.feature.settings.component.SettingsGroup
 import com.lochanpthakke.empee3.feature.settings.component.SettingsIcon
@@ -46,6 +60,7 @@ import com.lochanpthakke.empee3.feature.settings.sound.SoundSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.sound.SoundViewModel
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeSettingsScreen
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
+import kotlin.math.roundToInt
 
 private data class SettingCategory(
     val id: String,
@@ -178,7 +193,13 @@ fun SettingsCategoryScreen(
             )
         "visualizer" -> VisualizerSettingsSubPage(viewModel = visualizerViewModel, title = title, onBack = onBack)
         "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel, title = title, onBack = onBack)
-        else -> MetadataSettingsSubPage(viewModel = libraryViewModel, title = title, onBack = onBack, onNavigateToMetadataEditor = onNavigateToMetadataEditor)
+        else ->
+            MetadataSettingsSubPage(
+                viewModel = libraryViewModel,
+                title = title,
+                onBack = onBack,
+                onNavigateToMetadataEditor = onNavigateToMetadataEditor,
+            )
     }
 }
 
@@ -374,8 +395,16 @@ private fun MetadataSettingsSubPage(
     onNavigateToMetadataEditor: () -> Unit,
 ) {
     val selectedProvider by viewModel.selectedProvider.collectAsState()
-    val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+    val selectedFields by viewModel.selectedFields.collectAsState()
     val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
+    val confidenceThreshold by viewModel.confidenceThreshold.collectAsState()
+    val context = LocalContext.current
+    val hasAllFilesAccess =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            true
+        }
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
         SettingsSection(
@@ -397,6 +426,9 @@ private fun MetadataSettingsSubPage(
             }
         }
 
+        StorageAccessSection(hasAllFilesAccess = hasAllFilesAccess, context = context)
+        ConfidenceThresholdSection(threshold = confidenceThreshold, onChange = viewModel::setConfidenceThreshold)
+
         SettingsSection(
             title = "Primary Source Provider",
             footer = "Last.fm needs your own API key (lastfm.apiKey in local.properties, then rebuild); without one it is not queried.",
@@ -415,19 +447,116 @@ private fun MetadataSettingsSubPage(
             }
         }
 
-        SettingsSection(title = "Primary Fix Action", footer = UNSUPPORTED_FIX_ACTIONS_NOTE) {
-            SettingsGroup(selectable = true) {
-                com.lochanpthakke.empee3.core.model.MetadataFixAction.supported.forEach { action ->
-                    row {
-                        SettingsChoiceRow(
-                            title = action.displayName,
-                            summary = action.summary(),
-                            selected = selectedFixAction == action,
-                            onClick = { viewModel.setSelectedFixAction(action) },
-                        )
-                    }
+        FieldsToFixSection(selectedFields = selectedFields, onToggle = viewModel::toggleField)
+    }
+}
+
+@Composable
+private fun FieldsToFixSection(
+    selectedFields: Set<com.lochanpthakke.empee3.core.model.MetadataField>,
+    onToggle: (com.lochanpthakke.empee3.core.model.MetadataField) -> Unit,
+) {
+    SettingsSection(title = "Fields to Fix", footer = FIELD_SELECTION_NOTE) {
+        SettingsGroup {
+            com.lochanpthakke.empee3.core.model.MetadataField.supported.forEach { field ->
+                row {
+                    SettingsSwitchRow(
+                        title = field.displayName,
+                        summary = field.summary(),
+                        checked = field in selectedFields,
+                        onCheckedChange = { onToggle(field) },
+                    )
                 }
             }
         }
     }
 }
+
+/**
+ * Lochan's storage section: "All files access" lets empee3 write tags and rename files without
+ * per-file consent (and on SD cards).
+ */
+@Composable
+private fun StorageAccessSection(
+    hasAllFilesAccess: Boolean,
+    context: android.content.Context,
+) {
+    SettingsSection(
+        title = "Storage Permissions",
+        footer =
+            "Granting Full Storage Access allows empee3 to write ID3 tags and rename music files on external SD cards " +
+                "without permission errors.",
+    ) {
+        SettingsGroup {
+            row {
+                SettingsNavigationRow(
+                    title = "Full Storage Access",
+                    summary =
+                        if (hasAllFilesAccess) {
+                            "Granted — full read/write access to internal & SD card storage"
+                        } else {
+                            "Tap to grant full device storage write permission in System Settings"
+                        },
+                    icon = Icons.Default.Folder,
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            try {
+                                context.startActivity(
+                                    Intent(
+                                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                        Uri.parse("package:${context.packageName}"),
+                                    ),
+                                )
+                            } catch (_: android.content.ActivityNotFoundException) {
+                                context.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                            }
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Lochan's threshold slider; the default stays at 85 % (the matcher's own threshold). */
+@Composable
+private fun ConfidenceThresholdSection(
+    threshold: Float,
+    onChange: (Float) -> Unit,
+) {
+    SettingsSection(
+        title = "Confidence Threshold",
+        footer =
+            "Automated metadata fixes are accepted when search result confidence is at or above this threshold. " +
+                "Lower values write more matches but risk wrong ones; uncertain matches are always listed for review.",
+    ) {
+        SettingsGroup {
+            row {
+                Column(modifier = Modifier.padding(Spacing.md)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Auto-Accept Threshold", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "${(threshold * PERCENT).roundToInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(Spacing.xs))
+                    Slider(
+                        value = threshold,
+                        onValueChange = onChange,
+                        valueRange = LibraryViewModel.MIN_THRESHOLD..LibraryViewModel.MAX_THRESHOLD,
+                        steps = THRESHOLD_STEPS,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private const val PERCENT = 100
+private const val THRESHOLD_STEPS = 8

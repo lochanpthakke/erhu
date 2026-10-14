@@ -33,6 +33,8 @@ sealed interface TrackLookup {
     data class Concluded(
         val item: RepairQueueItem,
         val write: TagWriteRequest? = null,
+        /** File name to give the track ("Filename" field), when it differs from the current one. */
+        val renameTo: String? = null,
     ) : TrackLookup
 
     /** Some providers answered, others couldn't be reached, and nothing confident was found: retry later. */
@@ -76,6 +78,8 @@ data class LookupPhaseResult(
     /** Tag edits to make, by queue index: only for tracks whose lookup concluded with a change. */
     val writes: Map<Int, TagWriteRequest>,
     val pause: BatchPause?,
+    /** Files to rename, by queue index (after their tags are written, if any). */
+    val renames: Map<Int, String> = emptyMap(),
 )
 
 /**
@@ -98,11 +102,14 @@ class RepairBatchRunner(
     ): LookupPhaseResult {
         val queue = start.toMutableList()
         val writes = mutableMapOf<Int, TagWriteRequest>()
+        val renames = mutableMapOf<Int, String>()
+
+        fun result(pause: BatchPause?) = LookupPhaseResult(queue, writes, pause, renames)
         for (i in queue.indices) {
             val item = queue[i]
             if (item.status !in RepairStatus.TO_PROCESS) continue
-            networkPause(networkStatus())?.let { return LookupPhaseResult(queue, writes, it) }
-            if (pauseRequested()) return LookupPhaseResult(queue, writes, BatchPause(BatchPause.Kind.USER, "Paused"))
+            networkPause(networkStatus())?.let { return result(it) }
+            if (pauseRequested()) return result(BatchPause(BatchPause.Kind.USER, "Paused"))
 
             queue[i] = inProgress(item.copy(status = RepairStatus.FIXING, failureReason = null))
             onProgress(queue.toList())
@@ -110,6 +117,7 @@ class RepairBatchRunner(
                 is TrackLookup.Concluded -> {
                     queue[i] = result.item
                     result.write?.let { writes[i] = it }
+                    result.renameTo?.let { renames[i] = it }
                 }
                 is TrackLookup.PartlyUnreachable ->
                     queue[i] = result.item.copy(status = RepairStatus.NETWORK_FAILED, failureReason = result.reason)
@@ -119,12 +127,12 @@ class RepairBatchRunner(
                     onProgress(queue.toList())
                     val pause =
                         networkPause(networkStatus()) ?: BatchPause(BatchPause.Kind.UNREACHABLE, result.reason)
-                    return LookupPhaseResult(queue, writes, pause)
+                    return result(pause)
                 }
             }
             onProgress(queue.toList())
         }
-        return LookupPhaseResult(queue, writes, null)
+        return result(null)
     }
 
     private fun networkPause(status: NetworkStatus): BatchPause? =

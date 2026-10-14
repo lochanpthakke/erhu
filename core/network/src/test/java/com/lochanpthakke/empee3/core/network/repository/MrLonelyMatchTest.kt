@@ -113,7 +113,7 @@ class MrLonelyMatchTest {
     @Test
     fun theFileNameTitleKeepsItsClosingBracket() {
         assertTrue(fileTitles.toString(), "Mr. Lonely (feat. Frank Ocean & Steve Lacy)" in fileTitles)
-        assertFalse(fileTitles.any { it.count { c -> c == '(' } != it.count { c -> c == ')' } })
+        assertFalse(fileTitles.toString(), fileTitles.any { it.count { c -> c == '(' } != it.count { c -> c == ')' } })
     }
 
     @Test
@@ -125,6 +125,8 @@ class MrLonelyMatchTest {
                 TrackQuery("911 / Mr. Lonely", null, TrackQuery.Source.TAG, album = "Flower Boy"),
                 TrackQuery("Mr. Lonely", taggedArtist, TrackQuery.Source.FILE_NAME),
                 TrackQuery("Mr. Lonely", null, TrackQuery.Source.FILE_NAME, album = "Flower Boy"),
+                // Lochan's fallback: the title alone, last.
+                TrackQuery("911 / Mr. Lonely", null, TrackQuery.Source.TAG),
             ),
             queries,
         )

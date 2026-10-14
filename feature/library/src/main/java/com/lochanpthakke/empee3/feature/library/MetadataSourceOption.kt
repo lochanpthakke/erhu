@@ -1,6 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
-import com.lochanpthakke.empee3.core.model.MetadataFixAction
+import com.lochanpthakke.empee3.core.model.MetadataField
 import com.lochanpthakke.empee3.core.network.repository.MetadataSources
 
 /** A metadata source the user can choose, with what it really provides (verified 2026-10-13). */
@@ -53,22 +53,23 @@ private val OFFERED_KEYS = listOf(MetadataSources.ALL, MetadataSources.MUSICBRAI
 fun offeredMetadataSource(stored: String?): String =
     OFFERED_KEYS.firstOrNull { it.equals(stored, ignoreCase = true) } ?: MetadataSources.ALL
 
-/** What each offered fix action actually writes. */
-fun MetadataFixAction.summary(): String =
+/** What each field does when it is selected (all tag fields together = "All Fields"). */
+fun MetadataField.summary(): String =
     when (this) {
-        MetadataFixAction.ALL_FIELDS ->
-            "Title from the match; artist, album, year, genre and cover only where the file has none (a 1970 year counts as none)"
-        MetadataFixAction.TITLE_ONLY -> "Only the title"
-        MetadataFixAction.ARTIST_ONLY -> "Only the artist; a fuller credit with featured artists is kept"
-        MetadataFixAction.ALBUM_ONLY -> "Only the album name, replacing the current one"
-        MetadataFixAction.YEAR_ONLY -> "The original release date from MusicBrainz, replacing the file's year; skipped when uncertain"
-        MetadataFixAction.GENRE_ONLY -> "The album's genre: MusicBrainz's top-voted genre, or Deezer's"
-        MetadataFixAction.ARTWORK_ONLY -> "Replaces the embedded cover with the match's cover"
-        MetadataFixAction.BPM_ONLY, MetadataFixAction.LYRICS_ONLY -> unsupportedReason.orEmpty()
+        MetadataField.TITLE -> "The online title; a “(feat. …)” note in your title is kept"
+        MetadataField.ARTIST -> "The artist; a fuller credit with featured artists is kept"
+        MetadataField.ALBUM -> "The album name"
+        MetadataField.YEAR -> "The original release date from MusicBrainz; skipped when uncertain"
+        MetadataField.GENRE -> "The album's genre: MusicBrainz's top-voted genre, or Deezer's"
+        MetadataField.ARTWORK -> "The cover from the match"
+        MetadataField.FILENAME -> "Renames the file after its title"
+        MetadataField.BPM -> unsupportedReason.orEmpty()
     }
 
-/** Why the actions that aren't offered are missing, for a footnote. */
-val UNSUPPORTED_FIX_ACTIONS_NOTE: String =
-    MetadataFixAction.entries
-        .filterNot { it.isSupported }
-        .joinToString(" ") { "${it.displayName.removeSuffix(" Only")}: ${it.unsupportedReason}" }
+/** How the selection behaves, and why unsupported fields are missing, for a footnote. */
+val FIELD_SELECTION_NOTE: String =
+    "With every field on (All Fields) the title is updated, while artist, album, year, genre and cover are only filled " +
+        "where the file has none (a 1970 year counts as none). With fewer fields, those fields are replaced. " +
+        MetadataField.entries
+            .filterNot { it.isSupported }
+            .joinToString(" ") { "${it.displayName}: ${it.unsupportedReason}" }

@@ -20,9 +20,12 @@
             <option value="$PROJECT_DIR$/core/network" />
             <option value="$PROJECT_DIR$/core/playback" />
             <option value="$PROJECT_DIR$/core/sound" />
+            <option value="$PROJECT_DIR$/core/vybe" />
+            <option value="$PROJECT_DIR$/core/vybe-mediapipe" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/library" />
             <option value="$PROJECT_DIR$/feature/settings" />
+            <option value="$PROJECT_DIR$/feature/transfer" />
           </set>
         </option>
       </GradleProjectSettings>

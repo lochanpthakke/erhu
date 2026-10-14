@@ -252,10 +252,17 @@ fun MetadataEditorScreen(
             var actionExpanded by remember { mutableStateOf(false) }
 
             val selectedProvider by viewModel.selectedProvider.collectAsState()
-            val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+            val selectedFields by viewModel.selectedFields.collectAsState()
 
             val providerOptions = sourceOptions.map { it.key to it.label }
-            val actionOptions = com.lochanpthakke.empee3.core.model.MetadataFixAction.supported
+            // Lochan's multi-select: every field can be switched on or off; all tag fields = "All Fields".
+            val allFields = com.lochanpthakke.empee3.core.model.MetadataField.supported
+            val fixButtonLabel =
+                when {
+                    selectedFields.containsAll(allFields) -> "Fix: All Fields ▾"
+                    selectedFields.size == 1 -> "Fix: ${selectedFields.first().displayName} ▾"
+                    else -> "Fix: ${selectedFields.size} Fields ▾"
+                }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -296,7 +303,7 @@ fun MetadataEditorScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = "Fix: ${selectedFixAction.displayName} ▾",
+                            text = fixButtonLabel,
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -306,13 +313,20 @@ fun MetadataEditorScreen(
                         expanded = actionExpanded,
                         onDismissRequest = { actionExpanded = false },
                     ) {
-                        actionOptions.forEach { action ->
+                        DropdownMenuItem(
+                            text = { Text("Select All Fields", fontWeight = FontWeight.Bold) },
+                            onClick = { viewModel.selectAllFields() },
+                        )
+                        allFields.forEach { field ->
                             DropdownMenuItem(
-                                text = { Text(action.displayName) },
-                                onClick = {
-                                    viewModel.setSelectedFixAction(action)
-                                    actionExpanded = false
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = field in selectedFields, onCheckedChange = null)
+                                        Spacer(modifier = Modifier.width(Spacing.xs))
+                                        Text(field.displayName)
+                                    }
                                 },
+                                onClick = { viewModel.toggleField(field) },
                             )
                         }
                     }

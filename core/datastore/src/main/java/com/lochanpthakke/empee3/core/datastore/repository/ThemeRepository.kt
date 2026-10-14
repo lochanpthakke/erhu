@@ -35,8 +35,11 @@ interface ThemeRepository {
     /** Metadata & Artwork provider choice as stored ("" until the user picks one). */
     val metadataProvider: StateFlow<String>
 
-    /** Metadata & Artwork fix action name as stored ("" until the user picks one). */
+    /** Metadata & Artwork fields to fix as stored ("" until the user picks; older versions stored one action name). */
     val metadataFixAction: StateFlow<String>
+
+    /** Auto-accept threshold for metadata matches as stored (0 until the user changes it). */
+    val metadataConfidenceThreshold: StateFlow<Float>
 
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
@@ -51,6 +54,8 @@ interface ThemeRepository {
     suspend fun setMetadataProvider(provider: String): AppResult<Unit>
 
     suspend fun setMetadataFixAction(action: String): AppResult<Unit>
+
+    suspend fun setMetadataConfidenceThreshold(threshold: Float): AppResult<Unit>
 
     suspend fun setCustomScanLocation(
         uri: String,

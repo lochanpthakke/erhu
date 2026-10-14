@@ -28,7 +28,9 @@ class FilenameCleaner
             customBlocklistTokens: List<String> = emptyList(),
         ): CleanedFilenameResult {
             val extractedJunk = mutableListOf<String>()
-            var clean = rawFilename.substringBeforeLast('.')
+            // Only a real audio extension is removed: titles are cleaned too, and "Mr. Lonely (feat. X)"
+            // must not lose everything after "feat.".
+            var clean = stripAudioExtension(rawFilename)
 
             val trackNumMatch = LEADING_TRACK_NUMBER_REGEX.find(clean)
             if (trackNumMatch != null) {
@@ -63,9 +65,16 @@ class FilenameCleaner
 
             val allBlocklist = (DEFAULT_BLOCKLIST + customBlocklistTokens).distinct()
             for (token in allBlocklist) {
-                if (token.isNotBlank() && clean.contains(token, ignoreCase = true)) {
-                    clean = clean.replace(token, "", ignoreCase = true)
-                    extractedJunk.add(token.trim('[', ']', '(', ')', ' '))
+                if (token.isNotBlank()) {
+                    val pattern = if (token.startsWith(".")) {
+                        Regex("(?i)" + Regex.escape(token) + "\\b")
+                    } else {
+                        Regex("(?i)\\b" + Regex.escape(token) + "\\b")
+                    }
+                    if (pattern.containsMatchIn(clean)) {
+                        clean = clean.replace(pattern, "")
+                        extractedJunk.add(token.trim('[', ']', '(', ')', ' '))
+                    }
                 }
             }
 
@@ -74,6 +83,8 @@ class FilenameCleaner
             clean = clean.replace(BITRATE_REGEX, "")
             clean = clean.replace('_', ' ')
             clean = clean.replace(BRACKET_NOISE_REGEX, "")
+            // Brackets emptied by the removals above ("[320kbps]" -> "[]") go too.
+            clean = clean.replace(EMPTY_BRACKETS_REGEX, "")
             clean = trimUnmatchedBrackets(clean.replace(EXTRA_WHITESPACE_REGEX, " ").trim(' ', '-', '_'))
 
             val cleanedModel =
@@ -110,9 +121,20 @@ class FilenameCleaner
                     if (result.endsWith("]") && result.count { it == ']' } > result.count { it == '[' }) result = result.dropLast(1)
                     if (result.startsWith("(") && result.count { it == '(' } > result.count { it == ')' }) result = result.drop(1)
                     if (result.startsWith("[") && result.count { it == '[' } > result.count { it == ']' }) result = result.drop(1)
+                    // An opener at the very end (or a closer at the very start) never encloses anything.
+                    if (result.endsWith("(") || result.endsWith("[")) result = result.dropLast(1)
+                    if (result.startsWith(")") || result.startsWith("]")) result = result.drop(1)
                     result = result.trim(' ', '-', '_')
                     if (result == before) return result
                 }
+            }
+
+            private val AUDIO_EXTENSIONS = setOf("mp3", "flac", "m4a", "ogg", "opus", "wav", "aac", "wma", "alac", "aiff", "aif")
+
+            /** [name] without its audio file extension; a title without one is returned whole. */
+            internal fun stripAudioExtension(name: String): String {
+                val extension = name.substringAfterLast('.', "")
+                return if (extension.lowercase() in AUDIO_EXTENSIONS) name.substringBeforeLast('.') else name
             }
 
             val DEFAULT_BLOCKLIST =
@@ -137,6 +159,7 @@ class FilenameCleaner
 
             private val LEADING_TRACK_NUMBER_REGEX = Regex("^[0-9]{1,3}[\\s._-]+")
             private val EXTRA_WHITESPACE_REGEX = Regex("\\s+")
+            private val EMPTY_BRACKETS_REGEX = Regex("""\(\s*\)|\[\s*]""")
             private val DOMAIN_WATERMARK_REGEX = Regex("(?i)[a-zA-Z0-9-]+\\.(com|in|org|net|co|site|xyz|cc|io|club|mobi|audio|mp3)")
             private val BITRATE_REGEX = Regex("(?i)\\[?\\d{2,3}\\s*kbps]?|\\(128kbps\\)|\\(320kbps\\)|320kbps|128kbps|vbr|flac\\s*hd")
             private val BRACKET_NOISE_REGEX = Regex("(?i)\\[(official|video|audio|lyric|hd|4k|clean|remastered|mp3|download|single)]")

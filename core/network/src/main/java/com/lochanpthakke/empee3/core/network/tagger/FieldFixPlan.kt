@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.network.tagger
 
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
+import com.lochanpthakke.empee3.core.model.MetadataField
 import com.lochanpthakke.empee3.core.model.MetadataFixAction
 import com.lochanpthakke.empee3.core.network.scorer.foldForMatch
 
@@ -62,7 +63,7 @@ data class FieldFixPlan(
  * - [genre], [artworkBytes] and [releaseDate] are what the caller found online for this match (the
  *   date already validated and unambiguous, see [releaseDateFor]), or null.
  */
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList")
 fun planFieldFix(
     contentUri: String,
     filePath: String,
@@ -72,9 +73,60 @@ fun planFieldFix(
     genre: String?,
     artworkBytes: ByteArray?,
     releaseDate: ReleaseDate? = null,
+): FieldFixPlan =
+    planFieldFix(
+        contentUri,
+        filePath,
+        action.fields(),
+        action == MetadataFixAction.ALL_FIELDS,
+        local,
+        match,
+        genre,
+        artworkBytes,
+        releaseDate,
+    )
+
+/** The tag fields a field selection may change, and whether it is "All Fields" (fill missing values only). */
+data class FieldSelection(
+    val fields: Set<FixField>,
+    val fillOnly: Boolean,
+    /** Rename the file after its title ([MetadataField.FILENAME]). */
+    val rename: Boolean,
+)
+
+fun fieldSelection(selected: Set<MetadataField>): FieldSelection {
+    val supported = selected.filter { it.isSupported }.toSet()
+    val tags =
+        supported
+            .mapNotNull {
+                when (it) {
+                    MetadataField.TITLE -> FixField.TITLE
+                    MetadataField.ARTIST -> FixField.ARTIST
+                    MetadataField.ALBUM -> FixField.ALBUM
+                    MetadataField.YEAR -> FixField.YEAR
+                    MetadataField.GENRE -> FixField.GENRE
+                    MetadataField.ARTWORK -> FixField.ARTWORK
+                    MetadataField.BPM, MetadataField.FILENAME -> null
+                }
+            }.toSet()
+    return FieldSelection(tags, fillOnly = supported.containsAll(MetadataField.supportedTags), rename = MetadataField.FILENAME in supported)
+}
+
+/** Same as the action-based [planFieldFix], for an individual field selection. */
+@Suppress("LongParameterList", "CyclomaticComplexMethod")
+fun planFieldFix(
+    contentUri: String,
+    filePath: String,
+    fields: Set<FixField>,
+    fillOnly: Boolean,
+    local: LocalTrackTags,
+    match: MetadataCandidate,
+    genre: String?,
+    artworkBytes: ByteArray?,
+    releaseDate: ReleaseDate? = null,
 ): FieldFixPlan {
-    val fields = action.fields()
-    val fillOnly = action == MetadataFixAction.ALL_FIELDS
+    // The file's "(feat. …)" note is kept when the online title has none (MusicBrainz titles never do).
+    val matchTitle = withLocalFeaturing(match.title, local.title)
     val changes = mutableListOf<FieldFixPlan.Change>()
     val notes = mutableListOf<String>()
 
@@ -95,13 +147,13 @@ fun planFieldFix(
         }
     }
 
-    val sameTitleSpelling = isUsableTag(local.title) && foldForMatch(local.title) == foldForMatch(match.title)
+    val sameTitleSpelling = isUsableTag(local.title) && foldForMatch(local.title) == foldForMatch(matchTitle)
     val title =
         if (fillOnly && FixField.TITLE in fields && sameTitleSpelling) {
             // Same title apart from case or punctuation ("IGOR'S" vs "IGOR’S"): the file's spelling stays.
-            null.also { if (local.title.trim() != match.title.trim()) notes += "Kept the existing title \"${local.title.trim()}\"" }
+            null.also { if (local.title.trim() != matchTitle.trim()) notes += "Kept the existing title \"${local.title.trim()}\"" }
         } else {
-            text(FixField.TITLE, "title", local.title, match.title, keepValidLocal = false)
+            text(FixField.TITLE, "title", local.title, matchTitle, keepValidLocal = false)
         }
     val artist =
         if (FixField.ARTIST in fields && isUsableTag(local.artist) && creditContains(local.artist, match.artist)) {
@@ -205,3 +257,17 @@ private fun yearToWrite(
             found.yearOnly() to "Saved the year only: this file's tag format (ID3v2.3) can't store a month without a day"
         else -> found to null
     }
+
+private val FEATURING_PART = Regex("""(?i)\s*[(\[]\s*(?:feat\.?|ft\.?|featuring|with)\s[^)\]]+[)\]]""")
+
+/**
+ * [online] with [local]'s featured-artist note added when only the file has one:
+ * "911 / Mr. Lonely" + "… (feat. Frank Ocean & Steve Lacy)" -> "911 / Mr. Lonely (feat. Frank Ocean & Steve Lacy)".
+ */
+fun withLocalFeaturing(
+    online: String,
+    local: String,
+): String {
+    val note = FEATURING_PART.find(local)?.value?.trim()
+    return if (note == null || FEATURING_PART.containsMatchIn(online)) online else "${online.trim()} $note"
+}

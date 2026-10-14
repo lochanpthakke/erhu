@@ -17,7 +17,6 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
-import com.lochanpthakke.empee3.core.model.MetadataFixAction
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TagChange
@@ -32,7 +31,6 @@ import com.lochanpthakke.empee3.core.network.repository.TrackIdentity
 import com.lochanpthakke.empee3.core.network.repository.TrackMatcher
 import com.lochanpthakke.empee3.core.network.repository.usableIdentityText
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
-import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
 import com.lochanpthakke.empee3.core.network.tagger.EditableTags
 import com.lochanpthakke.empee3.core.network.tagger.EmbeddedTagReader
 import com.lochanpthakke.empee3.core.network.tagger.FieldFixPlan
@@ -59,6 +57,9 @@ import com.lochanpthakke.empee3.core.network.provider.LastFmCredentials
 import com.lochanpthakke.empee3.core.network.repository.MetadataSources
 import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
 import kotlinx.coroutines.CancellationException
+import com.lochanpthakke.empee3.core.model.MetadataField
+import com.lochanpthakke.empee3.core.network.tagger.FieldSelection
+import com.lochanpthakke.empee3.core.network.tagger.fieldSelection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -230,11 +231,41 @@ class LibraryViewModel
                 .map(::offeredMetadataSource)
                 .stateIn(viewModelScope, SharingStarted.Eagerly, offeredMetadataSource(themeRepository.metadataProvider.value))
 
-        /** Metadata & Artwork fix action, stored in settings; always a supported action. */
-        val selectedFixAction: StateFlow<MetadataFixAction> =
+        /**
+         * The fields a fix may change (Lochan's multi-select), stored in settings. All tag fields
+         * selected = "All Fields" (missing values filled, valid ones kept); fewer = replace those.
+         */
+        val selectedFields: StateFlow<Set<MetadataField>> =
             themeRepository.metadataFixAction
-                .map(MetadataFixAction::fromStored)
-                .stateIn(viewModelScope, SharingStarted.Eagerly, MetadataFixAction.fromStored(themeRepository.metadataFixAction.value))
+                .map(MetadataField::fromStored)
+                .stateIn(viewModelScope, SharingStarted.Eagerly, MetadataField.fromStored(themeRepository.metadataFixAction.value))
+
+        /** Turns [field] on or off; at least one field stays selected. */
+        fun toggleField(field: MetadataField) {
+            if (!field.isSupported) return
+            val current = selectedFields.value
+            val next =
+                when {
+                    field !in current -> current + field
+                    current.size > 1 -> current - field
+                    else -> current
+                }
+            viewModelScope.launch { themeRepository.setMetadataFixAction(MetadataField.toStored(next)) }
+        }
+
+        fun selectAllFields() {
+            viewModelScope.launch { themeRepository.setMetadataFixAction(MetadataField.toStored(MetadataField.all)) }
+        }
+
+        /** Score a match needs to be written automatically (Lochan's slider); 85 % unless the user changes it. */
+        val confidenceThreshold: StateFlow<Float> =
+            themeRepository.metadataConfidenceThreshold
+                .map(::effectiveThreshold)
+                .stateIn(viewModelScope, SharingStarted.Eagerly, effectiveThreshold(themeRepository.metadataConfidenceThreshold.value))
+
+        fun setConfidenceThreshold(threshold: Float) {
+            viewModelScope.launch { themeRepository.setMetadataConfidenceThreshold(threshold.coerceIn(MIN_THRESHOLD, MAX_THRESHOLD)) }
+        }
 
         enum class RepairMode { AUTOMATIC, MANUAL }
 
@@ -247,11 +278,6 @@ class LibraryViewModel
 
         fun setSelectedProvider(provider: String) {
             viewModelScope.launch { themeRepository.setMetadataProvider(offeredMetadataSource(provider)) }
-        }
-
-        fun setSelectedFixAction(action: MetadataFixAction) {
-            if (!action.isSupported) return
-            viewModelScope.launch { themeRepository.setMetadataFixAction(action.name) }
         }
 
         private fun buildSuccessDetails(
@@ -885,11 +911,12 @@ class LibraryViewModel
         @Suppress("ReturnCount")
         fun startFixingQueue() {
             if (_isFixingQueue.value) return
-            val action = selectedFixAction.value
-            if (!action.isSupported) {
-                _userMessage.value = action.unsupportedReason
+            val selection = fieldSelection(selectedFields.value)
+            if (selection.fields.isEmpty() && !selection.rename) {
+                _userMessage.value = "Choose at least one field to fix"
                 return
             }
+            val acceptAt = confidenceThreshold.value
             if (_repairQueue.value.none { it.status in RepairStatus.TO_PROCESS }) return
             _isFixingQueue.value = true
             val provider = selectedProvider.value
@@ -905,7 +932,7 @@ class LibraryViewModel
                         _userMessage.value = "${check.pause.reason}. Nothing was looked up; the queue is kept."
                         _isFixingQueue.value = false
                     }
-                    Preflight.Ready -> runBatch(provider, action)
+                    Preflight.Ready -> runBatch(provider, selection, acceptAt)
                 }
             }
         }
@@ -946,7 +973,8 @@ class LibraryViewModel
         @Suppress("TooGenericExceptionCaught")
         private suspend fun runBatch(
             provider: String,
-            action: MetadataFixAction,
+            selection: FieldSelection,
+            acceptAt: Float,
         ) {
             pauseRequested = false
             autoResumeArmed = false
@@ -959,7 +987,7 @@ class LibraryViewModel
                     inProgress = { item -> item.copy(diagnostics = searchingDiagnostics(item, provider)) },
                     lookup = { item ->
                         delay(REPAIR_DELAY_MS)
-                        lookUpTrack(item, provider, action, plans)
+                        lookUpTrack(item, provider, selection, acceptAt, plans)
                     },
                 )
             val phase =
@@ -981,70 +1009,80 @@ class LibraryViewModel
                 val remaining = phase.queue.count { it.status in RepairStatus.TO_PROCESS }
                 _userMessage.value = "${pause.reason}. ${written + phase.writes.size} fixed or being written; $remaining still to check."
             }
-            writePlanned(phase.queue.toMutableList(), phase.writes, plans)
+            writePlanned(phase.queue.toMutableList(), phase.writes, phase.renames, plans)
         }
 
-        /** Writes the planned tag edits; a track is only marked fixed once its file was actually written. */
-        @Suppress("LongMethod")
+        /**
+         * Writes the planned tag edits, then renames the files that asked for it ("Filename"). A track
+         * is only marked fixed once its file was actually written (or renamed, for a rename alone).
+         */
+        @Suppress("LongMethod", "CyclomaticComplexMethod")
         private suspend fun writePlanned(
             queue: MutableList<RepairQueueItem>,
             writes: Map<Int, TagWriteRequest>,
+            renames: Map<Int, String>,
             plans: Map<Long, FieldFixPlan>,
         ) {
             _repairQueue.value = queue.toList()
-            if (writes.isEmpty()) {
+            val indices = (writes.keys + renames.keys).sorted()
+            if (indices.isEmpty()) {
                 _isFixingQueue.value = false
                 return
             }
             withWriteAccess(
-                contentUris = writes.values.map { it.contentUri },
+                contentUris = indices.map { queue[it].song.uri },
                 onGranted = {
-                    var wroteAny = false
-                    for ((index, request) in writes) {
+                    var changedAny = false
+                    for (index in indices) {
                         val item = queue[index]
+                        val request = writes[index]
+                        val writeResult = request?.let { metadataRepository.writeTagsToFile(it) }
+                        if (writeResult is AppResult.Error) {
+                            queue[index] = item.copy(status = RepairStatus.FAILED, failureReason = writeResult.error.message)
+                            _repairQueue.value = queue.toList()
+                            continue
+                        }
+                        if (request != null) {
+                            changedAny = true
+                            ArtworkLoader.invalidate(request.contentUri)
+                        }
+                        val filePath = request?.filePath ?: libraryRepository.getSongFilePath(item.song.id) ?: item.song.filePath.orEmpty()
+                        val renameRes =
+                            renames[index]?.let { target -> fileRenamer.renameAudioFile(item.song.uri, filePath, target) }
+                        val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
+                        val newName = (renameRes as? AppResult.Success)?.data?.newFileName
+                        if (newPath != null) {
+                            changedAny = true
+                            libraryRepository.updateFilePath(item.song.id, newPath)
+                        }
+                        val successDetails =
+                            buildSuccessDetails(
+                                oldTitle = item.song.title,
+                                oldArtist = item.song.artist,
+                                oldAlbum = item.song.album,
+                                newTitle = request?.title ?: item.song.title,
+                                newArtist = request?.artist ?: item.song.artist,
+                                newAlbum = request?.album ?: item.song.album,
+                                oldFileName = java.io.File(filePath).name,
+                                newFileName = newName,
+                                renameError = (renameRes as? AppResult.Error)?.error?.message,
+                                isManual = (_repairMode.value == RepairMode.MANUAL),
+                                extraChanges = plans[item.song.id]?.let(::nonTextChanges).orEmpty(),
+                            )
                         queue[index] =
-                            when (val result = metadataRepository.writeTagsToFile(request)) {
-                                is AppResult.Success -> {
-                                    wroteAny = true
-                                    ArtworkLoader.invalidate(request.contentUri)
-                                    // The file is named after the title: rename only when the title changed.
-                                    val renameRes =
-                                        request.title?.let { newTitle ->
-                                            val ext = request.filePath.substringAfterLast('.', "mp3")
-                                            val targetFileName = fileRenamer.buildTargetFileName(newTitle, ext)
-                                            fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
-                                        }
-                                    val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
-                                    val newName = (renameRes as? AppResult.Success)?.data?.newFileName
-                                    if (newPath != null) {
-                                        libraryRepository.updateFilePath(item.song.id, newPath)
-                                    }
-                                    val successDetails =
-                                        buildSuccessDetails(
-                                            oldTitle = item.song.title,
-                                            oldArtist = item.song.artist,
-                                            oldAlbum = item.song.album,
-                                            newTitle = request.title ?: item.song.title,
-                                            newArtist = request.artist ?: item.song.artist,
-                                            newAlbum = request.album ?: item.song.album,
-                                            oldFileName = java.io.File(request.filePath).name,
-                                            newFileName = newName,
-                                            renameError = (renameRes as? AppResult.Error)?.error?.message,
-                                            isManual = (_repairMode.value == RepairMode.MANUAL),
-                                            extraChanges = plans[item.song.id]?.let(::nonTextChanges).orEmpty(),
-                                        )
-                                    val itemStatus = if (renameRes is AppResult.Error) RepairStatus.PARTIAL_SUCCESS else RepairStatus.DONE
-                                    item.copy(status = itemStatus, successDetails = successDetails)
-                                }
-                                is AppResult.Error -> item.copy(status = RepairStatus.FAILED, failureReason = result.error.message)
+                            when {
+                                renameRes is AppResult.Error && request == null ->
+                                    item.copy(status = RepairStatus.FAILED, failureReason = renameRes.error.message, successDetails = successDetails)
+                                renameRes is AppResult.Error -> item.copy(status = RepairStatus.PARTIAL_SUCCESS, successDetails = successDetails)
+                                else -> item.copy(status = RepairStatus.DONE, successDetails = successDetails)
                             }
                         _repairQueue.value = queue.toList()
                     }
-                    if (wroteAny) libraryRepository.requestRescanAfterChange()
+                    if (changedAny) libraryRepository.requestRescanAfterChange()
                     _isFixingQueue.value = false
                 },
                 onDenied = {
-                    for (index in writes.keys) {
+                    for (index in indices) {
                         queue[index] = queue[index].copy(status = RepairStatus.FAILED, failureReason = "Write access not granted")
                     }
                     _repairQueue.value = queue.toList()
@@ -1058,7 +1096,8 @@ class LibraryViewModel
         private suspend fun lookUpTrack(
             item: RepairQueueItem,
             provider: String,
-            action: MetadataFixAction,
+            selection: FieldSelection,
+            acceptAt: Float,
             plans: MutableMap<Long, FieldFixPlan>,
         ): TrackLookup =
             try {
@@ -1082,7 +1121,7 @@ class LibraryViewModel
                         fileArtist = usableIdentityText(cleanerResult?.artistGuess),
                     )
                 val result =
-                    trackMatcher.match(identity) { query ->
+                    trackMatcher.match(identity, acceptAt) { query ->
                         metadataRepository
                             .searchAndScoreTrackDetailed(
                                 title = query.title,
@@ -1117,9 +1156,11 @@ class LibraryViewModel
                     status: String,
                     reason: String?,
                     write: TagWriteRequest? = null,
+                    renameTo: String? = null,
                 ) = TrackLookup.Concluded(
                     item.copy(status = status, failureReason = reason, diagnostics = diag.copy(finalReason = reason)),
                     write,
+                    renameTo,
                 )
 
                 val decision = result.decision
@@ -1141,15 +1182,25 @@ class LibraryViewModel
                     decision is MatchDecision.Ambiguous -> concluded(RepairStatus.NEEDS_REVIEW, decision.reason)
                     else -> {
                         val match = (decision as MatchDecision.Confident).match
-                        val plan = planFix(item.song, filePath, match, candidates, action)
+                        val plan = planFix(item.song, filePath, match, candidates, selection, acceptAt)
                         plans[item.song.id] = plan
                         val request = plan.request
-                        if (request == null) {
+                        // "Filename": the file is named after its (new or current) title.
+                        val renameTo =
+                            if (selection.rename) {
+                                val title = request?.title ?: embedded?.title ?: item.song.title
+                                fileRenamer
+                                    .buildTargetFileName(title, filePath.substringAfterLast('.', "mp3"))
+                                    .takeIf { it != java.io.File(filePath).name }
+                            } else {
+                                null
+                            }
+                        if (request == null && renameTo == null) {
                             // Nothing to write is not a fix: say why instead of reporting success.
                             val why = plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
                             concluded(RepairStatus.UNCHANGED, why)
                         } else {
-                            concluded(RepairStatus.FIXING, null, request)
+                            concluded(RepairStatus.FIXING, null, request, renameTo)
                         }
                     }
                 }
@@ -1342,10 +1393,11 @@ class LibraryViewModel
             filePath: String,
             match: MetadataCandidate,
             candidates: List<MetadataCandidate>,
-            action: MetadataFixAction,
+            selection: FieldSelection,
+            acceptAt: Float,
         ): FieldFixPlan {
-            val fields = action.fields()
-            val fillOnly = action == MetadataFixAction.ALL_FIELDS
+            val fields = selection.fields
+            val fillOnly = selection.fillOnly
             val local = localTags(song, filePath, checkDateFormat = FixField.YEAR in fields)
             // Specific reasons found here replace the plan's generic "not found" notes.
             val notes = mutableMapOf<String, String>()
@@ -1354,9 +1406,9 @@ class LibraryViewModel
             val wantsArtwork = FixField.ARTWORK in fields && (!fillOnly || (local.tagsReadable && !local.hasArtwork))
             val artwork = if (wantsArtwork) onlineCover(match, notes) else null
             val wantsYear = FixField.YEAR in fields && (!fillOnly || (local.tagsReadable && !isUsableYearTag(local.year)))
-            val releaseDate = if (wantsYear) onlineReleaseDate(match, candidates, notes) else null
+            val releaseDate = if (wantsYear) onlineReleaseDate(match, candidates, acceptAt, notes) else null
 
-            val plan = planFieldFix(song.uri, filePath, action, local, match, genre, artwork, releaseDate)
+            val plan = planFieldFix(song.uri, filePath, fields, fillOnly, local, match, genre, artwork, releaseDate)
             return plan.copy(notes = plan.notes.map { notes[it] ?: it })
         }
 
@@ -1385,9 +1437,10 @@ class LibraryViewModel
         private fun onlineReleaseDate(
             match: MetadataCandidate,
             candidates: List<MetadataCandidate>,
+            acceptAt: Float,
             notes: MutableMap<String, String>,
         ): ReleaseDate? =
-            when (val decision = releaseDateFor(match, candidates, LocalDate.now(), HIGH_CONFIDENCE_THRESHOLD)) {
+            when (val decision = releaseDateFor(match, candidates, LocalDate.now(), acceptAt)) {
                 is ReleaseDateDecision.Found -> decision.date
                 is ReleaseDateDecision.Rejected -> null.also { notes[NO_YEAR_NOTE] = "No year: ${decision.reason}" }
             }
@@ -1558,6 +1611,8 @@ class LibraryViewModel
             private const val SCAN_INDICATOR_DELAY_MS = 1000L
             private const val REPAIR_DELAY_MS = 600L
             private const val PERSIST_DEBOUNCE_MS = 500L
+            const val MIN_THRESHOLD = 0.50f
+            const val MAX_THRESHOLD = 0.95f
             private const val TOP_CANDIDATES_SHOWN = 3
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val SEARCH_SECTION_LIMIT = 12
@@ -1576,3 +1631,7 @@ internal fun List<RepairQueueItem>.toPersisted(pause: BatchPause?): PersistedRep
             },
         pauseReason = pause?.reason?.takeIf { it.isNotEmpty() },
     )
+
+/** The stored auto-accept threshold, or the default (0.85) when it was never set. */
+internal fun effectiveThreshold(stored: Float): Float =
+    if (stored <= 0f) HIGH_CONFIDENCE_THRESHOLD else stored.coerceIn(LibraryViewModel.MIN_THRESHOLD, LibraryViewModel.MAX_THRESHOLD)

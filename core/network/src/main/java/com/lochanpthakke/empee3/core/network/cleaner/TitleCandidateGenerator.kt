@@ -10,50 +10,76 @@ class TitleCandidateGenerator
     constructor(
         private val filenameCleaner: FilenameCleaner,
     ) {
+        private val recognizedAudioExtensions = setOf("mp3", "flac", "m4a", "ogg", "opus", "wav", "aac", "wma", "alac", "aiff")
+
+        @Suppress("CyclomaticComplexMethod")
         fun generateCandidates(
-            rawFilename: String,
+            rawFilenameOrTitle: String,
             customBlocklistTokens: List<String> = emptyList(),
         ): List<String> {
-            val primaryResult = filenameCleaner.cleanFilenameAndExtractJunk(rawFilename, customBlocklistTokens).cleaned
-            val primaryTitle = primaryResult.title.trim()
-            val artistGuess = primaryResult.artistGuess?.trim()
-            val rawTitle = rawFilename.substringBeforeLast('.').replace('_', ' ').trim()
+            val extension = rawFilenameOrTitle.substringAfterLast('.', "")
+            val rawTitle = if (extension.isNotBlank() && recognizedAudioExtensions.contains(extension.lowercase())) {
+                rawFilenameOrTitle.substringBeforeLast('.').replace('_', ' ').trim()
+            } else {
+                rawFilenameOrTitle.replace('_', ' ').trim()
+            }
 
+            val normalizedTitle = autoCompleteEnclosures(rawTitle)
             val candidates = mutableListOf<String>()
 
-            // 1. Clean head title (artistGuess if split off by " - " e.g. "Diwali" or "Love Me Again")
-            if (!artistGuess.isNullOrBlank() && !artistGuess.equals("Unknown Artist", ignoreCase = true)) {
-                candidates.add(artistGuess)
+            // Step 1: Complete original title
+            if (normalizedTitle.isNotBlank()) {
+                candidates.add(normalizedTitle)
             }
 
-            // 2. Strip trailing enclosure suffix [ ... ] or ( ... )
-            val trailingEnclosureRegex = Regex("\\s*[\\[(][^\\])]+[\\])]\\s*$")
-            val rawNoEnclosure = rawTitle.replace(trailingEnclosureRegex, "").trim()
-            if (rawNoEnclosure.isNotBlank() && rawNoEnclosure.length >= 2) {
-                candidates.add(rawNoEnclosure)
-            }
-
-            // 3. Primary cleaned title
-            if (primaryTitle.isNotBlank()) {
-                candidates.add(primaryTitle)
-            }
-
-            // 4. Full raw title
-            if (rawTitle.isNotBlank()) {
-                candidates.add(rawTitle)
-            }
-
-            // 5. Fallback: Strip trailing word if raw title has >= 2 words
-            val words = rawTitle.split("\\s+".toRegex())
-            if (words.size >= 2) {
-                val headWords = words.dropLast(1).joinToString(" ").trim()
-                // Dropping a word inside "(feat. A & B)" leaves a broken "(feat. A &": not a title.
-                val balanced = headWords.count { it == '(' } == headWords.count { it == ')' }
-                if (headWords.isNotBlank() && headWords.length >= 2 && balanced) {
-                    candidates.add(headWords)
+            // Step 2: Fallback to title before any hyphen "-", stripping bracket/enclosure noise
+            if (normalizedTitle.contains("-")) {
+                val headRaw = normalizedTitle.substringBefore("-").trim()
+                val cleanHead = headRaw.replace(Regex("""\[.*?\]|\(.*?\)"""), "").replace(Regex("\\s+"), " ").trim(' ', '-', '_', '[', ']', '(', ')')
+                if (cleanHead.isNotBlank() && cleanHead.length >= 2 && cleanHead != normalizedTitle) {
+                    candidates.add(cleanHead)
                 }
             }
 
-            return candidates.distinct().filter { it.length >= 2 }.take(3)
+            // Step 3: Strip featured artist clause e.g. "(feat. ...)", "(ft. ...)", "ft. ..."
+            val featRegex = Regex("(?i)\\s*[(\\[]?(feat|ft|featuring|with)\\.?\\s+[^)\\]]+[)\\]]?")
+            val titleNoFeat = normalizedTitle.replace(featRegex, "").trim(' ', '-', '_', '[', ']', '(', ')')
+            // Only when a clause was really removed: trimming alone would cut a title's own ")".
+            val featRemoved = featRegex.containsMatchIn(normalizedTitle)
+            if (featRemoved && titleNoFeat.length >= 2 && titleNoFeat != normalizedTitle) {
+                candidates.add(titleNoFeat)
+            }
+
+            // Step 4: Strip version tag e.g. "(Remix)", "(Radio Edit)", "(Live)", "(Remastered)"
+            val versionRegex = Regex("(?i)\\s*[(\\[](remix|radio edit|live|remastered|extended mix|acoustic)[^)]*[)\\]]")
+            val titleNoVersion = normalizedTitle.replace(versionRegex, "").trim(' ', '-', '_', '[', ']', '(', ')')
+            val versionRemoved = versionRegex.containsMatchIn(normalizedTitle)
+            if (versionRemoved && titleNoVersion.length >= 2 && titleNoVersion != normalizedTitle) {
+                candidates.add(titleNoVersion)
+            }
+
+            // Step 5: Watermark-cleaned title via FilenameCleaner
+            val cleanedResult = filenameCleaner.cleanFilename(normalizedTitle, customBlocklistTokens).title.trim()
+            if (cleanedResult.isNotBlank() && cleanedResult.length >= 2) {
+                candidates.add(cleanedResult)
+            }
+
+            return candidates.distinct().filter { it.isNotBlank() && it.length >= 2 }.take(3)
+        }
+
+        private fun autoCompleteEnclosures(title: String): String {
+            var result = title
+            val openParens = result.count { it == '(' }
+            val closeParens = result.count { it == ')' }
+            if (openParens > closeParens) {
+                result += ")".repeat(openParens - closeParens)
+            }
+
+            val openBrackets = result.count { it == '[' }
+            val closeBrackets = result.count { it == ']' }
+            if (openBrackets > closeBrackets) {
+                result += "]".repeat(openBrackets - closeBrackets)
+            }
+            return result
         }
     }

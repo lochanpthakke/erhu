@@ -75,6 +75,9 @@ class ThemeRepositoryImpl
         private val _metadataFixAction = MutableStateFlow("")
         override val metadataFixAction: StateFlow<String> = _metadataFixAction.asStateFlow()
 
+        private val _metadataConfidenceThreshold = MutableStateFlow(0f)
+        override val metadataConfidenceThreshold: StateFlow<Float> = _metadataConfidenceThreshold.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -92,6 +95,7 @@ class ThemeRepositoryImpl
                 _defaultStartSection.value = proto.defaultStartSection.ifBlank { "TRACKS" }
                 _metadataProvider.value = proto.metadataProvider
                 _metadataFixAction.value = proto.metadataFixAction
+                _metadataConfidenceThreshold.value = proto.metadataConfidenceThreshold
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
@@ -152,6 +156,12 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setMetadataFixAction(action).build() }
                 _metadataFixAction.value = action
+            }
+
+        override suspend fun setMetadataConfidenceThreshold(threshold: Float): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setMetadataConfidenceThreshold(threshold).build() }
+                _metadataConfidenceThreshold.value = threshold
             }
 
         override suspend fun setCustomScanLocation(

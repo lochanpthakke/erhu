@@ -91,8 +91,10 @@ class TrackMatcher
     constructor(
         private val scorer: MetadataScorer,
     ) {
+        /** [acceptAt]: the score a match needs to be written (Settings; 0.85 unless the user changes it). */
         suspend fun match(
             identity: TrackIdentity,
+            acceptAt: Float = HIGH_CONFIDENCE_THRESHOLD,
             search: suspend (TrackQuery) -> DetailedSearchResponse,
         ): MatchResult {
             val queries = planQueries(identity)
@@ -109,11 +111,11 @@ class TrackMatcher
                     if (previous == null || scored.confidenceScore > previous.confidenceScore) found[candidate.id] = scored
                 }
                 val ranked = found.values.sortedByDescending { it.confidenceScore }
-                if (decide(ranked, identity) is MatchDecision.Confident) break
+                if (decide(ranked, identity, acceptAt) is MatchDecision.Confident) break
             }
             val ranked = found.values.sortedByDescending { it.confidenceScore }
             val sent = queries.take(attempts.size)
-            return MatchResult(decide(ranked, identity), ranked, mergeOutcomes(responses, ranked), sent, attempts)
+            return MatchResult(decide(ranked, identity, acceptAt), ranked, mergeOutcomes(responses, ranked), sent, attempts)
         }
 
         /**
@@ -153,14 +155,19 @@ fun planQueries(identity: TrackIdentity): List<TrackQuery> {
         ).map { (title, source) -> stripFeaturing(title) to source }
             .filter { (title, _) -> title.isNotBlank() }
             .distinctBy { (title, _) -> foldForMatch(title) }
-    return titles
-        .flatMap { (title, source) ->
+    val narrowed =
+        titles.flatMap { (title, source) ->
             listOfNotNull(
                 artist?.let { TrackQuery(title, it, source) },
                 identity.album?.let { TrackQuery(title, null, source, album = it) },
-            ).ifEmpty { listOf(TrackQuery(title, null, source)) }
-        }.distinctBy { Triple(foldForMatch(it.title), foldForMatch(it.artist.orEmpty()), foldForMatch(it.album.orEmpty())) }
-        .take(MAX_QUERIES)
+            )
+        }
+    // Last resort (Lochan's fallback): the best title alone, for when the artist and album tags
+    // match nothing online. It runs only if nothing above was confident; scoring guards against
+    // the many unrelated songs a bare title finds.
+    val unconstrained = titles.firstOrNull()?.let { (title, source) -> TrackQuery(title, null, source) }
+    return (narrowed.take(MAX_QUERIES - 1) + listOfNotNull(unconstrained))
+        .distinctBy { Triple(foldForMatch(it.title), foldForMatch(it.artist.orEmpty()), foldForMatch(it.album.orEmpty())) }
 }
 
 /** A tag value worth searching and matching with: present, not a placeholder, not misread text, not a downloader watermark. */
@@ -175,18 +182,19 @@ private val WATERMARK = Regex("""(?i)\.(com|net|org|mp3|m4a)\b|\b(www|download(e
 internal fun decide(
     ranked: List<MetadataCandidate>,
     identity: TrackIdentity,
+    acceptAt: Float = HIGH_CONFIDENCE_THRESHOLD,
 ): MatchDecision {
     val best = ranked.firstOrNull() ?: return MatchDecision.NoMatch(null)
     val rivals =
         ranked.drop(1).filter {
-            it.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD &&
+            it.confidenceScore >= acceptAt &&
                 best.confidenceScore - it.confidenceScore <= TIE_MARGIN &&
                 writtenIdentity(it) != writtenIdentity(best)
         }
     return when {
-        best.confidenceScore < UNCERTAIN_THRESHOLD ->
+        best.confidenceScore < minOf(UNCERTAIN_THRESHOLD, acceptAt) ->
             MatchDecision.NoMatch("No close match. Best: ${describe(best, identity)}")
-        best.confidenceScore < HIGH_CONFIDENCE_THRESHOLD ->
+        best.confidenceScore < acceptAt ->
             MatchDecision.LowConfidence(best, "Not confident enough to write. Best: ${describe(best, identity)}")
         rivals.isNotEmpty() ->
             MatchDecision.Ambiguous(

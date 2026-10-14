@@ -47,6 +47,8 @@ fun classifyProviderFailure(
             ProviderFailure(ProviderStatus.NETWORK_ERROR, "Connection failed: ${error.message}", retryable = true)
         is InterruptedIOException -> ProviderFailure(ProviderStatus.TIMED_OUT, "Request timed out", retryable = true)
         is HttpException -> classifyHttp(error, nowMs)
+        // Any other I/O failure on a request is the connection's (OkHttp reports most as IOException).
+        is java.io.IOException -> ProviderFailure(ProviderStatus.NETWORK_ERROR, "Connection failed: ${error.message}", retryable = true)
         else -> ProviderFailure(ProviderStatus.FAILED, error.message ?: error.javaClass.simpleName)
     }
 

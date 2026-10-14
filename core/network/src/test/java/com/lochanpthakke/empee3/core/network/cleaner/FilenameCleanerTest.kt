@@ -73,4 +73,12 @@ class FilenameCleanerTest {
         assertEquals("(Intro) Song", FilenameCleaner.trimUnmatchedBrackets("(Intro) Song"))
         assertEquals("Song [Live]", FilenameCleaner.trimUnmatchedBrackets(" Song [Live] - "))
     }
+
+    @Test
+    fun aTitleWithoutExtension_isNotCutAtItsLastDot() {
+        val cleaner = FilenameCleaner()
+        assertEquals("Mr. Lonely (feat. Frank Ocean & Steve Lacy)", cleaner.cleanFilename("Mr. Lonely (feat. Frank Ocean & Steve Lacy)").title)
+        assertEquals("Mr. Brightside", cleaner.cleanFilename("Mr. Brightside.flac").title)
+        assertEquals("Yellow", FilenameCleaner.trimUnmatchedBrackets("Yellow ["))
+    }
 }

@@ -268,4 +268,26 @@ class RepairBatchRunnerTest {
                 )
             assertEquals(mapOf(0 to write(1), 1 to write(2)), runner.lookUp(queue(2)).writes)
         }
+
+    @Test
+    fun aRenameOnlyTrack_isPlannedForTheWritePhase() =
+        runTest {
+            val runner =
+                RepairBatchRunner(
+                    { NetworkStatus.AVAILABLE },
+                    { false },
+                    lookup = { item -> TrackLookup.Concluded(item.copy(status = RepairStatus.FIXING), write = null, renameTo = "Song.mp3") },
+                )
+            val result = runner.lookUp(queue(1))
+            assertTrue(result.writes.isEmpty())
+            assertEquals(mapOf(0 to "Song.mp3"), result.renames)
+        }
+
+    @Test
+    fun theThreshold_defaultsTo85_andStaysInRange() {
+        assertEquals(0.85f, effectiveThreshold(0f), 0.0001f)
+        assertEquals(0.75f, effectiveThreshold(0.75f), 0.0001f)
+        assertEquals(LibraryViewModel.MIN_THRESHOLD, effectiveThreshold(0.2f), 0.0001f)
+        assertEquals(LibraryViewModel.MAX_THRESHOLD, effectiveThreshold(1.4f), 0.0001f)
+    }
 }
