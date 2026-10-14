@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -56,8 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -73,7 +69,6 @@ import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.pressScale
-import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -145,7 +140,7 @@ fun NowPlayingScreen(
     // Tracks are a strip (previous | current | next) moved by one offset: the swipe drives
     // it directly and every track change (swipe, buttons, end of song) slides it.
     val carousel = rememberTrackCarouselState()
-    TrackChangeEffect(carousel, song, playbackState.previousSong, playbackState.nextSong)
+    TrackChangeEffect(carousel, song, playbackState.currentIndex, playbackState.previousSong, playbackState.nextSong)
     val latestState by rememberUpdatedState(playbackState)
     val collapseDrag = if (transition != null) Modifier.playerDrag(transition, expandsUpward = false) else Modifier
     val trackSwipe =
@@ -237,7 +232,6 @@ fun NowPlayingScreen(
                             val hero =
                                 if (isCurrent) {
                                     Modifier
-                                        .onGloballyPositioned { transition?.heroArtworkBounds = it.boundsInRoot() }
                                         .graphicsLayer { alpha = if (transition == null || transition.isSettledOpen) 1f else 0f }
                                 } else {
                                     Modifier
@@ -247,10 +241,9 @@ fun NowPlayingScreen(
                                 contentDescription = if (isCurrent) "Album artwork" else null,
                                 modifier =
                                     hero
-                                        .widthIn(max = ArtworkSize.heroMax)
-                                        .fillMaxWidth()
-                                        .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                                        .glassPanel(Radius.largeShape, backdrop = null)
+                                        .playerArtworkLayout { bounds ->
+                                            if (isCurrent) transition?.heroArtworkBounds = bounds
+                                        }.glassPanel(Radius.largeShape, backdrop = null)
                                         .clip(Radius.largeShape),
                             )
                         }

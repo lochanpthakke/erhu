@@ -6,7 +6,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -37,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -59,8 +60,6 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
-
-import androidx.hilt.navigation.compose.hiltViewModel
 
 /** Actions offered for a single song wherever it is listed. */
 internal class SongActions(
@@ -108,6 +107,7 @@ fun LibraryScreen(
     val playlists by playlistsViewModel.playlists.collectAsState()
     // The Library tab is an overview; "More" opens one full shelf (null = the overview).
     var openShelf by rememberSaveable { mutableStateOf<LibraryShelf?>(null) }
+    val sectionStates = rememberSaveableStateHolder()
     val shownShelf = openShelf.takeIf { section == LibrarySection.LIBRARY && !isSearchActive }
     var showNewPlaylist by remember { mutableStateOf(false) }
     // Only the playing song's id: position ticks must not recompose the library.
@@ -231,8 +231,8 @@ fun LibraryScreen(
                 },
             ) {
                 // Sections are switched by LibraryNavigationBar in the shell's bottom chrome.
-                Column(modifier = Modifier.fillMaxSize()) {
-                    when (section) {
+                LibraryContentMotion(section, shownShelf, sectionStates) { activeSection, activeShelf ->
+                    when (activeSection) {
                         LibrarySection.TRACKS -> {
                             // Collected only on the Tracks section, which shows the smart playlist cards.
                             val smartPlaylistCovers by viewModel.smartPlaylistCovers.collectAsState()
@@ -261,7 +261,7 @@ fun LibraryScreen(
                                 onAlbumClick = onOpenAlbum,
                             )
                         LibrarySection.LIBRARY ->
-                            if (shownShelf == null) {
+                            if (activeShelf == null) {
                                 LibraryOverview(
                                     playlists = playlists,
                                     favoriteSongs = favoriteSongs,
@@ -284,7 +284,7 @@ fun LibraryScreen(
                                 )
                             } else {
                                 LibraryHub(
-                                    shelf = shownShelf,
+                                    shelf = activeShelf,
                                     playlists = playlists,
                                     favoriteSongs = favoriteSongs,
                                     artists = artists,

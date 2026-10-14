@@ -18,7 +18,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 
 /**
  * The app's motion system. Every animation uses these tokens, so one user action
@@ -107,8 +106,11 @@ object Motion {
 
     /** One icon replacing another (play/pause, favorite, repeat mode). */
     fun iconSwap(): ContentTransform =
-        (fadeIn(fade(MICRO)) + scaleIn(press(), initialScale = ICON_SWAP_SCALE)) togetherWith
-            (fadeOut(fade(MICRO)) + scaleOut(fade(MICRO), targetScale = ICON_SWAP_SCALE))
+        ContentTransform(
+            targetContentEnter = fadeIn(fade(MICRO)) + scaleIn(press(), initialScale = ICON_SWAP_SCALE),
+            initialContentExit = fadeOut(fade(MICRO)) + scaleOut(fade(MICRO), targetScale = ICON_SWAP_SCALE),
+            sizeTransform = null,
+        )
 
     // ---- level 2: content
 
@@ -129,7 +131,12 @@ object Motion {
         )
 
     /** Two states of the same place (empty state <-> results): a quick crossfade. */
-    fun crossfade(): ContentTransform = fadeIn(fade(CONTENT, delayMillis = MICRO / 2)) togetherWith fadeOut(fade(MICRO))
+    fun crossfade(): ContentTransform =
+        ContentTransform(
+            targetContentEnter = fadeIn(fade(CONTENT, delayMillis = MICRO / 2)),
+            initialContentExit = fadeOut(fade(MICRO)),
+            sizeTransform = null,
+        )
 
     // ---- level 3: navigation (the whole screen moves; its contents stay still)
 

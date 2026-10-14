@@ -14,7 +14,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -27,9 +26,7 @@ import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.sign
 
@@ -41,12 +38,6 @@ private val SKIP_FLING_VELOCITY = 900.dp
 
 /** Dragging towards a side with no song moves the content this much per finger pixel. */
 private const val EDGE_RESISTANCE = 0.25f
-
-/** A committed skip is sent to the player once the strip is this close (share of a page) to the new page. */
-private const val COMMIT_FRACTION = 0.04f
-
-/** ...or after this long at the latest. */
-private const val COMMIT_TIMEOUT_MS = 450L
 
 /** A committed skip whose track change never arrives (e.g. the player refused it) springs back after this. */
 private const val TRACK_CHANGE_TIMEOUT_MS = 1_000L
@@ -91,13 +82,7 @@ internal class TrackCarouselState(
     private var settle: Job? = null
     private var watchdog: Job? = null
 
-    /** A committed skip waiting for the strip to arrive on the new page (see [commit]). */
-    private var deferredSkip: (() -> Unit)? = null
-    private var deferredWait: Job? = null
-
     internal fun startDrag() {
-        // A new swipe commits the previous one now, so rapid swipes each change the track.
-        fireDeferredSkip()
         dragging = true
         settle?.cancel()
         dragPosition = position
@@ -133,16 +118,13 @@ internal class TrackCarouselState(
         direction: Int,
         skip: (Int) -> Unit,
     ) {
-        fireDeferredSkip()
         commit(direction, 0f, skip)
     }
 
     /**
-     * The strip settles on the new page at once: its artwork and title are already
-     * there, so the new track is established visually without waiting for anything.
-     * The player is told to skip as the strip arrives (within [COMMIT_FRACTION] of a
-     * page): the new state recomposes Now Playing, and that work lands on a frame
-     * where nothing is moving instead of stalling the settle half-way.
+     * Send the playback action immediately. The strip settles independently;
+     * the reported track change re-centres its pages without a position jump.
+     * Animation completion must never gate a music control or a committed swipe.
      */
     private fun commit(
         direction: Int,
@@ -151,23 +133,8 @@ internal class TrackCarouselState(
     ) {
         pending += direction
         settleAt(-direction * page, velocity)
-        deferredSkip = { skip(direction) }
-        deferredWait?.cancel()
-        deferredWait =
-            scope.launch {
-                withTimeoutOrNull(COMMIT_TIMEOUT_MS) {
-                    snapshotFlow { abs(position + direction * page) }.first { it <= page * COMMIT_FRACTION }
-                }
-                fireDeferredSkip()
-            }
-    }
-
-    private fun fireDeferredSkip() {
-        val skip = deferredSkip ?: return
-        deferredSkip = null
-        deferredWait?.cancel()
-        skip()
         armWatchdog()
+        skip(direction)
     }
 
     /**
@@ -230,30 +197,36 @@ internal fun rememberTrackCarouselState(): TrackCarouselState {
 internal fun TrackChangeEffect(
     state: TrackCarouselState,
     current: Song?,
+    currentIndex: Int,
     previousSong: Song?,
     nextSong: Song?,
 ) {
     val last = remember { LastNeighbours() }
     val id = current?.id
-    if (id != last.current) {
+    // Repeated queue entries can have the same song id. Moving to the next
+    // occurrence must acknowledge the skip and re-centre the visual strip too.
+    if (id != last.current || currentIndex != last.index) {
         if (last.current != null && id != null) {
             state.onTrackChanged(
-                when (id) {
-                    last.next -> 1
-                    last.previous -> -1
+                when {
+                    id == last.current -> currentIndex.compareTo(last.index)
+                    id == last.next -> 1
+                    id == last.previous -> -1
                     else -> 0
                 },
             )
         }
         last.current = id
+        last.index = currentIndex
     }
     last.next = nextSong?.id
     last.previous = previousSong?.id
-    LaunchedEffect(id) { state.settleAfterTrackChange() }
+    LaunchedEffect(id, currentIndex) { state.settleAfterTrackChange() }
 }
 
 private class LastNeighbours {
     var current: Long? = null
+    var index: Int = -1
     var next: Long? = null
     var previous: Long? = null
 }

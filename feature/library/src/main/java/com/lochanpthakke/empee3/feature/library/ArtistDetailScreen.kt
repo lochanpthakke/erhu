@@ -1,6 +1,5 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -44,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
@@ -57,7 +57,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
-import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
@@ -463,7 +462,6 @@ private fun CompactAlbumTile(
             contentDescription = null,
             modifier =
                 Modifier
-                    .sharedArtwork(albumArtworkKey(album.id))
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(Radius.mediumShape),

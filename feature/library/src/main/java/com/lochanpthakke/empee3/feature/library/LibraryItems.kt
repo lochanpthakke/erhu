@@ -35,7 +35,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
-import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
@@ -130,7 +129,6 @@ fun AlbumTile(
             contentDescription = null,
             modifier =
                 Modifier
-                    .sharedArtwork(albumArtworkKey(album.id))
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(Radius.mediumShape),

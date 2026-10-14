@@ -1,6 +1,5 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
@@ -59,7 +59,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
-import com.lochanpthakke.empee3.core.designsystem.foundation.sharedArtwork
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
@@ -335,9 +334,8 @@ private fun AlbumHero(
             contentDescription = "Album artwork",
             modifier =
                 Modifier
-                    // In place, not in the transition overlay: the title, artist and fade drawn
-                    // over the cover stay visible while it travels in from the grid.
-                    .sharedArtwork(albumArtworkKey(album.id), renderInOverlay = false)
+                    // Keep the cover with its scrim and title during navigation.
+                    // A separate shared overlay can outlive the page on Back.
                     .fillMaxSize()
                     .graphicsLayer {
                         val scrolled = heroScroll(listState, size.height)
