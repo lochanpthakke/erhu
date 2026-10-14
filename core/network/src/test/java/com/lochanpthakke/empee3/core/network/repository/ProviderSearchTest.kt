@@ -4,7 +4,9 @@ import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataProvider
 import com.lochanpthakke.empee3.core.model.ProviderStatus
 import com.lochanpthakke.empee3.core.network.model.MusicBrainzGenreDto
+import com.lochanpthakke.empee3.core.network.provider.ProviderAuthException
 import com.lochanpthakke.empee3.core.network.provider.ProviderUnavailableException
+import com.lochanpthakke.empee3.core.network.retry.RetryPolicy
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.MetadataScorer
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
@@ -39,12 +41,27 @@ class ProviderSearchTest {
 
     private val scorer = MetadataScorer()
 
+    private val noRetry = RetryPolicy(maxAttempts = 1)
+
     private fun search(
         provider: MetadataProvider,
         selection: String = MetadataSources.ALL,
-        unavailable: String? = null,
+        availability: ProviderAvailability = ProviderAvailability.Available,
+        retry: RetryPolicy = noRetry,
+        onAuthFailure: (String) -> Unit = {},
     ) = runBlocking {
-        searchProviderScored(provider, selection, unavailable, scorer, "Runaway", "Kanye West", "My Beautiful Dark Twisted Fantasy", 548_000L)
+        searchProviderScored(
+            provider,
+            selection,
+            availability,
+            scorer,
+            "Runaway",
+            "Kanye West",
+            "My Beautiful Dark Twisted Fantasy",
+            548_000L,
+            retry = retry,
+            onAuthFailure = onAuthFailure,
+        )
     }
 
     private fun candidate(
@@ -73,12 +90,94 @@ class ProviderSearchTest {
     }
 
     @Test
-    fun unavailableProvider_isSkippedWithItsReason() {
+    fun notConfiguredProvider_isReportedAsSuch_withoutARequest() {
         val lastFm = FakeProvider("Last.fm") { listOf(candidate("Runaway")) }
-        val (_, outcome) = search(lastFm, unavailable = "Last.fm rejects the app's API key")
+        val (_, outcome) = search(lastFm, availability = ProviderAvailability.NotConfigured("No Last.fm API key configured"))
         assertEquals(0, lastFm.calls)
-        assertEquals(ProviderStatus.SKIPPED, outcome.status)
-        assertEquals("Last.fm rejects the app's API key", outcome.errorMessage)
+        assertEquals(ProviderStatus.NOT_CONFIGURED, outcome.status)
+        assertEquals("No Last.fm API key configured", outcome.errorMessage)
+    }
+
+    @Test
+    fun aKeyRejectedEarlier_isNotSentAgain() {
+        val lastFm = FakeProvider("Last.fm") { listOf(candidate("Runaway")) }
+        val (_, outcome) = search(lastFm, availability = ProviderAvailability.Rejected("Last.fm error 10: Invalid API key"))
+        assertEquals(0, lastFm.calls)
+        assertEquals(ProviderStatus.AUTH_FAILED, outcome.status)
+        assertTrue(outcome.errorMessage!!.contains("not retried"))
+    }
+
+    @Test
+    fun anInvalidKey_isAnAuthFailure_reportedOnce() {
+        val rejected = mutableListOf<String>()
+        val lastFm = FakeProvider("Last.fm") { throw ProviderAuthException("Last.fm error 10: Invalid API key") }
+        val (candidates, outcome) = search(lastFm, retry = RetryPolicy(maxAttempts = 3, baseDelayMs = 1), onAuthFailure = { rejected += it })
+        assertTrue(candidates.isEmpty())
+        assertEquals(ProviderStatus.AUTH_FAILED, outcome.status)
+        assertEquals("credentials are never retried", 1, lastFm.calls)
+        assertEquals(listOf("Last.fm error 10: Invalid API key"), rejected)
+    }
+
+    @Test
+    fun aDnsFailure_isANetworkError_neverNoResults() {
+        val musicBrainz =
+            FakeProvider("MusicBrainz") {
+                throw java.net.UnknownHostException("Unable to resolve host \"musicbrainz.org\": No address associated with hostname")
+            }
+        val (candidates, outcome) = search(musicBrainz)
+        assertTrue(candidates.isEmpty())
+        assertEquals(ProviderStatus.NETWORK_ERROR, outcome.status)
+        assertTrue(outcome.errorMessage!!.contains("musicbrainz.org"))
+    }
+
+    @Test
+    fun aTransientFailure_recoversWithinTheRetryBudget() {
+        var attempts = 0
+        val musicBrainz =
+            FakeProvider("MusicBrainz") {
+                attempts++
+                if (attempts == 1) throw java.net.SocketTimeoutException("timeout") else listOf(candidate("Runaway"))
+            }
+        val (candidates, outcome) = search(musicBrainz, retry = RetryPolicy(maxAttempts = 3, baseDelayMs = 1, maxDelayMs = 2))
+        assertEquals(2, musicBrainz.calls)
+        assertEquals(ProviderStatus.SUCCESS, outcome.status)
+        assertEquals(1, candidates.size)
+    }
+
+    @Test
+    fun emptyResults_areNoResults_andSuccessIsSuccess() {
+        assertEquals(ProviderStatus.NO_RESULTS, search(FakeProvider("MusicBrainz") { emptyList() }).second.status)
+        assertEquals(ProviderStatus.SUCCESS, search(FakeProvider("MusicBrainz") { listOf(candidate("Runaway")) }).second.status)
+    }
+
+    @Test
+    fun lastFmOnly_queriesLastFm_andSaysWhyTheOthersWereNot() {
+        val lastFm = FakeProvider("Last.fm") { listOf(candidate("Runaway", source = "Last.fm")) }
+        val musicBrainz = FakeProvider("MusicBrainz") { listOf(candidate("Runaway")) }
+        assertEquals(ProviderStatus.SUCCESS, search(lastFm, selection = MetadataSources.LAST_FM).second.status)
+        val skipped = search(musicBrainz, selection = MetadataSources.LAST_FM).second
+        assertEquals(1, lastFm.calls)
+        assertEquals(0, musicBrainz.calls)
+        assertEquals(ProviderStatus.SKIPPED, skipped.status)
+        assertEquals("Not selected (source: LastFm)", skipped.errorMessage)
+    }
+
+    @Test
+    fun allProviders_includesAConfiguredLastFm() {
+        val lastFm = FakeProvider("Last.fm") { listOf(candidate("Runaway", source = "Last.fm")) }
+        search(lastFm, selection = MetadataSources.ALL)
+        assertEquals(1, lastFm.calls)
+    }
+
+    @Test
+    fun preflightHosts_followTheSelection() {
+        assertEquals(listOf("musicbrainz.org", "api.deezer.com"), MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = false))
+        assertEquals(
+            listOf("musicbrainz.org", "api.deezer.com", "ws.audioscrobbler.com"),
+            MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = true),
+        )
+        assertEquals(emptyList<String>(), MetadataSources.hostsFor(MetadataSources.LAST_FM, lastFmConfigured = false))
+        assertEquals(listOf("musicbrainz.org"), MetadataSources.hostsFor(MetadataSources.MUSICBRAINZ, lastFmConfigured = true))
     }
 
     @Test

@@ -33,8 +33,9 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
+        // Request lines carry query strings: keep API keys out of logcat.
         val logging =
-            HttpLoggingInterceptor().apply {
+            HttpLoggingInterceptor { message -> HttpLoggingInterceptor.Logger.DEFAULT.log(redactSecrets(message)) }.apply {
                 level = HttpLoggingInterceptor.Level.BASIC
             }
         return OkHttpClient
@@ -125,3 +126,8 @@ object NetworkModule {
             .create(com.lochanpthakke.empee3.core.network.api.GitHubUpdateApi::class.java)
     }
 }
+
+private val SECRET_QUERY = Regex("""(?i)\b(api_key|apikey|token|secret)=[^&\s]*""")
+
+/** [message] with the values of key-like query parameters replaced. */
+internal fun redactSecrets(message: String): String = message.replace(SECRET_QUERY) { "${it.groupValues[1]}=<redacted>" }

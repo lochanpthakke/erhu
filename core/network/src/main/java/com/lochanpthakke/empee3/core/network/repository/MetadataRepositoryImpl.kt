@@ -27,6 +27,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import com.lochanpthakke.empee3.core.network.retry.RetryPolicy
+import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.inject.Inject
@@ -46,8 +48,11 @@ class MetadataRepositoryImpl
         private val tagWriter: JAudioTaggerWriter,
         private val tagWriteAccessChecker: TagWriteAccessChecker,
         private val okHttpClient: OkHttpClient,
+        private val providerHealth: ProviderHealth,
         private val logger: Logger,
     ) : MetadataRepository {
+        private val retryPolicy = RetryPolicy()
+
         private val providers: List<MetadataProvider> by lazy {
             listOf(musicBrainzProvider, deezerProvider, lastFmProvider)
         }
@@ -111,21 +116,25 @@ class MetadataRepositoryImpl
             searchProviderScored(
                 provider = provider,
                 selection = selection,
-                unavailableReason =
-                    if (provider === lastFmProvider &&
-                        !LastFmProvider.IS_CONFIGURED
-                    ) {
-                        "Last.fm rejects the app's API key"
-                    } else {
-                        null
-                    },
+                availability = availabilityOf(provider),
                 scorer = scorer,
                 title = title,
                 artist = artist,
                 album = album,
                 durationMs = durationMs,
-                onFailure = { message, error -> logger.w(TAG, message, error) },
+                retry = retryPolicy,
+                log = { message -> logger.i(TAG, message) },
+                onAuthFailure = { reason -> providerHealth.markRejected(provider.providerName, reason) },
             )
+
+        private fun availabilityOf(provider: MetadataProvider): ProviderAvailability =
+            when {
+                provider === lastFmProvider && !lastFmProvider.isConfigured ->
+                    ProviderAvailability.NotConfigured(LastFmProvider.NOT_CONFIGURED_MESSAGE)
+                else ->
+                    providerHealth.rejectionOf(provider.providerName)?.let { ProviderAvailability.Rejected(it) }
+                        ?: ProviderAvailability.Available
+            }
 
         override suspend fun fetchAlbumArt(
             albumTitle: String,
@@ -240,33 +249,91 @@ internal fun genreFromMusicBrainz(genres: List<MusicBrainzGenreDto>): GenreLooku
     }
 }
 
+/** Whether a provider may be asked at all, and if not, the reason shown instead of results. */
+sealed interface ProviderAvailability {
+    data object Available : ProviderAvailability
+
+    /** No credentials: never called. */
+    data class NotConfigured(
+        val reason: String,
+    ) : ProviderAvailability
+
+    /** Its credentials were rejected earlier this session: not called again with the same key. */
+    data class Rejected(
+        val reason: String,
+    ) : ProviderAvailability
+}
+
 /**
- * One provider's part of a search: skipped when not selected or [unavailableReason] is set,
- * otherwise searched and scored. A provider that throws is FAILED / TIMED_OUT with its message,
- * never "no results"; the status reflects the best score, not the first result's.
+ * Providers whose credentials were rejected during this session, so an invalid key costs one
+ * request rather than one per track. Cleared only by restarting the app (a new key needs a new build).
+ */
+@Singleton
+class ProviderHealth
+    @Inject
+    constructor() {
+        private val rejected = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+        fun markRejected(
+            providerName: String,
+            reason: String,
+        ) {
+            rejected[providerName] = reason
+        }
+
+        fun rejectionOf(providerName: String): String? = rejected[providerName]
+    }
+
+/**
+ * One provider's part of a search. Not selected: [ProviderStatus.SKIPPED]; not configured or
+ * rejected earlier: [ProviderStatus.NOT_CONFIGURED] / [ProviderStatus.AUTH_FAILED], all without a
+ * request. Otherwise the request runs under [retry] (transient failures only, bounded backoff,
+ * Retry-After respected) and a failure keeps its real category: network, timeout, rate limit,
+ * credentials or other, never "no results". The status reflects the best score, not the first.
  */
 @Suppress("LongParameterList", "TooGenericExceptionCaught", "ReturnCount")
 internal suspend fun searchProviderScored(
     provider: MetadataProvider,
     selection: String,
-    unavailableReason: String?,
+    availability: ProviderAvailability,
     scorer: MetadataScorer,
     title: String,
     artist: String?,
     album: String?,
     durationMs: Long?,
-    onFailure: (String, Throwable) -> Unit = { _, _ -> },
+    retry: RetryPolicy = RetryPolicy(),
+    log: (String) -> Unit = {},
+    onAuthFailure: (String) -> Unit = {},
 ): Pair<List<MetadataCandidate>, ProviderOutcome> {
     val name = provider.providerName
     if (!MetadataSources.matches(name, selection)) {
-        return emptyList<MetadataCandidate>() to ProviderOutcome(name, status = ProviderStatus.SKIPPED)
+        return emptyList<MetadataCandidate>() to
+            ProviderOutcome(name, status = ProviderStatus.SKIPPED, errorMessage = "Not selected (source: ${sourceLabel(selection)})")
     }
-    if (unavailableReason != null) {
-        return emptyList<MetadataCandidate>() to ProviderOutcome(name, status = ProviderStatus.SKIPPED, errorMessage = unavailableReason)
+    when (availability) {
+        is ProviderAvailability.NotConfigured -> {
+            log("provider=$name decision=not-queried reason=not-configured")
+            return emptyList<MetadataCandidate>() to
+                ProviderOutcome(name, status = ProviderStatus.NOT_CONFIGURED, errorMessage = availability.reason)
+        }
+        is ProviderAvailability.Rejected -> {
+            log("provider=$name decision=not-queried reason=credentials-rejected-earlier")
+            return emptyList<MetadataCandidate>() to
+                ProviderOutcome(name, status = ProviderStatus.AUTH_FAILED, errorMessage = "${availability.reason} (not retried)")
+        }
+        ProviderAvailability.Available -> Unit
     }
     return try {
+        val found =
+            retry.run(
+                onRetry = { attempt, failure, waitMs ->
+                    log("provider=$name retry=$attempt cause=${failure.status} waitMs=$waitMs")
+                },
+            ) {
+                provider.searchTrack(title, artist, album)
+            }
         val scored =
-            provider.searchTrack(title, artist, album).map { candidate ->
+            found.map { candidate ->
                 scorer.scoreCandidate(
                     candidate = candidate,
                     targetTitle = title,
@@ -282,15 +349,16 @@ internal suspend fun searchProviderScored(
                 topScore >= HIGH_CONFIDENCE_THRESHOLD -> ProviderStatus.SUCCESS
                 else -> ProviderStatus.LOW_CONFIDENCE
             }
+        log("provider=$name decision=queried outcome=$status candidates=${scored.size}")
         scored to ProviderOutcome(name, candidateCount = scored.size, status = status)
     } catch (e: CancellationException) {
         throw e
-    } catch (e: java.net.SocketTimeoutException) {
-        onFailure("Search timed out for $name: ${e.message}", e)
-        emptyList<MetadataCandidate>() to ProviderOutcome(name, status = ProviderStatus.TIMED_OUT, errorMessage = "Request timed out")
     } catch (e: Exception) {
-        onFailure("Search failed for $name: ${e.message}", e)
-        emptyList<MetadataCandidate>() to
-            ProviderOutcome(name, status = ProviderStatus.FAILED, errorMessage = e.message ?: "Search request failed")
+        val failure = classifyProviderFailure(e)
+        log("provider=$name decision=queried outcome=${failure.status} error=${e.javaClass.simpleName}")
+        if (failure.status == ProviderStatus.AUTH_FAILED) onAuthFailure(failure.message)
+        emptyList<MetadataCandidate>() to ProviderOutcome(name, status = failure.status, errorMessage = failure.message)
     }
 }
+
+private fun sourceLabel(selection: String): String = if (selection == MetadataSources.ALL) "all providers" else selection

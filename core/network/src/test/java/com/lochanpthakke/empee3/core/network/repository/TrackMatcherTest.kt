@@ -73,7 +73,16 @@ class TrackMatcherTest {
             matcher.match(identity) { query ->
                 queries += query
                 val (candidates, outcome) =
-                    searchProviderScored(provider(found), "ALL", null, scorer, query.title, query.artist, identity.album, identity.durationMs)
+                    searchProviderScored(
+                        provider(found),
+                        "ALL",
+                        ProviderAvailability.Available,
+                        scorer,
+                        query.title,
+                        query.artist,
+                        identity.album,
+                        identity.durationMs,
+                    )
                 DetailedSearchResponse(candidates.sortedByDescending { it.confidenceScore }, listOf(outcome))
             }
         }

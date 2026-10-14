@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -101,19 +103,20 @@ fun MetadataEditorScreen(
     val searchArtists by viewModel.searchArtists.collectAsState()
     val selectAll by viewModel.selectAllForRepair.collectAsState()
 
-    val doneCount = repairQueue.count { it.status == "DONE" || it.status == "SUCCESS" || it.status == "PARTIAL_SUCCESS" }
-    val unchangedCount = repairQueue.count { it.status == "UNCHANGED" }
-    val reviewCount = repairQueue.count { it.status == "NEEDS_REVIEW" }
-    val failedCount = repairQueue.count { it.status == "FAILED" }
+    val summary = RepairSummary.of(repairQueue)
+    val batchPause by viewModel.batchPause.collectAsState()
+    val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
+    val toProcessCount = repairQueue.count { it.status in RepairStatus.TO_PROCESS }
     val totalCount = repairQueue.size
-    val processedCount = repairQueue.count { it.status != "PENDING" && it.status != "FIXING" }
+    val processedCount = repairQueue.count { it.status !in RepairStatus.TO_PROCESS && it.status != RepairStatus.FIXING }
     val isQueueComplete = totalCount > 0 && processedCount == totalCount
     val progressFloat = if (totalCount > 0) processedCount.toFloat() / totalCount.toFloat() else 0f
 
-    LaunchedEffect(isQueueComplete) {
-        if (isQueueComplete) {
-            showCompletionDialog = true
-        }
+    // The summary appears whenever a run ends: finished, paused by the connection or by the user.
+    var wasFixing by remember { mutableStateOf(false) }
+    LaunchedEffect(isFixingQueue) {
+        if (wasFixing && !isFixingQueue && totalCount > 0) showCompletionDialog = true
+        wasFixing = isFixingQueue
     }
 
     AppScaffold(
@@ -251,7 +254,7 @@ fun MetadataEditorScreen(
             val selectedProvider by viewModel.selectedProvider.collectAsState()
             val selectedFixAction by viewModel.selectedFixAction.collectAsState()
 
-            val providerOptions = METADATA_SOURCE_OPTIONS.map { it.key to it.label }
+            val providerOptions = sourceOptions.map { it.key to it.label }
             val actionOptions = com.lochanpthakke.empee3.core.model.MetadataFixAction.supported
 
             Row(
@@ -379,6 +382,19 @@ fun MetadataEditorScreen(
 
             Spacer(modifier = Modifier.height(Spacing.md))
 
+            batchPause?.let { pause ->
+                if (!isFixingQueue && toProcessCount > 0) {
+                    Text(
+                        text =
+                            "Paused: ${pause.reason}. ${summary.fixed} fixed so far, $toProcessCount still to check" +
+                                if (pause.kind.resumesWithNetwork) " (resumes when the connection is back)." else ".",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+                }
+            }
+
             if (isQueueComplete) {
                 Button(
                     onClick = {
@@ -391,15 +407,26 @@ fun MetadataEditorScreen(
                     Spacer(modifier = Modifier.width(Spacing.sm))
                     Text("Finish Repair & Return to Library")
                 }
+            } else if (isFixingQueue) {
+                OutlinedButton(
+                    onClick = { viewModel.pauseFixingQueue() },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(imageVector = Icons.Default.Pause, contentDescription = null)
+                    Spacer(modifier = Modifier.width(Spacing.sm))
+                    Text("Pause after this track")
+                }
             } else {
                 Button(
                     onClick = { viewModel.startFixingQueue() },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isFixingQueue && repairQueue.any { it.status == "PENDING" },
+                    enabled = toProcessCount > 0,
                 ) {
                     Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null)
                     Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text(if (isFixingQueue) "Fixing Tags in Progress..." else "Start Fixing Queue / Fix Tags")
+                    Text(
+                        if (processedCount > 0 && toProcessCount > 0) "Resume ($toProcessCount left)" else "Start Fixing Queue / Fix Tags",
+                    )
                 }
             }
 
@@ -484,7 +511,17 @@ fun MetadataEditorScreen(
                                                     overflow = TextOverflow.Ellipsis,
                                                 )
                                             }
-                                            if (queueItem.status == "FAILED") {
+                                            if (queueItem.status == RepairStatus.NETWORK_FAILED) {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Not checked (network): ${queueItem.failureReason.orEmpty()}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
+                                            if (queueItem.status == RepairStatus.FAILED || queueItem.status == RepairStatus.NO_MATCH) {
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
                                                     text = "⚠️ ${formatFailureReason(queueItem.failureReason)}",
@@ -523,11 +560,21 @@ fun MetadataEditorScreen(
                                                     contentDescription = "Needs Review",
                                                     tint = MaterialTheme.colorScheme.secondary,
                                                 )
-                                            "FAILED" ->
+                                            RepairStatus.FAILED, RepairStatus.NO_MATCH, RepairStatus.NETWORK_FAILED ->
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Icon(
-                                                        imageVector = Icons.Default.Error,
-                                                        contentDescription = "Failed",
+                                                        imageVector =
+                                                            if (queueItem.status == RepairStatus.NETWORK_FAILED) {
+                                                                Icons.Default.CloudOff
+                                                            } else {
+                                                                Icons.Default.Error
+                                                            },
+                                                        contentDescription =
+                                                            when (queueItem.status) {
+                                                                RepairStatus.NETWORK_FAILED -> "Network failure"
+                                                                RepairStatus.NO_MATCH -> "No match"
+                                                                else -> "Failed"
+                                                            },
                                                         tint = MaterialTheme.colorScheme.error,
                                                     )
                                                     IconButton(
@@ -606,15 +653,7 @@ fun MetadataEditorScreen(
                                                     horizontalArrangement = Arrangement.SpaceBetween,
                                                 ) {
                                                     Text("• ${outcome.providerName}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
-                                                    val statusText = when (outcome.status) {
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS -> "✓ Selected candidate"
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.CANDIDATES_FOUND -> "${outcome.candidateCount} candidate(s)"
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.LOW_CONFIDENCE -> "${outcome.candidateCount} low confidence"
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS -> "No results found"
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.TIMED_OUT -> "Request timed out"
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.FAILED -> "Failed: ${outcome.errorMessage ?: "Request failed"}"
-                                                        com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED -> "Provider not queried"
-                                                    }
+                                                    val statusText = providerStatusText(outcome)
                                                     Text(statusText, style = MaterialTheme.typography.bodySmall, color = if (outcome.status == com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                             }
@@ -701,23 +740,40 @@ fun MetadataEditorScreen(
     if (showCompletionDialog) {
         GlassAlertDialog(
             onDismissRequest = { showCompletionDialog = false },
-            title = { Text("Metadata Repair Complete") },
+            title = { Text(if (toProcessCount > 0) "Metadata Repair Paused" else "Metadata Repair Complete") },
             text = {
                 Column {
-                    Text("✓ $doneCount tracks fixed successfully", fontWeight = FontWeight.Bold)
-                    if (unchangedCount > 0) {
+                    Text("✓ ${summary.fixed} tracks fixed successfully", fontWeight = FontWeight.Bold)
+                    if (summary.unchanged > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("• $unchangedCount tracks matched but nothing was written (see each track)")
+                        Text("• ${summary.unchanged} tracks matched but nothing was written (see each track)")
                     }
-                    if (reviewCount > 0) {
+                    if (summary.needsReview > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("🔍 $reviewCount tracks need manual review")
+                        Text("🔍 ${summary.needsReview} tracks need manual review")
                     }
-                    if (failedCount > 0) {
+                    if (summary.noMatch > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("❌ $failedCount tracks failed:", fontWeight = FontWeight.Bold)
-                        val failedReasons = repairQueue.filter { it.status == "FAILED" }
-                            .groupBy { formatFailureReason(it.failureReason) }
+                        Text("• ${summary.noMatch} tracks had no online match")
+                    }
+                    if (summary.networkFailures + summary.notChecked > 0) {
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Text(
+                            "📡 ${summary.networkFailures + summary.notChecked} tracks not checked yet (connection): " +
+                                "they stay in the queue for Resume",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        batchPause?.let { pause ->
+                            Text(pause.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    if (summary.otherFailures > 0) {
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Text("❌ ${summary.otherFailures} tracks failed:", fontWeight = FontWeight.Bold)
+                        val failedReasons =
+                            repairQueue
+                                .filter { it.status == RepairStatus.FAILED }
+                                .groupBy { formatFailureReason(it.failureReason) }
                         failedReasons.forEach { (reason, items) ->
                             Text("  • ${items.size} × $reason", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
@@ -725,14 +781,25 @@ fun MetadataEditorScreen(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showCompletionDialog = false
-                        viewModel.clearRepairQueue()
-                        onNavigateToLibrary()
-                    },
-                ) {
-                    Text("Finish & Return to Library")
+                if (toProcessCount > 0) {
+                    Button(
+                        onClick = {
+                            showCompletionDialog = false
+                            viewModel.startFixingQueue()
+                        },
+                    ) {
+                        Text("Resume ($toProcessCount left)")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            showCompletionDialog = false
+                            viewModel.clearRepairQueue()
+                            onNavigateToLibrary()
+                        },
+                    ) {
+                        Text("Finish & Return to Library")
+                    }
                 }
             },
             dismissButton = {

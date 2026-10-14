@@ -11,15 +11,20 @@ data class MetadataSourceOption(
 )
 
 /**
- * The sources offered for tag fixing. Last.fm is not offered: its API rejects the app's key, and
- * its track search has no album, genre or year anyway. LRCLIB serves lyrics only (Lyrics page).
+ * The sources offered for tag fixing, with what each really provides. Last.fm is offered with its
+ * true state: without an API key it is listed as not configured (and refused when chosen alone);
+ * LRCLIB serves lyrics only (Lyrics page) and is not a tag source.
  */
-val METADATA_SOURCE_OPTIONS: List<MetadataSourceOption> =
+fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption> =
     listOf(
         MetadataSourceOption(
             MetadataSources.ALL,
             "All providers",
-            "MusicBrainz and Deezer together; the best-scoring match is used",
+            if (lastFmConfigured) {
+                "MusicBrainz, Deezer and Last.fm together; the best-scoring match is used"
+            } else {
+                "MusicBrainz and Deezer together (Last.fm has no API key); the best-scoring match is used"
+            },
         ),
         MetadataSourceOption(
             MetadataSources.MUSICBRAINZ,
@@ -31,11 +36,22 @@ val METADATA_SOURCE_OPTIONS: List<MetadataSourceOption> =
             "Deezer",
             "Title, artist, album and cover; album genre; no release year. Returns no tracks where Deezer isn't offered, such as India",
         ),
+        MetadataSourceOption(
+            MetadataSources.LAST_FM,
+            "Last.fm",
+            if (lastFmConfigured) {
+                "Title and artist only: Last.fm's search has no album, year or genre"
+            } else {
+                "Not configured: needs a Last.fm API key (lastfm.apiKey in local.properties)"
+            },
+        ),
     )
 
-/** A stored source back to an offered one; anything else (e.g. the old Last.fm choice) means all providers. */
+private val OFFERED_KEYS = listOf(MetadataSources.ALL, MetadataSources.MUSICBRAINZ, MetadataSources.DEEZER, MetadataSources.LAST_FM)
+
+/** A stored source back to an offered one; anything unknown means all providers. */
 fun offeredMetadataSource(stored: String?): String =
-    METADATA_SOURCE_OPTIONS.firstOrNull { it.key.equals(stored, ignoreCase = true) }?.key ?: MetadataSources.ALL
+    OFFERED_KEYS.firstOrNull { it.equals(stored, ignoreCase = true) } ?: MetadataSources.ALL
 
 /** What each offered fix action actually writes. */
 fun MetadataFixAction.summary(): String =

@@ -95,12 +95,17 @@ class ProviderMappingTest {
 
     // ---- Last.fm
 
-    /** What ws.audioscrobbler.com answered for the app's key on 2026-10-13. */
+    /** What ws.audioscrobbler.com answered for the key that was in the code (2026-10-13 and -14). */
     @Test
-    fun lastFm_rejectedKey_isAFailureNotNoResults() {
+    fun lastFm_rejectedKey_isAnAuthFailure_notNoResults() {
         val response =
             json.decodeFromString<LastFmSearchResponse>("""{"message":"Invalid API key - You must be granted a valid key by last.fm","error":10}""")
-        assertUnavailable("Invalid API key") { lastFmTrackCandidates(response, "Last.fm") }
+        try {
+            lastFmTrackCandidates(response, "Last.fm")
+            fail("expected ProviderAuthException")
+        } catch (e: ProviderAuthException) {
+            assertTrue(e.message.orEmpty().contains("Invalid API key"))
+        }
     }
 
     @Test

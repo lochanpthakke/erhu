@@ -1,13 +1,37 @@
 package com.lochanpthakke.empee3.core.model
 
+/**
+ * What happened when a provider was (or was not) asked about a track. [SKIPPED] and
+ * [NOT_CONFIGURED] mean no request was sent; every failure status means one was sent and failed,
+ * and none of them is ever reported as [NO_RESULTS].
+ */
 enum class ProviderStatus(val label: String) {
+    IN_PROGRESS("Searching…"),
     NO_RESULTS("No results found"),
     CANDIDATES_FOUND("Candidates found"),
     LOW_CONFIDENCE("Low confidence candidates"),
-    FAILED("Search request failed"),
-    TIMED_OUT("Request timed out"),
     SUCCESS("Selected candidate contributed"),
-    SKIPPED("Provider not queried"),
+
+    /** Not queried because the user's provider choice excludes it. */
+    SKIPPED("Not queried"),
+
+    /** Not queried: no credentials are configured for it. */
+    NOT_CONFIGURED("Not configured"),
+
+    /** Queried, and the provider rejected the app's credentials. */
+    AUTH_FAILED("Credentials rejected"),
+
+    /** The request never reached the provider: no connection, DNS failure or network access blocked. */
+    NETWORK_ERROR("Network unavailable"),
+    TIMED_OUT("Request timed out"),
+    RATE_LIMITED("Rate limited"),
+
+    /** Any other provider error (HTTP error, unusable response, service not offered here). */
+    FAILED("Provider error"),
+    ;
+
+    /** A failure worth retrying later: the connection or the provider's load, not the request itself. */
+    val isTransient: Boolean get() = this == NETWORK_ERROR || this == TIMED_OUT || this == RATE_LIMITED
 }
 
 data class ProviderOutcome(

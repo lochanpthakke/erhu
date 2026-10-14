@@ -29,7 +29,6 @@ import com.lochanpthakke.empee3.core.model.VisualizerMode
 import com.lochanpthakke.empee3.core.model.VisualizerSensitivity
 import com.lochanpthakke.empee3.core.model.VisualizerSmoothing
 import com.lochanpthakke.empee3.feature.library.LibraryViewModel
-import com.lochanpthakke.empee3.feature.library.METADATA_SOURCE_OPTIONS
 import com.lochanpthakke.empee3.feature.library.UNSUPPORTED_FIX_ACTIONS_NOTE
 import com.lochanpthakke.empee3.feature.library.summary
 import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
@@ -376,6 +375,7 @@ private fun MetadataSettingsSubPage(
 ) {
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     val selectedFixAction by viewModel.selectedFixAction.collectAsState()
+    val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
         SettingsSection(
@@ -399,10 +399,10 @@ private fun MetadataSettingsSubPage(
 
         SettingsSection(
             title = "Primary Source Provider",
-            footer = "Last.fm isn't offered: it rejects the app's API key, and its search has no album, genre or year.",
+            footer = "Last.fm needs your own API key (lastfm.apiKey in local.properties, then rebuild); without one it is not queried.",
         ) {
             SettingsGroup(selectable = true) {
-                METADATA_SOURCE_OPTIONS.forEach { option ->
+                sourceOptions.forEach { option ->
                     row {
                         SettingsChoiceRow(
                             title = option.label,

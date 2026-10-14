@@ -49,6 +49,16 @@ import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
 import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
+import com.lochanpthakke.empee3.core.datastore.RepairBatchPersistence
+import com.lochanpthakke.empee3.core.model.PersistedRepairBatch
+import com.lochanpthakke.empee3.core.model.PersistedRepairItem
+import com.lochanpthakke.empee3.core.model.ProviderStatus
+import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatus
+import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatusSource
+import com.lochanpthakke.empee3.core.network.provider.LastFmCredentials
+import com.lochanpthakke.empee3.core.network.repository.MetadataSources
+import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
+import kotlinx.coroutines.CancellationException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -120,6 +130,9 @@ class LibraryViewModel
         private val titleCandidateGenerator: com.lochanpthakke.empee3.core.network.cleaner.TitleCandidateGenerator,
         private val embeddedTagReader: EmbeddedTagReader,
         private val trackMatcher: TrackMatcher,
+        private val networkStatus: NetworkStatusSource,
+        private val repairBatchPersistence: RepairBatchPersistence,
+        private val lastFmCredentials: LastFmCredentials,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -211,7 +224,7 @@ class LibraryViewModel
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
 
-        /** Metadata & Artwork source, stored in settings; one of [METADATA_SOURCE_OPTIONS]. */
+        /** Metadata & Artwork source, stored in settings; one of [metadataSourceOptions]. */
         val selectedProvider: StateFlow<String> =
             themeRepository.metadataProvider
                 .map(::offeredMetadataSource)
@@ -549,6 +562,8 @@ class LibraryViewModel
         fun clearRepairQueue() {
             _repairQueue.value = emptyList()
             _selectAllForRepair.value = null
+            _batchPause.value = null
+            autoResumeArmed = false
         }
 
         /**
@@ -801,12 +816,73 @@ class LibraryViewModel
             }
         }
 
+        /** Why the last batch stopped before every track was looked up; null when it didn't. */
+        private val _batchPause = MutableStateFlow<BatchPause?>(null)
+        val batchPause: StateFlow<BatchPause?> = _batchPause.asStateFlow()
+
+        /** Set by [pauseFixingQueue]: the batch stops before its next track and still writes what it found. */
+        @Volatile private var pauseRequested = false
+
+        /** One automatic resume per connection pause, when the network comes back. */
+        private var autoResumeArmed = false
+
+        /** Stops the running batch after the current track; finished tracks are kept and their tags still written. */
+        fun pauseFixingQueue() {
+            if (_isFixingQueue.value) pauseRequested = true
+        }
+
+        /** The sources offered in Settings and the editor, with Last.fm's real configuration state. */
+        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> =
+            MutableStateFlow(metadataSourceOptions(lastFmConfigured = lastFmCredentials.isConfigured)).asStateFlow()
+
+        private fun metadataSourceLabel(key: String): String = metadataSourceOptions.value.firstOrNull { it.key == key }?.label ?: key
+
+        init {
+            viewModelScope.launch {
+                restoreRepairBatch()
+                // Saved as it changes, so a batch survives the process; a track mid-lookup is saved as pending.
+                combine(_repairQueue, _batchPause) { queue, pause -> queue to pause }
+                    .debounce(PERSIST_DEBOUNCE_MS)
+                    .collect { (queue, pause) -> repairBatchPersistence.save(queue.toPersisted(pause)) }
+            }
+            viewModelScope.launch {
+                // A batch paused by the connection resumes once when the network comes back (not in a loop).
+                networkStatus.status.collect { status ->
+                    val pause = _batchPause.value
+                    val resumable = autoResumeArmed && pause?.kind?.resumesWithNetwork == true && !_isFixingQueue.value
+                    if (status == NetworkStatus.AVAILABLE && resumable) {
+                        autoResumeArmed = false
+                        startFixingQueue()
+                    }
+                }
+            }
+        }
+
+        /** Puts back a batch saved by an earlier session (songs no longer in the library are dropped). */
+        private suspend fun restoreRepairBatch() {
+            val saved = repairBatchPersistence.load() ?: return
+            if (_repairQueue.value.isNotEmpty()) return
+            val songs = libraryRepository.getAllSongs().first().associateBy { it.id }
+            _repairQueue.value =
+                saved.items.mapNotNull { stored ->
+                    songs[stored.songId]?.let { song ->
+                        val status = if (stored.status == RepairStatus.FIXING) RepairStatus.PENDING else stored.status
+                        RepairQueueItem(song = song, status = status, failureReason = stored.reason)
+                    }
+                }
+            // A restored pause waits for the user: nothing starts by itself when the app opens.
+            _batchPause.value = saved.pauseReason?.let { BatchPause(BatchPause.Kind.USER, it) }
+        }
+
         /**
-         * Looks up matches for every pending track first, then writes all confident
-         * matches in one go, so Android 11+ shows a single write-access dialog for
-         * the whole batch instead of one per file.
+         * Looks up matches for every track still to process ([RepairStatus.TO_PROCESS]: pending ones
+         * and earlier network failures, never finished ones), then writes all confident matches in
+         * one go, so Android 11+ shows a single write-access dialog for the whole batch. Before
+         * starting it checks the connection and that the chosen providers' addresses resolve (DNS
+         * only, nothing is sent to them). A lost connection pauses the batch (see [RepairBatchRunner]);
+         * it resumes by itself when the network returns, or with [startFixingQueue].
          */
-        @Suppress("MagicNumber", "NestedBlockDepth", "TooGenericExceptionCaught", "LongMethod", "CyclomaticComplexMethod")
+        @Suppress("ReturnCount")
         fun startFixingQueue() {
             if (_isFixingQueue.value) return
             val action = selectedFixAction.value
@@ -814,149 +890,137 @@ class LibraryViewModel
                 _userMessage.value = action.unsupportedReason
                 return
             }
+            if (_repairQueue.value.none { it.status in RepairStatus.TO_PROCESS }) return
+            _isFixingQueue.value = true
+            val provider = selectedProvider.value
             viewModelScope.launch {
-                _isFixingQueue.value = true
-                val queue = _repairQueue.value.toMutableList()
-                val writes = mutableMapOf<Int, TagWriteRequest>()
-                val plans = mutableMapOf<Int, FieldFixPlan>()
-                val provider = selectedProvider.value
+                when (val check = preflight(provider)) {
+                    is Preflight.Refused -> {
+                        _userMessage.value = check.message
+                        _isFixingQueue.value = false
+                    }
+                    is Preflight.Paused -> {
+                        _batchPause.value = check.pause
+                        autoResumeArmed = check.pause.kind.resumesWithNetwork
+                        _userMessage.value = "${check.pause.reason}. Nothing was looked up; the queue is kept."
+                        _isFixingQueue.value = false
+                    }
+                    Preflight.Ready -> runBatch(provider, action)
+                }
+            }
+        }
 
-                for (i in queue.indices) {
-                    val item = queue[i]
-                    if (item.status != "PENDING") continue
-                    queue[i] = item.copy(status = "FIXING")
-                    _repairQueue.value = queue.toList()
-                    delay(REPAIR_DELAY_MS)
+        private sealed interface Preflight {
+            data object Ready : Preflight
 
-                    queue[i] =
-                        try {
-                            val filePath = libraryRepository.getSongFilePath(item.song.id)
-                            val rawFileName = filePath?.let { java.io.File(it).name } ?: item.song.title
-                            val activeLearnedTokens = learnedWatermarkDao.getAllActiveTokensSync()
-                            val cleanerResult = (metadataRepository as? com.lochanpthakke.empee3.core.network.repository.MetadataRepositoryImpl)?.let {
-                                metadataRepository.cleanFilename(rawFileName, activeLearnedTokens)
-                            }
-                            // The file's own tags are the track's identity; the file name is only a fallback
-                            // (downloaders shorten it: "THANK YOU.mp3" holds "GONE, GONE / THANK YOU").
-                            val embedded = filePath?.let { embeddedTagReader.readEmbeddedTags(it) }
-                            val identity =
-                                TrackIdentity(
-                                    title = usableIdentityText(embedded?.title) ?: usableIdentityText(item.song.title),
-                                    artist = usableIdentityText(embedded?.artist) ?: usableIdentityText(item.song.artist),
-                                    album = usableIdentityText(embedded?.album) ?: usableIdentityText(item.song.album),
-                                    durationMs = item.song.durationMs.takeIf { it > 0 },
-                                    fileTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens),
-                                    fileArtist = usableIdentityText(cleanerResult?.artistGuess),
-                                )
-                            val result =
-                                trackMatcher.match(identity) { query ->
-                                    metadataRepository
-                                        .searchAndScoreTrackDetailed(
-                                            title = query.title,
-                                            artist = query.artist?.takeUnless { it.equals(query.title, ignoreCase = true) },
-                                            album = identity.album,
-                                            durationMs = identity.durationMs,
-                                            sourceProvider = provider,
-                                        ).getOrDefault(DetailedSearchResponse(emptyList(), emptyList()))
-                                }
-                            val candidates = result.candidates
-                            val outcomes = result.providerOutcomes
+            data class Refused(
+                val message: String,
+            ) : Preflight
 
-                            val finalStatus: String
-                            val finalReason: String?
-                            val tagRequest: TagWriteRequest?
+            data class Paused(
+                val pause: BatchPause,
+            ) : Preflight
+        }
 
-                            val decision = result.decision
-                            if (filePath == null) {
-                                finalStatus = "FAILED"
-                                finalReason = "FILE_NOT_FOUND"
-                                tagRequest = null
-                            } else {
-                                when (decision) {
-                                    is MatchDecision.NoMatch -> {
-                                        finalStatus = "FAILED"
-                                        val providerFailure = if (candidates.isEmpty()) providerFailureSummary(outcomes) else null
-                                        finalReason = providerFailure ?: decision.reason ?: "NO_MATCH"
-                                        tagRequest = null
-                                    }
-                                    is MatchDecision.LowConfidence -> {
-                                        finalStatus = "NEEDS_REVIEW"
-                                        finalReason = decision.reason
-                                        tagRequest = null
-                                    }
-                                    is MatchDecision.Ambiguous -> {
-                                        finalStatus = "NEEDS_REVIEW"
-                                        finalReason = decision.reason
-                                        tagRequest = null
-                                    }
-                                    is MatchDecision.Confident -> {
-                                        val plan = planFix(item.song, filePath, decision.match, candidates, action)
-                                        plans[i] = plan
-                                        if (plan.request == null) {
-                                            // Nothing to write is not a fix: say why instead of reporting success.
-                                            finalStatus = "UNCHANGED"
-                                            finalReason =
-                                                plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
-                                            tagRequest = null
-                                        } else {
-                                            finalStatus = "FIXING"
-                                            finalReason = null
-                                            tagRequest = plan.request
-                                        }
-                                    }
-                                }
-                            }
+        @Suppress("ReturnCount")
+        private suspend fun preflight(provider: String): Preflight {
+            when (networkStatus.status.value) {
+                NetworkStatus.OFFLINE -> return Preflight.Paused(BatchPause(BatchPause.Kind.OFFLINE, "No internet connection"))
+                NetworkStatus.BLOCKED ->
+                    return Preflight.Paused(BatchPause(BatchPause.Kind.BLOCKED, "Android is blocking empee3's network access"))
+                NetworkStatus.AVAILABLE -> Unit
+            }
+            val hosts = MetadataSources.hostsFor(provider, lastFmCredentials.isConfigured)
+            if (hosts.isEmpty()) {
+                return Preflight.Refused("${metadataSourceLabel(provider)} isn't configured: add its API key or choose another source")
+            }
+            val resolved = networkStatus.resolves(hosts)
+            if (resolved.values.none { it }) {
+                return Preflight.Paused(
+                    BatchPause(BatchPause.Kind.UNREACHABLE, "Couldn't resolve ${hosts.joinToString()}: check the connection, then resume"),
+                )
+            }
+            return Preflight.Ready
+        }
 
-                            val diag = com.lochanpthakke.empee3.core.model.RepairDiagnostics(
-                                originalFilename = rawFileName,
-                                searchTitle = result.queries.joinToString("\" · \"") { it.title },
-                                searchArtist = result.queries.firstOrNull()?.artist,
-                                targetDurationMs = item.song.durationMs.takeIf { it > 0 },
-                                providerOutcomes = outcomes,
-                                topCandidates = candidates.take(3),
-                                finalReason = finalReason,
-                            )
-
-                            if (tagRequest != null) {
-                                writes[i] = tagRequest
-                            }
-
-                            item.copy(status = finalStatus, failureReason = finalReason, diagnostics = diag)
-                        } catch (e: Exception) {
-                            item.copy(status = "FAILED", failureReason = e.message ?: "NETWORK_ERROR")
+        @Suppress("TooGenericExceptionCaught")
+        private suspend fun runBatch(
+            provider: String,
+            action: MetadataFixAction,
+        ) {
+            pauseRequested = false
+            autoResumeArmed = false
+            _batchPause.value = null
+            val plans = mutableMapOf<Long, FieldFixPlan>()
+            val runner =
+                RepairBatchRunner(
+                    networkStatus = { networkStatus.status.value },
+                    pauseRequested = { pauseRequested },
+                    inProgress = { item -> item.copy(diagnostics = searchingDiagnostics(item, provider)) },
+                    lookup = { item ->
+                        delay(REPAIR_DELAY_MS)
+                        lookUpTrack(item, provider, action, plans)
+                    },
+                )
+            val phase =
+                try {
+                    runner.lookUp(_repairQueue.value) { _repairQueue.value = it }
+                } catch (e: CancellationException) {
+                    // Cancelled mid-track: that track wasn't concluded.
+                    _repairQueue.value =
+                        _repairQueue.value.map { item ->
+                            if (item.status == RepairStatus.FIXING) item.copy(status = RepairStatus.PENDING) else item
                         }
-                    _repairQueue.value = queue.toList()
-                }
-
-                if (writes.isEmpty()) {
                     _isFixingQueue.value = false
-                    return@launch
+                    throw e
                 }
+            _batchPause.value = phase.pause
+            phase.pause?.let { pause ->
+                autoResumeArmed = pause.kind.resumesWithNetwork
+                val written = phase.queue.count { it.status == RepairStatus.DONE || it.status == RepairStatus.PARTIAL_SUCCESS }
+                val remaining = phase.queue.count { it.status in RepairStatus.TO_PROCESS }
+                _userMessage.value = "${pause.reason}. ${written + phase.writes.size} fixed or being written; $remaining still to check."
+            }
+            writePlanned(phase.queue.toMutableList(), phase.writes, plans)
+        }
 
-                withWriteAccess(
-                    contentUris = writes.values.map { it.contentUri },
-                    onGranted = {
-                        var wroteAny = false
-                        for ((index, request) in writes) {
-                            val item = queue[index]
-                            queue[index] =
-                                when (val result = metadataRepository.writeTagsToFile(request)) {
-                                    is AppResult.Success -> {
-                                        wroteAny = true
-                                        ArtworkLoader.invalidate(request.contentUri)
-                                        // The file is named after the title: rename only when the title changed.
-                                        val renameRes =
-                                            request.title?.let { newTitle ->
-                                                val ext = request.filePath.substringAfterLast('.', "mp3")
-                                                val targetFileName = fileRenamer.buildTargetFileName(newTitle, ext)
-                                                fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
-                                            }
-                                        val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
-                                        val newName = (renameRes as? AppResult.Success)?.data?.newFileName
-                                        if (newPath != null) {
-                                            libraryRepository.updateFilePath(item.song.id, newPath)
+        /** Writes the planned tag edits; a track is only marked fixed once its file was actually written. */
+        @Suppress("LongMethod")
+        private suspend fun writePlanned(
+            queue: MutableList<RepairQueueItem>,
+            writes: Map<Int, TagWriteRequest>,
+            plans: Map<Long, FieldFixPlan>,
+        ) {
+            _repairQueue.value = queue.toList()
+            if (writes.isEmpty()) {
+                _isFixingQueue.value = false
+                return
+            }
+            withWriteAccess(
+                contentUris = writes.values.map { it.contentUri },
+                onGranted = {
+                    var wroteAny = false
+                    for ((index, request) in writes) {
+                        val item = queue[index]
+                        queue[index] =
+                            when (val result = metadataRepository.writeTagsToFile(request)) {
+                                is AppResult.Success -> {
+                                    wroteAny = true
+                                    ArtworkLoader.invalidate(request.contentUri)
+                                    // The file is named after the title: rename only when the title changed.
+                                    val renameRes =
+                                        request.title?.let { newTitle ->
+                                            val ext = request.filePath.substringAfterLast('.', "mp3")
+                                            val targetFileName = fileRenamer.buildTargetFileName(newTitle, ext)
+                                            fileRenamer.renameAudioFile(request.contentUri, request.filePath, targetFileName)
                                         }
-                                        val successDetails = buildSuccessDetails(
+                                    val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
+                                    val newName = (renameRes as? AppResult.Success)?.data?.newFileName
+                                    if (newPath != null) {
+                                        libraryRepository.updateFilePath(item.song.id, newPath)
+                                    }
+                                    val successDetails =
+                                        buildSuccessDetails(
                                             oldTitle = item.song.title,
                                             oldArtist = item.song.artist,
                                             oldAlbum = item.song.album,
@@ -967,28 +1031,147 @@ class LibraryViewModel
                                             newFileName = newName,
                                             renameError = (renameRes as? AppResult.Error)?.error?.message,
                                             isManual = (_repairMode.value == RepairMode.MANUAL),
-                                            extraChanges = plans[index]?.let(::nonTextChanges).orEmpty(),
+                                            extraChanges = plans[item.song.id]?.let(::nonTextChanges).orEmpty(),
                                         )
-                                        val itemStatus = if (renameRes is AppResult.Error) "PARTIAL_SUCCESS" else "DONE"
-                                        item.copy(status = itemStatus, successDetails = successDetails)
-                                    }
-                                    is AppResult.Error -> item.copy(status = "FAILED", failureReason = result.error.message)
+                                    val itemStatus = if (renameRes is AppResult.Error) RepairStatus.PARTIAL_SUCCESS else RepairStatus.DONE
+                                    item.copy(status = itemStatus, successDetails = successDetails)
                                 }
-                            _repairQueue.value = queue.toList()
-                        }
-                        if (wroteAny) libraryRepository.requestRescanAfterChange()
-                        _isFixingQueue.value = false
-                    },
-                    onDenied = {
-                        for (index in writes.keys) {
-                            queue[index] = queue[index].copy(status = "FAILED", failureReason = "Write access not granted")
-                        }
+                                is AppResult.Error -> item.copy(status = RepairStatus.FAILED, failureReason = result.error.message)
+                            }
                         _repairQueue.value = queue.toList()
-                        _isFixingQueue.value = false
-                    },
-                )
-            }
+                    }
+                    if (wroteAny) libraryRepository.requestRescanAfterChange()
+                    _isFixingQueue.value = false
+                },
+                onDenied = {
+                    for (index in writes.keys) {
+                        queue[index] = queue[index].copy(status = RepairStatus.FAILED, failureReason = "Write access not granted")
+                    }
+                    _repairQueue.value = queue.toList()
+                    _isFixingQueue.value = false
+                },
+            )
         }
+
+        /** Looks up one track and concludes what to do with it. Network trouble is reported as such, never as "no match". */
+        @Suppress("TooGenericExceptionCaught", "LongMethod", "ReturnCount", "CyclomaticComplexMethod")
+        private suspend fun lookUpTrack(
+            item: RepairQueueItem,
+            provider: String,
+            action: MetadataFixAction,
+            plans: MutableMap<Long, FieldFixPlan>,
+        ): TrackLookup =
+            try {
+                val filePath = libraryRepository.getSongFilePath(item.song.id)
+                val rawFileName = filePath?.let { java.io.File(it).name } ?: item.song.title
+                val activeLearnedTokens = learnedWatermarkDao.getAllActiveTokensSync()
+                val cleanerResult =
+                    (metadataRepository as? com.lochanpthakke.empee3.core.network.repository.MetadataRepositoryImpl)?.let {
+                        metadataRepository.cleanFilename(rawFileName, activeLearnedTokens)
+                    }
+                // The file's own tags are the track's identity; the file name is only a fallback
+                // (downloaders shorten it: "THANK YOU.mp3" holds "GONE, GONE / THANK YOU").
+                val embedded = filePath?.let { embeddedTagReader.readEmbeddedTags(it) }
+                val identity =
+                    TrackIdentity(
+                        title = usableIdentityText(embedded?.title) ?: usableIdentityText(item.song.title),
+                        artist = usableIdentityText(embedded?.artist) ?: usableIdentityText(item.song.artist),
+                        album = usableIdentityText(embedded?.album) ?: usableIdentityText(item.song.album),
+                        durationMs = item.song.durationMs.takeIf { it > 0 },
+                        fileTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens),
+                        fileArtist = usableIdentityText(cleanerResult?.artistGuess),
+                    )
+                val result =
+                    trackMatcher.match(identity) { query ->
+                        metadataRepository
+                            .searchAndScoreTrackDetailed(
+                                title = query.title,
+                                artist = query.artist?.takeUnless { it.equals(query.title, ignoreCase = true) },
+                                album = identity.album,
+                                durationMs = identity.durationMs,
+                                sourceProvider = provider,
+                            ).getOrDefault(DetailedSearchResponse(emptyList(), emptyList()))
+                    }
+                val candidates = result.candidates
+                val outcomes = result.providerOutcomes
+                val diag =
+                    com.lochanpthakke.empee3.core.model.RepairDiagnostics(
+                        originalFilename = rawFileName,
+                        searchTitle = result.queries.joinToString("\" · \"") { it.title },
+                        searchArtist = result.queries.firstOrNull()?.artist,
+                        targetDurationMs = item.song.durationMs.takeIf { it > 0 },
+                        providerOutcomes = outcomes,
+                        topCandidates = candidates.take(TOP_CANDIDATES_SHOWN),
+                    )
+
+                fun concluded(
+                    status: String,
+                    reason: String?,
+                    write: TagWriteRequest? = null,
+                ) = TrackLookup.Concluded(
+                    item.copy(status = status, failureReason = reason, diagnostics = diag.copy(finalReason = reason)),
+                    write,
+                )
+
+                val decision = result.decision
+                val verdict = if (decision is MatchDecision.Confident) null else networkVerdict(outcomes)
+                when {
+                    filePath == null -> concluded(RepairStatus.FAILED, "FILE_NOT_FOUND")
+                    verdict is NetworkVerdict.Unreachable -> TrackLookup.Unreachable(verdict.reason)
+                    verdict is NetworkVerdict.PartlyUnreachable ->
+                        TrackLookup.PartlyUnreachable(item.copy(diagnostics = diag.copy(finalReason = verdict.reason)), verdict.reason)
+                    decision is MatchDecision.NoMatch -> {
+                        val providerFailure = if (candidates.isEmpty()) providerFailureSummary(outcomes) else null
+                        if (providerFailure != null) {
+                            concluded(RepairStatus.FAILED, providerFailure)
+                        } else {
+                            concluded(RepairStatus.NO_MATCH, decision.reason ?: "No online match found")
+                        }
+                    }
+                    decision is MatchDecision.LowConfidence -> concluded(RepairStatus.NEEDS_REVIEW, decision.reason)
+                    decision is MatchDecision.Ambiguous -> concluded(RepairStatus.NEEDS_REVIEW, decision.reason)
+                    else -> {
+                        val match = (decision as MatchDecision.Confident).match
+                        val plan = planFix(item.song, filePath, match, candidates, action)
+                        plans[item.song.id] = plan
+                        val request = plan.request
+                        if (request == null) {
+                            // Nothing to write is not a fix: say why instead of reporting success.
+                            val why = plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
+                            concluded(RepairStatus.UNCHANGED, why)
+                        } else {
+                            concluded(RepairStatus.FIXING, null, request)
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val failure = classifyProviderFailure(e)
+                if (failure.status.isTransient) {
+                    TrackLookup.PartlyUnreachable(item, failure.message)
+                } else {
+                    TrackLookup.Concluded(item.copy(status = RepairStatus.FAILED, failureReason = failure.message))
+                }
+            }
+
+        /** While a track is looked up: the providers being asked, marked as in progress. */
+        private fun searchingDiagnostics(
+            item: RepairQueueItem,
+            provider: String,
+        ): com.lochanpthakke.empee3.core.model.RepairDiagnostics =
+            com.lochanpthakke.empee3.core.model.RepairDiagnostics(
+                originalFilename = item.song.filePath?.substringAfterLast('/') ?: item.song.title,
+                searchTitle = item.song.title,
+                searchArtist = item.song.artist,
+                providerOutcomes =
+                    metadataSourceOptions.value
+                        .filter { it.key != MetadataSources.ALL && MetadataSources.matches(it.key, provider) }
+                        .map { option ->
+                            com.lochanpthakke.empee3.core.model
+                                .ProviderOutcome(option.label, status = ProviderStatus.IN_PROGRESS)
+                        },
+            )
 
         /**
          * Plays [song] with the whole list it was tapped in as the queue. The list
@@ -1238,17 +1421,13 @@ class LibraryViewModel
                     TagChange(label, change.oldValue, change.newValue)
                 }
 
-        /** When every queried provider failed (not merely found nothing), the failure, so it isn't shown as "no match". */
+        /** When every provider that was asked (or should have been) failed rather than answered, the failures. */
         private fun providerFailureSummary(outcomes: List<com.lochanpthakke.empee3.core.model.ProviderOutcome>): String? {
-            val queried = outcomes.filter { it.status != com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED }
-            val failed =
-                queried.filter {
-                    it.status == com.lochanpthakke.empee3.core.model.ProviderStatus.FAILED ||
-                        it.status == com.lochanpthakke.empee3.core.model.ProviderStatus.TIMED_OUT
-                }
+            val considered = outcomes.filter { it.status != ProviderStatus.SKIPPED }
+            val failed = considered.filter { it.status !in ANSWERED_STATUSES }
             return when {
-                queried.isEmpty() -> "No provider could be queried for this source"
-                failed.size != queried.size -> null
+                considered.isEmpty() -> "No provider could be queried for this source"
+                failed.size != considered.size -> null
                 else -> "Lookup failed: " + failed.joinToString("; ") { "${it.providerName}: ${it.errorMessage ?: it.status.label}" }
             }
         }
@@ -1369,9 +1548,22 @@ class LibraryViewModel
 
             private const val SCAN_INDICATOR_DELAY_MS = 1000L
             private const val REPAIR_DELAY_MS = 600L
+            private const val PERSIST_DEBOUNCE_MS = 500L
+            private const val TOP_CANDIDATES_SHOWN = 3
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L
             private const val RECENT_ALBUMS_LIMIT = 12
         }
     }
+
+/** What is saved of the queue: status and reason per song. A planned but unwritten track is saved as pending. */
+internal fun List<RepairQueueItem>.toPersisted(pause: BatchPause?): PersistedRepairBatch =
+    PersistedRepairBatch(
+        items =
+            map { item ->
+                val status = if (item.status == RepairStatus.FIXING) RepairStatus.PENDING else item.status
+                PersistedRepairItem(item.song.id, status, item.failureReason)
+            },
+        pauseReason = pause?.reason?.takeIf { it.isNotEmpty() },
+    )

@@ -43,6 +43,22 @@ message PlaybackStateProto {
   // Empty = defaults (all providers, all fields).
   string metadata_provider = 26;
   string metadata_fix_action = 27;
+  // The metadata editor's repair queue, so a batch interrupted by a lost connection or a closed
+  // app can be resumed. Absent / empty = no batch.
+  RepairBatchProto repair_batch = 28;
+}
+
+message RepairBatchProto {
+  repeated RepairItemProto items = 1;
+  // Why the batch stopped before finishing ("" = it didn't).
+  string pause_reason = 2;
+}
+
+// One queued track: its song id, status name (PENDING, DONE, NETWORK_FAILED…) and the reason shown.
+message RepairItemProto {
+  int64 song_id = 1;
+  string status = 2;
+  string reason = 3;
 }
 
 message GlobalTransitionProto {

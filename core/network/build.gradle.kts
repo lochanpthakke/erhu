@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
@@ -5,12 +7,31 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+/**
+ * Last.fm API key: `lastfm.apiKey=…` in local.properties (git-ignored) or the LASTFM_API_KEY
+ * environment variable. Never committed; blank means Last.fm is reported as not configured.
+ */
+val lastFmApiKey: String =
+    rootProject
+        .file("local.properties")
+        .takeIf { it.isFile }
+        ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
+        ?.getProperty("lastfm.apiKey")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: System.getenv("LASTFM_API_KEY")?.trim().orEmpty()
+
 android {
     namespace = "com.lochanpthakke.empee3.core.network"
     compileSdk = 37
 
     defaultConfig {
         minSdk = 26
+        buildConfigField("String", "LASTFM_API_KEY", "\"${lastFmApiKey.replace("\"", "")}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     compileOptions {

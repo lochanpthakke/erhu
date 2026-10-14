@@ -46,6 +46,17 @@ object MetadataSources {
     ): Boolean = selection == ALL || key(providerName) == key(selection)
 
     private fun key(name: String): String = name.lowercase().filter { it.isLetterOrDigit() }
+
+    private val HOSTS = listOf(MUSICBRAINZ to "musicbrainz.org", DEEZER to "api.deezer.com", LAST_FM to "ws.audioscrobbler.com")
+
+    /** The hosts [selection] will contact (for a DNS-only preflight); Last.fm only when it has a key. */
+    fun hostsFor(
+        selection: String,
+        lastFmConfigured: Boolean,
+    ): List<String> =
+        HOSTS
+            .filter { (provider, _) -> matches(provider, selection) && (provider != LAST_FM || lastFmConfigured) }
+            .map { it.second }
 }
 
 interface MetadataRepository {

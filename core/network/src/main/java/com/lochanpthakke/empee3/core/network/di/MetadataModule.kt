@@ -19,6 +19,12 @@ interface MetadataModule {
 
     @Binds
     @Singleton
+    fun bindNetworkStatusSource(
+        impl: com.lochanpthakke.empee3.core.network.connectivity.AndroidNetworkStatusMonitor,
+    ): com.lochanpthakke.empee3.core.network.connectivity.NetworkStatusSource
+
+    @Binds
+    @Singleton
     fun bindUpdateCheckerRepository(
         impl: com.lochanpthakke.empee3.core.network.repository.UpdateCheckerRepositoryImpl,
     ): com.lochanpthakke.empee3.core.network.repository.UpdateCheckerRepository

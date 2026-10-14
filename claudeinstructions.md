@@ -191,6 +191,17 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   against the embedded identity (not the query text); ties that would write different tags -> NEEDS_REVIEW.
 - Library audit (read-only, 153 songs): 1 misread title, 0 corrupted files, 75 year-1970, 142 no genre.
 
+### 5.8 Batch network failures + Last.fm (2026-10-14, UNCOMMITTED, not installed)
+- Cause of "No address associated with hostname" x84: Battery Saver on (low_power=1); Android blocks network
+  for background apps (netpolicy UID 10485 blocked=BATTERY_SAVER|APP_BACKGROUND). Reproduced: run-as empee3
+  can't resolve musicbrainz.org while the shell can. Wi-Fi also flapped ~19:50.
+- Batch: RepairBatchRunner pauses on OFFLINE/BLOCKED/unreachable (track put back, not "no match"),
+  NETWORK_FAILED + NO_MATCH statuses, preflight (network + DNS only), RetryPolicy (3 tries, backoff+jitter,
+  Retry-After <= 30 s), queue persisted in proto field 28, one auto-resume when the network returns.
+- Last.fm: old hard-coded key invalid (HTTP 403, error 10). Key now from local.properties `lastfm.apiKey`
+  or env LASTFM_API_KEY -> BuildConfig; blank = NOT_CONFIGURED (no request). Auth failure disables it for the session.
+- OkHttp request logs now redact api_key.
+
 ## 6. Last known state
 - `kshitij` == `origin/kshitij` == `4485552`, working tree clean (this file is new and untracked).
 - Last APK installed on the S23: 2026-10-11 21:01 (preview-icon build). The merged build with
