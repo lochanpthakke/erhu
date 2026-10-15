@@ -27,8 +27,12 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-/** At or above this the player counts as fully expanded (float tolerance). */
-private const val SETTLED = 0.999f
+/**
+ * Progress spans a screen, not one pixel. The default Float spring tolerance
+ * (0.01) snaps the last ~1% of that journey, visibly resizing the artwork at
+ * handoff. Keep the residual below a pixel even on a tall, high-density screen.
+ */
+private const val PROGRESS_VISIBILITY_THRESHOLD = 0.0001f
 
 /** Released below this expansion (and not flung up), the player collapses. */
 private const val SETTLE_THRESHOLD = 0.65f
@@ -49,7 +53,7 @@ private const val FLING_FRACTION_PER_SECOND = 1.2f
  */
 @Stable
 class PlayerTransitionState {
-    val progress = Animatable(0f)
+    val progress = Animatable(0f, visibilityThreshold = PROGRESS_VISIBILITY_THRESHOLD)
 
     /** The mini player surface, and its artwork, in root coordinates. */
     var miniBounds by mutableStateOf(Rect.Zero)
@@ -59,16 +63,18 @@ class PlayerTransitionState {
     var heroArtworkBounds by mutableStateOf(Rect.Zero)
 
     /** Fully expanded: the real Now Playing artwork shows instead of the travelling one. */
-    val isSettledOpen: Boolean get() = progress.value >= SETTLED
+    val isSettledOpen: Boolean get() = progress.value == 1f
 
     /** True while the player is open or opening (drives Back and accessibility). */
     val isOpen: Boolean get() = progress.targetValue > 0f
 
     // Interrupting a running open/close keeps its current velocity, so reversing
     // mid-way turns around smoothly from where the player is instead of restarting.
-    suspend fun expand(velocity: Float = progress.velocity) = progress.animateTo(1f, Motion.hero(), initialVelocity = velocity)
+    suspend fun expand(velocity: Float = progress.velocity) =
+        progress.animateTo(1f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
 
-    suspend fun collapse(velocity: Float = progress.velocity) = progress.animateTo(0f, Motion.hero(), initialVelocity = velocity)
+    suspend fun collapse(velocity: Float = progress.velocity) =
+        progress.animateTo(0f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
 
     /** Direct manipulation: the finger moved by [delta] in units of the drag distance. */
     internal suspend fun dragBy(delta: Float) = progress.snapTo((progress.value + delta).coerceIn(0f, 1f))
@@ -84,7 +90,7 @@ class PlayerTransitionState {
                 velocity < -FLING_FRACTION_PER_SECOND -> false
                 else -> progress.value > SETTLE_THRESHOLD
             }
-        progress.animateTo(if (expand) 1f else 0f, Motion.gestureSettle(), initialVelocity = velocity)
+        progress.animateTo(if (expand) 1f else 0f, Motion.gestureSettle(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
     }
 }
 

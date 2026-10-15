@@ -81,13 +81,15 @@ object Motion {
      * A released drag finishing its journey: starts from the finger's velocity,
      * no bounce, quick enough that the release feels like a throw.
      */
-    fun <T> gestureSettle(): SpringSpec<T> = spring(dampingRatio = 1f, stiffness = 380f)
+    fun <T> gestureSettle(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 1f, stiffness = 380f, visibilityThreshold = visibilityThreshold)
 
     /**
      * Level 4: the player moving between collapsed and expanded on its own (tap,
      * Back). Heavy enough to feel physical, critically damped (no bounce).
      */
-    fun <T> hero(): SpringSpec<T> = spring(dampingRatio = 1f, stiffness = 220f)
+    fun <T> hero(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 1f, stiffness = 220f, visibilityThreshold = visibilityThreshold)
 
     /**
      * Now Playing's track strip settling on a page (after a swipe, a skip button or
