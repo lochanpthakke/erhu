@@ -21,7 +21,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -51,8 +50,10 @@ import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
+import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.selectionJiggle
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -408,16 +409,16 @@ internal fun LibrarySongRow(
         showTrackNumber = showTrackNumber,
     ) {
         // Smaller glyphs inside full-size touch targets: the title stays the strongest element.
-        IconButton(onClick = { actions.onToggleFavorite(song) }) {
+        PressIconButton(onClick = { actions.onToggleFavorite(song) }) {
             Icon(
                 imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (song.isFavorite) "Remove from favorites" else "Add to favorites",
                 tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(IconSize.small),
+                modifier = Modifier.size(IconSize.small).selectionJiggle(song.isFavorite, identity = song.id, expressive = true),
             )
         }
         Box {
-            IconButton(onClick = { menuExpanded = true }) {
+            PressIconButton(onClick = { menuExpanded = true }) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "Song options",

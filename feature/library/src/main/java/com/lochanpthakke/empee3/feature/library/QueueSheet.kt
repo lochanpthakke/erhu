@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
@@ -381,7 +382,7 @@ private fun QueuePage(
                             tint = if (isDragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    IconButton(onClick = { onRemove(index, queuedSong) }) {
+                    PressIconButton(onClick = { onRemove(index, queuedSong) }) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from queue")
                     }
                 }
@@ -495,7 +496,7 @@ private fun HistoryPage(
                     style = TextStyles.metadata,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                IconButton(onClick = { onPlayAgain(entry) }) {
+                PressIconButton(onClick = { onPlayAgain(entry) }) {
                     Icon(imageVector = Icons.Default.Replay, contentDescription = "Play ${entry.song.title} again")
                 }
             }

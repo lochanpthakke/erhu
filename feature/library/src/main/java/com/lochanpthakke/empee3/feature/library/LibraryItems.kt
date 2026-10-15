@@ -1,7 +1,9 @@
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,8 @@ import androidx.compose.ui.unit.Dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.ARTWORK_PRESSED_SCALE
+import com.lochanpthakke.empee3.core.designsystem.component.pressScale
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -123,7 +128,8 @@ fun AlbumTile(
 ) {
     // Not clipped to a rounded shape: the corner would cut into the first glyph of
     // the bottom text line. Only the artwork is rounded.
-    Column(modifier = modifier.clickable(onClick = onClick)) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(modifier = modifier.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)) {
         AlbumArtwork(
             artworkUri = album.artworkUri,
             contentDescription = null,
@@ -131,6 +137,7 @@ fun AlbumTile(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
+                    .pressScale(interaction, ARTWORK_PRESSED_SCALE)
                     .clip(Radius.mediumShape),
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -171,13 +178,15 @@ fun PlaylistTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.clickable(onClick = onClick)) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(modifier = modifier.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)) {
         PlaylistCover(
             playlist = playlist,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
+                    .pressScale(interaction, ARTWORK_PRESSED_SCALE)
                     .clip(Radius.mediumShape),
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -203,12 +212,14 @@ fun NewPlaylistTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.clickable(onClick = onClick)) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(modifier = modifier.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)) {
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
+                    .pressScale(interaction, ARTWORK_PRESSED_SCALE)
                     .clip(Radius.mediumShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
@@ -236,8 +247,9 @@ fun ArtistTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ArtistArtwork(
@@ -246,7 +258,8 @@ fun ArtistTile(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1f)
+                    .pressScale(interaction, ARTWORK_PRESSED_SCALE),
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
         Text(
@@ -279,15 +292,16 @@ private fun LibraryRow(
     endInset: Dp = Spacing.xs,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
                 .padding(start = Spacing.screenGutter, end = endInset, top = Spacing.sm, bottom = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        leading()
+        Box(Modifier.pressScale(interaction, ARTWORK_PRESSED_SCALE)) { leading() }
         Spacer(modifier = Modifier.width(Spacing.md))
         Column(modifier = Modifier.weight(1f)) {
             Text(

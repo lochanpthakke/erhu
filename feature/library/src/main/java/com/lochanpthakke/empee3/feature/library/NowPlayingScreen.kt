@@ -69,6 +69,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.pressScale
+import com.lochanpthakke.empee3.core.designsystem.component.selectionJiggle
 import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -318,9 +319,9 @@ fun NowPlayingScreen(
                                             if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                             label = "favoriteTint",
                                         )
-                                    SwapIcon(if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder) {
+                                    Box(Modifier.selectionJiggle(isFavorite, identity = song.id, expressive = true)) {
                                         Icon(
-                                            imageVector = it,
+                                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                             contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
                                             tint = heartColor,
                                         )
@@ -408,17 +409,18 @@ fun NowPlayingScreen(
                                 onClick = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
                                 modifier =
                                     Modifier
-                                        .size(ComponentSize.primaryButton)
-                                        .pressScale(playInteraction),
+                                        .size(ComponentSize.primaryButton),
                                 shape = CircleShape,
                                 interactionSource = playInteraction,
                             ) {
-                                SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = if (isPlaying) "Pause" else "Play",
-                                        modifier = Modifier.size(IconSize.hero),
-                                    )
+                                Box(Modifier.pressScale(playInteraction)) {
+                                    SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = if (isPlaying) "Pause" else "Play",
+                                            modifier = Modifier.size(IconSize.hero),
+                                        )
+                                    }
                                 }
                             }
 
@@ -441,6 +443,7 @@ fun NowPlayingScreen(
 
                             ToggleIconButton(
                                 active = playbackState.repeatMode != RepeatMode.OFF,
+                                feedbackValue = playbackState.repeatMode,
                                 onClick = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
                                 modifier = Modifier.offset(x = 12.dp),
                             ) {
@@ -590,6 +593,7 @@ private fun ToggleIconButton(
     active: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    feedbackValue: Any = active,
     content: @Composable () -> Unit,
 ) {
     // On/off is a colour change that fades, never a jump.
@@ -607,6 +611,7 @@ private fun ToggleIconButton(
         Box(
             modifier =
                 Modifier
+                    .selectionJiggle(feedbackValue)
                     .clip(CircleShape)
                     .background(background)
                     .padding(6.dp),

@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.EqMove
 import com.lochanpthakke.empee3.core.model.TransitionSpec
@@ -90,7 +90,7 @@ internal fun PreviewButton(
 ) {
     val playing = state is PreviewState.Playing
     // Just the symbol, no container: it sits in the gap between the two waveforms.
-    IconButton(onClick = onToggle, modifier = modifier.size(PREVIEW_TOUCH)) {
+    PressIconButton(onClick = onToggle, modifier = modifier.size(PREVIEW_TOUCH)) {
         Icon(
             if (playing) Icons.Default.Stop else Icons.Default.PlayArrow,
             contentDescription = if (playing) "Stop preview" else "Preview transition (your queue is not changed)",

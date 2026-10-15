@@ -71,6 +71,18 @@ object Motion {
     /** Level 1 press / toggle response: quick, a hint of overshoot. */
     fun <T> press(): SpringSpec<T> = spring(dampingRatio = 0.75f, stiffness = 700f)
 
+    /** Tight compression / cancellation: acknowledge touch without wobbling. */
+    fun <T> responsive(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 0.9f, stiffness = 1000f, visibilityThreshold = visibilityThreshold)
+
+    /** A brief, damped jiggle for a confirmed selection, never for continuous content. */
+    fun <T> playful(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 0.45f, stiffness = 550f, visibilityThreshold = visibilityThreshold)
+
+    /** A small spring-back on release; larger surfaces keep the non-bouncy hero spring. */
+    fun <T> expressive(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 0.65f, stiffness = 380f, visibilityThreshold = visibilityThreshold)
+
     /** Selection moving between places (navigation indicator): settled, barely overshoots. */
     fun <T> selection(): SpringSpec<T> = spring(dampingRatio = 0.85f, stiffness = 420f)
 
