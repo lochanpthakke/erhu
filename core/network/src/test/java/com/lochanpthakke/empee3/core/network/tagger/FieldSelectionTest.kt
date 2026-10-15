@@ -20,11 +20,12 @@ class FieldSelectionTest {
         assertEquals(setOf(MetadataField.GENRE), MetadataField.fromStored("GENRE_ONLY"))
         assertEquals(setOf(MetadataField.YEAR), MetadataField.fromStored("YEAR_ONLY"))
         assertEquals(setOf(MetadataField.TITLE, MetadataField.FILENAME), MetadataField.fromStored("TITLE,FILENAME"))
-        assertEquals("BPM is never selected", setOf(MetadataField.GENRE), MetadataField.fromStored("GENRE,BPM"))
+        assertEquals(setOf(MetadataField.GENRE, MetadataField.BPM), MetadataField.fromStored("GENRE,BPM"))
+        assertEquals(setOf(MetadataField.BPM), MetadataField.fromStored("BPM_ONLY"))
         assertEquals(MetadataField.all, MetadataField.fromStored("NONSENSE"))
         val stored = MetadataField.toStored(setOf(MetadataField.FILENAME, MetadataField.ALBUM))
         assertEquals(setOf(MetadataField.ALBUM, MetadataField.FILENAME), MetadataField.fromStored(stored))
-        assertFalse(MetadataField.BPM in MetadataField.supported)
+        assertTrue(MetadataField.BPM in MetadataField.supported)
     }
 
     @Test
@@ -36,6 +37,15 @@ class FieldSelectionTest {
 
         val tagsOnly = fieldSelection(MetadataField.supportedTags)
         assertTrue("all tag fields, no rename", tagsOnly.fillOnly && !tagsOnly.rename)
+
+        // BPM on or off never changes whether the other fields are filled or replaced, so a
+        // selection saved before BPM was offered keeps its meaning.
+        val savedBeforeBpm = MetadataField.fromStored("TITLE,ARTIST,ALBUM,YEAR,GENRE,ARTWORK,FILENAME")
+        assertTrue(fieldSelection(savedBeforeBpm).fillOnly)
+        assertFalse(FixField.BPM in fieldSelection(savedBeforeBpm).fields)
+        val bpmOnly = fieldSelection(setOf(MetadataField.BPM))
+        assertEquals(setOf(FixField.BPM), bpmOnly.fields)
+        assertFalse(bpmOnly.fillOnly)
 
         val two = fieldSelection(setOf(MetadataField.GENRE, MetadataField.YEAR))
         assertFalse(two.fillOnly)

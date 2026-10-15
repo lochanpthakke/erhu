@@ -50,6 +50,12 @@ interface LibraryRepository {
 
     suspend fun updateFilePath(songId: Long, newPath: String): AppResult<Unit>
 
+    /** Stores a BPM just written to the song's file, so the library shows it before the rescan. */
+    suspend fun updateSongBpm(
+        songId: Long,
+        bpm: Int?,
+    ): AppResult<Unit>
+
     /** Emits false when the song is not a favorite or no longer exists. */
     fun observeIsFavorite(songId: Long): Flow<Boolean>
 

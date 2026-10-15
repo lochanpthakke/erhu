@@ -61,6 +61,9 @@ import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.network.tagger.BpmCorrection
+import com.lochanpthakke.empee3.core.network.tagger.PLAUSIBLE_BPM
+import com.lochanpthakke.empee3.core.network.tagger.parseBpmTag
 
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")
@@ -96,6 +99,9 @@ fun ViewMetadataScreen(
     var comment by remember(uiState.tagData) { mutableStateOf(uiState.tagData?.comment ?: "") }
     var lyrics by remember(uiState.tagData) { mutableStateOf(uiState.tagData?.lyrics ?: "") }
     var bpm by remember(uiState.tagData) { mutableStateOf(uiState.tagData?.bpm ?: "") }
+    // A half / double time correction waiting for the user's confirmation: (from, to, kind).
+    var pendingBpmCorrection by remember { mutableStateOf<Triple<Int, Int, BpmCorrection>?>(null) }
+    val libraryMessage by libraryViewModel.userMessage.collectAsState()
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -290,6 +296,13 @@ fun ViewMetadataScreen(
                             modifier = Modifier.weight(1f),
                         )
                     }
+                    BpmCorrectionRow(
+                        bpm = parseBpmTag(bpm),
+                        onPropose = { from, to, kind -> pendingBpmCorrection = Triple(from, to, kind) },
+                    )
+                    libraryMessage?.takeIf { it.startsWith("BPM") }?.let { message ->
+                        Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
 
                     Spacer(modifier = Modifier.height(Spacing.md))
 
@@ -413,6 +426,37 @@ fun ViewMetadataScreen(
         )
     }
 
+    // Half / double time: the proposed value is shown, and only written once confirmed.
+    pendingBpmCorrection?.let { (from, to, kind) ->
+        GlassAlertDialog(
+            onDismissRequest = { pendingBpmCorrection = null },
+            title = { Text("Change BPM to $to?") },
+            text = {
+                Text(
+                    "${kind.label}: $from → $to BPM. Only the BPM tag of this file is written; the file is read back " +
+                        "to check it, then the library is updated. Other tags are not touched.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        libraryViewModel.correctBpm(song, oldBpm = from, newBpm = to)
+                        bpm = to.toString()
+                        pendingBpmCorrection = null
+                    },
+                ) {
+                    Text("Save $to BPM")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingBpmCorrection = null }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
     // Force Repair Confirmation Dialog
     if (uiState.showForceRepairConfirm) {
         GlassAlertDialog(
@@ -454,5 +498,28 @@ fun ViewMetadataScreen(
                 }
             },
         )
+    }
+}
+
+/** Half / double time buttons for a BPM read at the wrong octave; each shows the value it proposes. */
+@Composable
+private fun BpmCorrectionRow(
+    bpm: Int?,
+    onPropose: (from: Int, to: Int, kind: BpmCorrection) -> Unit,
+) {
+    if (bpm == null || bpm !in PLAUSIBLE_BPM) return
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Tempo off by an octave?", style = MaterialTheme.typography.bodySmall)
+        BpmCorrection.entries.forEach { kind ->
+            kind.applyTo(bpm)?.let { proposed ->
+                TextButton(onClick = { onPropose(bpm, proposed, kind) }) {
+                    Text("${kind.label}: $proposed")
+                }
+            }
+        }
     }
 }

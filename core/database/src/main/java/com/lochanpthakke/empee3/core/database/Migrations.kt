@@ -129,6 +129,20 @@ private val STATEMENTS_11_12 =
     )
 
 /**
+ * v12 → v13: songs get a `bpm` column (the file's BPM tag), so the library and VYBE can use tempo.
+ * Every song is marked for re-enrichment so the next library scan reads its BPM tag (the other
+ * enriched values are read again from the same tags); nothing else changes.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_12_13 =
+    object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `songs` ADD COLUMN `bpm` INTEGER")
+            db.execSQL("UPDATE `songs` SET `is_enriched` = 0")
+        }
+    }
+
+/**
  * v9 → v10: playlist entries are keyed by (playlist, position) instead of (playlist, song), so a
  * playlist can hold the same song more than once (a saved queue). Every existing entry is kept in
  * its order; positions are renumbered 0..n-1 per playlist (a correlated count: SQLite on older

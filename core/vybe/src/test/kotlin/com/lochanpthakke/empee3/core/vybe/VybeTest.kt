@@ -71,6 +71,25 @@ class VybeTest {
     }
 
     @Test
+    fun `several genres from the library are separate genres`() {
+        // The library stores a file's genres joined ("Electronic; Synth-pop; Alternative"), as the
+        // tag reader and the metadata fixer write them.
+        val song = SongText(3, "Midnight City", "M83", "Hurry Up, We're Dreaming", genre = "Electronic; Synth-pop; Alternative")
+        assertEquals(listOf("Electronic", "Synth-pop", "Alternative"), song.genres)
+        assertEquals("Title: Midnight City. Artist: M83. Genres: Electronic, Synth-pop, Alternative", SongDescriber.describe(song))
+        assertEquals(listOf("Hip-Hop"), SongText(4, "T", "A", "B", genre = " Hip-Hop ").genres)
+        assertEquals(emptyList<String>(), SongText(5, "T", "A", "B", genre = "Unknown").genres)
+        assertEquals("Title: T. Artist: A", SongDescriber.describe(SongText(5, "T", "A", "B", genre = " ; unknown")))
+    }
+
+    @Test
+    fun `a library BPM is part of the description`() {
+        val song = SongText(6, "EARFQUAKE", "Tyler, The Creator", "IGOR", genre = "hip hop", year = 2019, bpm = 80)
+        assertEquals("Title: EARFQUAKE. Artist: Tyler, The Creator. Genre: hip hop. Year: 2019. Tempo: 80 BPM", SongDescriber.describe(song))
+        assertEquals("Title: T", SongDescriber.describe(SongText(7, "T", "", "", bpm = 0)))
+    }
+
+    @Test
     fun `lyrics become a short excerpt without timestamps`() {
         val lrc = "[ar:Someone]\n[00:01.00]<00:01.00>Late <00:01.40>night\n[00:05.00]city lights"
         assertEquals("Late night city lights", SongDescriber.lyricsExcerpt(lrc))

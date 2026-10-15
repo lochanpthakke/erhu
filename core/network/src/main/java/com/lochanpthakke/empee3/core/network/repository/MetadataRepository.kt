@@ -3,6 +3,7 @@
 package com.lochanpthakke.empee3.core.network.repository
 
 import com.lochanpthakke.empee3.core.common.result.AppResult
+import com.lochanpthakke.empee3.core.model.Genres
 import com.lochanpthakke.empee3.core.model.LyricsResult
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.ProviderOutcome
@@ -17,12 +18,16 @@ data class DetailedSearchResponse(
 
 /** Outcome of a genre lookup for a matched track. */
 sealed interface GenreLookup {
+    /** Every usable genre the source lists, most-voted first where it ranks them. */
     data class Found(
-        val genre: String,
+        val genres: List<String>,
         val source: String,
-    ) : GenreLookup
+    ) : GenreLookup {
+        /** [genres] in the stored form ("Electronic; Synth-pop"), see [Genres]. */
+        val genre: String get() = genres.joinToString(Genres.SEPARATOR)
+    }
 
-    /** The lookup worked but gave no single genre; [reason] says why. */
+    /** The lookup worked but gave no genre; [reason] says why. */
     data class NotFound(
         val reason: String,
     ) : GenreLookup

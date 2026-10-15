@@ -14,7 +14,7 @@ enum class MetadataFixAction(
     ALBUM_ONLY("Album Only"),
     YEAR_ONLY("Year Only"),
     GENRE_ONLY("Genre Only"),
-    BPM_ONLY("BPM Only", "No connected provider supplies BPM: Deezer reports 0 for the tracks checked, MusicBrainz has none."),
+    BPM_ONLY("BPM Only"),
     LYRICS_ONLY("Lyrics Only", "Lyrics are looked up on the Lyrics page and are never written into files."),
     ARTWORK_ONLY("Artwork Only"),
     ;

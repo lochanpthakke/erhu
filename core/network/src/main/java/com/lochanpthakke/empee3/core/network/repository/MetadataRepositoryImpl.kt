@@ -4,6 +4,7 @@ import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
+import com.lochanpthakke.empee3.core.model.Genres
 import com.lochanpthakke.empee3.core.model.LyricsResult
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataProvider
@@ -178,7 +179,10 @@ class MetadataRepositoryImpl
                         releaseGroupId != null ->
                             genreFromMusicBrainz(musicBrainzProvider.fetchReleaseGroupGenres(releaseGroupId))
                         deezerAlbumId != null ->
-                            deezerProvider.fetchAlbumGenres(deezerAlbumId).firstOrNull()?.let { GenreLookup.Found(it, "Deezer album") }
+                            Genres
+                                .normalize(deezerProvider.fetchAlbumGenres(deezerAlbumId))
+                                .takeIf { it.isNotEmpty() }
+                                ?.let { GenreLookup.Found(it, "Deezer album") }
                                 ?: GenreLookup.NotFound("Deezer lists no genre for this album")
                         else -> GenreLookup.NotFound("${match.sourceName} doesn't provide genres")
                     }
@@ -234,16 +238,17 @@ class MetadataRepositoryImpl
     }
 
 /**
- * The genre to write from MusicBrainz's curated release-group genres: the single most-voted one.
- * A tie at the top gives no genre rather than an arbitrary pick.
+ * The genres to write from MusicBrainz's curated release-group genres: every usable one, most-voted
+ * first. Genres with equal votes are all kept (in MusicBrainz's order): a tie used to give no genre
+ * at all, which left most albums (one vote per genre is common) without one.
  */
 internal fun genreFromMusicBrainz(genres: List<MusicBrainzGenreDto>): GenreLookup {
-    val ranked = genres.filter { it.name.isNotBlank() }.sortedByDescending { it.count }
-    val tied = ranked.takeWhile { it.count == ranked.first().count }
-    return when {
-        ranked.isEmpty() -> GenreLookup.NotFound("MusicBrainz has no genre for this album")
-        tied.size > 1 -> GenreLookup.NotFound("MusicBrainz genres are tied: ${tied.joinToString { it.name }}")
-        else -> GenreLookup.Found(ranked.first().name.trim(), "MusicBrainz release group")
+    // A genre voted down to zero or below is not one MusicBrainz vouches for.
+    val ranked = Genres.normalize(genres.filter { it.count > 0 }.sortedByDescending { it.count }.map { it.name })
+    return if (ranked.isEmpty()) {
+        GenreLookup.NotFound("MusicBrainz has no genre for this album")
+    } else {
+        GenreLookup.Found(ranked, "MusicBrainz release group")
     }
 }
 

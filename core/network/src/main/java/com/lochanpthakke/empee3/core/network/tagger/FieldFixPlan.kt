@@ -1,12 +1,16 @@
+@file:Suppress("TooManyFunctions")
+
 package com.lochanpthakke.empee3.core.network.tagger
 
+import com.lochanpthakke.empee3.core.model.Genres
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataField
 import com.lochanpthakke.empee3.core.model.MetadataFixAction
+import com.lochanpthakke.empee3.core.network.bpm.BpmLookup
 import com.lochanpthakke.empee3.core.network.scorer.foldForMatch
 
 /** A tag a metadata fix can change. */
-enum class FixField { TITLE, ARTIST, ALBUM, YEAR, GENRE, ARTWORK }
+enum class FixField { TITLE, ARTIST, ALBUM, YEAR, GENRE, ARTWORK, BPM }
 
 /** The fields [MetadataFixAction] may change; empty for actions that are not supported. */
 fun MetadataFixAction.fields(): Set<FixField> =
@@ -18,7 +22,8 @@ fun MetadataFixAction.fields(): Set<FixField> =
         MetadataFixAction.YEAR_ONLY -> setOf(FixField.YEAR)
         MetadataFixAction.GENRE_ONLY -> setOf(FixField.GENRE)
         MetadataFixAction.ARTWORK_ONLY -> setOf(FixField.ARTWORK)
-        MetadataFixAction.BPM_ONLY, MetadataFixAction.LYRICS_ONLY -> emptySet()
+        MetadataFixAction.BPM_ONLY -> setOf(FixField.BPM)
+        MetadataFixAction.LYRICS_ONLY -> emptySet()
     }
 
 /**
@@ -35,13 +40,20 @@ data class LocalTrackTags(
     val tagsReadable: Boolean = true,
     val year: String? = null,
     val canStoreYearMonth: Boolean = true,
+    /** The file's BPM tag as stored ("128"), if any. */
+    val bpm: String? = null,
 )
 
-/** A planned fix: [request] is null when nothing should be written; [notes] say why a field was left alone. */
+/**
+ * A planned fix: [request] is null when nothing should be written; [notes] say why a field was left
+ * alone. [unfilled] are the reasons a selected field the file needs could not be found or looked up
+ * (not "kept the existing value"): a write with any of them is only a partial fix.
+ */
 data class FieldFixPlan(
     val request: TagWriteRequest?,
     val changes: List<Change>,
     val notes: List<String>,
+    val unfilled: List<String> = emptyList(),
 ) {
     data class Change(
         val field: FixField,
@@ -61,7 +73,12 @@ data class FieldFixPlan(
  * - the year counts as missing when blank or 1970 (a downloader placeholder): All Fields fills it
  *   then and keeps any other year; Year Only replaces it;
  * - [genre], [artworkBytes] and [releaseDate] are what the caller found online for this match (the
- *   date already validated and unambiguous, see [releaseDateFor]), or null.
+ *   date already validated and unambiguous, see [releaseDateFor]), or null. [genre] may hold several
+ *   genres ("Electronic; Synth-pop", see [Genres]): all of them are written;
+ * - [bpm] is the tempo found for the track (see BpmFinder), or null. It only ever fills a missing
+ *   (or implausible) BPM: an estimate (AcousticBrainz or on-device, both can be half or double
+ *   time) never replaces a BPM the file already has, not even with BPM Only. Correcting a tagged
+ *   BPM is a manual edit (the inspector's half / double time).
  */
 @Suppress("LongParameterList")
 fun planFieldFix(
@@ -73,6 +90,7 @@ fun planFieldFix(
     genre: String?,
     artworkBytes: ByteArray?,
     releaseDate: ReleaseDate? = null,
+    bpm: BpmLookup.Found? = null,
 ): FieldFixPlan =
     planFieldFix(
         contentUri,
@@ -84,6 +102,7 @@ fun planFieldFix(
         genre,
         artworkBytes,
         releaseDate,
+        bpm,
     )
 
 /** The tag fields a field selection may change, and whether it is "All Fields" (fill missing values only). */
@@ -106,10 +125,11 @@ fun fieldSelection(selected: Set<MetadataField>): FieldSelection {
                     MetadataField.YEAR -> FixField.YEAR
                     MetadataField.GENRE -> FixField.GENRE
                     MetadataField.ARTWORK -> FixField.ARTWORK
-                    MetadataField.BPM, MetadataField.FILENAME -> null
+                    MetadataField.BPM -> FixField.BPM
+                    MetadataField.FILENAME -> null
                 }
             }.toSet()
-    return FieldSelection(tags, fillOnly = supported.containsAll(MetadataField.supportedTags), rename = MetadataField.FILENAME in supported)
+    return FieldSelection(tags, fillOnly = supported.containsAll(MetadataField.fillOnlyTags), rename = MetadataField.FILENAME in supported)
 }
 
 /** Same as the action-based [planFieldFix], for an individual field selection. */
@@ -124,6 +144,7 @@ fun planFieldFix(
     genre: String?,
     artworkBytes: ByteArray?,
     releaseDate: ReleaseDate? = null,
+    bpm: BpmLookup.Found? = null,
 ): FieldFixPlan {
     // The file's "(feat. …)" note is kept when the online title has none (MusicBrainz titles never do).
     val matchTitle = withLocalFeaturing(match.title, local.title)
@@ -169,8 +190,10 @@ fun planFieldFix(
         when {
             FixField.GENRE !in fields -> null
             fillOnly && !local.tagsReadable -> null.also { notes += "Genre not filled: the file's tags couldn't be read" }
-            else -> text(FixField.GENRE, "genre", local.genre.orEmpty(), genre, keepValidLocal = fillOnly)
+            else -> planGenres(local.genre, genre, fillOnly, changes, notes)
         }
+
+    val newBpm = if (FixField.BPM in fields) planBpm(local, bpm, fillOnly, changes, notes) else null
 
     val artwork =
         when {
@@ -193,9 +216,56 @@ fun planFieldFix(
             album = album,
             releaseDate = year,
             genre = newGenre,
+            bpm = newBpm,
             artworkBytes = artwork,
         ).takeIf { it.hasChanges }
     return FieldFixPlan(request, changes, notes)
+}
+
+/**
+ * The genres to write ([Genres] stored form), or null. Every genre found is kept; the comparison is
+ * by genre list, so "Rock; Pop" and "rock;pop" are the same and nothing is rewritten.
+ */
+private fun planGenres(
+    current: String?,
+    found: String?,
+    fillOnly: Boolean,
+    changes: MutableList<FieldFixPlan.Change>,
+    notes: MutableList<String>,
+): String? {
+    val genres = Genres.join(Genres.parse(found))
+    val existing = Genres.join(Genres.parse(current))
+    return when {
+        genres == null -> null.also { notes += "No genre found online" }
+        Genres.same(existing, genres) -> null
+        fillOnly && existing != null -> null.also { notes += "Kept the existing genre \"$existing\"" }
+        else -> genres.also { changes += FieldFixPlan.Change(FixField.GENRE, existing, it) }
+    }
+}
+
+/** The BPM to write, or null with the reason in [notes]. */
+@Suppress("CyclomaticComplexMethod")
+private fun planBpm(
+    local: LocalTrackTags,
+    found: BpmLookup.Found?,
+    fillOnly: Boolean,
+    changes: MutableList<FieldFixPlan.Change>,
+    notes: MutableList<String>,
+): Int? {
+    val current = usableBpm(local.bpm)
+    return when {
+        found == null -> null.also { notes += "No BPM found" }
+        found.bpm !in PLAUSIBLE_BPM -> null.also { notes += "BPM ${found.bpm} from ${found.source} is not a plausible tempo" }
+        fillOnly && !local.tagsReadable -> null.also { notes += "BPM not filled: the file's tags couldn't be read" }
+        current == found.bpm -> null
+        current != null && fillOnly -> null.also { notes += "Kept the existing BPM $current" }
+        current != null && found.estimated ->
+            null.also { notes += "Kept the existing BPM $current: an estimate (${found.bpm}, ${found.source}) doesn't replace it" }
+        else ->
+            found.bpm.also {
+                changes += FieldFixPlan.Change(FixField.BPM, current?.toString(), "$it (${found.source})")
+            }
+    }
 }
 
 private val PLACEHOLDERS = setOf("unknown", "unknown artist", "unknown album", "unknown title", "<unknown>", "unknown genre")

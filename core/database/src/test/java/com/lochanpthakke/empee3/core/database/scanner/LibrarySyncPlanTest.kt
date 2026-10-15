@@ -38,22 +38,24 @@ class LibrarySyncPlanTest {
 
     @Test
     fun rescan_unchangedFile_keepsEnrichment() {
-        val enriched = entity(1).copy(isEnriched = true, lyrics = "la la", genre = "Pop", discNumber = 2)
+        val enriched = entity(1).copy(isEnriched = true, lyrics = "la la", genre = "Pop; Synth-pop", discNumber = 2, bpm = 78)
         val plan = planLibrarySync(scanned = listOf(entity(1)), existing = listOf(enriched))
         val result = plan.upserts.single()
         assertTrue(result.isEnriched)
         assertEquals("la la", result.lyrics)
-        assertEquals("Pop", result.genre)
+        assertEquals("Pop; Synth-pop", result.genre)
+        assertEquals(78, result.bpm)
         assertEquals(2, result.discNumber)
     }
 
     @Test
     fun rescan_modifiedFile_isReEnrichedButKeepsFavorite() {
-        val old = entity(1, dateModified = 100).copy(isEnriched = true, lyrics = "old", isFavorite = true)
+        val old = entity(1, dateModified = 100).copy(isEnriched = true, lyrics = "old", isFavorite = true, bpm = 156)
         val plan = planLibrarySync(scanned = listOf(entity(1, dateModified = 200, title = "New title")), existing = listOf(old))
         val result = plan.upserts.single()
         assertFalse(result.isEnriched)
         assertNull(result.lyrics)
+        assertNull("re-read from the file's tags", result.bpm)
         assertTrue(result.isFavorite)
         assertEquals("New title", result.title)
     }

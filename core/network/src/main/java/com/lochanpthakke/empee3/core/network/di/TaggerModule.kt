@@ -1,6 +1,8 @@
 package com.lochanpthakke.empee3.core.network.di
 
 import android.content.Context
+import com.lochanpthakke.empee3.core.network.bpm.AudioPcmDecoder
+import com.lochanpthakke.empee3.core.network.bpm.PcmSource
 import com.lochanpthakke.empee3.core.network.tagger.AudioContentStore
 import com.lochanpthakke.empee3.core.network.tagger.ContentResolverAudioContentStore
 import com.lochanpthakke.empee3.core.network.tagger.MediaRescanner
@@ -22,6 +24,9 @@ interface TaggerModule {
 
     @Binds
     fun bindMediaRescanner(impl: MediaScannerRescanner): MediaRescanner
+
+    @Binds
+    fun bindPcmSource(impl: AudioPcmDecoder): PcmSource
 
     companion object {
         @Provides

@@ -170,6 +170,14 @@ class LibraryRepositoryImpl
                 songDao.updateFilePath(songId, newPath)
             }
 
+        override suspend fun updateSongBpm(
+            songId: Long,
+            bpm: Int?,
+        ): AppResult<Unit> =
+            appResultOf {
+                songDao.updateBpm(songId, bpm)
+            }
+
         override fun observeIsScanning(): Flow<Boolean> =
             workManager
                 .get()

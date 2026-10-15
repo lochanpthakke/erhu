@@ -525,6 +525,18 @@ fun MetadataEditorScreen(
                                                     overflow = TextOverflow.Ellipsis,
                                                 )
                                             }
+                                            if (queueItem.status == RepairStatus.PARTIAL_SUCCESS &&
+                                                !queueItem.failureReason.isNullOrBlank()
+                                            ) {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "Partly fixed: ${queueItem.failureReason}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 3,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
                                             if (queueItem.status == RepairStatus.NETWORK_FAILED) {
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Text(

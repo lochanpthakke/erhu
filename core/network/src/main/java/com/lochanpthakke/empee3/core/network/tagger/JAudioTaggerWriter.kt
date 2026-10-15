@@ -8,6 +8,7 @@ import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
+import com.lochanpthakke.empee3.core.model.Genres
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
@@ -99,7 +100,8 @@ class JAudioTaggerWriter
                 tag.deleteField(FieldKey.YEAR)
                 tag.setField(FieldKey.YEAR, value)
             }
-            request.genre?.let { tag.setField(FieldKey.GENRE, it) }
+            // Several genres are kept as separate values where the format allows it (see writeGenres).
+            requestedGenres(request)?.let { tag.writeGenres(it) }
             request.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
             request.bpm?.let { tag.setField(FieldKey.BPM, it.toString()) }
             request.lyrics?.let { tag.setField(FieldKey.LYRICS, it) }
@@ -130,11 +132,19 @@ class JAudioTaggerWriter
                     request.title?.let { FieldKey.TITLE to it },
                     request.artist?.let { FieldKey.ARTIST to it },
                     request.album?.let { FieldKey.ALBUM to it },
-                    request.genre?.let { FieldKey.GENRE to it },
                 )
             for ((key, value) in expected) {
                 val actual = tag.getFirst(key)
                 if (actual != value) throw CannotWriteException("Verification failed for $key: '$actual'")
+            }
+            // Every genre must come back, in order: a format that drops or merges some isn't trusted.
+            requestedGenres(request)?.let { genres ->
+                val actual = tag.readGenres()
+                if (actual != genres) throw CannotWriteException("Verification failed for GENRE: wrote $genres, file reads $actual")
+            }
+            request.bpm?.let { bpm ->
+                val stored = tag.getFirst(FieldKey.BPM)
+                if (parseBpmTag(stored) != bpm) throw CannotWriteException("Verification failed for BPM: wrote $bpm, file reads '$stored'")
             }
             // The date must read back exactly: a format that changes it (ID3v2.3 turns "2010-11" into
             // "2010-11-01") would store a date nobody gave, so the write is refused instead.
@@ -145,6 +155,9 @@ class JAudioTaggerWriter
         }
 
         private fun yearTagValue(request: TagWriteRequest): String? = request.releaseDate ?: request.year?.toString()
+
+        /** The request's genres as a list ("Electronic; Synth-pop" -> two), or null when it sets none. */
+        private fun requestedGenres(request: TagWriteRequest): List<String>? = Genres.parse(request.genre).takeIf { it.isNotEmpty() }
 
         private fun writeBack(
             contentUri: String,

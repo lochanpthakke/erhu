@@ -2,6 +2,7 @@
 
 package com.lochanpthakke.empee3.core.network.di
 
+import com.lochanpthakke.empee3.core.network.api.AcousticBrainzApi
 import com.lochanpthakke.empee3.core.network.api.DeezerApi
 import com.lochanpthakke.empee3.core.network.api.LastFmApi
 import com.lochanpthakke.empee3.core.network.api.LrclibApi
@@ -60,6 +61,22 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(MusicBrainzApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAcousticBrainzApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): AcousticBrainzApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://acousticbrainz.org/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(AcousticBrainzApi::class.java)
     }
 
     @Provides

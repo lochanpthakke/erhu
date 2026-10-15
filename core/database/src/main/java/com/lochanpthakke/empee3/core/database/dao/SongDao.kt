@@ -119,7 +119,7 @@ interface SongDao {
     @Query(
         """
         UPDATE songs
-        SET lyrics = :lyrics, disc_number = :discNumber, composer = :composer, genre = :genre, is_enriched = 1
+        SET lyrics = :lyrics, disc_number = :discNumber, composer = :composer, genre = :genre, bpm = :bpm, is_enriched = 1
         WHERE id = :id
         """,
     )
@@ -129,6 +129,14 @@ interface SongDao {
         discNumber: Int,
         composer: String?,
         genre: String?,
+        bpm: Int? = null,
+    ): Int
+
+    /** The library's copy of a BPM just written to the file (the rescan reads it again). */
+    @Query("UPDATE songs SET bpm = :bpm WHERE id = :id")
+    suspend fun updateBpm(
+        id: Long,
+        bpm: Int?,
     ): Int
 
     /** Callers must chunk [ids]: SQLite limits bound variables (999 before API 30). */

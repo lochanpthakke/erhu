@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.network.tagger
 
 import com.lochanpthakke.empee3.core.common.logging.Logger
+import com.lochanpthakke.empee3.core.model.Genres
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
@@ -115,7 +116,8 @@ class EmbeddedTagReader
                         albumArtist = getTagField(FieldKey.ALBUM_ARTIST),
                         album = getTagField(FieldKey.ALBUM),
                         year = getTagField(FieldKey.YEAR),
-                        genre = getTagField(FieldKey.GENRE),
+                        // Every genre, joined ("Electronic; Synth-pop"), however the format stores them.
+                        genre = runCatching { Genres.join(tag.readGenres()) }.getOrNull(),
                         trackNumber = getTagField(FieldKey.TRACK),
                         trackTotal = getTagField(FieldKey.TRACK_TOTAL),
                         discNumber = getTagField(FieldKey.DISC_NO),

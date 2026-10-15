@@ -24,6 +24,8 @@ data class Song(
     val sampleRate: Int = 0,
     val bitrate: Int = 0,
     val channels: Int = 2,
+    /** The file's BPM tag, when it holds a plausible tempo. */
+    val bpm: Int? = null,
 ) {
     val isLossless: Boolean
         get() =

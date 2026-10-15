@@ -364,4 +364,102 @@ class JAudioTaggerWriterTest {
             assertEquals("1970", tag.getFirst(FieldKey.YEAR))
         }
     }
+
+    // ---- Several genres and a BPM, per tag format: real files written by the writer, read back
+
+    private val severalGenres = listOf("Electronic", "Synth-pop", "Alternative")
+
+    /** A minimal FLAC (STREAMINFO: 44.1 kHz, 16-bit mono, 2 s) followed by a frame header and silence. */
+    private fun flacBytes(): ByteArray {
+        val buffer = ByteBuffer.allocate(4 + 4 + 34 + 2000)
+        buffer.put("fLaC".toByteArray())
+        buffer.put(byteArrayOf(0x80.toByte(), 0, 0, 34))
+        buffer.putShort(4096).putShort(4096).put(ByteArray(6))
+        buffer.putLong((44_100L shl 44) or (0L shl 41) or (15L shl 36) or 88_200L).put(ByteArray(16))
+        buffer.put(byteArrayOf(0xFF.toByte(), 0xF8.toByte())).put(ByteArray(1998))
+        return buffer.array()
+    }
+
+    private fun mp3WithId3v24(): ByteArray {
+        val file = File(tmp.root, "v24-${System.nanoTime()}.mp3").apply { writeBytes(mp3Bytes()) }
+        val audio = AudioFileIO.read(file)
+        audio.tag = org.jaudiotagger.tag.id3.ID3v24Tag().apply { setField(FieldKey.TITLE, "Seed") }
+        AudioFileIO.write(audio)
+        return file.readBytes()
+    }
+
+    /** Writes [genre] and [bpm] into a [label] file through the writer; the file as read back. */
+    private fun roundTrip(
+        label: String,
+        bytes: ByteArray,
+        genre: String,
+        bpm: Int? = null,
+    ): File {
+        val extension = label.substringAfterLast('.')
+        val formatUri = "content://media/external/audio/media/$label"
+        store.files[formatUri] = bytes
+        val result = write(TagWriteRequest(formatUri, "/storage/emulated/0/Music/$label", genre = genre, bpm = bpm))
+        assertTrue("$label: $result", result is AppResult.Success)
+        return File(tmp.root, "readback-${System.nanoTime()}.$extension").apply { writeBytes(store.files.getValue(formatUri)) }
+    }
+
+    @Test
+    fun severalGenres_andBpm_surviveEveryFormat_inItsOwnRepresentation() {
+        val joined = "Electronic; Synth-pop; Alternative"
+        val formats =
+            listOf(
+                Triple("id3v23.mp3", mp3Bytes(), false),
+                Triple("id3v24.mp3", mp3WithId3v24(), true),
+                Triple("test.wav", wavBytes(), false),
+                Triple("test.flac", flacBytes(), true),
+            )
+        for ((label, bytes, separateValues) in formats) {
+            val file = roundTrip(label, bytes, joined, bpm = 128)
+            val tag = AudioFileIO.read(file).tag
+            assertEquals(label, severalGenres, tag.readGenres())
+            assertEquals(label, "128", tag.getFirst(FieldKey.BPM))
+            if (separateValues) {
+                // Separate values other players read as three genres.
+                assertEquals(label, severalGenres, tag.getAll(FieldKey.GENRE))
+            } else {
+                // One value, as the format allows: never jaudiotagger's corrupted multi-value ID3v2.3.
+                assertEquals(label, listOf(joined), tag.getAll(FieldKey.GENRE))
+            }
+            // What the app reads back (editor, repair planning) is the whole list.
+            val embedded = runBlocking { EmbeddedTagReader(SilentLogger).readEmbeddedTags(file.path) }
+            assertEquals(label, joined, embedded.genre)
+            assertEquals(label, "128", embedded.bpm)
+        }
+    }
+
+    @Test
+    fun aSingleGenre_isStillWrittenAsBefore_andReadByName() {
+        for ((label, bytes) in listOf("one.mp3" to mp3Bytes(), "one.flac" to flacBytes(), "one.wav" to wavBytes())) {
+            val tag = AudioFileIO.read(roundTrip(label, bytes, "Rock")).tag
+            assertEquals(label, listOf("Rock"), tag.readGenres())
+            assertEquals(label, "Rock", tag.getFirst(FieldKey.GENRE))
+        }
+    }
+
+    @Test
+    fun replacingGenres_dropsTheOldOnes() {
+        val file = roundTrip("again.flac", flacBytes(), "Jazz; Blues; Soul")
+        val formatUri = "content://media/external/audio/media/again.flac"
+        store.files[formatUri] = file.readBytes()
+        assertTrue(write(TagWriteRequest(formatUri, "/storage/emulated/0/Music/again.flac", genre = "Hip Hop/Rap")) is AppResult.Success)
+        val readBack = File(tmp.root, "again-${System.nanoTime()}.flac").apply { writeBytes(store.files.getValue(formatUri)) }
+        // "/" is part of a genre name (Deezer's "Hip Hop/Rap"), never a separator.
+        assertEquals(listOf("Hip Hop/Rap"), AudioFileIO.read(readBack).tag.readGenres())
+    }
+
+    @Test
+    fun id3GenreReferences_andOtherTaggersLists_areReadAsNames() {
+        val file = File(tmp.root, "refs.mp3").apply { writeBytes(mp3WithId3v24()) }
+        val audio = AudioFileIO.read(file)
+        audio.tag.deleteField(FieldKey.GENRE)
+        audio.tag.addField(FieldKey.GENRE, "17")
+        audio.tag.addField(FieldKey.GENRE, "Synth-pop")
+        AudioFileIO.write(audio)
+        assertEquals(listOf("Rock", "Synth-pop"), AudioFileIO.read(file).tag.readGenres())
+    }
 }

@@ -5,12 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
+import com.lochanpthakke.empee3.core.model.Genres
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.tagger.EmbeddedTagData
 import com.lochanpthakke.empee3.core.network.tagger.EmbeddedTagReader
 import com.lochanpthakke.empee3.core.network.tagger.FileRenamer
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
+import com.lochanpthakke.empee3.core.network.tagger.writeGenres
 import com.lochanpthakke.empee3.core.playback.diagnostics.SourceDiagnostics
 import com.lochanpthakke.empee3.core.playback.diagnostics.SourceInspector
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -230,7 +232,7 @@ class ViewMetadataViewModel
                         if (fields.artist.isNotBlank()) tag.setField(FieldKey.ARTIST, fields.artist)
                         if (fields.album.isNotBlank()) tag.setField(FieldKey.ALBUM, fields.album)
                         if (fields.year.isNotBlank()) tag.setField(FieldKey.YEAR, fields.year)
-                        if (fields.genre.isNotBlank()) tag.setField(FieldKey.GENRE, fields.genre)
+                        Genres.parse(fields.genre).takeIf { it.isNotEmpty() }?.let { tag.writeGenres(it) }
 
                         val artworkBytes = if (currentState.isArtworkRemoved) null else currentState.selectedArtworkBytes
                         artworkBytes?.let { bytes ->

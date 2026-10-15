@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.network.tagger
 
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.MetadataFixAction
+import com.lochanpthakke.empee3.core.network.bpm.BpmLookup
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,7 +34,11 @@ class FieldFixPlanTest {
         genre: String? = "hip hop",
         artwork: ByteArray? = cover,
         released: ReleaseDate? = date("2010-11-19"),
-    ) = planFieldFix("content://media/1", "/music/a.mp3", action, local, candidate, genre, artwork, released)
+        bpm: BpmLookup.Found? = null,
+    ) = planFieldFix("content://media/1", "/music/a.mp3", action, local, candidate, genre, artwork, released, bpm)
+
+    private val measured = BpmLookup.Found(128, "AcousticBrainz", estimated = true)
+    private val estimated = BpmLookup.Found(126, "on-device estimate, 3 of 3 sections agree", estimated = true)
 
     @Test
     fun allFields_fillsEverythingThatIsMissing() {
@@ -44,7 +49,7 @@ class FieldFixPlanTest {
         assertEquals("hip hop", request.genre)
         assertArrayEquals(cover, request.artworkBytes)
         assertEquals("2010-11-19", request.releaseDate)
-        assertNull("BPM is never written", request.bpm)
+        assertNull("no tempo was found", request.bpm)
         assertNull(request.year)
         assertNull(request.lyrics)
     }
@@ -213,10 +218,80 @@ class FieldFixPlanTest {
 
     @Test
     fun unsupportedActions_writeNothing_andAreNotOffered() {
-        assertNull(plan(MetadataFixAction.BPM_ONLY, candidate = match.copy(bpm = 120)).request)
         assertNull(plan(MetadataFixAction.LYRICS_ONLY).request)
-        assertFalse(MetadataFixAction.BPM_ONLY in MetadataFixAction.supported)
         assertFalse(MetadataFixAction.LYRICS_ONLY in MetadataFixAction.supported)
+        assertTrue(MetadataFixAction.BPM_ONLY in MetadataFixAction.supported)
+    }
+
+    // ---- several genres
+
+    @Test
+    fun severalGenres_areAllWritten_byAllFieldsAndGenreOnly() {
+        val genres = "electronic; synth-pop; alternative"
+        assertEquals(genres, plan(MetadataFixAction.ALL_FIELDS, genre = genres).request?.genre)
+        val tidy = messy.copy(genre = "Rock")
+        val result = plan(MetadataFixAction.GENRE_ONLY, local = tidy, genre = genres)
+        assertEquals(genres, result.request?.genre)
+        assertEquals("Rock", result.changes.single().oldValue)
+        assertEquals(genres, result.changes.single().newValue)
+    }
+
+    @Test
+    fun genres_areCompared_asLists() {
+        val local = messy.copy(genre = "Electronic;Synth-pop")
+        assertNull("same genres, other spelling", plan(MetadataFixAction.GENRE_ONLY, local = local, genre = "electronic; synth-pop").request)
+        // Duplicates and padding are cleaned before writing.
+        assertEquals("Electronic; synth-pop", plan(MetadataFixAction.GENRE_ONLY, genre = " Electronic ;synth-pop; Synth-pop ;").request?.genre)
+        // All Fields keeps a file's own genres.
+        val kept = plan(MetadataFixAction.ALL_FIELDS, local = messy.copy(genre = "Rock; Pop"), genre = "electronic")
+        assertNull(kept.request?.genre)
+        assertTrue(kept.notes.contains("Kept the existing genre \"Rock; Pop\""))
+    }
+
+    @Test
+    fun unusableGenreData_isNotWritten() {
+        for (junk in listOf(null, "", " ; ;", "Unknown", "(12345)")) {
+            val result = plan(MetadataFixAction.GENRE_ONLY, genre = junk)
+            assertNull("for '$junk'", result.request)
+            assertTrue(result.notes.contains("No genre found online"))
+        }
+    }
+
+    // ---- BPM
+
+    @Test
+    fun bpm_isFilledByAllFields_andWrittenByBpmOnly() {
+        assertEquals(128, plan(MetadataFixAction.ALL_FIELDS, bpm = measured).request?.bpm)
+        val only = plan(MetadataFixAction.BPM_ONLY, bpm = estimated)
+        assertEquals(126, only.request?.bpm)
+        assertNull(only.request?.title)
+        assertEquals("126 (on-device estimate, 3 of 3 sections agree)", only.changes.single().newValue)
+    }
+
+    @Test
+    fun anExistingBpm_isKeptByAllFields_andNeverReplacedByAnEstimate() {
+        val tagged = messy.copy(bpm = "93")
+        assertNull(plan(MetadataFixAction.ALL_FIELDS, local = tagged, bpm = measured).request?.bpm)
+        val estimate = plan(MetadataFixAction.BPM_ONLY, local = tagged, bpm = estimated)
+        assertNull(estimate.request)
+        assertTrue(estimate.notes.single().startsWith("Kept the existing BPM 93"))
+        // Not AcousticBrainz either, even with BPM alone: its analyses can be double time (EARFQUAKE
+        // 155.7 for a ~80 BPM song). A tagged BPM is only corrected by hand.
+        val database = plan(MetadataFixAction.BPM_ONLY, local = tagged, bpm = measured)
+        assertNull(database.request)
+        assertEquals("Kept the existing BPM 93: an estimate (128, AcousticBrainz) doesn't replace it", database.notes.single())
+        // A junk BPM ("0") counts as none.
+        assertEquals(126, plan(MetadataFixAction.ALL_FIELDS, local = messy.copy(bpm = "0"), bpm = estimated).request?.bpm)
+    }
+
+    @Test
+    fun noBpm_doesNotStopTheOtherFields() {
+        val result = plan(MetadataFixAction.ALL_FIELDS, bpm = null)
+        assertEquals("hip hop", result.request?.genre)
+        assertNull(result.request?.bpm)
+        assertTrue(result.notes.contains("No BPM found"))
+        assertNull(plan(MetadataFixAction.BPM_ONLY, bpm = null).request)
+        assertNull("implausible", plan(MetadataFixAction.BPM_ONLY, bpm = measured.copy(bpm = 900)).request)
     }
 
     @Test
@@ -224,7 +299,7 @@ class FieldFixPlanTest {
         assertEquals(MetadataFixAction.GENRE_ONLY, MetadataFixAction.fromStored("GENRE_ONLY"))
         assertEquals(MetadataFixAction.YEAR_ONLY, MetadataFixAction.fromStored("YEAR_ONLY"))
         assertTrue(MetadataFixAction.YEAR_ONLY in MetadataFixAction.supported)
-        assertEquals(MetadataFixAction.ALL_FIELDS, MetadataFixAction.fromStored("BPM_ONLY"))
+        assertEquals(MetadataFixAction.BPM_ONLY, MetadataFixAction.fromStored("BPM_ONLY"))
         assertEquals(MetadataFixAction.ALL_FIELDS, MetadataFixAction.fromStored(""))
         assertEquals(MetadataFixAction.ALL_FIELDS, MetadataFixAction.fromStored(null))
     }

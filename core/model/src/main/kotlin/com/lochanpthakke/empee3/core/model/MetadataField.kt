@@ -15,7 +15,7 @@ enum class MetadataField(
     ALBUM("Album"),
     YEAR("Year"),
     GENRE("Genre"),
-    BPM("BPM", "No connected provider supplies BPM: Deezer reports 0 for the tracks checked, MusicBrainz has none."),
+    BPM("BPM"),
     ARTWORK("Artwork"),
     FILENAME("Filename Only"),
     ;
@@ -28,8 +28,15 @@ enum class MetadataField(
     companion object {
         val supported: List<MetadataField> get() = entries.filter { it.isSupported }
 
-        /** The supported tag fields: selecting all of them is "All Fields". */
+        /** The supported tag fields. */
         val supportedTags: Set<MetadataField> get() = supported.filter { it.isTag }.toSet()
+
+        /**
+         * Selecting all of these is "All Fields" (fill missing values only). BPM is left out so that
+         * switching it on or off (it can need an on-device analysis) never changes whether the other
+         * fields are filled or replaced, and selections saved before BPM existed keep their mode.
+         */
+        val fillOnlyTags: Set<MetadataField> get() = supportedTags - BPM
 
         /** Every supported field: the default selection. */
         val all: Set<MetadataField> get() = supported.toSet()
@@ -60,6 +67,7 @@ enum class MetadataField(
                 "ALBUM_ONLY" to ALBUM,
                 "YEAR_ONLY" to YEAR,
                 "GENRE_ONLY" to GENRE,
+                "BPM_ONLY" to BPM,
                 "ARTWORK_ONLY" to ARTWORK,
             )
     }

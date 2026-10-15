@@ -36,4 +36,6 @@ data class SongEntity(
     val genre: String? = null,
     @ColumnInfo(name = "is_favorite")
     val isFavorite: Boolean = false,
+    /** The file's BPM tag when it is a plausible tempo; read with the other tag enrichment. */
+    val bpm: Int? = null,
 )

@@ -2,6 +2,9 @@ package com.lochanpthakke.empee3.core.database.scanner
 
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.database.dao.SongDao
+import com.lochanpthakke.empee3.core.model.Genres
+import com.lochanpthakke.empee3.core.network.tagger.readGenres
+import com.lochanpthakke.empee3.core.network.tagger.usableBpm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
@@ -74,6 +77,7 @@ class JAudioTaggerEnricher
                             discNumber = 1,
                             composer = null,
                             genre = null,
+                            bpm = null,
                         )
                         continue
                     }
@@ -82,6 +86,7 @@ class JAudioTaggerEnricher
                     var discNumber = 1
                     var composer: String? = null
                     var genre: String? = null
+                    var bpm: Int? = null
 
                     try {
                         val audioFile = AudioFileIO.read(file)
@@ -89,7 +94,9 @@ class JAudioTaggerEnricher
                         if (tag != null) {
                             lyrics = tag.getFirst(FieldKey.LYRICS).takeIf { it.isNotBlank() }
                             composer = tag.getFirst(FieldKey.COMPOSER).takeIf { it.isNotBlank() }
-                            genre = tag.getFirst(FieldKey.GENRE).takeIf { it.isNotBlank() }
+                            // All of the file's genres, stored joined ("Electronic; Synth-pop"); see Genres.
+                            genre = Genres.join(tag.readGenres())
+                            bpm = usableBpm(tag.getFirst(FieldKey.BPM))
                             val discStr = tag.getFirst(FieldKey.DISC_NO).takeIf { it.isNotBlank() }
                             if (discStr != null) {
                                 discNumber = discStr.split("/")[0].toIntOrNull() ?: 1
@@ -104,6 +111,7 @@ class JAudioTaggerEnricher
                             discNumber = discNumber,
                             composer = composer,
                             genre = genre,
+                            bpm = bpm,
                         )
                     }
                 }

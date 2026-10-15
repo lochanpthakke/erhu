@@ -20,6 +20,8 @@ import com.lochanpthakke.empee3.core.model.MetadataCandidate
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TagChange
+import com.lochanpthakke.empee3.core.network.bpm.BpmFinder
+import com.lochanpthakke.empee3.core.network.bpm.BpmLookup
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsRepository
 import com.lochanpthakke.empee3.core.network.lyrics.ProviderResponse
@@ -43,6 +45,8 @@ import com.lochanpthakke.empee3.core.network.tagger.isUsableTag
 import com.lochanpthakke.empee3.core.network.tagger.isUsableYearTag
 import com.lochanpthakke.empee3.core.network.tagger.planFieldFix
 import com.lochanpthakke.empee3.core.network.tagger.releaseDateFor
+import com.lochanpthakke.empee3.core.network.tagger.PLAUSIBLE_BPM
+import com.lochanpthakke.empee3.core.network.tagger.usableBpm
 import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
 import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
@@ -134,6 +138,7 @@ class LibraryViewModel
         private val networkStatus: NetworkStatusSource,
         private val repairBatchPersistence: RepairBatchPersistence,
         private val lastFmCredentials: LastFmCredentials,
+        private val bpmFinder: BpmFinder,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -1069,11 +1074,20 @@ class LibraryViewModel
                                 isManual = (_repairMode.value == RepairMode.MANUAL),
                                 extraChanges = plans[item.song.id]?.let(::nonTextChanges).orEmpty(),
                             )
+                        // A selected field that couldn't be found (e.g. no BPM) makes it a partial fix, said so.
+                        val unfilled = plans[item.song.id]?.unfilled.orEmpty()
                         queue[index] =
                             when {
                                 renameRes is AppResult.Error && request == null ->
                                     item.copy(status = RepairStatus.FAILED, failureReason = renameRes.error.message, successDetails = successDetails)
-                                renameRes is AppResult.Error -> item.copy(status = RepairStatus.PARTIAL_SUCCESS, successDetails = successDetails)
+                                renameRes is AppResult.Error || unfilled.isNotEmpty() ->
+                                    item.copy(
+                                        status = RepairStatus.PARTIAL_SUCCESS,
+                                        failureReason =
+                                            (unfilled + listOfNotNull((renameRes as? AppResult.Error)?.error?.message))
+                                                .joinToString("; "),
+                                        successDetails = successDetails,
+                                    )
                                 else -> item.copy(status = RepairStatus.DONE, successDetails = successDetails)
                             }
                         _repairQueue.value = queue.toList()
@@ -1386,8 +1400,10 @@ class LibraryViewModel
         /**
          * Plans the tag edit for a confident [match]: reads the file's current genre and cover, looks
          * up a genre and downloads the cover only when [action] could use them, then lets
-         * [planFieldFix] decide field by field. Lookup failures become notes, never empty values.
+         * [planFieldFix] decide field by field. Lookup failures become notes, never empty values;
+         * the ones for fields the file needs are also kept as the plan's "unfilled" reasons.
          */
+        @Suppress("CyclomaticComplexMethod")
         private suspend fun planFix(
             song: Song,
             filePath: String,
@@ -1407,9 +1423,12 @@ class LibraryViewModel
             val artwork = if (wantsArtwork) onlineCover(match, notes) else null
             val wantsYear = FixField.YEAR in fields && (!fillOnly || (local.tagsReadable && !isUsableYearTag(local.year)))
             val releaseDate = if (wantsYear) onlineReleaseDate(match, candidates, acceptAt, notes) else null
+            // The file's own plausible BPM is kept by All Fields: no lookup or audio analysis then.
+            val wantsBpm = FixField.BPM in fields && (!fillOnly || (local.tagsReadable && usableBpm(local.bpm) == null))
+            val bpm = if (wantsBpm) foundBpm(match, filePath, notes) else null
 
-            val plan = planFieldFix(song.uri, filePath, fields, fillOnly, local, match, genre, artwork, releaseDate)
-            return plan.copy(notes = plan.notes.map { notes[it] ?: it })
+            val plan = planFieldFix(song.uri, filePath, fields, fillOnly, local, match, genre, artwork, releaseDate, bpm)
+            return plan.copy(notes = plan.notes.map { notes[it] ?: it }, unfilled = notes.values.toList())
         }
 
         /** What the file has now, read from its embedded tags (the library's title / artist / album). */
@@ -1430,6 +1449,7 @@ class LibraryViewModel
                 tagsReadable = embedded.hasEmbeddedTag,
                 year = embedded.year,
                 canStoreYearMonth = checkDateFormat && embeddedTagReader.canStoreYearMonth(filePath),
+                bpm = embedded.bpm,
             )
         }
 
@@ -1456,6 +1476,18 @@ class LibraryViewModel
                 is GenreLookup.Failed -> null.also { notes[NO_GENRE_NOTE] = "Genre lookup failed: ${lookup.reason}" }
             }
 
+        /** The track's tempo (AcousticBrainz, else estimated on this device), or null with the reason in [notes]. */
+        private suspend fun foundBpm(
+            match: MetadataCandidate,
+            filePath: String,
+            notes: MutableMap<String, String>,
+        ): BpmLookup.Found? =
+            when (val lookup = bpmFinder.find(match, filePath)) {
+                is BpmLookup.Found -> lookup
+                is BpmLookup.NotFound -> null.also { notes[NO_BPM_NOTE] = "No BPM: ${lookup.reason}" }
+                is BpmLookup.Failed -> null.also { notes[NO_BPM_NOTE] = "BPM lookup failed: ${lookup.reason}" }
+            }
+
         /** The match's cover image, or null with the reason in [notes]. */
         private suspend fun onlineCover(
             match: MetadataCandidate,
@@ -1472,12 +1504,13 @@ class LibraryViewModel
 
         private fun nonTextChanges(plan: FieldFixPlan): List<TagChange> =
             plan.changes
-                .filter { it.field == FixField.YEAR || it.field == FixField.GENRE || it.field == FixField.ARTWORK }
+                .filter { it.field in NON_TEXT_FIELDS }
                 .map { change ->
                     val label =
                         when (change.field) {
                             FixField.YEAR -> "Year"
                             FixField.GENRE -> "Genre"
+                            FixField.BPM -> "BPM"
                             else -> "Artwork"
                         }
                     TagChange(label, change.oldValue, change.newValue)
@@ -1554,6 +1587,44 @@ class LibraryViewModel
             }
         }
 
+        /**
+         * Writes [newBpm] as the song's BPM tag and nothing else (no rename, no other tag), after the
+         * user confirmed a half / double time correction. The writer reads the file back before the
+         * original is replaced; then the library row is updated and a rescan re-reads the tags.
+         */
+        fun correctBpm(
+            song: Song,
+            oldBpm: Int?,
+            newBpm: Int,
+        ) {
+            viewModelScope.launch {
+                if (newBpm !in PLAUSIBLE_BPM) {
+                    _userMessage.value = "BPM not changed: $newBpm is not a plausible tempo"
+                    return@launch
+                }
+                val filePath = libraryRepository.getSongFilePath(song.id)
+                if (filePath == null) {
+                    _userMessage.value = "Couldn't find the file for \"${song.title}\". Pull to refresh the library and try again."
+                    return@launch
+                }
+                val request = TagWriteRequest(contentUri = song.uri, filePath = filePath, bpm = newBpm)
+                withWriteAccess(
+                    contentUris = listOf(request.contentUri),
+                    onGranted = {
+                        when (val result = metadataRepository.writeTagsToFile(request)) {
+                            is AppResult.Success -> {
+                                libraryRepository.updateSongBpm(song.id, newBpm)
+                                libraryRepository.requestRescanAfterChange()
+                                _userMessage.value = "BPM of \"${song.title}\" saved: $newBpm" + (oldBpm?.let { " (was $it)" } ?: "")
+                            }
+                            is AppResult.Error -> _userMessage.value = tagWriteFailureMessage(result.error)
+                        }
+                    },
+                    onDenied = { _userMessage.value = "BPM not changed: empee3 wasn't allowed to modify the file." },
+                )
+            }
+        }
+
         private fun tagWriteFailureMessage(error: AppError): String =
             when (error) {
                 is AppError.WriteAccessRequired -> "Tags not changed: ${error.message}"
@@ -1604,6 +1675,8 @@ class LibraryViewModel
             private const val NO_GENRE_NOTE = "No genre found online"
             private const val NO_ARTWORK_NOTE = "No artwork found online"
             private const val NO_YEAR_NOTE = "No release year found online"
+            private const val NO_BPM_NOTE = "No BPM found"
+            private val NON_TEXT_FIELDS = setOf(FixField.YEAR, FixField.GENRE, FixField.ARTWORK, FixField.BPM)
 
             /** Opening an album waits at most this long for its tracks (then they load as before). */
             const val PREPARE_ALBUM_TIMEOUT_MS = 150L

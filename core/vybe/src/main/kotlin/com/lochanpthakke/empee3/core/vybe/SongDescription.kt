@@ -1,9 +1,12 @@
 package com.lochanpthakke.empee3.core.vybe
 
+import com.lochanpthakke.empee3.core.model.Genres
+
 /**
  * The text VYBE knows about a song, taken from the library as it is (no fetching):
- * blank or unknown fields are simply left out of its description. [genre] is the file's genre tag;
- * the metadata fixer writes it only from a provider (MusicBrainz / Deezer album genre), never a guess.
+ * blank or unknown fields are simply left out of its description. [genre] is the library's stored
+ * genre value: one genre or several ("Electronic; Synth-pop; Alternative", see [Genres]), read from
+ * the file's tags; the metadata fixer writes them only from a provider, never a guess.
  */
 data class SongText(
     val songId: Long,
@@ -14,7 +17,12 @@ data class SongText(
     val year: Int = 0,
     /** Lyrics already stored for the song (embedded tags), if any; only an excerpt is used. */
     val lyrics: String? = null,
-)
+    /** The library's BPM (the file's tag), if it has a plausible one. */
+    val bpm: Int? = null,
+) {
+    /** Each genre on its own: "Electronic; Synth-pop" is two genres, not one. */
+    val genres: List<String> get() = Genres.parse(genre)
+}
 
 /**
  * Builds the one-paragraph description of a song that VYBE embeds. Pure and deterministic.
@@ -29,6 +37,8 @@ object SongDescriber {
 
     private const val MIN_YEAR = 1900
     private const val MAX_YEAR = 2100
+    private const val MIN_BPM = 20
+    private const val MAX_BPM = 400
 
     /** LRC line / word timestamps and `[tag:value]` lines: timing, not words. */
     private val LRC_MARKUP = Regex("""\[[^\]]*]|<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>""")
@@ -39,8 +49,9 @@ object SongDescriber {
         listOfNotNull(
             field("Title", song.title),
             field("Artist", song.artist),
-            field("Genre", song.genre),
+            genreField(song.genres),
             song.year.takeIf { it in MIN_YEAR..MAX_YEAR }?.let { "Year: $it" },
+            song.bpm?.takeIf { it in MIN_BPM..MAX_BPM }?.let { "Tempo: $it BPM" },
             lyricsExcerpt(song.lyrics)?.let { "Lyrics: $it" },
         ).joinToString(". ")
 
@@ -58,6 +69,13 @@ object SongDescriber {
                     words.substring(0, words.lastIndexOf(' ', LYRICS_EXCERPT_CHARS).takeIf { it > 0 } ?: LYRICS_EXCERPT_CHARS)
                 }
             }
+
+    /** "Genre: Hip-Hop", or "Genres: Electronic, Synth-pop, Alternative" for several. */
+    private fun genreField(genres: List<String>): String? =
+        genres
+            .filter { it.lowercase() !in UNKNOWN }
+            .takeIf { it.isNotEmpty() }
+            ?.let { (if (it.size == 1) "Genre: " else "Genres: ") + it.joinToString(", ") }
 
     private fun field(
         label: String,

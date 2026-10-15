@@ -60,16 +60,17 @@ fun MetadataField.summary(): String =
         MetadataField.ARTIST -> "The artist; a fuller credit with featured artists is kept"
         MetadataField.ALBUM -> "The album name"
         MetadataField.YEAR -> "The original release date from MusicBrainz; skipped when uncertain"
-        MetadataField.GENRE -> "The album's genre: MusicBrainz's top-voted genre, or Deezer's"
+        MetadataField.GENRE -> "Every genre MusicBrainz (most-voted first) or Deezer lists for the album"
         MetadataField.ARTWORK -> "The cover from the match"
         MetadataField.FILENAME -> "Renames the file after its title"
-        MetadataField.BPM -> unsupportedReason.orEmpty()
+        MetadataField.BPM -> "Tempo from AcousticBrainz, else estimated on this device; skipped when uncertain"
     }
 
 /** How the selection behaves, and why unsupported fields are missing, for a footnote. */
 val FIELD_SELECTION_NOTE: String =
-    "With every field on (All Fields) the title is updated, while artist, album, year, genre and cover are only filled " +
-        "where the file has none (a 1970 year counts as none). With fewer fields, those fields are replaced. " +
+    "With every field on (All Fields) the title is updated, while artist, album, year, genre, cover and BPM are only " +
+        "filled where the file has none (a 1970 year counts as none). With fewer fields, those fields are replaced, " +
+        "except BPM: a found BPM only fills a missing one (use half / double time in the inspector to correct one). " +
         MetadataField.entries
             .filterNot { it.isSupported }
             .joinToString(" ") { "${it.displayName}: ${it.unsupportedReason}" }

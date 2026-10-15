@@ -11,7 +11,7 @@ internal data class LibrarySyncPlan(
  * Reconciles a fresh MediaStore scan with what is already stored.
  *
  * - User-owned state (favorites) always survives a rescan.
- * - Tag enrichment (lyrics, disc, composer, genre) survives when the file is
+ * - Tag enrichment (lyrics, disc, composer, genre, BPM) survives when the file is
  *   unchanged, so it is not re-read on every scan; a modified file is
  *   re-enriched.
  * - Songs no longer present in MediaStore are deleted.
@@ -33,6 +33,7 @@ internal fun planLibrarySync(
                     discNumber = old.discNumber,
                     composer = old.composer,
                     genre = old.genre,
+                    bpm = old.bpm,
                 )
             } else {
                 fresh.copy(isFavorite = old.isFavorite)

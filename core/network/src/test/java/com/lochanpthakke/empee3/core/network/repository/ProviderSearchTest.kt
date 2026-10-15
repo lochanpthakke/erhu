@@ -225,7 +225,7 @@ class ProviderSearchTest {
     // ---- genre choice
 
     @Test
-    fun genre_isTheSingleMostVotedMusicBrainzGenre() {
+    fun genres_areEveryMusicBrainzGenre_mostVotedFirst() {
         // Her Loss, MusicBrainz release group 81463cd8…, 2026-10-13.
         val herLoss =
             listOf(
@@ -234,14 +234,24 @@ class ProviderSearchTest {
                 MusicBrainzGenreDto("pop rap", 3),
                 MusicBrainzGenreDto("trap", 3),
             )
-        assertEquals(GenreLookup.Found("hip hop", "MusicBrainz release group"), genreFromMusicBrainz(herLoss))
+        val found = genreFromMusicBrainz(herLoss) as GenreLookup.Found
+        assertEquals(listOf("hip hop", "pop rap", "trap", "contemporary r&b"), found.genres)
+        assertEquals("hip hop; pop rap; trap; contemporary r&b", found.genre)
     }
 
     @Test
-    fun tiedOrMissingGenres_giveNoGenre() {
-        // OCTANE, release group 25b63144…: three genres with one vote each.
+    fun tiedGenres_areAllKept_notDropped() {
+        // OCTANE, release group 25b63144…: three genres with one vote each. This tie used to give no
+        // genre at all (the reported bug: multi-genre results left the genre empty).
         val octane = listOf(MusicBrainzGenreDto("alternative r&b", 1), MusicBrainzGenreDto("hip hop", 1), MusicBrainzGenreDto("trap", 1))
-        assertTrue(genreFromMusicBrainz(octane) is GenreLookup.NotFound)
+        assertEquals(GenreLookup.Found(listOf("alternative r&b", "hip hop", "trap"), "MusicBrainz release group"), genreFromMusicBrainz(octane))
+    }
+
+    @Test
+    fun missingBlankOrDuplicateGenres_areCleanedUp() {
         assertTrue(genreFromMusicBrainz(emptyList()) is GenreLookup.NotFound)
+        assertTrue(genreFromMusicBrainz(listOf(MusicBrainzGenreDto("  ", 3))) is GenreLookup.NotFound)
+        val messy = listOf(MusicBrainzGenreDto(" Synth-pop ", 2), MusicBrainzGenreDto("synth-pop", 1), MusicBrainzGenreDto("electronic", 2))
+        assertEquals(listOf("Synth-pop", "electronic"), (genreFromMusicBrainz(messy) as GenreLookup.Found).genres)
     }
 }

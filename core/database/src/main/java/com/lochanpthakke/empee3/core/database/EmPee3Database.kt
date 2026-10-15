@@ -52,7 +52,7 @@ import com.lochanpthakke.empee3.core.database.entity.WaveformCacheEntity
         WaveformCacheEntity::class,
         LearnedWatermarkEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class EmPee3Database : RoomDatabase() {
