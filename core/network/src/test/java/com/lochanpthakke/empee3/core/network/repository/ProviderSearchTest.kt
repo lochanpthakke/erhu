@@ -171,9 +171,9 @@ class ProviderSearchTest {
 
     @Test
     fun preflightHosts_followTheSelection() {
-        assertEquals(listOf("musicbrainz.org", "api.deezer.com"), MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = false))
+        assertEquals(listOf("itunes.apple.com", "musicbrainz.org", "api.deezer.com"), MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = false))
         assertEquals(
-            listOf("musicbrainz.org", "api.deezer.com", "ws.audioscrobbler.com"),
+            listOf("itunes.apple.com", "musicbrainz.org", "api.deezer.com", "ws.audioscrobbler.com"),
             MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = true),
         )
         assertEquals(emptyList<String>(), MetadataSources.hostsFor(MetadataSources.LAST_FM, lastFmConfigured = false))
@@ -238,10 +238,13 @@ class ProviderSearchTest {
     }
 
     @Test
-    fun tiedOrMissingGenres_giveNoGenre() {
+    fun tiedOrMissingGenres_joinTiedGenresIntoSlashString() {
         // OCTANE, release group 25b63144…: three genres with one vote each.
         val octane = listOf(MusicBrainzGenreDto("alternative r&b", 1), MusicBrainzGenreDto("hip hop", 1), MusicBrainzGenreDto("trap", 1))
-        assertTrue(genreFromMusicBrainz(octane) is GenreLookup.NotFound)
+        assertEquals(
+            GenreLookup.Found("alternative r&b / hip hop / trap", "MusicBrainz release group"),
+            genreFromMusicBrainz(octane),
+        )
         assertTrue(genreFromMusicBrainz(emptyList()) is GenreLookup.NotFound)
     }
 }

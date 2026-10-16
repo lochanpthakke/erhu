@@ -24,6 +24,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.io.File
 import java.time.ZoneId
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -65,6 +66,13 @@ interface RepositoryModule {
         fun provideArtistArtworkStore(
             @ApplicationContext context: Context,
         ): ArtistArtworkStore = ArtistArtworkStore(File(context.filesDir, "artist_artwork"))
+
+        @Provides
+        @Singleton
+        @Named("artistArtworkDir")
+        fun provideArtistArtworkDir(
+            @ApplicationContext context: Context,
+        ): File = File(context.filesDir, "artist_artwork")
 
         @Provides
         @Singleton

@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,6 +54,7 @@ fun SongRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.title,
+                modifier = Modifier.basicMarquee(),
                 style = TextStyles.itemTitle,
                 color = if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -61,6 +63,7 @@ fun SongRow(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${song.artist} • ${song.album}",
+                modifier = Modifier.basicMarquee(),
                 style = TextStyles.itemSubtitle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

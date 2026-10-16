@@ -43,6 +43,8 @@ class MetadataRepositoryImpl
         private val deezerProvider: DeezerProvider,
         private val lastFmProvider: LastFmProvider,
         private val lrclibProvider: LrclibProvider,
+        private val iTunesProvider: com.lochanpthakke.empee3.core.network.provider.ITunesProvider,
+        private val wikipediaProvider: com.lochanpthakke.empee3.core.network.provider.WikipediaProvider,
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
@@ -54,7 +56,7 @@ class MetadataRepositoryImpl
         private val retryPolicy = RetryPolicy()
 
         private val providers: List<MetadataProvider> by lazy {
-            listOf(musicBrainzProvider, deezerProvider, lastFmProvider)
+            listOf(iTunesProvider, musicBrainzProvider, deezerProvider, lastFmProvider)
         }
 
         override fun cleanFilename(
@@ -153,6 +155,8 @@ class MetadataRepositoryImpl
         ): AppResult<List<String>> =
             appResultOf {
                 withContext(Dispatchers.IO) {
+                    val iTunesList = iTunesProvider.fetchAlbumArtList(albumTitle, artist)
+                    val musicBrainzList = musicBrainzProvider.fetchReleaseGroupArtList(albumTitle, artist)
                     val deezerList =
                         if (MetadataSources.matches(deezerProvider.providerName, sourceProvider)) {
                             deezerProvider.fetchAlbumArtList(albumTitle, artist)
@@ -165,7 +169,26 @@ class MetadataRepositoryImpl
                             .getOrDefault(emptyList())
                     val candidateUrls = trackCandidates.mapNotNull { it.coverArtUrl }.filter { it.isNotBlank() }
 
-                    (deezerList + candidateUrls).distinct()
+                    (iTunesList + musicBrainzList + deezerList + candidateUrls).distinct()
+                }
+            }
+
+        override suspend fun fetchArtistArtworkCandidates(
+            artistName: String,
+            sourceProvider: String,
+        ): AppResult<List<String>> =
+            appResultOf {
+                withContext(Dispatchers.IO) {
+                    val urls = mutableListOf<String>()
+                    val deezerPortraits = deezerProvider.fetchArtistPortraitList(artistName)
+                    urls.addAll(deezerPortraits)
+
+                    val wikiPortrait = wikipediaProvider.fetchArtistPortrait(artistName)
+                    if (!wikiPortrait.isNullOrBlank()) {
+                        urls.add(wikiPortrait)
+                    }
+
+                    urls.distinct()
                 }
             }
 
@@ -177,9 +200,14 @@ class MetadataRepositoryImpl
                     when {
                         releaseGroupId != null ->
                             genreFromMusicBrainz(musicBrainzProvider.fetchReleaseGroupGenres(releaseGroupId))
-                        deezerAlbumId != null ->
-                            deezerProvider.fetchAlbumGenres(deezerAlbumId).firstOrNull()?.let { GenreLookup.Found(it, "Deezer album") }
-                                ?: GenreLookup.NotFound("Deezer lists no genre for this album")
+                        deezerAlbumId != null -> {
+                            val deezerGenres = deezerProvider.fetchAlbumGenres(deezerAlbumId)
+                            if (deezerGenres.isNotEmpty()) {
+                                GenreLookup.Found(deezerGenres.joinToString(" / "), "Deezer album")
+                            } else {
+                                GenreLookup.NotFound("Deezer lists no genre for this album")
+                            }
+                        }
                         else -> GenreLookup.NotFound("${match.sourceName} doesn't provide genres")
                     }
                 } catch (e: CancellationException) {
@@ -234,17 +262,16 @@ class MetadataRepositoryImpl
     }
 
 /**
- * The genre to write from MusicBrainz's curated release-group genres: the single most-voted one.
- * A tie at the top gives no genre rather than an arbitrary pick.
+ * The genre to write from MusicBrainz's curated release-group genres: the top-voted genres.
+ * Multiple top/tied genres are joined into a slash-separated string ("Genre A / Genre B").
  */
 internal fun genreFromMusicBrainz(genres: List<MusicBrainzGenreDto>): GenreLookup {
     val ranked = genres.filter { it.name.isNotBlank() }.sortedByDescending { it.count }
-    val tied = ranked.takeWhile { it.count == ranked.first().count }
-    return when {
-        ranked.isEmpty() -> GenreLookup.NotFound("MusicBrainz has no genre for this album")
-        tied.size > 1 -> GenreLookup.NotFound("MusicBrainz genres are tied: ${tied.joinToString { it.name }}")
-        else -> GenreLookup.Found(ranked.first().name.trim(), "MusicBrainz release group")
-    }
+    if (ranked.isEmpty()) return GenreLookup.NotFound("MusicBrainz has no genre for this album")
+    val maxCount = ranked.first().count
+    val topGenres = ranked.takeWhile { it.count == maxCount }.map { it.name.trim() }.distinct()
+    val combined = topGenres.joinToString(" / ")
+    return GenreLookup.Found(combined, "MusicBrainz release group")
 }
 
 /** Whether a provider may be asked at all, and if not, the reason shown instead of results. */

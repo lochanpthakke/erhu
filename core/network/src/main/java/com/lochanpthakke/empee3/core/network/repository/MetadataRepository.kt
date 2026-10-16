@@ -35,6 +35,7 @@ sealed interface GenreLookup {
 /** Provider names as stored in settings ("ALL", "Deezer", "MusicBrainz", …). */
 object MetadataSources {
     const val ALL = "ALL"
+    const val ITUNES = "iTunes"
     const val MUSICBRAINZ = "MusicBrainz"
     const val DEEZER = "Deezer"
     const val LAST_FM = "LastFm"
@@ -47,7 +48,7 @@ object MetadataSources {
 
     private fun key(name: String): String = name.lowercase().filter { it.isLetterOrDigit() }
 
-    private val HOSTS = listOf(MUSICBRAINZ to "musicbrainz.org", DEEZER to "api.deezer.com", LAST_FM to "ws.audioscrobbler.com")
+    private val HOSTS = listOf(ITUNES to "itunes.apple.com", MUSICBRAINZ to "musicbrainz.org", DEEZER to "api.deezer.com", LAST_FM to "ws.audioscrobbler.com")
 
     /** The hosts [selection] will contact (for a DNS-only preflight); Last.fm only when it has a key. */
     fun hostsFor(
@@ -97,6 +98,11 @@ interface MetadataRepository {
     suspend fun fetchAlbumArtCandidates(
         albumTitle: String,
         artist: String?,
+        sourceProvider: String = "ALL",
+    ): AppResult<List<String>>
+
+    suspend fun fetchArtistArtworkCandidates(
+        artistName: String,
         sourceProvider: String = "ALL",
     ): AppResult<List<String>>
 

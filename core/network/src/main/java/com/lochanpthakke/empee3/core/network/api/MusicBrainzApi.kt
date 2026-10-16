@@ -16,6 +16,13 @@ interface MusicBrainzApi {
     ): MusicBrainzSearchResponse
 
     @Headers("User-Agent: empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
+    @GET("ws/2/release-group")
+    suspend fun searchReleaseGroup(
+        @Query("query") query: String,
+        @Query("fmt") format: String = "json",
+    ): com.lochanpthakke.empee3.core.network.model.MusicBrainzReleaseGroupSearchResponse
+
+    @Headers("User-Agent: empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
     @GET("ws/2/release-group/{id}")
     suspend fun lookupReleaseGroupGenres(
         @Path("id") releaseGroupId: String,

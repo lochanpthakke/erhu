@@ -22,6 +22,14 @@ interface SongDao {
     @Query("UPDATE songs SET file_path = :newPath WHERE id = :songId")
     suspend fun updateFilePath(songId: Long, newPath: String): Int
 
+    @Query("UPDATE songs SET title = :title, artist = :artist, album = :album WHERE id = :id")
+    suspend fun updateSongTags(
+        id: Long,
+        title: String,
+        artist: String,
+        album: String,
+    ): Int
+
     @Query("SELECT id FROM songs")
     suspend fun getAllSongIds(): List<Long>
 

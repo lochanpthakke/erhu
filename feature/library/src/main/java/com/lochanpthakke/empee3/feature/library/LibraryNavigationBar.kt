@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -89,6 +91,8 @@ fun LibraryNavigationBar(
     searching: Boolean = false,
     compact: () -> Float = { 0f },
     onExpand: () -> Unit = {},
+    hasCurrentSong: Boolean = true,
+    onShufflePlayLibrary: () -> Unit = {},
 ) {
     // Compact (scrolled library): the sections fade out and the current one's icon
     // remains as a single button that brings the sections back.
@@ -158,7 +162,8 @@ fun LibraryNavigationBar(
             CompactSectionButton(
                 section = selected,
                 enabled = isCompact,
-                onClick = onExpand,
+                onClick = if (!hasCurrentSong) onShufflePlayLibrary else onExpand,
+                hasCurrentSong = hasCurrentSong,
                 modifier =
                     Modifier
                         .matchParentSize()
@@ -182,6 +187,7 @@ private fun CompactSectionButton(
     section: LibrarySection,
     enabled: Boolean,
     onClick: () -> Unit,
+    hasCurrentSong: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     if (!enabled) return
@@ -195,8 +201,8 @@ private fun CompactSectionButton(
         contentAlignment = Alignment.Center,
     ) {
         Icon(
-            imageVector = section.icon,
-            contentDescription = "Expand section bar (${section.label})",
+            imageVector = if (!hasCurrentSong) Icons.Default.Shuffle else section.icon,
+            contentDescription = if (!hasCurrentSong) "Shuffle play library" else "Expand section bar (${section.label})",
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }

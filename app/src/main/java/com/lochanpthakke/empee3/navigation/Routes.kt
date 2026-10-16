@@ -41,6 +41,8 @@ object MetadataEditor
 @Serializable
 object ArtworkManager
 
+typealias ArtworkFetcher = ArtworkManager
+
 /** Wi-Fi Transfer: receive music from a computer's browser over the local network. */
 @Serializable
 object WifiTransfer

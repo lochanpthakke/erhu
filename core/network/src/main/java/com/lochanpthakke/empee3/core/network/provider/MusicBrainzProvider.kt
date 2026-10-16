@@ -54,11 +54,29 @@ class MusicBrainzProvider
                     logger.d(TAG, "Genres for release group $releaseGroupId: ${it.size}")
                 }
 
-        /** Artwork comes from the Cover Art Archive URL on each candidate, not from a separate search. */
+        /** Artwork comes from the Cover Art Archive URL on each candidate, or direct release group search. */
         override suspend fun fetchAlbumArt(
             albumTitle: String,
             artist: String?,
-        ): String? = null
+        ): String? {
+            return fetchReleaseGroupArtList(albumTitle, artist).firstOrNull()
+        }
+
+        suspend fun fetchReleaseGroupArtList(
+            albumTitle: String,
+            artist: String?,
+        ): List<String> {
+            val query = musicBrainzReleaseGroupQuery(albumTitle, artist)
+            return try {
+                val response = throttled { musicBrainzApi.searchReleaseGroup(query) }
+                response.releaseGroups
+                    .mapNotNull { it.id }
+                    .map { coverArtArchiveUrl(it) }
+            } catch (e: Exception) {
+                logger.w(TAG, "MusicBrainz release group art search failed for $albumTitle: ${e.message}", e)
+                emptyList()
+            }
+        }
 
         private suspend fun <T> throttled(request: suspend () -> T): T =
             gate.withLock {
@@ -79,6 +97,19 @@ class MusicBrainzProvider
             private const val NANOS_PER_MS = 1_000_000L
         }
     }
+
+/**
+ * The Lucene query for a release group (album) search: the release title as an escaped phrase,
+ * plus artist terms.
+ */
+internal fun musicBrainzReleaseGroupQuery(
+    albumTitle: String,
+    artist: String?,
+): String {
+    val release = "release:\"${escapePhrase(albumTitle.trim())}\""
+    val terms = artistSearchTerms(artist?.takeUnless { it.equals("Unknown Artist", ignoreCase = true) })
+    return if (terms != null) "$release AND artist:($terms)" else release
+}
 
 /**
  * The Lucene query for a recording search: the title as an escaped phrase, plus the artist credit

@@ -25,14 +25,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -47,6 +53,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -68,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.lochanpthakke.empee3.core.model.Album
+import com.lochanpthakke.empee3.core.model.Artist
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,23 +88,46 @@ fun ArtworkManagerScreen(
     onNavigateToLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedTab by remember { mutableStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
     var showCompletionDialog by remember { mutableStateOf(false) }
 
     val artworkQueue by viewModel.artworkQueue.collectAsState()
+    val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
     val searchAlbums by viewModel.searchAlbums.collectAsState()
+    val searchArtists by viewModel.searchArtists.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
     val isSearchingArtwork by viewModel.isSearchingArtwork.collectAsState()
     val artworkCandidates by viewModel.artworkCandidates.collectAsState()
     val currentProcessingAlbum by viewModel.currentProcessingAlbum.collectAsState()
+    val currentProcessingArtist by viewModel.currentProcessingArtist.collectAsState()
     val selectedEnlargedArtworkUrl by viewModel.selectedEnlargedArtworkUrl.collectAsState()
 
-    val doneCount = artworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
-    val failedCount = artworkQueue.count { it.status == "FAILED" }
-    val totalCount = artworkQueue.size
-    val isQueueComplete =
-        totalCount > 0 && artworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
-    val progressFloat = if (totalCount > 0) doneCount.toFloat() / totalCount.toFloat() else 0f
+    val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
+    val selectedProviderKey by viewModel.selectedProvider.collectAsState()
+    val providerOptions = remember(sourceOptions) { sourceOptions.map { it.key to it.label } }
+    val currentProviderLabel = remember(selectedProviderKey, sourceOptions) {
+        sourceOptions.firstOrNull { it.key == selectedProviderKey }?.label ?: selectedProviderKey
+    }
+    var providerDropdownExpanded by remember { mutableStateOf(false) }
+
+    val activeQueueCount = if (selectedTab == 0) artworkQueue.size else artistArtworkQueue.size
+    val doneCount = if (selectedTab == 0) {
+        artworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
+    } else {
+        artistArtworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
+    }
+    val failedCount = if (selectedTab == 0) {
+        artworkQueue.count { it.status == "FAILED" }
+    } else {
+        artistArtworkQueue.count { it.status == "FAILED" }
+    }
+    val isQueueComplete = activeQueueCount > 0 && if (selectedTab == 0) {
+        artworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
+    } else {
+        artistArtworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
+    }
+    val progressFloat = if (activeQueueCount > 0) doneCount.toFloat() / activeQueueCount.toFloat() else 0f
 
     LaunchedEffect(isQueueComplete) {
         if (isQueueComplete) {
@@ -106,7 +138,7 @@ fun ArtworkManagerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Artwork Manager") },
+                title = { Text("Artwork Fetcher") },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
                         Icon(
@@ -147,6 +179,60 @@ fun ArtworkManagerScreen(
                     .padding(innerPadding)
                     .padding(horizontal = 16.dp),
         ) {
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = {
+                        selectedTab = 0
+                        searchQuery = ""
+                    },
+                    text = { Text("Albums") },
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = {
+                        selectedTab = 1
+                        searchQuery = ""
+                    },
+                    text = { Text("Artists") },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Source Provider:",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Box {
+                    TextButton(onClick = { providerDropdownExpanded = true }) {
+                        Text(currentProviderLabel, fontWeight = FontWeight.Medium)
+                        Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
+                    }
+                    DropdownMenu(
+                        expanded = providerDropdownExpanded,
+                        onDismissRequest = { providerDropdownExpanded = false },
+                    ) {
+                        providerOptions.forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    viewModel.setSelectedProvider(key)
+                                    providerDropdownExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
@@ -156,7 +242,7 @@ fun ArtworkManagerScreen(
                     viewModel.searchLocalLibrary(it)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search albums...") },
+                placeholder = { Text(if (selectedTab == 0) "Search albums..." else "Search artists...") },
                 leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
             )
 
@@ -177,11 +263,28 @@ fun ArtworkManagerScreen(
                             .fillMaxWidth()
                             .height(180.dp),
                 ) {
-                    items(searchAlbums) { album ->
-                        AlbumSearchCard(
-                            album = album,
-                            onAdd = { viewModel.enqueueAlbumForArtwork(album) },
-                        )
+                    if (selectedTab == 0) {
+                        items(searchAlbums) { album ->
+                            AlbumSearchCard(
+                                album = album,
+                                onAdd = {
+                                    viewModel.enqueueAlbumForArtwork(album)
+                                    searchQuery = ""
+                                    viewModel.searchLocalLibrary("")
+                                },
+                            )
+                        }
+                    } else {
+                        items(searchArtists) { artist ->
+                            ArtistSearchCard(
+                                artist = artist,
+                                onAdd = {
+                                    viewModel.enqueueArtistForArtwork(artist)
+                                    searchQuery = ""
+                                    viewModel.searchLocalLibrary("")
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -189,30 +292,123 @@ fun ArtworkManagerScreen(
             }
 
             Button(
-                onClick = { viewModel.scanForMissingCovers() },
+                onClick = {
+                    if (selectedTab == 0) {
+                        viewModel.scanForMissingCovers()
+                    } else {
+                        viewModel.scanForMissingArtistPhotos()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isScanning && !isSearchingArtwork,
             ) {
                 Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isScanning) "Scanning Storage..." else "Scan for Missing Album Covers")
+                Text(
+                    if (isScanning) {
+                        "Scanning Storage..."
+                    } else if (selectedTab == 0) {
+                        "Scan for Missing Album Covers"
+                    } else {
+                        "Scan for Missing Artist Photos"
+                    },
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            if (currentProcessingAlbum != null) {
+            val minResolution by viewModel.minArtworkResolution.collectAsState()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Resolution Target: $minResolution×$minResolution px",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row {
+                    listOf(300, 500, 1000).forEach { res ->
+                        TextButton(
+                            onClick = { viewModel.setMinArtworkResolution(res) },
+                            enabled = minResolution != res,
+                        ) {
+                            Text("${res}px", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val currentContextTitle = if (selectedTab == 0) currentProcessingAlbum?.title else currentProcessingArtist?.name
+            val currentContextSub = if (selectedTab == 0) currentProcessingAlbum?.artist.orEmpty() else "${currentProcessingArtist?.songCount ?: 0} tracks"
+            var showDiagnosticsExpanded by remember { mutableStateOf(false) }
+            val diagnostics by viewModel.artworkSearchDiagnostics.collectAsState()
+
+            if (diagnostics != null && currentContextTitle != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { showDiagnosticsExpanded = !showDiagnosticsExpanded },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Provider Results & Diagnostics",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Icon(
+                                imageVector = if (showDiagnosticsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = null,
+                            )
+                        }
+
+                        if (showDiagnosticsExpanded) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Provider Results", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            diagnostics!!.providerOutcomes.forEach { outcome ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text("• ${outcome.providerName}", style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        text = when (outcome.status) {
+                                            com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS -> "✓ Found ${outcome.candidateCount} candidates"
+                                            com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED -> "Not configured"
+                                            com.lochanpthakke.empee3.core.model.ProviderStatus.UNAVAILABLE -> "Not available here"
+                                            else -> outcome.status.label
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (outcome.status == com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (currentContextTitle != null) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
-                            text = "ARTWORK CANDIDATES: ${currentProcessingAlbum!!.title}",
+                            text = "ARTWORK CANDIDATES: $currentContextTitle",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            text = currentProcessingAlbum!!.artist,
+                            text = currentContextSub,
                             style = MaterialTheme.typography.bodySmall,
                         )
 
@@ -222,7 +418,7 @@ fun ArtworkManagerScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 LinearProgressIndicator(modifier = Modifier.weight(1f))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Searching covers...", style = MaterialTheme.typography.bodySmall)
+                                Text("Searching artwork...", style = MaterialTheme.typography.bodySmall)
                             }
                         } else if (artworkCandidates.isNotEmpty()) {
                             LazyVerticalGrid(
@@ -241,7 +437,7 @@ fun ArtworkManagerScreen(
                             }
                         } else {
                             Text(
-                                text = "No artwork candidates found for this album.",
+                                text = "No artwork candidates found.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -258,7 +454,11 @@ fun ArtworkManagerScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "IN QUEUE FOR ARTWORK ($doneCount / $totalCount ALBUMS)",
+                    text = if (selectedTab == 0) {
+                        "IN QUEUE FOR ARTWORK ($doneCount / $activeQueueCount ALBUMS)"
+                    } else {
+                        "IN QUEUE FOR ARTIST PHOTOS ($doneCount / $activeQueueCount ARTISTS)"
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -280,7 +480,7 @@ fun ArtworkManagerScreen(
             if (isQueueComplete) {
                 Button(
                     onClick = {
-                        viewModel.clearArtworkQueue()
+                        if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
                         onNavigateToLibrary()
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -292,13 +492,20 @@ fun ArtworkManagerScreen(
             } else {
                 Button(
                     onClick = {
-                        val firstPending = artworkQueue.firstOrNull { it.status == "PENDING" }
-                        if (firstPending != null) {
-                            viewModel.searchArtworkForAlbum(firstPending.album)
+                        if (selectedTab == 0) {
+                            val firstPending = artworkQueue.firstOrNull { it.status == "PENDING" }
+                            if (firstPending != null) viewModel.searchArtworkForAlbum(firstPending.album)
+                        } else {
+                            val firstPending = artistArtworkQueue.firstOrNull { it.status == "PENDING" }
+                            if (firstPending != null) viewModel.searchArtworkForArtist(firstPending.artist)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSearchingArtwork && artworkQueue.any { it.status == "PENDING" },
+                    enabled = !isSearchingArtwork && if (selectedTab == 0) {
+                        artworkQueue.any { it.status == "PENDING" }
+                    } else {
+                        artistArtworkQueue.any { it.status == "PENDING" }
+                    },
                 ) {
                     Icon(imageVector = Icons.Default.ImageSearch, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -308,125 +515,51 @@ fun ArtworkManagerScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (artworkQueue.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "Queue is empty. Search for an album or scan for missing artwork to populate the artwork queue.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+            if (selectedTab == 0) {
+                if (artworkQueue.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Queue is empty. Search for an album or scan for missing artwork to populate the queue.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(artworkQueue, key = { it.album.id }) { queueItem ->
+                            AlbumQueueCard(
+                                title = queueItem.album.title,
+                                subtitle = queueItem.album.artist,
+                                status = queueItem.status,
+                                onRemove = { viewModel.removeFromArtworkQueue(queueItem.album) },
+                            )
+                        }
+                    }
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(artworkQueue, key = { it.album.id }) { queueItem ->
-                        Card(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        ) {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                if (queueItem.status == "SEARCHING" || queueItem.status == "WRITING") {
-                                    LinearProgressIndicator(
-                                        modifier =
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .height(3.dp),
-                                    )
-                                }
-
-                                Row(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Row(
-                                        modifier = Modifier.weight(1f),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .size(40.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.MusicNote,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(10.dp))
-
-                                        Column {
-                                            Text(
-                                                text = queueItem.album.title,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = queueItem.album.artist,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        }
-                                    }
-
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        when (queueItem.status) {
-                                            "SEARCHING", "WRITING" ->
-                                                Icon(
-                                                    imageVector = Icons.Default.HourglassTop,
-                                                    contentDescription = "Searching",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                )
-                                            "COMPLETED", "DONE", "SUCCESS" ->
-                                                Icon(
-                                                    imageVector = Icons.Default.CheckCircle,
-                                                    contentDescription = "Done",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                )
-                                            "FAILED" ->
-                                                Icon(
-                                                    imageVector = Icons.Default.Error,
-                                                    contentDescription = "Failed",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                )
-                                            else ->
-                                                Text(
-                                                    text = "Pending",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        IconButton(
-                                            onClick = {
-                                                viewModel.removeFromArtworkQueue(queueItem.album)
-                                            },
-                                        ) {
-                                            Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from Queue")
-                                        }
-                                    }
-                                }
-                            }
+                if (artistArtworkQueue.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Queue is empty. Search for an artist or scan for missing photos to populate the queue.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(artistArtworkQueue, key = { it.artist.id }) { queueItem ->
+                            AlbumQueueCard(
+                                title = queueItem.artist.name,
+                                subtitle = "${queueItem.artist.songCount} tracks",
+                                status = queueItem.status,
+                                onRemove = { viewModel.removeFromArtistArtworkQueue(queueItem.artist) },
+                            )
                         }
                     }
                 }
@@ -434,10 +567,11 @@ fun ArtworkManagerScreen(
         }
     }
 
-    if (selectedEnlargedArtworkUrl != null && currentProcessingAlbum != null) {
+    if (selectedEnlargedArtworkUrl != null && (currentProcessingAlbum != null || currentProcessingArtist != null)) {
+        val targetTitle = currentProcessingAlbum?.title ?: currentProcessingArtist?.name ?: ""
         AlertDialog(
             onDismissRequest = { viewModel.selectEnlargedArtwork(null) },
-            title = { Text("Inspect Cover: ${currentProcessingAlbum!!.title}") },
+            title = { Text("Inspect Artwork: $targetTitle") },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(
@@ -457,7 +591,11 @@ fun ArtworkManagerScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Do you want to embed this cover art into all tracks of ${currentProcessingAlbum!!.title}?",
+                        text = if (currentProcessingAlbum != null) {
+                            "Do you want to embed this cover art into all tracks of $targetTitle?"
+                        } else {
+                            "Do you want to set this photo as $targetTitle's profile picture?"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -465,10 +603,14 @@ fun ArtworkManagerScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.applyArtworkToAlbum(currentProcessingAlbum!!, selectedEnlargedArtworkUrl!!)
+                        if (currentProcessingAlbum != null) {
+                            viewModel.applyArtworkToAlbum(currentProcessingAlbum!!, selectedEnlargedArtworkUrl!!)
+                        } else if (currentProcessingArtist != null) {
+                            viewModel.applyArtistArtwork(currentProcessingArtist!!, selectedEnlargedArtworkUrl!!)
+                        }
                     },
                 ) {
-                    Text("Add Artwork")
+                    Text("Apply Artwork")
                 }
             },
             dismissButton = {
@@ -482,13 +624,13 @@ fun ArtworkManagerScreen(
     if (showCompletionDialog) {
         AlertDialog(
             onDismissRequest = { showCompletionDialog = false },
-            title = { Text("Artwork Manager Complete") },
+            title = { Text("Artwork Fetcher Complete") },
             text = {
                 Column {
-                    Text("✓ $doneCount albums updated successfully", fontWeight = FontWeight.Bold)
+                    Text("✓ $doneCount items updated successfully", fontWeight = FontWeight.Bold)
                     if (failedCount > 0) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("❌ $failedCount albums failed")
+                        Text("❌ $failedCount items failed")
                     }
                 }
             },
@@ -496,7 +638,7 @@ fun ArtworkManagerScreen(
                 Button(
                     onClick = {
                         showCompletionDialog = false
-                        viewModel.clearArtworkQueue()
+                        if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
                         onNavigateToLibrary()
                     },
                 ) {
@@ -526,17 +668,145 @@ private fun SquareArtworkCandidateCard(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        AsyncImage(
-            model =
-                ImageRequest
-                    .Builder(LocalContext.current)
-                    .data(imageUrl)
-                    .crossfade(true)
-                    .build(),
-            contentDescription = "Artwork Candidate",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model =
+                    ImageRequest
+                        .Builder(LocalContext.current)
+                        .data(imageUrl)
+                        .crossfade(true)
+                        .build(),
+                contentDescription = "Artwork Candidate",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f))
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = if (imageUrl.contains("cover_xl") || imageUrl.contains("picture_xl")) "1000×1000" else "High Res",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlbumQueueCard(
+    title: String,
+    subtitle: String,
+    status: String,
+    onRemove: () -> Unit,
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (status == "SEARCHING" || status == "WRITING") {
+                LinearProgressIndicator(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(3.dp),
+                )
+            }
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    when (status) {
+                        "SEARCHING", "WRITING" ->
+                            Icon(
+                                imageVector = Icons.Default.HourglassTop,
+                                contentDescription = "Searching",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        "COMPLETED", "DONE", "SUCCESS" ->
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Done",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        "FAILED" ->
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = "Failed",
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                        else ->
+                            Text(
+                                text = "Pending",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    IconButton(onClick = onRemove) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from Queue")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -560,7 +830,10 @@ private fun AlbumSearchCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     modifier =
                         Modifier
@@ -576,15 +849,86 @@ private fun AlbumSearchCard(
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(text = album.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = album.artist, style = MaterialTheme.typography.bodySmall)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = album.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = album.artist,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            OutlinedButton(onClick = onAdd) {
+            IconButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Album")
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Add")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArtistSearchCard(
+    artist: Artist,
+    onAdd: () -> Unit,
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = artist.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "${artist.songCount} tracks",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            IconButton(onClick = onAdd) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Artist")
             }
         }
     }

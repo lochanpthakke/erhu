@@ -32,7 +32,7 @@ class FieldSelectionTest {
         val all = fieldSelection(MetadataField.all)
         assertTrue(all.fillOnly)
         assertTrue(all.rename)
-        assertEquals(FixField.entries.toSet(), all.fields)
+        assertEquals(FixField.entries.filter { it != FixField.ARTWORK }.toSet(), all.fields)
 
         val tagsOnly = fieldSelection(MetadataField.supportedTags)
         assertTrue("all tag fields, no rename", tagsOnly.fillOnly && !tagsOnly.rename)

@@ -121,6 +121,22 @@ class DeezerProvider
             }
         }
 
+        suspend fun fetchArtistPortraitList(artistName: String): List<String> {
+            val trimmed = artistName.trim()
+            if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return emptyList()
+            return try {
+                val response = deezerApi.searchArtist(trimmed)
+                val candidates = response.data.orEmpty()
+                candidates
+                    .mapNotNull { it.pictureXl ?: it.pictureBig ?: it.pictureMedium }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.w(TAG, "Deezer artist portrait list search failed for $artistName: ${e.message}", e)
+                emptyList()
+            }
+        }
+
         companion object {
             private const val TAG = "DeezerProvider"
         }

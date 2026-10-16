@@ -24,6 +24,9 @@ interface LearnedWatermarkDao {
     @Query("UPDATE learned_watermarks SET frequency_count = frequency_count + 1 WHERE token = :token")
     suspend fun incrementFrequency(token: String): Int
 
+    @Query("DELETE FROM learned_watermarks WHERE token = :token")
+    suspend fun deleteToken(token: String): Int
+
     suspend fun insertOrIncrement(token: String) {
         val trimmed = token.trim()
         if (trimmed.length < 2) return

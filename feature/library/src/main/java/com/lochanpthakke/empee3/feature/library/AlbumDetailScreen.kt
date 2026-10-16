@@ -17,17 +17,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -154,6 +163,23 @@ fun AlbumDetailScreen(
             },
         )
 
+    var menuExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            if (uri != null && detail?.album != null) {
+                try {
+                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    if (bytes != null && bytes.isNotEmpty()) {
+                        viewModel.applyArtworkBytesToAlbum(detail.album, bytes)
+                    }
+                } catch (_: Exception) {
+                }
+            }
+        }
+
     val listState = rememberLazyListState()
     val compactHeader by remember(listState) {
         derivedStateOf {
@@ -168,6 +194,71 @@ fun AlbumDetailScreen(
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(onBack),
                 title = detail?.album?.title?.takeIf { compactHeader },
+                actions = {
+                    val album = detail?.album
+                    val songs = detail?.songs.orEmpty()
+                    if (album != null) {
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                                colors =
+                                    IconButtonDefaults.iconButtonColors(
+                                        containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
+                            ) {
+                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Album options")
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Play Next") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        songs.asReversed().forEach { song -> viewModel.playNext(song) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Add to Queue") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        songs.forEach { song -> viewModel.addToQueue(song) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Auto Fix Tags") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.enqueueAlbumForRepair(album)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Fetch Cover Online") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.enqueueAlbumForArtwork(album)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Set Custom Cover (Local File)") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        imagePickerLauncher.launch("image/*")
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Transition Studio") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showStudio = true
+                                    },
+                                )
+                            }
+                        }
+                    }
+                },
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -399,7 +490,7 @@ private fun AlbumTitleBlock(
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
-        val factsText = songs?.let(::albumFacts).orEmpty()
+        val factsText = songs?.let { albumFacts(album, it) }.orEmpty()
         val isLossless = songs?.any { it.isLossless } == true
         val isDolbyAtmos = songs?.any { it.isDolbyAtmos } == true
 
@@ -490,8 +581,12 @@ private fun AlbumActions(
     }
 }
 
-/** "12 songs · 43 min" from the album's tracks; unknown parts are left out. */
-private fun albumFacts(songs: List<Song>): String {
+/** "2018 · 12 songs · 43 min" from the album's facts and tracks; unknown parts are left out. */
+private fun albumFacts(
+    album: Album,
+    songs: List<Song>,
+): String {
+    val yearStr = album.year.takeIf { it in 1900..2099 }?.toString()
     val totalMinutes = songs.sumOf { it.durationMs } / MS_PER_MINUTE
     val duration =
         when {
@@ -500,6 +595,7 @@ private fun albumFacts(songs: List<Song>): String {
             else -> "${totalMinutes / MINUTES_PER_HOUR} hr ${totalMinutes % MINUTES_PER_HOUR} min"
         }
     return listOfNotNull(
+        yearStr,
         countLabel(songs.size, "song"),
         duration,
     ).joinToString(" · ")

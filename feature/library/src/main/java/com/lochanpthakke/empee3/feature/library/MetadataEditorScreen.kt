@@ -3,6 +3,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -111,16 +112,21 @@ fun MetadataEditorScreen(
     val processedCount = repairQueue.count { it.status !in RepairStatus.TO_PROCESS && it.status != RepairStatus.FIXING }
     val isQueueComplete = totalCount > 0 && processedCount == totalCount
     val progressFloat = if (totalCount > 0) processedCount.toFloat() / totalCount.toFloat() else 0f
+    var selectedRevertIds by remember { mutableStateOf(setOf<Long>()) }
+    val revertCompletionMessage by viewModel.revertCompletionMessage.collectAsState()
+    val isReverting by viewModel.isReverting.collectAsState()
 
     // The summary appears whenever a run ends: finished, paused by the connection or by the user.
     var wasFixing by remember { mutableStateOf(false) }
     LaunchedEffect(isFixingQueue) {
-        if (wasFixing && !isFixingQueue && totalCount > 0) showCompletionDialog = true
+        if (wasFixing && !isFixingQueue && !isReverting && revertCompletionMessage == null && totalCount > 0) {
+            showCompletionDialog = true
+        }
         wasFixing = isFixingQueue
     }
 
     AppScaffold(
-        topBar = { AppTopBar(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Metadata Editor") },
+        topBar = { AppTopBar(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Auto Fix Tags") },
         bottomBar = {
             Box(
                 modifier =
@@ -160,7 +166,7 @@ fun MetadataEditorScreen(
                     viewModel.searchLocalLibrary(it)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search tracks, albums, or artists to fix...") },
+                placeholder = { Text("Search tracks, albums, or artists") },
                 leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     // Selects everything available: the search's songs, albums and artists, or the whole library.
@@ -205,13 +211,34 @@ fun MetadataEditorScreen(
                             .height(200.dp),
                 ) {
                     items(searchArtists) { artist ->
-                        ArtistSquareRow(artist = artist, onAdd = { viewModel.enqueueArtistForRepair(artist) })
+                        ArtistSquareRow(
+                            artist = artist,
+                            onAdd = {
+                                viewModel.enqueueArtistForRepair(artist)
+                                searchQuery = ""
+                                viewModel.searchLocalLibrary("")
+                            },
+                        )
                     }
                     items(searchAlbums) { album ->
-                        AlbumSquareRow(album = album, onAdd = { viewModel.enqueueAlbumForRepair(album) })
+                        AlbumSquareRow(
+                            album = album,
+                            onAdd = {
+                                viewModel.enqueueAlbumForRepair(album)
+                                searchQuery = ""
+                                viewModel.searchLocalLibrary("")
+                            },
+                        )
                     }
                     items(searchResults) { song ->
-                        TrackRow(song = song, onAdd = { viewModel.enqueueSongForRepair(song) })
+                        TrackRow(
+                            song = song,
+                            onAdd = {
+                                viewModel.enqueueSongForRepair(song)
+                                searchQuery = ""
+                                viewModel.searchLocalLibrary("")
+                            },
+                        )
                     }
                 }
 
@@ -228,6 +255,8 @@ fun MetadataEditorScreen(
                 Text(if (isScanning) "Finding tracks..." else "Scan for Bad / Incomplete Tracks")
             }
 
+            var reviewBeforeApplying by remember { mutableStateOf(false) }
+
             Row(
                 modifier =
                     Modifier
@@ -242,6 +271,24 @@ fun MetadataEditorScreen(
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
                     text = "Force Fix Tags (Re-evaluate already fixed files)",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = reviewBeforeApplying,
+                    onCheckedChange = { reviewBeforeApplying = it },
+                )
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(
+                    text = "Review changes before applying",
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -410,16 +457,31 @@ fun MetadataEditorScreen(
             }
 
             if (isQueueComplete) {
-                Button(
-                    onClick = {
-                        viewModel.clearRepairQueue()
-                        onNavigateToLibrary()
-                    },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
-                    Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text("Finish Repair & Return to Library")
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.revertSelectedChanges(selectedRevertIds)
+                            selectedRevertIds = emptySet()
+                        },
+                        enabled = selectedRevertIds.isNotEmpty() && !isReverting && !isFixingQueue,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(Spacing.xs))
+                        Text(if (isReverting) "Reverting..." else if (selectedRevertIds.isEmpty()) "Revert Changes" else "Revert (${selectedRevertIds.size})")
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.clearRepairQueue()
+                            onNavigateToLibrary()
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Return to Library")
+                    }
                 }
             } else if (isFixingQueue) {
                 OutlinedButton(
@@ -489,6 +551,21 @@ fun MetadataEditorScreen(
                                         modifier = Modifier.weight(1f),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
+                                        val isCompleted = queueItem.status == "DONE" || queueItem.status == "PARTIAL_SUCCESS" || queueItem.successDetails != null
+                                        if (isCompleted) {
+                                            Checkbox(
+                                                checked = queueItem.song.id in selectedRevertIds,
+                                                onCheckedChange = { checked ->
+                                                    selectedRevertIds = if (checked) {
+                                                        selectedRevertIds + queueItem.song.id
+                                                    } else {
+                                                        selectedRevertIds - queueItem.song.id
+                                                    }
+                                                },
+                                            )
+                                            Spacer(modifier = Modifier.width(Spacing.xs))
+                                        }
+
                                         SongArtwork(
                                             song = queueItem.song,
                                             modifier =
@@ -502,6 +579,7 @@ fun MetadataEditorScreen(
                                         Column {
                                             Text(
                                                 text = queueItem.song.title,
+                                                modifier = Modifier.basicMarquee(),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
@@ -510,6 +588,7 @@ fun MetadataEditorScreen(
                                             Spacer(modifier = Modifier.height(2.dp))
                                             Text(
                                                 text = "${queueItem.song.artist} • ${queueItem.song.album}",
+                                                modifier = Modifier.basicMarquee(),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1,
@@ -764,6 +843,30 @@ fun MetadataEditorScreen(
         }
     }
 
+    revertCompletionMessage?.let { msg ->
+        GlassAlertDialog(
+            onDismissRequest = { viewModel.dismissRevertCompletionMessage() },
+            title = { Text("Revert Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+            text = { Text(msg, style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.dismissRevertCompletionMessage()
+                        viewModel.clearRepairQueue()
+                        onNavigateToLibrary()
+                    },
+                ) {
+                    Text("Return to Library")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissRevertCompletionMessage() }) {
+                    Text("Keep Inspecting Queue")
+                }
+            },
+        )
+    }
+
     if (showCompletionDialog) {
         GlassAlertDialog(
             onDismissRequest = { showCompletionDialog = false },
@@ -878,7 +981,10 @@ private fun ArtistSquareRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     modifier =
                         Modifier
@@ -890,15 +996,24 @@ private fun ArtistSquareRow(
                     Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(text = artist.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "Artist • ${artist.songCount} tracks", style = MaterialTheme.typography.bodySmall)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = artist.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "Artist • ${artist.songCount} tracks",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            OutlinedButton(onClick = onAdd) {
+            IconButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Artist")
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text("Add")
             }
         }
     }
@@ -924,7 +1039,10 @@ private fun AlbumSquareRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Box(
                     modifier =
                         Modifier
@@ -940,15 +1058,24 @@ private fun AlbumSquareRow(
                     )
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(text = album.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = "Album • ${album.artist}", style = MaterialTheme.typography.bodySmall)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = album.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "Album • ${album.artist}",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            OutlinedButton(onClick = onAdd) {
+            IconButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Album")
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text("Add")
             }
         }
     }
@@ -975,13 +1102,22 @@ private fun TrackRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = song.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(text = "${song.artist} • ${song.album}", style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "${song.artist} • ${song.album}",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            OutlinedButton(onClick = onAdd) {
+            IconButton(onClick = onAdd) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Track")
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text("Add")
             }
         }
     }

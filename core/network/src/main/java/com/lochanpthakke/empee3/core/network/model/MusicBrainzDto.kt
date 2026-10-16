@@ -11,6 +11,12 @@ data class MusicBrainzSearchResponse(
 )
 
 @Serializable
+data class MusicBrainzReleaseGroupSearchResponse(
+    @SerialName("release-groups")
+    val releaseGroups: List<MusicBrainzReleaseGroupDto> = emptyList(),
+)
+
+@Serializable
 data class MusicBrainzRecordingDto(
     val id: String,
     val title: String,

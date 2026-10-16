@@ -16,7 +16,7 @@ enum class MetadataField(
     YEAR("Year"),
     GENRE("Genre"),
     BPM("BPM", "No connected provider supplies BPM: Deezer reports 0 for the tracks checked, MusicBrainz has none."),
-    ARTWORK("Artwork"),
+    ARTWORK("Artwork", "Artwork is managed separately via Artwork Fetcher."),
     FILENAME("Filename Only"),
     ;
 

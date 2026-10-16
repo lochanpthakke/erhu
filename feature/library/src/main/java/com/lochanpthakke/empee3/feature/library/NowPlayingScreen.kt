@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.feature.library
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -261,6 +262,7 @@ fun NowPlayingScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = track.title,
+                                    modifier = Modifier.basicMarquee(),
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -270,6 +272,7 @@ fun NowPlayingScreen(
                                 Spacer(modifier = Modifier.height(Spacing.xs))
                                 Text(
                                     text = "${track.artist} — ${track.album}",
+                                    modifier = Modifier.basicMarquee(),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
