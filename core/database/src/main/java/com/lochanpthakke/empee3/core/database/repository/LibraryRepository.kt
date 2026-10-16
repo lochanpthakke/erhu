@@ -50,6 +50,12 @@ interface LibraryRepository {
 
     suspend fun updateFilePath(songId: Long, newPath: String): AppResult<Unit>
 
+    /** The songs with these ids, in the order of [ids]; missing ones are left out. */
+    suspend fun getSongsByIds(ids: List<Long>): List<Song>
+
+    /** Every song's discovery text (title, artist, album, genres, year, BPM, lyrics excerpt); emits on changes. */
+    fun observeSongTags(): Flow<List<com.lochanpthakke.empee3.core.model.SongTags>>
+
     /** Stores a BPM just written to the song's file, so the library shows it before the rescan. */
     suspend fun updateSongBpm(
         songId: Long,

@@ -69,7 +69,7 @@ private const val MAX_STRETCH = 0.12f
 private const val SQUASH_RATIO = 0.4f
 
 internal fun getOrderedSections(start: LibrarySection): List<LibrarySection> {
-    val defaultList = listOf(LibrarySection.TRACKS, LibrarySection.ALBUMS, LibrarySection.LIBRARY)
+    val defaultList = listOf(LibrarySection.TRACKS, LibrarySection.ALBUMS, LibrarySection.LIBRARY, LibrarySection.VYBE)
     if (start !in defaultList) return defaultList
     return listOf(start) + defaultList.filter { it != start }
 }

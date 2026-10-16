@@ -35,13 +35,13 @@ class VybeQueryRouterTest {
 
     @Test
     fun albumAndTitleQueries_matchWholeNames() {
-        assertEquals(VybeRoute.Named(EntityKind.ALBUM, "igor", listOf(1L, 2L), true), route("albums like IGOR"))
-        assertEquals(VybeRoute.Named(EntityKind.TITLE, "runaway", listOf(4L), true), route("songs like Runaway"))
+        assertEquals(VybeRoute.Named(EntityKind.ALBUM, "IGOR", listOf(1L, 2L), true), route("albums like IGOR"))
+        assertEquals(VybeRoute.Named(EntityKind.TITLE, "Runaway", listOf(4L), true), route("songs like Runaway"))
     }
 
     @Test
     fun aNameNotInTheLibrary_isReportedUnknown_notGuessed() {
-        assertEquals(VybeRoute.UnknownName("blonde", "songs like Blonde"), route("songs like Blonde"))
+        assertEquals(VybeRoute.UnknownName("Blonde", "songs like Blonde"), route("songs like Blonde"))
     }
 
     @Test

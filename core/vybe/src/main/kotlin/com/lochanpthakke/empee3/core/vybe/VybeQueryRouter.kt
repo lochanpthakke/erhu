@@ -56,10 +56,24 @@ object VybeQueryRouter {
         query: String,
         songs: List<SongText>,
     ): VybeRoute {
-        val text = query.trim().lowercase()
+        val original = query.trim()
+        val text = original.lowercase()
         val (name, wantsSimilar) =
-            PATTERNS.firstNotNullOfOrNull { (regex, similar) -> regex.find(text)?.let { it.groupValues[1].trim() to similar } }
-                ?: return VybeRoute.Describe(query.trim())
+            PATTERNS.firstNotNullOfOrNull { (regex, similar) ->
+                regex.find(text)?.let { match ->
+                    // The name as the user typed it ("Drake", not "drake"), when lower-casing kept the length.
+                    val range = match.groups[1]!!.range
+                    val typed =
+                        if (original.length ==
+                            text.length
+                        ) {
+                            original.substring(range.first, range.last + 1)
+                        } else {
+                            match.groupValues[1]
+                        }
+                    typed.trim() to similar
+                }
+            } ?: return VybeRoute.Describe(original)
         val words = words(name)
         if (words.joinToString("").length < MIN_NAME_CHARS) return VybeRoute.UnknownName(name, query.trim())
 

@@ -32,6 +32,9 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:playback"))
     implementation(project(":core:sound"))
+    // VYBE: on-device discovery (EmbeddingGemma through MediaPipe; the model file is supplied by the user).
+    implementation(project(":core:vybe"))
+    implementation(project(":core:vybe-mediapipe"))
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)

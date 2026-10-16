@@ -132,6 +132,15 @@ interface SongDao {
         bpm: Int? = null,
     ): Int
 
+    /** Every song's discovery text (VYBE): tags only, lyrics cut to an excerpt. Emits again on any change. */
+    @Query(
+        """
+        SELECT id, title, artist, album, genre, year, bpm, substr(lyrics, 1, $LYRICS_EXCERPT_CHARS) AS lyricsExcerpt
+        FROM songs ORDER BY id
+        """,
+    )
+    fun observeSongTags(): Flow<List<SongTagsRow>>
+
     /** The library's copy of a BPM just written to the file (the rescan reads it again). */
     @Query("UPDATE songs SET bpm = :bpm WHERE id = :id")
     suspend fun updateBpm(
@@ -146,3 +155,18 @@ interface SongDao {
     @Query("DELETE FROM songs")
     suspend fun deleteAll(): Int
 }
+
+/** Lyrics characters read for discovery: an excerpt is all VYBE uses. */
+const val LYRICS_EXCERPT_CHARS = 600
+
+/** A row of [SongDao.observeSongTags]. */
+data class SongTagsRow(
+    val id: Long,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val genre: String?,
+    val year: Int,
+    val bpm: Int?,
+    val lyricsExcerpt: String?,
+)

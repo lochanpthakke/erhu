@@ -170,6 +170,28 @@ class LibraryRepositoryImpl
                 songDao.updateFilePath(songId, newPath)
             }
 
+        override suspend fun getSongsByIds(ids: List<Long>): List<Song> {
+            // Chunked: SQLite limits bound variables (999 before API 30).
+            val byId = ids.distinct().chunked(SQL_CHUNK).flatMap { songDao.getSongsByIds(it) }.associateBy { it.id }
+            return ids.mapNotNull { byId[it]?.toDomainModel() }
+        }
+
+        override fun observeSongTags(): Flow<List<com.lochanpthakke.empee3.core.model.SongTags>> =
+            songDao.observeSongTags().map { rows ->
+                rows.map {
+                    com.lochanpthakke.empee3.core.model.SongTags(
+                        songId = it.id,
+                        title = it.title,
+                        artist = it.artist,
+                        album = it.album,
+                        genre = it.genre,
+                        year = it.year,
+                        bpm = it.bpm,
+                        lyricsExcerpt = it.lyricsExcerpt,
+                    )
+                }
+            }
+
         override suspend fun updateSongBpm(
             songId: Long,
             bpm: Int?,
@@ -189,3 +211,5 @@ class LibraryRepositoryImpl
             private const val DEFAULT_PAGE_SIZE = 30
         }
     }
+
+private const val SQL_CHUNK = 900

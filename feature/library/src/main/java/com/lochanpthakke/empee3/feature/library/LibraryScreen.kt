@@ -300,6 +300,12 @@ fun LibraryScreen(
                                     bottomInset = scroll.contentBottom,
                                 )
                             }
+                        LibrarySection.VYBE ->
+                            com.lochanpthakke.empee3.feature.library.vybe.VybeScreen(
+                                topInset = scroll.contentTop,
+                                bottomInset = scroll.contentBottom,
+                                currentSongId = currentSongId,
+                            )
                     }
                 }
             }
