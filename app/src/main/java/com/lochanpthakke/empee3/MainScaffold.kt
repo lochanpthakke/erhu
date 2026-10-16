@@ -50,12 +50,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -191,23 +191,27 @@ fun MainScaffold() {
     // System Default follows the device's light/dark setting (re-read on configuration changes).
     val isSystemDark = isSystemInDarkTheme()
 
-    val playbackState by playbackRepository.collectStablePlaybackState()
-    val currentSong = playbackState.currentSong
+    // The shell only needs song presence. Keep the current song read inside the
+    // artwork observer/player, so a swipe does not recompose the whole drawer,
+    // navigation host and bottom chrome before the new track is drawn.
+    val playbackState = playbackRepository.collectStablePlaybackState()
+    val hasCurrentSong by remember(playbackState) { derivedStateOf { playbackState.value.currentSong != null } }
     val context = LocalContext.current
 
     // The artwork of the page in focus (album / artist) is not read here during composition:
     // only the artwork-colour themes watch it, so a page reporting its artwork does not
     // recompose the shell (and the screens under it) for any other theme.
     val focusedArtworkUri = remember { mutableStateOf<String?>(null) }
-    val latestSong by rememberUpdatedState(currentSong)
 
     val dynamicTheme by produceState<ThemeManifest>(
         initialValue = BuiltInThemes.DOMINANT_COLOR,
         key1 = selectedThemeId,
     ) {
         if (selectedThemeId == BuiltInThemes.DOMINANT_COLOR_ID || selectedThemeId == BuiltInThemes.GRADIENT_UI_ID) {
-            snapshotFlow { focusedArtworkUri.value ?: latestSong?.artworkUri ?: latestSong?.uri }
-                .distinctUntilChanged()
+            snapshotFlow {
+                val song = playbackState.value.currentSong
+                focusedArtworkUri.value ?: song?.artworkUri ?: song?.uri
+            }.distinctUntilChanged()
                 .collectLatest { uri ->
                     val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 48) }
                     val isGradient = selectedThemeId == BuiltInThemes.GRADIENT_UI_ID
@@ -409,7 +413,7 @@ fun MainScaffold() {
                                                     onSearch = { isLibrarySearchActive = true },
                                                     onExpand = { scope.launch { libraryChrome.expand() } },
                                                     searching = isLibrarySearchActive,
-                                                    hasCurrentSong = currentSong != null,
+                                                    hasCurrentSong = hasCurrentSong,
                                                     onShufflePlayLibrary = { libraryViewModel.shufflePlayLibrary() },
                                                     miniPlayer = { compact ->
                                                         // The collapsed form of the player; the expanding player grows out of it.
@@ -592,7 +596,7 @@ fun MainScaffold() {
                                 val playerState by playbackRepository.collectStablePlaybackState()
                                 ExpandingPlayer(state = player, song = playerState.currentSong) {
                                     val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
-                                    val lyrics by libraryViewModel.currentSongLyrics.collectAsState()
+                                    val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
                                     NowPlayingScreen(
                                         playbackRepository = playbackRepository,
                                         isFavorite = isFavorite,

@@ -84,6 +84,7 @@ fun ExpandingPlayer(
     // this, Back on a detail page popped the page behind the open player.
     key(state.isOpen) { BackHandler(enabled = state.isOpen) { scope.launch { state.collapse() } } }
     val visible by remember(state) { derivedStateOf { state.progress.value > 0f } }
+    val settledOpen by remember(state) { derivedStateOf { state.isSettledOpen } }
     // Now Playing is composed ahead of the first open (shortly after there is a song, not
     // during app start) and stays composed while collapsed, only unplaced: opening then
     // moves content that already exists, instead of building the whole screen (and
@@ -139,7 +140,9 @@ fun ExpandingPlayer(
                 CompositionLocalProvider(LocalBottomChromeHeight provides navigationBar, content = content)
             }
         }
-        if (song != null) TravellingArtwork(state, song)
+        // Once open, the carousel owns the artwork. Its moving bounds must not
+        // recompose an invisible travelling copy on every horizontal swipe frame.
+        if (song != null && !settledOpen) TravellingArtwork(state, song)
     }
 }
 

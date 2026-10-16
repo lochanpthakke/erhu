@@ -128,6 +128,9 @@ fun MiniPlayer(
                     shuffle = playbackState.shuffleModeEnabled,
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart,
+                    // The expanded surface fully covers this representation. Keep its
+                    // content current without running a second, invisible page transition.
+                    animate = transition?.isSettledOpen != true,
                 ) { track ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SongArtwork(

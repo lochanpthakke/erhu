@@ -7,7 +7,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
-import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
 import com.google.common.util.concurrent.MoreExecutors
@@ -20,8 +19,8 @@ import java.util.concurrent.Executors
 /**
  * Artwork for the media notification / lock screen.
  *
- * Uses [ArtworkLoader]'s in-memory cache for instant 0ms hits when skipping tracks.
- * Stale background requests from rapid multi-skips are automatically canceled.
+ * Uses [ArtworkLoader]'s size-keyed cache on a worker. Notification artwork must
+ * not reuse an arbitrary hero-sized bitmap and parcel it during a swipe callback.
  */
 @UnstableApi
 internal class SongArtworkBitmapLoader(
@@ -44,19 +43,29 @@ internal class SongArtworkBitmapLoader(
         val songUri = metadata.extras?.songUriFromExtras() ?: return super.loadBitmapFromMetadata(metadata)
         val albumArtUri = metadata.artworkUri?.toString()
 
-        // Fast path: instant 0ms memory cache hit for single atomic notification update
-        ArtworkLoader.peek(songUri, albumArtUri)?.let { cachedBitmap ->
-            return Futures.immediateFuture(cachedBitmap)
-        }
-
-        // Slow path: cancel stale in-flight request from previous rapid skips
+        // Resolve the notification-sized cache entry and any resizing on the
+        // worker rather than returning an arbitrary UI bitmap inline.
         activeTask?.cancel(true)
 
         val task =
             executor.submit<Bitmap> {
-                runBlocking {
-                    ArtworkLoader.load(context, songUri, albumArtUri, ARTWORK_SIZE_PX)
-                } ?: throw IOException("No artwork for $songUri")
+                val bitmap =
+                    runBlocking {
+                        ArtworkLoader.load(context, songUri, albumArtUri, ARTWORK_SIZE_PX)
+                    } ?: throw IOException("No artwork for $songUri")
+                // Embedded-image sampling can return more than the requested size.
+                val largest = maxOf(bitmap.width, bitmap.height)
+                if (largest > ARTWORK_SIZE_PX) {
+                    val scale = ARTWORK_SIZE_PX.toFloat() / largest
+                    Bitmap.createScaledBitmap(
+                        bitmap,
+                        (bitmap.width * scale).toInt().coerceAtLeast(1),
+                        (bitmap.height * scale).toInt().coerceAtLeast(1),
+                        true,
+                    )
+                } else {
+                    bitmap
+                }
             }
         activeTask = task
         return task

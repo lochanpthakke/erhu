@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.feature.library
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -27,8 +28,13 @@ fun AnimatedTrack(
     shuffle: Boolean,
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
+    animate: Boolean = true,
     content: @Composable (Song) -> Unit,
 ) {
+    if (!animate) {
+        Box(modifier = modifier, contentAlignment = contentAlignment) { content(song) }
+        return
+    }
     AnimatedContent(
         targetState = song to index,
         contentKey = { it.first.id },

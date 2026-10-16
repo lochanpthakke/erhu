@@ -14,10 +14,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.dp
@@ -44,9 +47,9 @@ private const val TRACK_CHANGE_TIMEOUT_MS = 1_000L
 
 /**
  * Now Playing's tracks as a strip of pages: previous | current | next, one
- * [page] apart. The strip's position is [position] = [offset] + [base]: the
- * strip rests where [offset] == -[base]. While a finger is down the offset is
- * the finger (direct manipulation); the neighbours are already composed, so
+ * [page] apart. While settling, [position] = [offset] + [base]; at rest it is
+ * zero. Pointer movement writes [position]
+ * synchronously; the neighbours are already composed, so
  * their artwork is loaded before they come into view.
  *
  * A committed swipe asks the player to skip AT RELEASE and settles the strip
@@ -64,28 +67,26 @@ internal class TrackCarouselState(
     val offset = Animatable(0f)
 
     /** Page shifts applied when the current track changed (see the class doc). */
-    private var base by mutableFloatStateOf(0f)
+    private var base = 0f
 
     /** Distance between two pages (the player's width), in px. */
     var page by mutableFloatStateOf(0f)
 
     /** Where the strip is drawn, relative to the current page at rest (0). Read in the draw phase. */
-    val position: Float get() = offset.value + base
+    var position by mutableFloatStateOf(0f)
+        private set
 
     private var dragging = false
-
-    /** Where the finger has put the strip (relative, like [position]): updated per pointer event, so no movement is lost. */
-    private var dragPosition = 0f
 
     /** Committed swipes whose track change has not arrived yet (+ = next, - = previous). */
     private var pending = 0
     private var settle: Job? = null
+    private var settleTarget = 0f
     private var watchdog: Job? = null
 
     internal fun startDrag() {
         dragging = true
         settle?.cancel()
-        dragPosition = position
     }
 
     internal fun dragBy(
@@ -93,10 +94,8 @@ internal class TrackCarouselState(
         canGoNext: Boolean,
         canGoPrevious: Boolean,
     ) {
-        val towardsMissing = (dragPosition + delta < 0f && !canGoNext) || (dragPosition + delta > 0f && !canGoPrevious)
-        dragPosition += if (towardsMissing) delta * EDGE_RESISTANCE else delta
-        val target = dragPosition - base
-        scope.launch { offset.snapTo(target) }
+        val towardsMissing = (position + delta < 0f && !canGoNext) || (position + delta > 0f && !canGoPrevious)
+        position += if (towardsMissing) delta * EDGE_RESISTANCE else delta
     }
 
     /** Ends a drag: [direction] +1 = skip to next, -1 = previous, 0 = spring back. */
@@ -132,7 +131,10 @@ internal class TrackCarouselState(
         skip: (Int) -> Unit,
     ) {
         pending += direction
-        settleAt(-direction * page, velocity)
+        // Opposite commands can cancel before a new state is composed. Keep
+        // the visual target on the net requested neighbour, never beyond the
+        // three pages we actually have ready to display.
+        settleAt(-pending.coerceIn(-1, 1) * page, velocity)
         armWatchdog()
         skip(direction)
     }
@@ -145,18 +147,25 @@ internal class TrackCarouselState(
     internal fun onTrackChanged(direction: Int) {
         val shift =
             if (pending != 0) {
-                sign(pending.toFloat()).toInt().also { pending -= it }
+                sign(pending.toFloat()).toInt()
             } else {
                 direction
             }
         base += shift * page
-        if (dragging) dragPosition += shift * page
+        // This handoff runs during composition. Do not subscribe that composition
+        // to position, which otherwise changes on every drag/animation frame.
+        Snapshot.withoutReadObservation { position += shift * page }
+        // StateFlow/composition can coalesce several skips into one latest
+        // state. Do not leave an unobservable intermediate skip pending.
+        pending = 0
     }
 
     /** After a track change has been composed: settle on the (new) current page unless a finger holds the strip. */
     internal fun settleAfterTrackChange() {
         if (pending == 0) watchdog?.cancel()
-        if (!dragging) settleAt(0f, offset.velocity)
+        if (!dragging && (settle?.isActive != true || settleTarget != -base)) {
+            settleAt(0f, offset.velocity)
+        }
     }
 
     /** Animates [position] to [target] (relative to the current page). */
@@ -166,7 +175,15 @@ internal class TrackCarouselState(
     ) {
         settle?.cancel()
         val absolute = target - base
-        settle = scope.launch { offset.animateTo(absolute, Motion.trackSettle(), initialVelocity = velocity) }
+        val start = position - base
+        settleTarget = absolute
+        settle =
+            scope.launch {
+                offset.snapTo(start)
+                offset.animateTo(absolute, Motion.trackSettle(), initialVelocity = velocity) {
+                    position = value + base
+                }
+            }
     }
 
     private fun armWatchdog() {
@@ -285,23 +302,20 @@ internal fun Modifier.trackCarouselSwipe(
         val fling = SKIP_FLING_VELOCITY.toPx()
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
-            var slop = Offset.Zero
-            val start =
-                awaitTouchSlopOrCancellation(down.id) { change, over ->
-                    if (abs(over.x) > abs(over.y)) {
-                        change.consume()
-                        slop = over
-                    }
-                } ?: return@awaitEachGesture
+            val (start, slop) = awaitHorizontalSwipeStart(down) ?: return@awaitEachGesture
             if (slop == Offset.Zero) return@awaitEachGesture
             val tracker = VelocityTracker()
+            tracker.addPosition(down.uptimeMillis, down.position)
+            start.historical.forEach { tracker.addPosition(it.uptimeMillis, it.position) }
             tracker.addPosition(start.uptimeMillis, start.position)
             state.startDrag()
             var travelled = slop.x
             state.dragBy(slop.x, canGoNext(), canGoPrevious())
-            trackDrag(start.id, tracker) { delta ->
-                travelled += delta.x
-                state.dragBy(delta.x, canGoNext(), canGoPrevious())
+            if (start.pressed) {
+                trackDrag(start.id, tracker) { delta ->
+                    travelled += delta.x
+                    state.dragBy(delta.x, canGoNext(), canGoPrevious())
+                }
             }
             val velocity = tracker.calculateVelocity().x
             val wanted =
@@ -314,3 +328,38 @@ internal fun Modifier.trackCarouselSwipe(
             state.release(if (allowed) wanted else 0, velocity, skip)
         }
     }
+
+private suspend fun AwaitPointerEventScope.awaitHorizontalSwipeStart(down: PointerInputChange): Pair<PointerInputChange, Offset>? {
+    var slop = Offset.Zero
+    val start =
+        awaitTouchSlopOrCancellation(down.id) { change, over ->
+            if (abs(over.x) > abs(over.y)) {
+                change.consume()
+                slop = over
+            }
+        } ?: currentEvent.changes.firstOrNull { change ->
+            // A busy UI thread can deliver all of a fast swipe in its up event.
+            // Foundation cancels slop detection on up before inspecting movement.
+            val completed = completedHorizontalSwipe(down, change, viewConfiguration.touchSlop)
+            if (completed != null && currentEvent.changes.none { it.pressed }) {
+                slop = completed
+                change.consume()
+                true
+            } else {
+                false
+            }
+        }
+    return start?.let { it to slop }
+}
+
+/** Movement beyond slop when recognition first sees a completed, unclaimed horizontal swipe. */
+internal fun completedHorizontalSwipe(
+    down: PointerInputChange,
+    up: PointerInputChange,
+    touchSlop: Float,
+): Offset? {
+    if (up.id != down.id || up.pressed || up.isConsumed) return null
+    val travel = up.position - down.position
+    val distance = travel.getDistance()
+    return if (distance > touchSlop && abs(travel.x) > abs(travel.y)) travel * (1f - touchSlop / distance) else null
+}

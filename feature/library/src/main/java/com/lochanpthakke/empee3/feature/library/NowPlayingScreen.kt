@@ -85,7 +85,6 @@ import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
-import com.lochanpthakke.empee3.core.model.Waveform
 import com.lochanpthakke.empee3.core.model.WaveformLoad
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import java.util.Locale
@@ -109,7 +108,7 @@ private val REVEAL_RISE = 24.dp
 fun NowPlayingScreen(
     playbackRepository: PlaybackRepository,
     isFavorite: Boolean,
-    lyrics: SongLyrics?,
+    lyrics: State<SongLyrics?>,
     /** Online lyrics lookup and choice for the lyrics page; null keeps it to the file's lyrics. */
     lyricsActions: LyricsActions?,
     onBackClick: () -> Unit,
@@ -158,9 +157,6 @@ fun NowPlayingScreen(
     var queueSheetPage by remember { mutableStateOf<Int?>(null) }
     var showVisualizer by remember { mutableStateOf(false) }
     var showAudioDetails by remember { mutableStateOf(false) }
-    val waveformLoad by extras.waveform.collectAsState()
-    val bookmarks by extras.bookmarks.collectAsState()
-    val bookmarkPositions = remember(bookmarks) { bookmarks.map { it.positionMs } }
     val context = LocalContext.current
 
     // The backdrop sits behind the whole scaffold, so it also fills the area
@@ -291,8 +287,7 @@ fun NowPlayingScreen(
                             PlaybackProgress(
                                 position = position,
                                 totalDurationMs = totalDurationMs,
-                                waveform = (waveformLoad as? WaveformLoad.Ready)?.waveform,
-                                bookmarkPositions = bookmarkPositions,
+                                extras = extras,
                                 loop = playbackState.abLoop,
                                 queueLabel =
                                     if (playbackState.queue.size > 1) {
@@ -523,7 +518,7 @@ fun NowPlayingScreen(
         QueueSheet(
             playbackState = playbackState,
             playbackRepository = playbackRepository,
-            lyrics = lyrics,
+            lyrics = lyrics.value,
             position = position,
             isPlaying = isPlaying,
             onSaveQueueAsPlaylist = onSaveQueueAsPlaylist,
@@ -544,13 +539,17 @@ fun NowPlayingScreen(
 private fun PlaybackProgress(
     position: State<Long>,
     totalDurationMs: Long,
-    waveform: Waveform?,
-    bookmarkPositions: List<Long>,
+    extras: PlayerExtrasViewModel,
     loop: AbLoopState?,
     queueLabel: String?,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Track changes load these independently. Only the progress area needs to
+    // recompose when they arrive; the artwork/gesture region stays undisturbed.
+    val waveformLoad by extras.waveform.collectAsState()
+    val bookmarks by extras.bookmarks.collectAsState()
+    val bookmarkPositions = remember(bookmarks) { bookmarks.map { it.positionMs } }
     var previewMs by remember { mutableStateOf<Long?>(null) }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -569,7 +568,7 @@ private fun PlaybackProgress(
             Text(text = formatMs(totalDurationMs), style = TextStyles.metadata)
         }
         WaveformSeekBar(
-            waveform = waveform,
+            waveform = (waveformLoad as? WaveformLoad.Ready)?.waveform,
             position = position,
             previewPositionMs = previewMs,
             durationMs = totalDurationMs,
