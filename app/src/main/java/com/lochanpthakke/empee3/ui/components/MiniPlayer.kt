@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.ui.components
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -147,6 +148,7 @@ fun MiniPlayer(
                         Column {
                             Text(
                                 text = track.title,
+                                modifier = Modifier.basicMarquee(),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -155,6 +157,7 @@ fun MiniPlayer(
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = track.artist,
+                                modifier = Modifier.basicMarquee(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,

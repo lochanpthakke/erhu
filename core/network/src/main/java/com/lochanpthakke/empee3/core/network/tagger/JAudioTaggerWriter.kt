@@ -94,14 +94,22 @@ class JAudioTaggerWriter
             request.title?.let { tag.setField(FieldKey.TITLE, it) }
             request.artist?.let { tag.setField(FieldKey.ARTIST, it) }
             request.album?.let { tag.setField(FieldKey.ALBUM, it) }
-            yearTagValue(request)?.let { value ->
-                // Without removing the old value first, ID3v2.3 keeps the old TYER: writing
-                // "2010-11-19" over "1970" read back as "1970-11-19" (jaudiotagger 3.0.1).
+            if (request.clearYear) {
                 tag.deleteField(FieldKey.YEAR)
-                tag.setField(FieldKey.YEAR, value)
+            } else {
+                yearTagValue(request)?.let { value ->
+                    // Without removing the old value first, ID3v2.3 keeps the old TYER: writing
+                    // "2010-11-19" over "1970" read back as "1970-11-19" (jaudiotagger 3.0.1).
+                    tag.deleteField(FieldKey.YEAR)
+                    tag.setField(FieldKey.YEAR, value)
+                }
             }
-            // Several genres are kept as separate values where the format allows it (see writeGenres).
-            requestedGenres(request)?.let { tag.writeGenres(it) }
+            if (request.clearGenre) {
+                tag.deleteField(FieldKey.GENRE)
+            } else {
+                // Several genres are kept as separate values where the format allows it (see writeGenres).
+                requestedGenres(request)?.let { tag.writeGenres(it) }
+            }
             request.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
             request.bpm?.let { tag.setField(FieldKey.BPM, it.toString()) }
             request.lyrics?.let { tag.setField(FieldKey.LYRICS, it) }
@@ -138,9 +146,16 @@ class JAudioTaggerWriter
                 if (actual != value) throw CannotWriteException("Verification failed for $key: '$actual'")
             }
             // Every genre must come back, in order: a format that drops or merges some isn't trusted.
-            requestedGenres(request)?.let { genres ->
-                val actual = tag.readGenres()
-                if (actual != genres) throw CannotWriteException("Verification failed for GENRE: wrote $genres, file reads $actual")
+            if (request.clearGenre) {
+                val actualGenre = tag.getFirst(FieldKey.GENRE)
+                if (actualGenre.isNotBlank()) {
+                    throw CannotWriteException("Verification failed for GENRE deletion: expected empty, found '$actualGenre'")
+                }
+            } else {
+                requestedGenres(request)?.let { genres ->
+                    val actual = tag.readGenres()
+                    if (actual != genres) throw CannotWriteException("Verification failed for GENRE: wrote $genres, file reads $actual")
+                }
             }
             request.bpm?.let { bpm ->
                 val stored = tag.getFirst(FieldKey.BPM)
@@ -148,9 +163,16 @@ class JAudioTaggerWriter
             }
             // The date must read back exactly: a format that changes it (ID3v2.3 turns "2010-11" into
             // "2010-11-01") would store a date nobody gave, so the write is refused instead.
-            yearTagValue(request)?.let { expected ->
-                val actual = tag.getFirst(FieldKey.YEAR)
-                if (actual != expected) throw CannotWriteException("Verification failed for YEAR: wrote '$expected', file reads '$actual'")
+            if (request.clearYear) {
+                val actualYear = tag.getFirst(FieldKey.YEAR)
+                if (actualYear.isNotBlank()) {
+                    throw CannotWriteException("Verification failed for YEAR deletion: expected empty, found '$actualYear'")
+                }
+            } else {
+                yearTagValue(request)?.let { expected ->
+                    val actual = tag.getFirst(FieldKey.YEAR)
+                    if (actual != expected) throw CannotWriteException("Verification failed for YEAR: wrote '$expected', file reads '$actual'")
+                }
             }
         }
 

@@ -44,6 +44,8 @@ class MetadataRepositoryImpl
         private val deezerProvider: DeezerProvider,
         private val lastFmProvider: LastFmProvider,
         private val lrclibProvider: LrclibProvider,
+        private val iTunesProvider: com.lochanpthakke.empee3.core.network.provider.ITunesProvider,
+        private val wikipediaProvider: com.lochanpthakke.empee3.core.network.provider.WikipediaProvider,
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
@@ -55,7 +57,7 @@ class MetadataRepositoryImpl
         private val retryPolicy = RetryPolicy()
 
         private val providers: List<MetadataProvider> by lazy {
-            listOf(musicBrainzProvider, deezerProvider, lastFmProvider)
+            listOf(iTunesProvider, musicBrainzProvider, deezerProvider, lastFmProvider)
         }
 
         override fun cleanFilename(
@@ -154,6 +156,8 @@ class MetadataRepositoryImpl
         ): AppResult<List<String>> =
             appResultOf {
                 withContext(Dispatchers.IO) {
+                    val iTunesList = iTunesProvider.fetchAlbumArtList(albumTitle, artist)
+                    val musicBrainzList = musicBrainzProvider.fetchReleaseGroupArtList(albumTitle, artist)
                     val deezerList =
                         if (MetadataSources.matches(deezerProvider.providerName, sourceProvider)) {
                             deezerProvider.fetchAlbumArtList(albumTitle, artist)
@@ -166,7 +170,26 @@ class MetadataRepositoryImpl
                             .getOrDefault(emptyList())
                     val candidateUrls = trackCandidates.mapNotNull { it.coverArtUrl }.filter { it.isNotBlank() }
 
-                    (deezerList + candidateUrls).distinct()
+                    (iTunesList + musicBrainzList + deezerList + candidateUrls).distinct()
+                }
+            }
+
+        override suspend fun fetchArtistArtworkCandidates(
+            artistName: String,
+            sourceProvider: String,
+        ): AppResult<List<String>> =
+            appResultOf {
+                withContext(Dispatchers.IO) {
+                    val urls = mutableListOf<String>()
+                    val deezerPortraits = deezerProvider.fetchArtistPortraitList(artistName)
+                    urls.addAll(deezerPortraits)
+
+                    val wikiPortrait = wikipediaProvider.fetchArtistPortrait(artistName)
+                    if (!wikiPortrait.isNullOrBlank()) {
+                        urls.add(wikiPortrait)
+                    }
+
+                    urls.distinct()
                 }
             }
 

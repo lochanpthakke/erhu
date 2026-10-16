@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
@@ -24,13 +27,20 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -447,7 +457,88 @@ private fun MetadataSettingsSubPage(
             }
         }
 
+        val activeWatermarks by viewModel.activeWatermarks.collectAsState()
+
+        WatermarksBlocklistSection(
+            activeWatermarks = activeWatermarks,
+            onAddWatermark = viewModel::addCustomWatermark,
+            onRemoveWatermark = viewModel::removeWatermark,
+        )
+
         FieldsToFixSection(selectedFields = selectedFields, onToggle = viewModel::toggleField)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WatermarksBlocklistSection(
+    activeWatermarks: List<String>,
+    onAddWatermark: (String) -> Unit,
+    onRemoveWatermark: (String) -> Unit,
+) {
+    var textInput by remember { mutableStateOf("") }
+    SettingsSection(
+        title = "Watermarks & Blocklist",
+        footer = "Tokens in this list are automatically stripped from filenames and metadata during Auto Fix Tags search.",
+    ) {
+        SettingsGroup {
+            row {
+                Column(modifier = Modifier.fillMaxWidth().padding(Spacing.md)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedTextField(
+                            value = textInput,
+                            onValueChange = { textInput = it },
+                            label = { Text("Add custom watermark token") },
+                            placeholder = { Text("e.g. pagalworld, djmaza") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                        )
+                        Button(
+                            onClick = {
+                                onAddWatermark(textInput)
+                                textInput = ""
+                            },
+                        ) {
+                            Text("Add")
+                        }
+                    }
+
+                    if (activeWatermarks.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        Text(
+                            text = "Stored Watermarks (${activeWatermarks.size}):",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        ) {
+                            activeWatermarks.forEach { token ->
+                                InputChip(
+                                    selected = true,
+                                    onClick = { onRemoveWatermark(token) },
+                                    label = { Text(token, style = MaterialTheme.typography.bodySmall) },
+                                    trailingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove watermark",
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

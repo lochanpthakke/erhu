@@ -21,10 +21,15 @@ fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption>
             MetadataSources.ALL,
             "All providers",
             if (lastFmConfigured) {
-                "MusicBrainz, Deezer and Last.fm together; the best-scoring match is used"
+                "iTunes, MusicBrainz, Deezer and Last.fm together; the best-scoring match is used"
             } else {
-                "MusicBrainz and Deezer together (Last.fm has no API key); the best-scoring match is used"
+                "iTunes, MusicBrainz and Deezer together (Last.fm has no API key); the best-scoring match is used"
             },
+        ),
+        MetadataSourceOption(
+            MetadataSources.ITUNES,
+            "iTunes / Apple Music",
+            "Title, artist, album, release date, genre, track/disc number, and 1000×1000 px cover artwork from Apple Music catalog",
         ),
         MetadataSourceOption(
             MetadataSources.MUSICBRAINZ,
@@ -47,7 +52,14 @@ fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption>
         ),
     )
 
-private val OFFERED_KEYS = listOf(MetadataSources.ALL, MetadataSources.MUSICBRAINZ, MetadataSources.DEEZER, MetadataSources.LAST_FM)
+private val OFFERED_KEYS =
+    listOf(
+        MetadataSources.ALL,
+        MetadataSources.ITUNES,
+        MetadataSources.MUSICBRAINZ,
+        MetadataSources.DEEZER,
+        MetadataSources.LAST_FM,
+    )
 
 /** A stored source back to an offered one; anything unknown means all providers. */
 fun offeredMetadataSource(stored: String?): String =

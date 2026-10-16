@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -165,7 +166,8 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Library", Icons.AutoMirrored.Filled.LibraryBooks, Library),
         DrawerDestination("Sound Capsule", Icons.Default.Insights, SoundCapsule),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
-        DrawerDestination("Metadata Editor", Icons.Default.EditNote, MetadataEditor),
+        DrawerDestination("Auto Fix Tags", Icons.Default.EditNote, MetadataEditor),
+        DrawerDestination("Artwork Fetcher", Icons.Default.ImageSearch, ArtworkManager),
         DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
     )
@@ -407,6 +409,8 @@ fun MainScaffold() {
                                                     onSearch = { isLibrarySearchActive = true },
                                                     onExpand = { scope.launch { libraryChrome.expand() } },
                                                     searching = isLibrarySearchActive,
+                                                    hasCurrentSong = currentSong != null,
+                                                    onShufflePlayLibrary = { libraryViewModel.shufflePlayLibrary() },
                                                     miniPlayer = { compact ->
                                                         // The collapsed form of the player; the expanding player grows out of it.
                                                         MiniPlayer(

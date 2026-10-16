@@ -131,6 +131,6 @@ class AndroidNetworkStatusMonitor
             }
 
         private companion object {
-            const val DNS_TIMEOUT_MS = 4_000L
+            const val DNS_TIMEOUT_MS = 8_000L
         }
     }

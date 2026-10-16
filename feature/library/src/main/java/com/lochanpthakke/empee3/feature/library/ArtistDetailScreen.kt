@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,15 +21,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -124,8 +131,72 @@ fun ArtistDetailScreen(
             },
         )
 
+    var menuExpanded by remember { mutableStateOf(false) }
+
     AppScaffold(
-        topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
+        topBar = {
+            OverlayHeader(
+                navigation = TopBarNavigation.Detail(onBack),
+                actions = {
+                    val artist = detail?.artist
+                    val allSongs = detail?.let { it.primarySongs.ifEmpty { it.featuredSongs } }.orEmpty()
+                    if (artist != null) {
+                        Box {
+                            IconButton(
+                                onClick = { menuExpanded = true },
+                                colors =
+                                    IconButtonDefaults.iconButtonColors(
+                                        containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
+                            ) {
+                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Artist options")
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Play Next") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        allSongs.asReversed().forEach { song -> viewModel.playNext(song) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Add to Queue") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        allSongs.forEach { song -> viewModel.addToQueue(song) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Auto Fix Tags") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.enqueueArtistForRepair(artist)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Fetch Photo Online") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.enqueueArtistForArtwork(artist)
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Set Custom Photo (Local File)") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        showImageDialog = true
+                                    },
+                                )
+                            }
+                        }
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) { innerPadding ->

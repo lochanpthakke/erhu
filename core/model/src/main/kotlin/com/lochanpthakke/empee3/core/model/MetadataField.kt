@@ -16,7 +16,7 @@ enum class MetadataField(
     YEAR("Year"),
     GENRE("Genre"),
     BPM("BPM"),
-    ARTWORK("Artwork"),
+    ARTWORK("Artwork", "Artwork is managed separately via Artwork Fetcher."),
     FILENAME("Filename Only"),
     ;
 

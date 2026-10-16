@@ -50,6 +50,8 @@ fun LibraryBottomChrome(
     miniPlayer: @Composable (compact: () -> Float) -> Unit,
     modifier: Modifier = Modifier,
     defaultStartSection: LibrarySection = LibrarySection.TRACKS,
+    hasCurrentSong: Boolean = true,
+    onShufflePlayLibrary: () -> Unit = {},
 ) {
     val compact = { if (showNavigation) state.fraction else 0f }
     val stepAside = Modifier.stepAsideForPlayer(LocalPlayerTransition.current)
@@ -72,6 +74,8 @@ fun LibraryBottomChrome(
                         searching = searching,
                         compact = compact,
                         onExpand = onExpand,
+                        hasCurrentSong = hasCurrentSong,
+                        onShufflePlayLibrary = onShufflePlayLibrary,
                     )
                 }
             }

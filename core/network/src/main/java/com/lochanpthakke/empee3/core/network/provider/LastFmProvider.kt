@@ -68,8 +68,7 @@ class LastFmProvider
 private const val LAST_FM_PLACEHOLDER_IMAGE = "2a96cbd8b46e442fc41c2b86b821562f"
 
 /**
- * Last.fm's API key. Supplied at build time from local.properties / LASTFM_API_KEY, never from
- * source: the key that used to be in the code is rejected by Last.fm (error 10, checked 2026-10-14).
+ * Last.fm's API key. Supplied at build time from local.properties / LASTFM_API_KEY.
  */
 @Singleton
 class LastFmCredentials(

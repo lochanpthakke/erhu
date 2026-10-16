@@ -41,6 +41,7 @@ object NetworkModule {
             }
         return OkHttpClient
             .Builder()
+            .dns(ResilientDns())
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .addInterceptor(logging)
@@ -142,9 +143,70 @@ object NetworkModule {
             .build()
             .create(com.lochanpthakke.empee3.core.network.api.GitHubUpdateApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideITunesApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.ITunesApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://itunes.apple.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.ITunesApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWikipediaApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.WikipediaApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://en.wikipedia.org/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.WikipediaApi::class.java)
+    }
 }
 
 private val SECRET_QUERY = Regex("""(?i)\b(api_key|apikey|token|secret)=[^&\s]*""")
 
 /** [message] with the values of key-like query parameters replaced. */
 internal fun redactSecrets(message: String): String = message.replace(SECRET_QUERY) { "${it.groupValues[1]}=<redacted>" }
+
+class ResilientDns : okhttp3.Dns {
+    override fun lookup(hostname: String): List<java.net.InetAddress> {
+        return try {
+            okhttp3.Dns.SYSTEM.lookup(hostname)
+        } catch (e: java.net.UnknownHostException) {
+            val fallbackIps =
+                mapOf(
+                    "musicbrainz.org" to listOf("138.201.225.10", "138.201.225.11"),
+                    "api.deezer.com" to listOf("188.165.234.195"),
+                    "ws.audioscrobbler.com" to listOf("151.101.1.193", "151.101.65.193"),
+                    "lrclib.net" to listOf("172.67.181.189"),
+                )
+            val ips = fallbackIps[hostname.lowercase()]
+            if (!ips.isNullOrEmpty()) {
+                val resolved =
+                    ips.mapNotNull { ip ->
+                        try {
+                            java.net.InetAddress.getByAddress(hostname, java.net.InetAddress.getByName(ip).address)
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                if (resolved.isNotEmpty()) return resolved
+            }
+            throw e
+        }
+    }
+}

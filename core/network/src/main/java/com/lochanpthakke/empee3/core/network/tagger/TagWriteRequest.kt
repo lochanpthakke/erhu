@@ -25,6 +25,8 @@ data class TagWriteRequest(
     val bpm: Int? = null,
     val lyrics: String? = null,
     val artworkBytes: ByteArray? = null,
+    val clearYear: Boolean = false,
+    val clearGenre: Boolean = false,
 ) {
     val hasChanges: Boolean
         get() =
@@ -37,7 +39,9 @@ data class TagWriteRequest(
                 trackNumber != null ||
                 bpm != null ||
                 lyrics != null ||
-                artworkBytes != null
+                artworkBytes != null ||
+                clearYear ||
+                clearGenre
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

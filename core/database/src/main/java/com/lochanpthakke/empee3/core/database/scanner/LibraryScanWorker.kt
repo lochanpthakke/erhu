@@ -13,6 +13,10 @@ import androidx.work.WorkerParameters
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 @HiltWorker
 class LibraryScanWorker
@@ -47,6 +51,7 @@ class LibraryScanWorker
         }
 
         @Suppress("TooGenericExceptionCaught")
+        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
         private suspend fun runScan() {
             mediaStoreScanner.scanLibrary().collect { progress ->
                 val title =
@@ -68,7 +73,14 @@ class LibraryScanWorker
                 }
             }
 
-            tagEnricher.enrichUnenrichedSongs()
+            @OptIn(DelicateCoroutinesApi::class)
+            GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    tagEnricher.enrichUnenrichedSongs()
+                } catch (e: Exception) {
+                    logger.w(TAG, "Tag enrichment background task failed: ${e.message}", e)
+                }
+            }
         }
 
         private fun createForegroundInfo(

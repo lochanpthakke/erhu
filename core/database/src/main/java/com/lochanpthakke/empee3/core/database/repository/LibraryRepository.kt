@@ -62,6 +62,13 @@ interface LibraryRepository {
         bpm: Int?,
     ): AppResult<Unit>
 
+    suspend fun updateSongTags(
+        songId: Long,
+        title: String,
+        artist: String,
+        album: String,
+    ): AppResult<Unit>
+
     /** Emits false when the song is not a favorite or no longer exists. */
     fun observeIsFavorite(songId: Long): Flow<Boolean>
 

@@ -200,6 +200,16 @@ class LibraryRepositoryImpl
                 songDao.updateBpm(songId, bpm)
             }
 
+        override suspend fun updateSongTags(
+            songId: Long,
+            title: String,
+            artist: String,
+            album: String,
+        ): AppResult<Unit> =
+            appResultOf {
+                songDao.updateSongTags(songId, title, artist, album)
+            }
+
         override fun observeIsScanning(): Flow<Boolean> =
             workManager
                 .get()

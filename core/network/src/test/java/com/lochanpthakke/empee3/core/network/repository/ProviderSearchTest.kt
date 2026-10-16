@@ -171,9 +171,9 @@ class ProviderSearchTest {
 
     @Test
     fun preflightHosts_followTheSelection() {
-        assertEquals(listOf("musicbrainz.org", "api.deezer.com"), MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = false))
+        assertEquals(listOf("itunes.apple.com", "musicbrainz.org", "api.deezer.com"), MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = false))
         assertEquals(
-            listOf("musicbrainz.org", "api.deezer.com", "ws.audioscrobbler.com"),
+            listOf("itunes.apple.com", "musicbrainz.org", "api.deezer.com", "ws.audioscrobbler.com"),
             MetadataSources.hostsFor(MetadataSources.ALL, lastFmConfigured = true),
         )
         assertEquals(emptyList<String>(), MetadataSources.hostsFor(MetadataSources.LAST_FM, lastFmConfigured = false))
