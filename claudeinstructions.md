@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-13. Branch `kshitij` at `4485552` (pushed to `origin/kshitij`)._
+_Last updated: 2026-10-17. Branch `kshitij`; animation source at `bd9b861`, followed by these handoff notes._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -55,6 +55,10 @@ is still open. Verify anything specific (file names, functions) against the code
 
 | Commit | What |
 |---|---|
+| `bd9b861` | Expanded-player swipe feedback and track handoff; see 3.6 for the subsequent installed-version correction |
+| `0f910f2` | Shared tactile spring feedback and bounded selection jiggles |
+| `e553558` | Exact player artwork endpoint handoff; remove residual expand/collapse resize |
+| `ebb23c3` | Library/player motion continuity and consistent measured artwork bounds |
 | `4485552` | Merge `origin/lochan` (Lochan: metadata editor framework, tag viewer/writer, file renamer, filename cleaning, metadata scoring — `c99cda9`, `a6f2262`) |
 | `0a53907` | Transition editor: preview control is just a ▶/■ symbol (no container) |
 | `8f9700c` | **Online lyrics** (LRCLIB) with local cache |
@@ -116,6 +120,64 @@ is still open. Verify anything specific (file names, functions) against the code
 ### 3.5 Earlier features (already shipped before this log)
 Visualizer, Wi-Fi Transfer, Queue Studio, waveform seek bar, timestamp bookmarks, A–B looping,
 Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlists, artwork manager.
+
+### 3.6 Animation work by Codex (2026-10-14–16)
+- **Library/player continuity (`ebb23c3`):** crossfade library sections while retaining scroll
+  state and preventing outgoing content from receiving input. Keep search/icon bounds stable;
+  remove competing album artwork overlays. Measure expanded artwork after its square sizing
+  (`PlayerArtworkLayout.kt`) so the travelling artwork targets the actual final image bounds.
+  Carousel skip commands run immediately and distinguish duplicate queue occurrences.
+- **Residual artwork resize (`e553558`):** `PlayerTransitionState` hands artwork over only at
+  the exact expanded endpoint; shared spring progress tolerance is subpixel. This addresses the
+  remaining size correction near the settled endpoint rather than hiding it with a slower fade.
+  Four regression tests cover expansion, collapse, gesture release and early hero reveal.
+- **Spring feedback (`0f910f2`):** shared press responses handle quick taps and cancellation;
+  confirmed favourite/playback-mode changes use bounded jiggles. Library artwork press feedback
+  preserves touch bounds and player transition geometry. No repeated unbounded jiggle impulses.
+- **Expanded-player swiping (`bd9b861`):** `TrackCarouselState.dragBy` now writes the draw-phase
+  position synchronously instead of launching a coroutine for every pointer event. Track
+  acknowledgements preserve an already-correct settling spring; coalesced skips clear pending
+  acknowledgements, avoiding stale watchdog corrections. Batched finger-up horizontal swipes
+  are recognised without claiming taps, vertical movement or consumed gestures. Position
+  rebasing does not subscribe composition to per-frame movement.
+- **Related swipe rendering work:** `MainScaffold` observes only song availability for shell
+  composition; lyrics are read inside the visible sheet and waveform/bookmark updates inside
+  `PlaybackProgress`. `ExpandingPlayer` drops the invisible travelling artwork at fully open;
+  `MiniPlayer` updates its covered content without a second hidden `AnimatedContent` transition.
+  `PlayerMotion.AnimatedTrack` supports that scoped opt-out. Approved glass visuals are unchanged.
+  `SongArtworkBitmapLoader` uses the existing 512px size-keyed cache/executor instead of returning
+  an arbitrary full-size latest UI bitmap to Media3; oversized embedded artwork is sampled on
+  the worker. No new dependency, artwork loader, playback delay or audio/DSP changes.
+- **Validation:** latest approved source passed 167 unit tests across `app`, `feature:library`
+  and `core:playback`, and `:app:assembleDebug`. App/playback ktlint and detekt passed; library
+  module-wide checks retain unrelated existing findings. Earlier continuity work passed two
+  S23 Compose geometry tests; spring feedback had 74 unit tests and S23 visual checks.
+  Expanded-player next/previous, repeated swipes, reversals and expand/collapse were exercised
+  on the S23. The user said the installed version was "plenty smooth" and asked to keep it,
+  but two packages were installed: see the correction below before treating either as accepted.
+- **Measurement limits:** debug A/B frame results varied with queue/thermal conditions; do not
+  claim a universal measured improvement or zero jank. Optimized baseline release comparison
+  was blocked by an existing R8/PlaybackStateProto field crash. Deliberately uncached/missing
+  artwork, differing aspect ratios and VYBE-loaded cases were not conclusively verified.
+- **Scope boundary:** no Smoothness Engine was built. Queue-cache, shared-transition relocation
+  and the final uninstalled mini-player snapshot/marquee experiments were removed. Do not
+  reintroduce them as if user-approved.
+- **2026-10-17 correction:** after the profiling clone was removed, the user reported that the
+  retained real app still lagged and believed the other copy was the smooth one. The earlier
+  assumption that their approval referred to the real package was wrong. Recover the saved
+  `D:\android-toolchain\swipe-investigation\final-scoped-debug.apk` (`.perf` package), which
+  matches the last installed profiling candidate. Its last diagnostic configuration used
+  `default_dark`, while the real app used artwork-driven `dominant_color`; package and theme
+  differences must be considered before claiming the source alone explains the perceived result.
+  The user then confirmed the restored copy and requested committing/pushing this version.
+- **Source verification after confirmation:** rebuilt current `bd9b861` source using
+  `:app:assembleDebug -PperfApp`; build passed. All 1,207 non-signature ZIP entries, including
+  every DEX file and resource, exactly match saved `final-scoped-debug.apk` (SHA-256 per entry).
+  Thus the recovered APK's application code is already committed in `bd9b861`; no missing
+  animation patch needs recreating. The fixed-dark preference is device DataStore state, not
+  a different animation implementation. Preserve that confirmed configuration; this comparison
+  does not establish a measured causal link between the theme and jank. No global theme-default
+  change was requested or made. Both packages remain installed; do not remove one by guessing.
 
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
@@ -203,7 +265,24 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
-- `kshitij` == `origin/kshitij` == `4485552`, working tree clean (this file is new and untracked).
-- Last APK installed on the S23: 2026-10-11 21:01 (preview-icon build). The merged build with
-  Lochan's metadata editor has been built and tested (432 unit tests pass) but **not installed** yet.
-- App-data backups: `D:\android-toolchain\dbbackup\pre-*` (latest `pre-preview-icon-20261011-210130`).
+- Animation application source is `bd9b861`, pushed to `origin/kshitij`; this handoff update
+  is being committed/pushed separately at the user's request. Check HEAD for the latest notes.
+- Original swipe APK remains in `com.lochanpthakke.empee3`, installed 2026-10-16 at 23:34.
+  Its installed APK SHA-256 matched the earlier saved real-package APK:
+  `90f4c9ead024f4725c35983090f9dd5350961a308d055cb41c8ebc9b383200c1`.
+  Automatic rotation was restored after the portrait-locked profiling runs.
+- **Subsequent correction (2026-10-17):** the user reported that the retained copy still lagged.
+  The saved `final-scoped-debug.apk` profiling copy has been reinstalled. With the phone idle,
+  current real-app data was backed up to
+  `D:\android-toolchain\dbbackup\pre-other-player-20261017-000230\appdata.tar`;
+  its databases and playback proto were copied to the recovered profiling package, then only
+  the clone's theme was set to `default_dark` to match its prior diagnostic configuration.
+  Real-app data was not overwritten. The user confirmed this recovered copy and requested
+  committing/pushing it. Its source-to-APK verification is recorded in 3.6. Keep it installed
+  with `default_dark`; keep the original real package as a data-safe fallback for now.
+- Test-setting follow-up: repeat was temporarily changed from Off to All during profiling.
+  The user subsequently changed tracks/queue; do not overwrite their current preferences
+  or restore an old data snapshot. Confirm their desired repeat mode before changing it.
+- Earlier pre-install app-data backup:
+  `D:\android-toolchain\dbbackup\pre-swipe-last-20261016-233415\appdata.tar`.
+  Do not restore older profiling backups over the user's newer queue/settings.
