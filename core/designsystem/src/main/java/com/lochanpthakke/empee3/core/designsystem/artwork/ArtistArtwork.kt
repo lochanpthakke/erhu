@@ -15,19 +15,19 @@ import coil.compose.AsyncImage
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 
 /**
- * Official artist profile artwork loaded asynchronously from a URL (e.g. Deezer).
- * Rendered strictly inside a circular container. Never uses album artwork.
+ * Official artist profile artwork loaded asynchronously from a URL (e.g. Deezer/Genius).
+ * Rendered inside a circular container by default, or full-bleed when [clipToCircle] is false.
  */
 @Composable
 fun ArtistArtwork(
     artworkUri: String?,
     artistName: String,
     modifier: Modifier = Modifier,
+    clipToCircle: Boolean = true,
 ) {
     Box(
         modifier =
-            modifier
-                .clip(CircleShape),
+            if (clipToCircle) modifier.clip(CircleShape) else modifier,
         contentAlignment = Alignment.Center,
     ) {
         if (!artworkUri.isNullOrBlank()) {
@@ -38,22 +38,23 @@ fun ArtistArtwork(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            ArtistMonogramCover(name = artistName)
+            ArtistMonogramCover(name = artistName, clipToCircle = clipToCircle)
         }
     }
 }
 
-/** Fallback circular cover for an artist without an official picture: initial in a circle. */
+/** Fallback cover for an artist without an official picture: initial letter. */
 @Composable
 fun ArtistMonogramCover(
     name: String,
     modifier: Modifier = Modifier,
+    clipToCircle: Boolean = true,
 ) {
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .clip(CircleShape)
+                .then(if (clipToCircle) Modifier.clip(CircleShape) else Modifier)
                 .background(EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surfaceVariant)),
         contentAlignment = Alignment.Center,
     ) {

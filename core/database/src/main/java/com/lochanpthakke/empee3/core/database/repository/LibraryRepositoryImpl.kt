@@ -124,8 +124,17 @@ class LibraryRepositoryImpl
         override fun getArtistById(id: Long): Flow<Artist?> = artistDao.observeArtistById(id).map { it?.toDomainModel() }
 
         override fun searchSongs(query: String): Flow<List<Song>> =
-            songDao.searchSongs(query.trim()).map { list ->
-                list.map { it.toDomainModel() }
+            songDao.getAllSongs().map { list ->
+                val trimmed = query.trim()
+                if (trimmed.isBlank()) {
+                    emptyList()
+                } else {
+                    list.map { it.toDomainModel() }.filter { song ->
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(song.title, trimmed) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(song.artist, trimmed) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(song.album, trimmed)
+                    }
+                }
             }
 
         override fun observeIsFavorite(songId: Long): Flow<Boolean> =

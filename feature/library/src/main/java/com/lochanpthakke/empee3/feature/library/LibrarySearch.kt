@@ -7,6 +7,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,19 +34,20 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
@@ -53,10 +56,10 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
-import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -68,16 +71,15 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
 
-/** Height of the floating search field (pill). */
+/** Height of the floating search field (pill) and circular back bubble. */
 private val SEARCH_FIELD_HEIGHT = 52.dp
 
 /** Width of the album / artist cards in the horizontal result rows. */
 private val RESULT_TILE_WIDTH = 132.dp
 
 /**
- * Library search header: a back button and a floating search pill, over the
- * content (no opaque bar). The field focuses itself, so the keyboard comes up
- * as soon as search opens.
+ * Library search header: a circular glass back button bubble on the left followed by
+ * a floating search pill (no internal search icon, left-aligned text).
  */
 @Composable
 @Suppress("LongMethod")
@@ -89,6 +91,7 @@ internal fun SearchHeader(
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
     Row(
         modifier =
             Modifier
@@ -97,9 +100,29 @@ internal fun SearchHeader(
                 .padding(horizontal = Spacing.sm, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PressIconButton(onClick = onClose) {
-            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close search")
+        // Circular Glass Bubble for Back Button
+        Box(
+            modifier =
+                Modifier
+                    .size(SEARCH_FIELD_HEIGHT)
+                    .glassPanel(Radius.pillShape, level = GlassLevel.Strong, elevated = false, outlined = false)
+                    .then(
+                        if (EmPee3Glass.isActive) {
+                            Modifier
+                        } else {
+                            Modifier.glassFallback()
+                        },
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            PressIconButton(onClick = onClose) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close search")
+            }
         }
+
+        Spacer(modifier = Modifier.width(Spacing.xs))
+
+        // Search Pill (Left aligned, no inner search icon)
         Row(
             modifier =
                 Modifier
@@ -112,20 +135,14 @@ internal fun SearchHeader(
                         } else {
                             Modifier.glassFallback()
                         },
-                    ).padding(start = Spacing.lg, end = Spacing.xs),
+                    )
+                    .padding(start = Spacing.lg, end = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(IconSize.small),
-            )
-            Spacer(modifier = Modifier.width(Spacing.md))
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "Songs, artists or albums",
+                        text = "Songs, Artists, Albums or Playlists",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -171,9 +188,13 @@ internal fun SearchContent(
     albums: List<Album>,
     artistArtwork: Map<Long, String>,
     currentSongId: Long?,
+    recentSearchItems: List<RecentSearchItem> = emptyList(),
+    onRemoveRecentItem: (RecentSearchItem) -> Unit = {},
+    onClearRecentItems: () -> Unit = {},
     onSongClick: (Int) -> Unit,
     onArtistClick: (Artist) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onPlaylistClick: (Long) -> Unit = {},
     actions: SongActions,
     topInset: Dp,
     bottomInset: Dp,
@@ -181,14 +202,32 @@ internal fun SearchContent(
 ) {
     val state =
         when {
+            query.isBlank() && recentSearchItems.isNotEmpty() -> SearchState.RECENT
             query.isBlank() -> SearchState.START
             songs.isEmpty() && artists.isEmpty() && albums.isEmpty() -> SearchState.NOTHING
             else -> SearchState.RESULTS
         }
-    // Start ↔ results ↔ nothing found crossfade; typing within results does not re-animate.
+
     AnimatedContent(targetState = state, transitionSpec = { Motion.crossfade() }, label = "searchState", modifier = modifier) {
         when (it) {
             SearchState.START -> SearchStart(modifier = Modifier.padding(top = topInset, bottom = bottomInset))
+            SearchState.RECENT ->
+                RecentSearchesContent(
+                    recentSearchItems = recentSearchItems,
+                    artistArtwork = artistArtwork,
+                    currentSongId = currentSongId,
+                    onSongClick = { song ->
+                        val idx = songs.indexOfFirst { s -> s.id == song.id }
+                        if (idx != -1) onSongClick(idx) else onSongClick(0)
+                    },
+                    onArtistClick = onArtistClick,
+                    onAlbumClick = onAlbumClick,
+                    onPlaylistClick = onPlaylistClick,
+                    onRemoveItem = onRemoveRecentItem,
+                    onClearAll = onClearRecentItems,
+                    actions = actions,
+                    modifier = Modifier.padding(top = topInset, bottom = bottomInset),
+                )
             SearchState.NOTHING ->
                 SearchMessage(
                     title = "No matches",
@@ -243,7 +282,7 @@ internal fun SearchContent(
     }
 }
 
-private enum class SearchState { START, NOTHING, RESULTS }
+private enum class SearchState { START, RECENT, NOTHING, RESULTS }
 
 @Composable
 private fun ResultRow(
@@ -273,7 +312,7 @@ private fun SectionTitle(text: String) {
     )
 }
 
-/** Starting screen: what search covers, instead of an empty area. */
+/** Fresh search starting screen: centered search icon and description text. */
 @Composable
 private fun SearchStart(modifier: Modifier = Modifier) {
     Column(
@@ -284,45 +323,211 @@ private fun SearchStart(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = "Search your library", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-        Spacer(modifier = Modifier.height(Spacing.sm))
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+            modifier = Modifier.size(92.dp),
+        )
+        Spacer(modifier = Modifier.height(Spacing.md))
         Text(
-            text = "Find any song, artist or album on this device.",
-            style = TextStyles.supporting,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "Find any song, artist or album on this device",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
         )
-        Spacer(modifier = Modifier.height(Spacing.xl))
-        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xl)) {
-            SearchKind(icon = Icons.Default.MusicNote, label = "Songs")
-            SearchKind(icon = Icons.Default.Person, label = "Artists")
-            SearchKind(icon = Icons.Default.Album, label = "Albums")
+    }
+}
+
+/** Recently searched rich items list view when history exists. */
+@Composable
+private fun RecentSearchesContent(
+    recentSearchItems: List<RecentSearchItem>,
+    artistArtwork: Map<Long, String>,
+    currentSongId: Long?,
+    onSongClick: (Song) -> Unit,
+    onArtistClick: (Artist) -> Unit,
+    onAlbumClick: (Album) -> Unit,
+    onPlaylistClick: (Long) -> Unit,
+    onRemoveItem: (RecentSearchItem) -> Unit,
+    onClearAll: () -> Unit,
+    actions: SongActions,
+    modifier: Modifier = Modifier,
+) {
+    val recentCollections =
+        remember(recentSearchItems) {
+            recentSearchItems.filter {
+                it is RecentSearchItem.ArtistItem || it is RecentSearchItem.AlbumItem || it is RecentSearchItem.PlaylistItem
+            }
+        }
+    val recentSongs =
+        remember(recentSearchItems) {
+            recentSearchItems.filterIsInstance<RecentSearchItem.SongItem>()
+        }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.lg),
+    ) {
+        item(key = "header") {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.screenGutter, vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Recently Searched",
+                    style = TextStyles.sectionTitle,
+                    modifier = Modifier.semantics { heading() },
+                )
+                TextButton(onClick = onClearAll) {
+                    Text("Clear All", style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        }
+
+        if (recentCollections.isNotEmpty()) {
+            item(key = "collectionsRow") {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = Spacing.screenGutter),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
+                    items(recentCollections, key = { it.key }) { item ->
+                        Box(modifier = Modifier.width(RESULT_TILE_WIDTH)) {
+                            when (item) {
+                                is RecentSearchItem.ArtistItem -> {
+                                    ArtistTile(
+                                        artist = item.artist,
+                                        artworkUri = artistArtwork[item.artist.id],
+                                        onClick = { onArtistClick(item.artist) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                is RecentSearchItem.AlbumItem -> {
+                                    AlbumTile(
+                                        album = item.album,
+                                        onClick = { onAlbumClick(item.album) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                is RecentSearchItem.PlaylistItem -> {
+                                    PlaylistTile(
+                                        title = item.title,
+                                        trackCount = item.trackCount,
+                                        onClick = { onPlaylistClick(item.playlistId) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                                is RecentSearchItem.SongItem -> {}
+                            }
+                            IconButton(
+                                onClick = { onRemoveItem(item) },
+                                modifier =
+                                    Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(28.dp)
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), CircleShape)
+                                        .padding(2.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove item",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(Spacing.lg))
+            }
+        }
+
+        if (recentSongs.isNotEmpty()) {
+            item(key = "songsHeader") {
+                SectionTitle("Songs")
+            }
+            items(recentSongs, key = { it.key }) { item ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(end = Spacing.screenGutter),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        LibrarySongRow(
+                            song = item.song,
+                            isCurrent = item.song.id == currentSongId,
+                            onClick = { onSongClick(item.song) },
+                            actions = actions,
+                        )
+                    }
+                    IconButton(
+                        onClick = { onRemoveItem(item) },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Remove song",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun SearchKind(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
+private fun PlaylistTile(
+    title: String,
+    trackCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier =
+            modifier
+                .width(RESULT_TILE_WIDTH)
+                .clickable { onClick() },
+    ) {
         Box(
             modifier =
                 Modifier
-                    .size(SEARCH_KIND_SIZE)
-                    .glassPanel(Radius.pillShape, level = GlassLevel.Medium, elevated = false)
-                    .then(if (EmPee3Glass.isActive) Modifier else Modifier.glassFallback()),
+                    .size(RESULT_TILE_WIDTH)
+                    .clip(Radius.mediumShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(48.dp),
+            )
         }
-        Spacer(modifier = Modifier.height(Spacing.sm))
-        Text(text = label, style = TextStyles.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(Spacing.xs))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = "$trackCount tracks",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
-
-private val SEARCH_KIND_SIZE = 56.dp
 
 @Composable
 private fun SearchMessage(

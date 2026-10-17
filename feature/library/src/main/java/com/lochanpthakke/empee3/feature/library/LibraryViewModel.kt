@@ -131,6 +131,26 @@ data class ArtistArtworkQueueItem(
     val failureReason: String? = null,
 )
 
+sealed interface RecentSearchItem {
+    val key: String
+
+    data class AlbumItem(val album: Album) : RecentSearchItem {
+        override val key: String get() = "album_${album.id}"
+    }
+
+    data class ArtistItem(val artist: Artist) : RecentSearchItem {
+        override val key: String get() = "artist_${artist.id}"
+    }
+
+    data class SongItem(val song: Song) : RecentSearchItem {
+        override val key: String get() = "song_${song.id}"
+    }
+
+    data class PlaylistItem(val playlistId: Long, val title: String, val trackCount: Int) : RecentSearchItem {
+        override val key: String get() = "playlist_$playlistId"
+    }
+}
+
 @HiltViewModel
 @Suppress("TooManyFunctions", "LargeClass")
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -244,6 +264,12 @@ class LibraryViewModel
 
         private val _searchArtists = MutableStateFlow<List<Artist>>(emptyList())
         val searchArtists: StateFlow<List<Artist>> = _searchArtists.asStateFlow()
+
+        private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+        val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
+
+        private val _recentSearchItems = MutableStateFlow<List<RecentSearchItem>>(emptyList())
+        val recentSearchItems: StateFlow<List<RecentSearchItem>> = _recentSearchItems.asStateFlow()
 
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
@@ -1303,19 +1329,58 @@ class LibraryViewModel
                 val allAlbums = libraryRepository.getAllAlbums().first()
                 _searchAlbums.value =
                     allAlbums.filter {
-                        it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.title, query) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.artist, query)
                     }
 
                 val allArtists = libraryRepository.getAllArtists().first()
                 _searchArtists.value =
                     allArtists.filter {
-                        it.name.contains(query, ignoreCase = true)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.name, query)
                     }
             }
         }
 
         fun setLibrarySearchQuery(query: String) {
             _librarySearchQuery.value = query
+        }
+
+        fun addRecentAlbum(album: Album) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.AlbumItem && it.album.id == album.id }
+            current.add(0, RecentSearchItem.AlbumItem(album))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun addRecentArtist(artist: Artist) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.ArtistItem && it.artist.id == artist.id }
+            current.add(0, RecentSearchItem.ArtistItem(artist))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun addRecentSong(song: Song) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.SongItem && it.song.id == song.id }
+            current.add(0, RecentSearchItem.SongItem(song))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun addRecentPlaylist(playlistId: Long, title: String, trackCount: Int) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.PlaylistItem && it.playlistId == playlistId }
+            current.add(0, RecentSearchItem.PlaylistItem(playlistId, title, trackCount))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun removeRecentSearchItem(item: RecentSearchItem) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it.key == item.key }
+            _recentSearchItems.value = current
+        }
+
+        fun clearRecentSearchItems() {
+            _recentSearchItems.value = emptyList()
         }
 
         fun enqueueSongForRepair(song: Song) {
@@ -1850,6 +1915,14 @@ class LibraryViewModel
         fun toggleFavorite(song: Song) {
             viewModelScope.launch {
                 libraryRepository.toggleFavorite(song.id)
+                val current = _recentSearchItems.value.map { item ->
+                    if (item is RecentSearchItem.SongItem && item.song.id == song.id) {
+                        item.copy(song = item.song.copy(isFavorite = !item.song.isFavorite))
+                    } else {
+                        item
+                    }
+                }
+                _recentSearchItems.value = current
             }
         }
 
