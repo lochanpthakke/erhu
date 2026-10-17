@@ -92,7 +92,13 @@ fun ArtworkManagerScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
-    var showCompletionDialog by remember { mutableStateOf(false) }
+    var appliedItemSuccessTitle by remember { mutableStateOf<String?>(null) }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearArtworkDiagnostics()
+        }
+    }
 
     val artworkQueue by viewModel.artworkQueue.collectAsState()
     val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
@@ -121,12 +127,6 @@ fun ArtworkManagerScreen(
         } else {
             artistArtworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
         }
-    val failedCount =
-        if (selectedTab == 0) {
-            artworkQueue.count { it.status == "FAILED" }
-        } else {
-            artistArtworkQueue.count { it.status == "FAILED" }
-        }
     val isQueueComplete =
         activeQueueCount > 0 &&
             if (selectedTab == 0) {
@@ -135,12 +135,6 @@ fun ArtworkManagerScreen(
                 artistArtworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
             }
     val progressFloat = if (activeQueueCount > 0) doneCount.toFloat() / activeQueueCount.toFloat() else 0f
-
-    LaunchedEffect(isQueueComplete) {
-        if (isQueueComplete) {
-            showCompletionDialog = true
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -170,16 +164,22 @@ fun ArtworkManagerScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = {
-                        selectedTab = 0
-                        searchQuery = ""
+                        if (selectedTab != 0) {
+                            selectedTab = 0
+                            searchQuery = ""
+                            viewModel.clearArtworkDiagnostics()
+                        }
                     },
                     text = { Text("Albums") },
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = {
-                        selectedTab = 1
-                        searchQuery = ""
+                        if (selectedTab != 1) {
+                            selectedTab = 1
+                            searchQuery = ""
+                            viewModel.clearArtworkDiagnostics()
+                        }
                     },
                     text = { Text("Artists") },
                 )
@@ -598,7 +598,7 @@ fun ArtworkManagerScreen(
                     contentDescription = null,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Metadata & Artwork Settings")
+                Text("Utility Settings")
             }
 
             Spacer(modifier = Modifier.height(110.dp))
@@ -643,11 +643,19 @@ fun ArtworkManagerScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (currentProcessingAlbum != null) {
-                            viewModel.applyArtworkToAlbum(currentProcessingAlbum!!, selectedEnlargedArtworkUrl!!)
-                        } else if (currentProcessingArtist != null) {
-                            viewModel.applyArtistArtwork(currentProcessingArtist!!, selectedEnlargedArtworkUrl!!)
+                        val albumToApply = currentProcessingAlbum
+                        val artistToApply = currentProcessingArtist
+                        val urlToApply = selectedEnlargedArtworkUrl
+                        val title = albumToApply?.title ?: artistToApply?.name ?: ""
+
+                        if (albumToApply != null && urlToApply != null) {
+                            viewModel.applyArtworkToAlbum(albumToApply, urlToApply)
+                        } else if (artistToApply != null && urlToApply != null) {
+                            viewModel.applyArtistArtwork(artistToApply, urlToApply)
                         }
+
+                        viewModel.selectEnlargedArtwork(null)
+                        appliedItemSuccessTitle = title
                     },
                 ) {
                     Text("Apply Artwork")
@@ -661,33 +669,35 @@ fun ArtworkManagerScreen(
         )
     }
 
-    if (showCompletionDialog) {
+    if (appliedItemSuccessTitle != null) {
+        val appliedTitle = appliedItemSuccessTitle.orEmpty()
         AlertDialog(
-            onDismissRequest = { showCompletionDialog = false },
-            title = { Text("Artwork Fetcher Complete") },
+            onDismissRequest = { appliedItemSuccessTitle = null },
+            title = { Text("Artwork Applied Successfully") },
             text = {
-                Column {
-                    Text("✓ $doneCount items updated successfully", fontWeight = FontWeight.Bold)
-                    if (failedCount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("❌ $failedCount items failed")
-                    }
-                }
+                Text(
+                    text = "Artwork for \"$appliedTitle\" has been updated.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        showCompletionDialog = false
+                        appliedItemSuccessTitle = null
+                    },
+                ) {
+                    Text("Fetch More Artwork")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        appliedItemSuccessTitle = null
                         if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
                         onNavigateToLibrary()
                     },
                 ) {
-                    Text("Finish & Return to Library")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCompletionDialog = false }) {
-                    Text("Keep Inspecting Queue")
+                    Text("Return to Library")
                 }
             },
         )

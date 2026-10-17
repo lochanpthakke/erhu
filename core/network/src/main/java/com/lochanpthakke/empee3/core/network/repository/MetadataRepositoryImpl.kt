@@ -48,9 +48,8 @@ class MetadataRepositoryImpl
         private val wikipediaProvider: com.lochanpthakke.empee3.core.network.provider.WikipediaProvider,
         private val geniusProvider: com.lochanpthakke.empee3.core.network.provider.GeniusProvider,
         private val duckDuckGoImageSearchProvider: com.lochanpthakke.empee3.core.network.provider.DuckDuckGoImageSearchProvider,
-        private val discogsProvider: com.lochanpthakke.empee3.core.network.provider.DiscogsProvider,
         private val fanartTvProvider: com.lochanpthakke.empee3.core.network.provider.FanartTvProvider,
-        private val theAudioDbProvider: com.lochanpthakke.empee3.core.network.provider.TheAudioDbProvider,
+        private val discogsProvider: com.lochanpthakke.empee3.core.network.provider.DiscogsProvider,
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
@@ -229,27 +228,8 @@ class MetadataRepositoryImpl
                             }
 
                         val fanartDeferred =
-                            if (MetadataSources.matches(MetadataSources.FANART_TV, sourceProvider)) {
-                                async {
-                                    fanartTvProvider
-                                        .fetchArtistPortraits(
-                                            artistName,
-                                            preResolvedMbid = mbid,
-                                        ).filter { isArtistPhotoUrl(it) }
-                                }
-                            } else {
-                                null
-                            }
-
-                        val theAudioDbDeferred =
-                            if (MetadataSources.matches(MetadataSources.THE_AUDIO_DB, sourceProvider)) {
-                                async {
-                                    theAudioDbProvider
-                                        .fetchArtistPortraits(
-                                            artistName,
-                                            preResolvedMbid = mbid,
-                                        ).filter { isArtistPhotoUrl(it) }
-                                }
+                            if (MetadataSources.matches(MetadataSources.FANART_TV, sourceProvider) && fanartTvProvider.isConfigured) {
+                                async { fanartTvProvider.fetchArtistPortraits(artistName, preResolvedMbid = mbid).filter { isArtistPhotoUrl(it) } }
                             } else {
                                 null
                             }
@@ -297,7 +277,6 @@ class MetadataRepositoryImpl
                         geniusDeferred?.await()?.let { map["Genius"] = it }
                         duckDeferred?.await()?.let { map["DuckDuckGo Web Search"] = it }
                         fanartDeferred?.await()?.let { map["Fanart.tv"] = it }
-                        theAudioDbDeferred?.await()?.let { map["TheAudioDB"] = it }
                         discogsDeferred?.await()?.let { map["Discogs"] = it }
                         deezerDeferred?.await()?.let { map["Deezer"] = it }
                         wikiDeferred?.await()?.let { map["Wikipedia / Wikimedia"] = it }
@@ -390,6 +369,9 @@ class MetadataRepositoryImpl
 private fun isArtistPhotoUrl(url: String): Boolean {
     if (url.isBlank()) return false
     val lower = url.lowercase()
+    if (lower.contains("genius.com") || lower.contains("rapgenius") || lower.contains("amazonaws.com/rapgenius")) {
+        return true
+    }
     if (lower.contains("/cover/") ||
         lower.contains("/album/") ||
         lower.contains("cover_") ||

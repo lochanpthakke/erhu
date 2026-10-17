@@ -44,7 +44,6 @@ object MetadataSources {
     const val GENIUS = "Genius"
     const val DUCKDUCKGO = "DuckDuckGo"
     const val FANART_TV = "FanartTv"
-    const val THE_AUDIO_DB = "TheAudioDb"
     const val DISCOGS = "Discogs"
     const val WIKIPEDIA = "Wikipedia"
     const val ITUNES = "iTunes"
@@ -73,10 +72,9 @@ object MetadataSources {
         val raw = name.lowercase().filter { it.isLetterOrDigit() }
         return when {
             raw.startsWith("genius") -> "genius"
-            raw.startsWith("duckduckgo") -> "duckduckgo"
-            raw.startsWith("wikipedia") || raw.startsWith("wikimedia") -> "wikipedia"
+            raw.startsWith("duckduckgo") || raw.startsWith("duck") -> "duckduckgo"
             raw.startsWith("fanart") -> "fanarttv"
-            raw.startsWith("theaudiodb") || raw.startsWith("audiodb") -> "theaudiodb"
+            raw.startsWith("wikipedia") || raw.startsWith("wikimedia") -> "wikipedia"
             raw.startsWith("discogs") -> "discogs"
             raw.startsWith("deezer") -> "deezer"
             raw.startsWith("itunes") || raw.startsWith("applemusic") -> "itunes"
@@ -91,7 +89,6 @@ object MetadataSources {
             GENIUS to "genius.com",
             DUCKDUCKGO to "duckduckgo.com",
             FANART_TV to "webservice.fanart.tv",
-            THE_AUDIO_DB to "www.theaudiodb.com",
             DISCOGS to "api.discogs.com",
             WIKIPEDIA to "en.wikipedia.org",
             ITUNES to "itunes.apple.com",

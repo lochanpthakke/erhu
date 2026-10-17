@@ -3,15 +3,13 @@ package com.lochanpthakke.empee3.core.network.provider
 import com.lochanpthakke.empee3.core.common.logging.Logger
 import com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
-import retrofit2.HttpException
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Unofficial / best-effort keyless web image search provider using DuckDuckGo's public image API.
- */
 @Singleton
+@Suppress("TooGenericExceptionCaught")
 class DuckDuckGoImageSearchProvider
     @Inject
     constructor(
@@ -22,66 +20,48 @@ class DuckDuckGoImageSearchProvider
             val trimmed = artistName.trim()
             if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return emptyList()
 
-            val query = "$trimmed artist"
+            try {
+                // 1. Try DuckDuckGo vqd + i.js search
+                val searchUrl = "https://duckduckgo.com/?q=${URLEncoder.encode("$trimmed artist portrait", StandardCharsets.UTF_8.name())}"
+                val htmlPage = duckDuckGoApi.getSearchPage(searchUrl).use { it.string() }
+                val vqdRegex = Regex("""vqd=([0-9-]+)""")
+                val vqd = vqdRegex.find(htmlPage)?.groupValues?.get(1)
 
-            var attempt = 0
-            while (attempt < MAX_RETRIES) {
-                try {
-                    // 1. Obtain dynamic vqd security token from search landing page
-                    val responseBody = duckDuckGoApi.getSearchPage(query = query)
-                    val html = responseBody.string()
-                    var vqdMatch = VQD_REGEXES.firstNotNullOfOrNull { it.find(html)?.groupValues?.get(1) }
-
-                    if (vqdMatch == null) {
-                        try {
-                            val encodedQ = java.net.URLEncoder.encode(query, "UTF-8")
-                            val htmlBody = duckDuckGoApi.getHtmlPage("https://html.duckduckgo.com/html/?q=$encodedQ")
-                            val fallbackHtml = htmlBody.string()
-                            vqdMatch = VQD_REGEXES.firstNotNullOfOrNull { it.find(fallbackHtml)?.groupValues?.get(1) }
-                        } catch (_: Exception) {
-                            // Fallback failed
-                        }
+                if (!vqd.isNullOrBlank()) {
+                    val res = duckDuckGoApi.searchImages(
+                        query = "$trimmed artist portrait",
+                        vqd = vqd,
+                    )
+                    val urls = res.results.orEmpty().mapNotNull { it.image }.filter { it.isNotBlank() }.distinct()
+                    if (urls.isNotEmpty()) {
+                        return urls.take(15)
                     }
-
-                    if (vqdMatch == null) {
-                        logger.w(TAG, "DuckDuckGo vqd token extraction failed for $artistName")
-                        return emptyList()
-                    }
-
-                    // 2. Query image search endpoint with valid vqd token and browser Referer
-                    val response = duckDuckGoApi.searchImages(query = query, vqdToken = vqdMatch)
-                    val results = response.results.orEmpty()
-                    return results
-                        .mapNotNull { it.image ?: it.thumbnail }
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: HttpException) {
-                    val code = e.code()
-                    if ((code == 202 || code == 403 || code == 429) && attempt < MAX_RETRIES - 1) {
-                        attempt++
-                        delay(BACKOFF_DELAY_MS * attempt)
-                    } else {
-                        logger.w(TAG, "DuckDuckGo HTTP $code for $artistName: ${e.message}")
-                        return emptyList()
-                    }
-                } catch (e: Exception) {
-                    logger.w(TAG, "DuckDuckGo image search failed for $artistName: ${e.message}", e)
-                    return emptyList()
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                logger.w(TAG, "DuckDuckGo i.js search failed for $artistName, trying Bing async fallback: ${e.message}")
             }
-            return emptyList()
+
+            // 2. Immediate fallback: Bing Images async HTML fragment extraction
+            return try {
+                val encodedQuery = URLEncoder.encode("$trimmed musician artist portrait", StandardCharsets.UTF_8.name())
+                val bingUrl = "https://www.bing.com/images/async?q=$encodedQuery&first=1&count=20&mmasync=1"
+                val html = duckDuckGoApi.fetchHtml(bingUrl).use { it.string() }
+                val murlRegex = Regex("""murl(?:&quot;|"):(?:&quot;|")(https?://[^"&]+?\.(?:jpg|jpeg|png))""", RegexOption.IGNORE_CASE)
+                murlRegex.findAll(html)
+                    .map { it.groupValues[1].replace("&amp;", "&") }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .take(15)
+                    .toList()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                logger.w(TAG, "Bing async fallback search failed for $artistName: ${e.message}", e)
+                emptyList()
+            }
         }
 
         companion object {
             private const val TAG = "DuckDuckGoImageSearchProvider"
-            private const val MAX_RETRIES = 3
-            private const val BACKOFF_DELAY_MS = 500L
-            private val VQD_REGEXES = listOf(
-                Regex("""vqd=["']?([0-9a-zA-Z_-]+)["']?"""),
-                Regex("""vqd=([0-9-]+)&"""),
-                Regex("""["']vqd["']\s*:\s*["']([^"']+)["']"""),
-            )
         }
     }

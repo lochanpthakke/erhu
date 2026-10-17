@@ -144,7 +144,7 @@ fun MetadataEditorScreen(
                         contentDescription = null,
                     )
                     Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text("Metadata & Artwork Settings")
+                    Text("Utility Settings")
                 }
             }
         },

@@ -29,6 +29,7 @@ class ThemeViewModel
         val libraryLayout: StateFlow<String> = themeRepository.libraryLayoutMode
         val isRollbackActive: StateFlow<Boolean> = themeRepository.isRollbackFlagActive
         val defaultStartSection: StateFlow<String> = themeRepository.defaultStartSection
+        val fanartTvApiKey: StateFlow<String> = themeRepository.fanartTvApiKey
 
         private val _importMessage = MutableStateFlow<String?>(null)
         val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
@@ -60,6 +61,12 @@ class ThemeViewModel
         fun setDefaultStartSection(section: String) {
             viewModelScope.launch {
                 themeRepository.setDefaultStartSection(section)
+            }
+        }
+
+        fun setFanartTvApiKey(key: String) {
+            viewModelScope.launch {
+                themeRepository.setFanartTvApiKey(key)
             }
         }
 

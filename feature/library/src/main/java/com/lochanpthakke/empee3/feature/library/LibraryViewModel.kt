@@ -154,6 +154,7 @@ class LibraryViewModel
         private val networkStatus: NetworkStatusSource,
         private val repairBatchPersistence: RepairBatchPersistence,
         private val lastFmCredentials: LastFmCredentials,
+        private val fanartTvCredentials: com.lochanpthakke.empee3.core.network.provider.FanartTvCredentials,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -820,6 +821,13 @@ class LibraryViewModel
         private val _artworkSearchDiagnostics = MutableStateFlow<ArtworkSearchDiagnostics?>(null)
         val artworkSearchDiagnostics: StateFlow<ArtworkSearchDiagnostics?> = _artworkSearchDiagnostics.asStateFlow()
 
+        fun clearArtworkDiagnostics() {
+            _artworkSearchDiagnostics.value = null
+            _artworkCandidates.value = emptyList()
+            _currentProcessingAlbum.value = null
+            _currentProcessingArtist.value = null
+        }
+
         fun selectEnlargedArtwork(url: String?) {
             _selectedEnlargedArtworkUrl.value = url
         }
@@ -914,7 +922,6 @@ class LibraryViewModel
                 val geniusSelected = MetadataSources.matches(MetadataSources.GENIUS, sel)
                 val duckSelected = MetadataSources.matches(MetadataSources.DUCKDUCKGO, sel)
                 val fanartSelected = MetadataSources.matches(MetadataSources.FANART_TV, sel)
-                val theAudioDbSelected = MetadataSources.matches(MetadataSources.THE_AUDIO_DB, sel)
                 val discogsSelected = MetadataSources.matches(MetadataSources.DISCOGS, sel)
                 val deezerSelected = MetadataSources.matches(MetadataSources.DEEZER, sel)
                 val wikiSelected = MetadataSources.matches(MetadataSources.WIKIPEDIA, sel)
@@ -923,7 +930,6 @@ class LibraryViewModel
                 val geniusCount = pMap["Genius"]?.size ?: 0
                 val duckCount = pMap["DuckDuckGo Web Search"]?.size ?: 0
                 val fanartCount = pMap["Fanart.tv"]?.size ?: 0
-                val theAudioDbCount = pMap["TheAudioDB"]?.size ?: 0
                 val discogsCount = pMap["Discogs"]?.size ?: 0
                 val deezerCount = pMap["Deezer"]?.size ?: 0
                 val wikiCount = pMap["Wikipedia / Wikimedia"]?.size ?: 0
@@ -944,12 +950,7 @@ class LibraryViewModel
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Fanart.tv",
                             candidateCount = fanartCount,
-                            status = if (!fanartSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (fanartCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
-                        ),
-                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
-                            "TheAudioDB",
-                            candidateCount = theAudioDbCount,
-                            status = if (!theAudioDbSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (theAudioDbCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status = if (!fanartSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (!fanartTvCredentials.isConfigured) com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED else if (fanartCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Discogs",
@@ -974,12 +975,12 @@ class LibraryViewModel
                     )
                 val details =
                     artUrls.map { url ->
+                        val returnedProvider = pMap.entries.firstOrNull { (_, list) -> url in list }?.key
                         val lower = url.lowercase()
                         val provider =
-                            when {
-                                "genius" in lower -> "Genius"
-                                "fanart" in lower -> "Fanart.tv"
-                                "theaudiodb" in lower -> "TheAudioDB"
+                            returnedProvider ?: when {
+                                "genius" in lower || "rapgenius" in lower -> "Genius"
+                                "fanart.tv" in lower -> "Fanart.tv"
                                 "discogs" in lower -> "Discogs"
                                 "wikimedia" in lower || "wikipedia" in lower -> "Wikipedia / Wikimedia"
                                 "mzstatic" in lower || "apple" in lower -> "iTunes / Apple Music"
@@ -1165,6 +1166,7 @@ class LibraryViewModel
                     _selectedEnlargedArtworkUrl.value = null
                     _artworkCandidates.value = emptyList()
                     _currentProcessingAlbum.value = null
+                    _artworkSearchDiagnostics.value = null
                     _isSearchingArtwork.value = false
                 }
             }
@@ -1197,20 +1199,64 @@ class LibraryViewModel
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         fun applyArtistArtwork(
             artist: Artist,
             imageUrl: String,
         ) {
             viewModelScope.launch(Dispatchers.IO) {
-                when (val downloadResult = metadataRepository.downloadArtwork(imageUrl)) {
-                    is AppResult.Success -> {
-                        (artistArtworkRepository.setCustomArtwork(artist.id, downloadResult.data) as? AppResult.Error)?.let {
-                            _userMessage.value = it.error.message
+                _isSearchingArtwork.value = true
+                val queue = _artistArtworkQueue.value.toMutableList()
+                val queueIndex = queue.indexOfFirst { it.artist.id == artist.id }
+                if (queueIndex != -1) {
+                    queue[queueIndex] = queue[queueIndex].copy(status = "WRITING")
+                    _artistArtworkQueue.value = queue.toList()
+                }
+
+                try {
+                    when (val downloadResult = metadataRepository.downloadArtwork(imageUrl)) {
+                        is AppResult.Success -> {
+                            val result = artistArtworkRepository.setCustomArtwork(artist.id, downloadResult.data)
+                            if (result is AppResult.Error) {
+                                _userMessage.value = result.error.message
+                                if (queueIndex != -1) {
+                                    queue[queueIndex] = queue[queueIndex].copy(
+                                        status = "FAILED",
+                                        failureReason = result.error.message,
+                                    )
+                                    _artistArtworkQueue.value = queue.toList()
+                                }
+                            } else if (queueIndex != -1) {
+                                queue[queueIndex] = queue[queueIndex].copy(status = "COMPLETED")
+                                _artistArtworkQueue.value = queue.toList()
+                            }
+                        }
+                        is AppResult.Error -> {
+                            _userMessage.value = downloadResult.error.message
+                            if (queueIndex != -1) {
+                                queue[queueIndex] = queue[queueIndex].copy(
+                                    status = "FAILED",
+                                    failureReason = downloadResult.error.message,
+                                )
+                                _artistArtworkQueue.value = queue.toList()
+                            }
                         }
                     }
-                    is AppResult.Error -> {
-                        _userMessage.value = downloadResult.error.message
+                    libraryRepository.triggerLibraryScan()
+                } catch (e: Throwable) {
+                    if (queueIndex != -1) {
+                        queue[queueIndex] = queue[queueIndex].copy(
+                            status = "FAILED",
+                            failureReason = e.message ?: "WRITE_ERROR",
+                        )
+                        _artistArtworkQueue.value = queue.toList()
                     }
+                } finally {
+                    _selectedEnlargedArtworkUrl.value = null
+                    _artworkCandidates.value = emptyList()
+                    _currentProcessingArtist.value = null
+                    _artworkSearchDiagnostics.value = null
+                    _isSearchingArtwork.value = false
                 }
             }
         }
@@ -1337,13 +1383,29 @@ class LibraryViewModel
             if (_isFixingQueue.value) pauseRequested = true
         }
 
-        /** The sources offered in Settings and the editor, with Last.fm's real configuration state. */
-        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> =
-            MutableStateFlow(metadataSourceOptions(lastFmConfigured = lastFmCredentials.isConfigured)).asStateFlow()
+        /** The sources offered in Settings and the editor, with Last.fm's & Fanart.tv's real configuration state. */
+        private val _metadataSourceOptions =
+            MutableStateFlow(
+                metadataSourceOptions(
+                    lastFmConfigured = lastFmCredentials.isConfigured,
+                    fanartTvConfigured = fanartTvCredentials.isConfigured,
+                ),
+            )
+        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> = _metadataSourceOptions.asStateFlow()
 
         private fun metadataSourceLabel(key: String): String = metadataSourceOptions.value.firstOrNull { it.key == key }?.label ?: key
 
         init {
+            viewModelScope.launch {
+                themeRepository.fanartTvApiKey.collect { key ->
+                    fanartTvCredentials.apiKey = key
+                    _metadataSourceOptions.value =
+                        metadataSourceOptions(
+                            lastFmConfigured = lastFmCredentials.isConfigured,
+                            fanartTvConfigured = key.isNotBlank(),
+                        )
+                }
+            }
             viewModelScope.launch {
                 restoreRepairBatch()
                 // Saved as it changes, so a batch survives the process; a track mid-lookup is saved as pending.

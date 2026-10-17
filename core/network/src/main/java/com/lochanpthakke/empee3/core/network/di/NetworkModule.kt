@@ -177,54 +177,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideFanartTvApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.lochanpthakke.empee3.core.network.api.FanartTvApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://webservice.fanart.tv/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.lochanpthakke.empee3.core.network.api.FanartTvApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideDuckDuckGoApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://duckduckgo.com/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideTheAudioDbApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.lochanpthakke.empee3.core.network.api.TheAudioDbApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://www.theaudiodb.com/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.lochanpthakke.empee3.core.network.api.TheAudioDbApi::class.java)
-    }
-
-    @Provides
-    @Singleton
     fun provideWikidataApi(
         okHttpClient: OkHttpClient,
         json: Json,
@@ -253,6 +205,38 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(com.lochanpthakke.empee3.core.network.api.GeniusApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDuckDuckGoApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://duckduckgo.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFanartTvApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.FanartTvApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://webservice.fanart.tv/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.FanartTvApi::class.java)
     }
 }
 

@@ -11,16 +11,19 @@ data class MetadataSourceOption(
 )
 
 /**
- * The sources offered for tag fixing, with what each really provides. Last.fm is offered with its
- * true state: without an API key it is listed as not configured (and refused when chosen alone);
+ * The sources offered for tag fixing, with what each really provides. Last.fm and Fanart.tv are offered with their
+ * true state: without an API key they are listed as not configured;
  * LRCLIB serves lyrics only (Lyrics page) and is not a tag source.
  */
-fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption> =
+fun metadataSourceOptions(
+    lastFmConfigured: Boolean,
+    fanartTvConfigured: Boolean = false,
+): List<MetadataSourceOption> =
     listOf(
         MetadataSourceOption(
             MetadataSources.ALL,
             "All providers",
-            "Genius, DuckDuckGo, Fanart.tv, TheAudioDB, Discogs, Wikipedia, iTunes, MusicBrainz, Deezer and Last.fm together",
+            "Genius, DuckDuckGo, Fanart.tv, Discogs, Wikipedia, iTunes, MusicBrainz, Deezer and Last.fm together",
         ),
         MetadataSourceOption(
             MetadataSources.GENIUS,
@@ -30,17 +33,16 @@ fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption>
         MetadataSourceOption(
             MetadataSources.DUCKDUCKGO,
             "DuckDuckGo Web Search",
-            "Keyless public web image search for instant out-of-the-box artist photos",
+            "Resilient web image search fallback for artist portraits",
         ),
         MetadataSourceOption(
             MetadataSources.FANART_TV,
             "Fanart.tv",
-            "Dedicated high-resolution music fanart and square artist portraits",
-        ),
-        MetadataSourceOption(
-            MetadataSources.THE_AUDIO_DB,
-            "TheAudioDB",
-            "Open music database for official artist promo photos and fanart",
+            if (fanartTvConfigured) {
+                "High-resolution community artist thumbs and backgrounds"
+            } else {
+                "Not configured: needs a Fanart.tv API key in Settings"
+            },
         ),
         MetadataSourceOption(
             MetadataSources.DISCOGS,
@@ -84,7 +86,6 @@ private val OFFERED_KEYS =
         MetadataSources.GENIUS,
         MetadataSources.DUCKDUCKGO,
         MetadataSources.FANART_TV,
-        MetadataSources.THE_AUDIO_DB,
         MetadataSources.DISCOGS,
         MetadataSources.WIKIPEDIA,
         MetadataSources.ITUNES,

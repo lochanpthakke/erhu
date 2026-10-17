@@ -78,6 +78,9 @@ class ThemeRepositoryImpl
         private val _metadataConfidenceThreshold = MutableStateFlow(0f)
         override val metadataConfidenceThreshold: StateFlow<Float> = _metadataConfidenceThreshold.asStateFlow()
 
+        private val _fanartTvApiKey = MutableStateFlow("")
+        override val fanartTvApiKey: StateFlow<String> = _fanartTvApiKey.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -96,6 +99,7 @@ class ThemeRepositoryImpl
                 _metadataProvider.value = proto.metadataProvider
                 _metadataFixAction.value = proto.metadataFixAction
                 _metadataConfidenceThreshold.value = proto.metadataConfidenceThreshold
+                _fanartTvApiKey.value = proto.fanartTvApiKey
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
@@ -162,6 +166,12 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setMetadataConfidenceThreshold(threshold).build() }
                 _metadataConfidenceThreshold.value = threshold
+            }
+
+        override suspend fun setFanartTvApiKey(apiKey: String): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setFanartTvApiKey(apiKey.trim()).build() }
+                _fanartTvApiKey.value = apiKey.trim()
             }
 
         override suspend fun setCustomScanLocation(
