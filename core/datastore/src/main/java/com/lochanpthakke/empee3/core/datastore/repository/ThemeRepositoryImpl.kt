@@ -81,6 +81,12 @@ class ThemeRepositoryImpl
         private val _fanartTvApiKey = MutableStateFlow("")
         override val fanartTvApiKey: StateFlow<String> = _fanartTvApiKey.asStateFlow()
 
+        private val _sidebarGlassyness = MutableStateFlow(0.85f)
+        override val sidebarGlassyness: StateFlow<Float> = _sidebarGlassyness.asStateFlow()
+
+        private val _uiGlassyness = MutableStateFlow(0.35f)
+        override val uiGlassyness: StateFlow<Float> = _uiGlassyness.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -100,6 +106,8 @@ class ThemeRepositoryImpl
                 _metadataFixAction.value = proto.metadataFixAction
                 _metadataConfidenceThreshold.value = proto.metadataConfidenceThreshold
                 _fanartTvApiKey.value = proto.fanartTvApiKey
+                _sidebarGlassyness.value = if (proto.sidebarGlassyness > 0f) proto.sidebarGlassyness else 0.85f
+                _uiGlassyness.value = if (proto.uiGlassyness > 0f) proto.uiGlassyness else 0.35f
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
@@ -142,6 +150,18 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setGlassEffectEnabled(enabled).build() }
                 _glassEffectEnabled.value = enabled
+            }
+
+        override suspend fun setSidebarGlassyness(value: Float): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setSidebarGlassyness(value).build() }
+                _sidebarGlassyness.value = value
+            }
+
+        override suspend fun setUiGlassyness(value: Float): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setUiGlassyness(value).build() }
+                _uiGlassyness.value = value
             }
 
         override suspend fun setDefaultStartSection(section: String): AppResult<Unit> =

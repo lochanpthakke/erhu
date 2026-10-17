@@ -3,16 +3,17 @@ package com.lochanpthakke.empee3.feature.library
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Album
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import com.lochanpthakke.empee3.core.designsystem.R
 
 /**
  * The primary destinations, switched by [LibraryNavigationBar] (Search is the
@@ -20,21 +21,41 @@ import androidx.compose.ui.graphics.vector.ImageVector
  */
 enum class LibrarySection(
     val label: String,
-    val icon: ImageVector,
-    val selectedIcon: ImageVector,
 ) {
-    TRACKS("Tracks", Icons.Outlined.MusicNote, Icons.Filled.MusicNote),
-    ALBUMS("Albums", Icons.Outlined.Album, Icons.Filled.Album),
-    LIBRARY("Library", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
-    VYBE("VYBE", Icons.Outlined.AutoAwesome, Icons.Filled.AutoAwesome),
+    TRACKS("Tracks"),
+    ALBUMS("Albums"),
+    LIBRARY("Library"),
+    VYBE("VYBE");
+
+    val icon: ImageVector
+        @Composable get() = when (this) {
+            TRACKS -> Icons.Outlined.MusicNote
+            ALBUMS -> Icons.Outlined.Album
+            LIBRARY -> Icons.Outlined.LibraryMusic
+            VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
+        }
+
+    val selectedIcon: ImageVector
+        @Composable get() = when (this) {
+            TRACKS -> Icons.Filled.MusicNote
+            ALBUMS -> Icons.Filled.Album
+            LIBRARY -> Icons.Filled.LibraryMusic
+            VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
+        }
 }
 
 /** The full shelves the Library overview opens with "More". */
 enum class LibraryShelf(
     val label: String,
-    val icon: ImageVector,
 ) {
-    PLAYLISTS("Playlists", Icons.AutoMirrored.Filled.QueueMusic),
-    FAVORITES("Favorites", Icons.Filled.Favorite),
-    ARTISTS("Artists", Icons.Filled.Person),
+    PLAYLISTS("Playlists"),
+    FAVORITES("Favorites"),
+    ARTISTS("Artists");
+
+    val icon: ImageVector
+        @Composable get() = when (this) {
+            PLAYLISTS -> Icons.AutoMirrored.Filled.QueueMusic
+            FAVORITES -> Icons.Filled.Favorite
+            ARTISTS -> Icons.Filled.Person
+        }
 }

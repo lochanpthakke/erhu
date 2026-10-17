@@ -50,6 +50,9 @@ message PlaybackStateProto {
   float metadata_confidence_threshold = 29;
   // User-supplied Fanart.tv personal API key for high-resolution artist thumbs and backgrounds.
   string fanart_tv_api_key = 30;
+  // Glassyness / frostiness level sliders (0.0 = clear glass, 1.0 = full frosted glass).
+  float sidebar_glassyness = 31;
+  float ui_glassyness = 32;
 }
 
 message RepairBatchProto {

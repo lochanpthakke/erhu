@@ -191,6 +191,7 @@ fun MainScaffold() {
     val selectedTheme by themeViewModel.appTheme.collectAsState()
     val selectedThemeId by themeViewModel.appThemeId.collectAsState()
     val glassEffectEnabled by themeViewModel.glassEffectEnabled.collectAsState()
+    val sidebarGlassyness by themeViewModel.sidebarGlassyness.collectAsState()
     // System Default follows the device's light/dark setting (re-read on configuration changes).
     val isSystemDark = isSystemInDarkTheme()
 
@@ -216,11 +217,14 @@ fun MainScaffold() {
                 focusedArtworkUri.value ?: song?.artworkUri ?: song?.uri
             }.distinctUntilChanged()
                 .collectLatest { uri ->
-                    val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 48) }
+                    val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 64) }
                     val isGradient = selectedThemeId == BuiltInThemes.GRADIENT_UI_ID
                     val colors = DominantColorExtractor.extractColors(bitmap)
-                    val accentColor = if (isGradient) colors.topColor else colors.primary
-                    value = DominantColorExtractor.createThemeFromAccent(accentColor, isGradient = isGradient)
+                    value = DominantColorExtractor.createThemeFromColors(
+                        mainColor = colors.primary,
+                        accentColor = colors.accentColor,
+                        isGradient = isGradient,
+                    )
                 }
         }
     }
@@ -358,6 +362,7 @@ fun MainScaffold() {
                                     backdrop = shellBackdrop,
                                     optics = DRAWER_OPTICS,
                                     environmentLens = true,
+                                    frostFactor = sidebarGlassyness,
                                 ),
                         ) {
                             Column(

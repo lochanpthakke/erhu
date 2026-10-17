@@ -240,7 +240,8 @@ fun ArtistDetailScreen(
                 val scroll = innerPadding.forScrollingContent(topOverlay = true)
 
                 val setFocusedArtwork = LocalSetFocusedArtworkUri.current
-                val artistArtUri = artist.artworkUri ?: allArtistSongs.firstOrNull()?.artworkUri ?: allArtistSongs.firstOrNull()?.uri
+                val validArtistPhoto = artist.artworkUri?.takeIf(ArtistArtworkCache::hasArtwork)
+                val artistArtUri = validArtistPhoto ?: primarySongs.firstOrNull()?.artworkUri ?: primarySongs.firstOrNull()?.uri
                 LaunchedEffect(artistArtUri) {
                     setFocusedArtwork(artistArtUri)
                 }
@@ -261,21 +262,12 @@ fun ArtistDetailScreen(
                     item(key = HERO_KEY) {
                         ArtistHero(
                             artist = artist,
+                            songs = allArtistSongs,
                             listState = listState,
+                            onPlay = { viewModel.playInOrder(allArtistSongs) },
+                            onShuffle = { viewModel.playShuffled(allArtistSongs) },
                             onArtworkClick = { showImageDialog = true },
                         )
-                    }
-
-                    item(key = "actions") {
-                        Spacer(modifier = Modifier.height(Spacing.md))
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            ArtistActions(
-                                enabled = allArtistSongs.isNotEmpty(),
-                                onPlay = { viewModel.playInOrder(allArtistSongs) },
-                                onShuffle = { viewModel.playShuffled(allArtistSongs) },
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(Spacing.md))
                     }
 
                     val lps = albums.filter { it.songCount >= 7 }
@@ -450,7 +442,10 @@ fun ArtistDetailScreen(
 @Composable
 private fun ArtistHero(
     artist: Artist,
+    songs: List<Song>,
     listState: LazyListState,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
     onArtworkClick: () -> Unit,
 ) {
     val page = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
@@ -492,6 +487,9 @@ private fun ArtistHero(
         )
         ArtistTitleBlock(
             artist = artist,
+            songs = songs,
+            onPlay = onPlay,
+            onShuffle = onShuffle,
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
@@ -506,6 +504,9 @@ private fun ArtistHero(
 @Composable
 private fun ArtistTitleBlock(
     artist: Artist,
+    songs: List<Song>,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -532,6 +533,12 @@ private fun ArtistTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        ArtistActions(
+            enabled = songs.isNotEmpty(),
+            onPlay = onPlay,
+            onShuffle = onShuffle,
         )
     }
 }

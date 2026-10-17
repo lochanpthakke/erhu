@@ -44,6 +44,9 @@ interface ThemeRepository {
     /** Fanart.tv personal API key as stored ("" until the user enters one). */
     val fanartTvApiKey: StateFlow<String>
 
+    val sidebarGlassyness: StateFlow<Float>
+    val uiGlassyness: StateFlow<Float>
+
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
     suspend fun setWidgetTheme(themeId: String): AppResult<Unit>
@@ -51,6 +54,10 @@ interface ThemeRepository {
     suspend fun setLibraryLayoutMode(mode: String): AppResult<Unit>
 
     suspend fun setGlassEffectEnabled(enabled: Boolean): AppResult<Unit>
+
+    suspend fun setSidebarGlassyness(value: Float): AppResult<Unit>
+
+    suspend fun setUiGlassyness(value: Float): AppResult<Unit>
 
     suspend fun setDefaultStartSection(section: String): AppResult<Unit>
 

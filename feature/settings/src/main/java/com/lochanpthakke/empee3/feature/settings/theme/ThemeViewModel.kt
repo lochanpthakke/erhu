@@ -30,6 +30,8 @@ class ThemeViewModel
         val isRollbackActive: StateFlow<Boolean> = themeRepository.isRollbackFlagActive
         val defaultStartSection: StateFlow<String> = themeRepository.defaultStartSection
         val fanartTvApiKey: StateFlow<String> = themeRepository.fanartTvApiKey
+        val sidebarGlassyness: StateFlow<Float> = themeRepository.sidebarGlassyness
+        val uiGlassyness: StateFlow<Float> = themeRepository.uiGlassyness
 
         private val _importMessage = MutableStateFlow<String?>(null)
         val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
@@ -49,6 +51,18 @@ class ThemeViewModel
         fun setGlassEffectEnabled(enabled: Boolean) {
             viewModelScope.launch {
                 themeRepository.setGlassEffectEnabled(enabled)
+            }
+        }
+
+        fun setSidebarGlassyness(value: Float) {
+            viewModelScope.launch {
+                themeRepository.setSidebarGlassyness(value)
+            }
+        }
+
+        fun setUiGlassyness(value: Float) {
+            viewModelScope.launch {
+                themeRepository.setUiGlassyness(value)
             }
         }
 

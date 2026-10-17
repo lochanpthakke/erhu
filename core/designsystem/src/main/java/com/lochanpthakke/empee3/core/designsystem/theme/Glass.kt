@@ -172,6 +172,7 @@ fun Modifier.glassPanel(
     fill: Color? = null,
     optics: Float = SECONDARY_OPTICS,
     environmentLens: Boolean = false,
+    frostFactor: Float = 1f,
 ): Modifier {
     val glass = LocalGlassTokens.current ?: return this
     val frost = backdrop?.takeIf { isBackdropBlurSupported && !windowFrosted }
@@ -180,7 +181,15 @@ fun Modifier.glassPanel(
     // The clipped frost, when the environment lens does not draw the backdrop itself.
     val clippedFrost = frost?.takeIf { environment == null }
     val position = remember { GlassPosition() }
-    val surfaceFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted)
+    val baseFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted)
+    val factor = frostFactor.coerceIn(0f, 1f)
+    val surfaceFill = if (frost != null || windowFrosted) {
+        val panel = glass.panelFillColor(level == GlassLevel.Strong)
+        val targetAlpha = panel.alpha * (0.15f + 0.85f * factor)
+        panel.copy(alpha = targetAlpha)
+    } else {
+        baseFill
+    }
     val shadowModifier = Modifier.glassElevation(elevated && !level.floats, shape, glass)
     val floatShadow = Modifier.glassFloatShadow(enabled = level.floats && !bar, shape = shape, color = Color(glass.floatShadow))
     val tracked = if (frost != null) Modifier.onGloballyPositioned { position.offset = it.positionInRoot() } else Modifier
@@ -193,8 +202,8 @@ fun Modifier.glassPanel(
         .drawWithCache {
             val outline = shape.createOutline(size, layoutDirection, this)
             val layers = glassLayers(glass, level, surfaceFill, outlined, bar)
-            val environment = Color(glass.backgroundGradient.first())
-            val frostRadius = glass.frostRadiusDp.dp.toPx()
+            val environmentColor = Color(glass.backgroundGradient.first())
+            val frostRadius = (glass.frostRadiusDp.dp.toPx() * (0.3f + 1.2f * factor)).coerceAtLeast(1f)
             // Record a margin around the surface so the blur has real content at its edges.
             val margin = ceil(frostRadius * 2).toInt()
             val frostLayer =
@@ -210,7 +219,7 @@ fun Modifier.glassPanel(
 
             onDrawBehind {
                 if (frostLayer != null && clippedFrost != null) {
-                    drawFrost(clippedFrost, frostLayer, position.offset, margin, environment)
+                    drawFrost(clippedFrost, frostLayer, position.offset, margin, environmentColor)
                 }
                 drawGlassLayers(layers, outline, bar)
             }
