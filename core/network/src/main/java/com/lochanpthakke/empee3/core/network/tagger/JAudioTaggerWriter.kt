@@ -90,9 +90,24 @@ class JAudioTaggerWriter
             val audioFile = AudioFileIO.read(file)
             val tag = audioFile.tagOrCreateAndSetDefault
 
-            request.title?.let { tag.setField(FieldKey.TITLE, it) }
-            request.artist?.let { tag.setField(FieldKey.ARTIST, it) }
-            request.album?.let { tag.setField(FieldKey.ALBUM, it) }
+            if (request.clearTitle || request.title?.isBlank() == true) {
+                tag.deleteField(FieldKey.TITLE)
+            } else {
+                request.title?.let { tag.setField(FieldKey.TITLE, it) }
+            }
+
+            if (request.clearArtist || request.artist?.isBlank() == true) {
+                tag.deleteField(FieldKey.ARTIST)
+            } else {
+                request.artist?.let { tag.setField(FieldKey.ARTIST, it) }
+            }
+
+            if (request.clearAlbum || request.album?.isBlank() == true) {
+                tag.deleteField(FieldKey.ALBUM)
+            } else {
+                request.album?.let { tag.setField(FieldKey.ALBUM, it) }
+            }
+
             if (request.clearYear) {
                 tag.deleteField(FieldKey.YEAR)
             } else {
@@ -103,23 +118,29 @@ class JAudioTaggerWriter
                     tag.setField(FieldKey.YEAR, value)
                 }
             }
+
             if (request.clearGenre) {
                 tag.deleteField(FieldKey.GENRE)
             } else {
                 request.genre?.let { tag.setField(FieldKey.GENRE, it) }
             }
+
             request.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
             request.bpm?.let { tag.setField(FieldKey.BPM, it.toString()) }
             request.lyrics?.let { tag.setField(FieldKey.LYRICS, it) }
 
-            request.artworkBytes?.let { bytes ->
-                val artworkFile = File(file.parentFile, "${file.nameWithoutExtension}-art.jpg")
-                try {
-                    artworkFile.writeBytes(downscaleArtwork(bytes))
-                    tag.deleteArtworkField()
-                    tag.setField(ArtworkFactory.createArtworkFromFile(artworkFile))
-                } finally {
-                    artworkFile.delete()
+            if (request.clearArtwork) {
+                tag.deleteArtworkField()
+            } else {
+                request.artworkBytes?.let { bytes ->
+                    val artworkFile = File(file.parentFile, "${file.nameWithoutExtension}-art.jpg")
+                    try {
+                        artworkFile.writeBytes(downscaleArtwork(bytes))
+                        tag.deleteArtworkField()
+                        tag.setField(ArtworkFactory.createArtworkFromFile(artworkFile))
+                    } finally {
+                        artworkFile.delete()
+                    }
                 }
             }
 
@@ -132,18 +153,44 @@ class JAudioTaggerWriter
             file: File,
             request: TagWriteRequest,
         ) {
-            val tag = AudioFileIO.read(file).tag ?: throw CannotWriteException("No tag after write")
-            val expected =
-                listOfNotNull(
-                    request.title?.let { FieldKey.TITLE to it },
-                    request.artist?.let { FieldKey.ARTIST to it },
-                    request.album?.let { FieldKey.ALBUM to it },
-                    request.genre?.takeUnless { request.clearGenre }?.let { FieldKey.GENRE to it },
-                )
-            for ((key, value) in expected) {
-                val actual = tag.getFirst(key)
-                if (actual != value) throw CannotWriteException("Verification failed for $key: '$actual'")
+            val tag = AudioFileIO.read(file).tag
+            if (tag == null) {
+                if (!request.clearTitle && !request.clearArtist && !request.clearAlbum) {
+                    throw CannotWriteException("No tag after write")
+                }
+                return
             }
+
+            if (request.clearTitle || request.title?.isBlank() == true) {
+                val actualTitle = tag.getFirst(FieldKey.TITLE)
+                if (actualTitle.isNotBlank()) throw CannotWriteException("Verification failed for TITLE deletion: expected empty, found '$actualTitle'")
+            } else {
+                request.title?.let { expected ->
+                    val actual = tag.getFirst(FieldKey.TITLE)
+                    if (actual != expected) throw CannotWriteException("Verification failed for TITLE: wrote '$expected', file reads '$actual'")
+                }
+            }
+
+            if (request.clearArtist || request.artist?.isBlank() == true) {
+                val actualArtist = tag.getFirst(FieldKey.ARTIST)
+                if (actualArtist.isNotBlank()) throw CannotWriteException("Verification failed for ARTIST deletion: expected empty, found '$actualArtist'")
+            } else {
+                request.artist?.let { expected ->
+                    val actual = tag.getFirst(FieldKey.ARTIST)
+                    if (actual != expected) throw CannotWriteException("Verification failed for ARTIST: wrote '$expected', file reads '$actual'")
+                }
+            }
+
+            if (request.clearAlbum || request.album?.isBlank() == true) {
+                val actualAlbum = tag.getFirst(FieldKey.ALBUM)
+                if (actualAlbum.isNotBlank()) throw CannotWriteException("Verification failed for ALBUM deletion: expected empty, found '$actualAlbum'")
+            } else {
+                request.album?.let { expected ->
+                    val actual = tag.getFirst(FieldKey.ALBUM)
+                    if (actual != expected) throw CannotWriteException("Verification failed for ALBUM: wrote '$expected', file reads '$actual'")
+                }
+            }
+
             if (request.clearYear) {
                 val actualYear = tag.getFirst(FieldKey.YEAR)
                 if (actualYear.isNotBlank()) {
@@ -152,14 +199,21 @@ class JAudioTaggerWriter
             } else {
                 yearTagValue(request)?.let { expectedYear ->
                     val actual = tag.getFirst(FieldKey.YEAR)
-                    if (actual != expectedYear) throw CannotWriteException("Verification failed for YEAR: wrote '$expectedYear', file reads '$actual'")
+                    if (actual != expectedYear) {
+                        throw CannotWriteException("Verification failed for YEAR: wrote '$expectedYear', file reads '$actual'")
+                    }
                 }
             }
+
             if (request.clearGenre) {
                 val actualGenre = tag.getFirst(FieldKey.GENRE)
                 if (actualGenre.isNotBlank()) {
                     throw CannotWriteException("Verification failed for GENRE deletion: expected empty, found '$actualGenre'")
                 }
+            }
+
+            if (request.clearArtwork) {
+                if (tag.firstArtwork != null) throw CannotWriteException("Verification failed for ARTWORK deletion: expected empty, found artwork")
             }
         }
 

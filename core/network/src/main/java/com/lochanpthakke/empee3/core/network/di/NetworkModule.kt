@@ -158,6 +158,102 @@ object NetworkModule {
             .build()
             .create(com.lochanpthakke.empee3.core.network.api.WikipediaApi::class.java)
     }
+
+    @Provides
+    @Singleton
+    fun provideDiscogsApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.DiscogsApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://api.discogs.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.DiscogsApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFanartTvApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.FanartTvApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://webservice.fanart.tv/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.FanartTvApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDuckDuckGoApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://duckduckgo.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.DuckDuckGoApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTheAudioDbApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.TheAudioDbApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://www.theaudiodb.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.TheAudioDbApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWikidataApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.WikidataApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://www.wikidata.org/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.WikidataApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGeniusApi(
+        okHttpClient: OkHttpClient,
+        json: Json,
+    ): com.lochanpthakke.empee3.core.network.api.GeniusApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://genius.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.lochanpthakke.empee3.core.network.api.GeniusApi::class.java)
+    }
 }
 
 private val SECRET_QUERY = Regex("""(?i)\b(api_key|apikey|token|secret)=[^&\s]*""")
@@ -182,7 +278,12 @@ class ResilientDns : okhttp3.Dns {
                 val resolved =
                     ips.mapNotNull { ip ->
                         try {
-                            java.net.InetAddress.getByAddress(hostname, java.net.InetAddress.getByName(ip).address)
+                            java.net.InetAddress.getByAddress(
+                                hostname,
+                                java.net.InetAddress
+                                    .getByName(ip)
+                                    .address,
+                            )
                         } catch (_: Exception) {
                             null
                         }

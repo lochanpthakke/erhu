@@ -25,8 +25,12 @@ data class TagWriteRequest(
     val bpm: Int? = null,
     val lyrics: String? = null,
     val artworkBytes: ByteArray? = null,
+    val clearTitle: Boolean = false,
+    val clearArtist: Boolean = false,
+    val clearAlbum: Boolean = false,
     val clearYear: Boolean = false,
     val clearGenre: Boolean = false,
+    val clearArtwork: Boolean = false,
 ) {
     val hasChanges: Boolean
         get() =
@@ -40,8 +44,12 @@ data class TagWriteRequest(
                 bpm != null ||
                 lyrics != null ||
                 artworkBytes != null ||
+                clearTitle ||
+                clearArtist ||
+                clearAlbum ||
                 clearYear ||
-                clearGenre
+                clearGenre ||
+                clearArtwork
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -56,8 +64,15 @@ data class TagWriteRequest(
             releaseDate == other.releaseDate &&
             genre == other.genre &&
             trackNumber == other.trackNumber &&
+            bpm == other.bpm &&
             lyrics == other.lyrics &&
-            artworkBytes.contentEquals(other.artworkBytes)
+            artworkBytes.contentEquals(other.artworkBytes) &&
+            clearTitle == other.clearTitle &&
+            clearArtist == other.clearArtist &&
+            clearAlbum == other.clearAlbum &&
+            clearYear == other.clearYear &&
+            clearGenre == other.clearGenre &&
+            clearArtwork == other.clearArtwork
     }
 
     @Suppress("MagicNumber")
@@ -71,8 +86,15 @@ data class TagWriteRequest(
         result = 31 * result + (releaseDate?.hashCode() ?: 0)
         result = 31 * result + (genre?.hashCode() ?: 0)
         result = 31 * result + (trackNumber ?: 0)
+        result = 31 * result + (bpm ?: 0)
         result = 31 * result + (lyrics?.hashCode() ?: 0)
         result = 31 * result + (artworkBytes?.contentHashCode() ?: 0)
+        result = 31 * result + clearTitle.hashCode()
+        result = 31 * result + clearArtist.hashCode()
+        result = 31 * result + clearAlbum.hashCode()
+        result = 31 * result + clearYear.hashCode()
+        result = 31 * result + clearGenre.hashCode()
+        result = 31 * result + clearArtwork.hashCode()
         return result
     }
 }

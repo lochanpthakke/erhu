@@ -127,8 +127,15 @@ class DeezerProvider
             return try {
                 val response = deezerApi.searchArtist(trimmed)
                 val candidates = response.data.orEmpty()
-                candidates
+                // 1. Filter to exact case-insensitive normalized name equality
+                val exactMatches = candidates.filter { it.name.trim().equals(trimmed, ignoreCase = true) }
+                // 2. Sort by fan count descending
+                val sorted = (if (exactMatches.isNotEmpty()) exactMatches else candidates).sortedByDescending { it.nbFan }
+                // 3. Extract pictureXl / pictureBig, requiring a valid 32-hex character hash segment
+                sorted
                     .mapNotNull { it.pictureXl ?: it.pictureBig ?: it.pictureMedium }
+                    .filter { url -> url.isNotBlank() && DEEZER_ARTIST_HASH_REGEX.containsMatchIn(url) }
+                    .distinct()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -139,6 +146,7 @@ class DeezerProvider
 
         companion object {
             private const val TAG = "DeezerProvider"
+            private val DEEZER_ARTIST_HASH_REGEX = Regex("""/images/artist/([a-fA-F0-9]{32})/""")
         }
     }
 

@@ -165,7 +165,10 @@ class LibraryRepositoryImpl
                 )
             }
 
-        override suspend fun updateFilePath(songId: Long, newPath: String): AppResult<Unit> =
+        override suspend fun updateFilePath(
+            songId: Long,
+            newPath: String,
+        ): AppResult<Unit> =
             appResultOf {
                 songDao.updateFilePath(songId, newPath)
             }

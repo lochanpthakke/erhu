@@ -20,11 +20,37 @@ fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption>
         MetadataSourceOption(
             MetadataSources.ALL,
             "All providers",
-            if (lastFmConfigured) {
-                "iTunes, MusicBrainz, Deezer and Last.fm together; the best-scoring match is used"
-            } else {
-                "iTunes, MusicBrainz and Deezer together (Last.fm has no API key); the best-scoring match is used"
-            },
+            "Genius, DuckDuckGo, Fanart.tv, TheAudioDB, Discogs, Wikipedia, iTunes, MusicBrainz, Deezer and Last.fm together",
+        ),
+        MetadataSourceOption(
+            MetadataSources.GENIUS,
+            "Genius",
+            "Keyless artist profile pictures and high-res header portraits",
+        ),
+        MetadataSourceOption(
+            MetadataSources.DUCKDUCKGO,
+            "DuckDuckGo Web Search",
+            "Keyless public web image search for instant out-of-the-box artist photos",
+        ),
+        MetadataSourceOption(
+            MetadataSources.FANART_TV,
+            "Fanart.tv",
+            "Dedicated high-resolution music fanart and square artist portraits",
+        ),
+        MetadataSourceOption(
+            MetadataSources.THE_AUDIO_DB,
+            "TheAudioDB",
+            "Open music database for official artist promo photos and fanart",
+        ),
+        MetadataSourceOption(
+            MetadataSources.DISCOGS,
+            "Discogs",
+            "Music database catalog and artist profile pictures",
+        ),
+        MetadataSourceOption(
+            MetadataSources.WIKIPEDIA,
+            "Wikipedia / Wikimedia",
+            "Wikipedia lead photos and Wikimedia Commons public domain artist images",
         ),
         MetadataSourceOption(
             MetadataSources.ITUNES,
@@ -55,6 +81,12 @@ fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption>
 private val OFFERED_KEYS =
     listOf(
         MetadataSources.ALL,
+        MetadataSources.GENIUS,
+        MetadataSources.DUCKDUCKGO,
+        MetadataSources.FANART_TV,
+        MetadataSources.THE_AUDIO_DB,
+        MetadataSources.DISCOGS,
+        MetadataSources.WIKIPEDIA,
         MetadataSources.ITUNES,
         MetadataSources.MUSICBRAINZ,
         MetadataSources.DEEZER,

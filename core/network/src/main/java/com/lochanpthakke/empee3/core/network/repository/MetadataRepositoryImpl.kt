@@ -16,6 +16,8 @@ import com.lochanpthakke.empee3.core.network.provider.DeezerProvider
 import com.lochanpthakke.empee3.core.network.provider.LastFmProvider
 import com.lochanpthakke.empee3.core.network.provider.LrclibProvider
 import com.lochanpthakke.empee3.core.network.provider.MusicBrainzProvider
+import com.lochanpthakke.empee3.core.network.retry.RetryPolicy
+import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.MetadataScorer
 import com.lochanpthakke.empee3.core.network.tagger.JAudioTaggerWriter
@@ -26,9 +28,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import com.lochanpthakke.empee3.core.network.retry.RetryPolicy
-import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.inject.Inject
@@ -45,6 +46,11 @@ class MetadataRepositoryImpl
         private val lrclibProvider: LrclibProvider,
         private val iTunesProvider: com.lochanpthakke.empee3.core.network.provider.ITunesProvider,
         private val wikipediaProvider: com.lochanpthakke.empee3.core.network.provider.WikipediaProvider,
+        private val geniusProvider: com.lochanpthakke.empee3.core.network.provider.GeniusProvider,
+        private val duckDuckGoImageSearchProvider: com.lochanpthakke.empee3.core.network.provider.DuckDuckGoImageSearchProvider,
+        private val discogsProvider: com.lochanpthakke.empee3.core.network.provider.DiscogsProvider,
+        private val fanartTvProvider: com.lochanpthakke.empee3.core.network.provider.FanartTvProvider,
+        private val theAudioDbProvider: com.lochanpthakke.empee3.core.network.provider.TheAudioDbProvider,
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
@@ -155,15 +161,27 @@ class MetadataRepositoryImpl
         ): AppResult<List<String>> =
             appResultOf {
                 withContext(Dispatchers.IO) {
-                    val iTunesList = iTunesProvider.fetchAlbumArtList(albumTitle, artist)
-                    val musicBrainzList = musicBrainzProvider.fetchReleaseGroupArtList(albumTitle, artist)
+                    val iTunesList =
+                        if (MetadataSources.matches(MetadataSources.ITUNES, sourceProvider)) {
+                            iTunesProvider.fetchAlbumArtList(albumTitle, artist)
+                        } else {
+                            emptyList()
+                        }
+
+                    val musicBrainzList =
+                        if (MetadataSources.matches(MetadataSources.MUSICBRAINZ, sourceProvider)) {
+                            musicBrainzProvider.fetchReleaseGroupArtList(albumTitle, artist)
+                        } else {
+                            emptyList()
+                        }
+
                     val deezerList =
-                        if (MetadataSources.matches(deezerProvider.providerName, sourceProvider)) {
+                        if (MetadataSources.matches(MetadataSources.DEEZER, sourceProvider)) {
                             deezerProvider.fetchAlbumArtList(albumTitle, artist)
                         } else {
                             emptyList()
                         }
-                    // An album search: the album title stands in for the track title and the album.
+
                     val trackCandidates =
                         searchTrack(title = albumTitle, artist = artist, album = albumTitle, sourceProvider = sourceProvider)
                             .getOrDefault(emptyList())
@@ -178,17 +196,125 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<List<String>> =
             appResultOf {
-                withContext(Dispatchers.IO) {
-                    val urls = mutableListOf<String>()
-                    val deezerPortraits = deezerProvider.fetchArtistPortraitList(artistName)
-                    urls.addAll(deezerPortraits)
+                when (val result = fetchArtistArtworkCandidatesDetailed(artistName, sourceProvider)) {
+                    is com.lochanpthakke.empee3.core.common.result.AppResult.Success -> result.data.candidates
+                    is com.lochanpthakke.empee3.core.common.result.AppResult.Error -> emptyList()
+                }
+            }
 
-                    val wikiPortrait = wikipediaProvider.fetchArtistPortrait(artistName)
-                    if (!wikiPortrait.isNullOrBlank()) {
-                        urls.add(wikiPortrait)
+        override suspend fun fetchArtistArtworkCandidatesDetailed(
+            artistName: String,
+            sourceProvider: String,
+        ): AppResult<ArtistArtworkSearchResponse> =
+            appResultOf {
+                withContext(Dispatchers.IO) {
+                    // 1. Resolve MBID once up front
+                    val mbid = musicBrainzProvider.resolveArtistMbid(artistName)
+
+                    // 2. Fan out provider calls in parallel
+                    val map = mutableMapOf<String, List<String>>()
+                    coroutineScope {
+                        val geniusDeferred =
+                            if (MetadataSources.matches(MetadataSources.GENIUS, sourceProvider)) {
+                                async { geniusProvider.fetchArtistPortraits(artistName).filter { isArtistPhotoUrl(it) } }
+                            } else {
+                                null
+                            }
+
+                        val duckDeferred =
+                            if (MetadataSources.matches(MetadataSources.DUCKDUCKGO, sourceProvider)) {
+                                async { duckDuckGoImageSearchProvider.fetchArtistPortraits(artistName).filter { isArtistPhotoUrl(it) } }
+                            } else {
+                                null
+                            }
+
+                        val fanartDeferred =
+                            if (MetadataSources.matches(MetadataSources.FANART_TV, sourceProvider)) {
+                                async {
+                                    fanartTvProvider
+                                        .fetchArtistPortraits(
+                                            artistName,
+                                            preResolvedMbid = mbid,
+                                        ).filter { isArtistPhotoUrl(it) }
+                                }
+                            } else {
+                                null
+                            }
+
+                        val theAudioDbDeferred =
+                            if (MetadataSources.matches(MetadataSources.THE_AUDIO_DB, sourceProvider)) {
+                                async {
+                                    theAudioDbProvider
+                                        .fetchArtistPortraits(
+                                            artistName,
+                                            preResolvedMbid = mbid,
+                                        ).filter { isArtistPhotoUrl(it) }
+                                }
+                            } else {
+                                null
+                            }
+
+                        val discogsDeferred =
+                            if (MetadataSources.matches(MetadataSources.DISCOGS, sourceProvider)) {
+                                async {
+                                    discogsProvider
+                                        .fetchArtistPortraits(
+                                            artistName,
+                                            preResolvedMbid = mbid,
+                                        ).filter { isArtistPhotoUrl(it) }
+                                }
+                            } else {
+                                null
+                            }
+
+                        val deezerDeferred =
+                            if (MetadataSources.matches(MetadataSources.DEEZER, sourceProvider)) {
+                                async { deezerProvider.fetchArtistPortraitList(artistName).filter { isArtistPhotoUrl(it) } }
+                            } else {
+                                null
+                            }
+
+                        val wikiDeferred =
+                            if (MetadataSources.matches(MetadataSources.WIKIPEDIA, sourceProvider)) {
+                                async {
+                                    wikipediaProvider
+                                        .fetchArtistPortraits(
+                                            artistName,
+                                            preResolvedMbid = mbid,
+                                        ).filter { isArtistPhotoUrl(it) }
+                                }
+                            } else {
+                                null
+                            }
+
+                        val iTunesArtistDeferred =
+                            if (MetadataSources.matches(MetadataSources.ITUNES, sourceProvider)) {
+                                async { iTunesProvider.fetchArtistArtworkList(artistName).filter { isArtistPhotoUrl(it) } }
+                            } else {
+                                null
+                            }
+
+                        geniusDeferred?.await()?.let { map["Genius"] = it }
+                        duckDeferred?.await()?.let { map["DuckDuckGo Web Search"] = it }
+                        fanartDeferred?.await()?.let { map["Fanart.tv"] = it }
+                        theAudioDbDeferred?.await()?.let { map["TheAudioDB"] = it }
+                        discogsDeferred?.await()?.let { map["Discogs"] = it }
+                        deezerDeferred?.await()?.let { map["Deezer"] = it }
+                        wikiDeferred?.await()?.let { map["Wikipedia / Wikimedia"] = it }
+                        iTunesArtistDeferred?.await()?.let { map["iTunes / Apple Music"] = it }
                     }
 
-                    urls.distinct()
+                    // 3. Merge layer: Pin top Deezer candidate first, followed by others, deduplicated
+                    val deezerTop = map["Deezer"]?.firstOrNull()
+                    val allFlattened = map.values.flatten().distinct()
+                    val allCandidates =
+                        if (deezerTop != null) {
+                            listOf(deezerTop) + (allFlattened - deezerTop)
+                        } else {
+                            allFlattened
+                        }
+
+                    ArtistArtworkSearchResponse(candidates = allCandidates, providerCandidates = map, resolvedMbid = mbid)
                 }
             }
 
@@ -260,6 +386,20 @@ class MetadataRepositoryImpl
             private const val MAX_ARTWORK_BYTES = 10L * 1024 * 1024
         }
     }
+
+private fun isArtistPhotoUrl(url: String): Boolean {
+    if (url.isBlank()) return false
+    val lower = url.lowercase()
+    if (lower.contains("/cover/") ||
+        lower.contains("/album/") ||
+        lower.contains("cover_") ||
+        lower.contains("coverart") ||
+        lower.contains("album_art")
+    ) {
+        return false
+    }
+    return true
+}
 
 /**
  * The genre to write from MusicBrainz's curated release-group genres: the top-voted genres.

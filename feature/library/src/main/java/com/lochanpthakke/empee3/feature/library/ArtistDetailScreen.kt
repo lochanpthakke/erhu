@@ -35,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +63,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
@@ -380,7 +380,9 @@ fun ArtistDetailScreen(
     songForViewMetadata?.let { song ->
         ViewMetadataScreen(
             song = song,
-            viewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+            viewModel =
+                androidx.hilt.navigation.compose
+                    .hiltViewModel(),
             libraryViewModel = viewModel,
             onDismiss = { songForViewMetadata = null },
         )

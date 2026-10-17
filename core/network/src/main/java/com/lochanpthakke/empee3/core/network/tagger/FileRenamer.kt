@@ -10,12 +10,11 @@ import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 data class RenameResult(
     val newFilePath: String,
@@ -71,53 +70,53 @@ class FileRenamer
         ): AppResult<RenameResult> =
             withContext(Dispatchers.IO) {
                 appResultOf(mapError = { AppError.TagWriteError("Could not rename file: ${it.message}", it) }) {
-                val currentFile = File(currentPath)
-                val parentDir = currentFile.parentFile ?: throw IllegalArgumentException("Invalid file path: $currentPath")
+                    val currentFile = File(currentPath)
+                    val parentDir = currentFile.parentFile ?: throw IllegalArgumentException("Invalid file path: $currentPath")
 
-                var finalTargetName = targetFileName
-                var targetFile = File(parentDir, finalTargetName)
-                var counter = 1
-                val baseNameWithoutExt = targetFileName.substringBeforeLast('.')
-                val ext = targetFileName.substringAfterLast('.', "")
+                    var finalTargetName = targetFileName
+                    var targetFile = File(parentDir, finalTargetName)
+                    var counter = 1
+                    val baseNameWithoutExt = targetFileName.substringBeforeLast('.')
+                    val ext = targetFileName.substringAfterLast('.', "")
 
-                while (targetFile.exists() && targetFile.absolutePath != currentFile.absolutePath) {
-                    finalTargetName = if (ext.isNotEmpty()) "$baseNameWithoutExt ($counter).$ext" else "$baseNameWithoutExt ($counter)"
-                    targetFile = File(parentDir, finalTargetName)
-                    counter++
-                }
+                    while (targetFile.exists() && targetFile.absolutePath != currentFile.absolutePath) {
+                        finalTargetName = if (ext.isNotEmpty()) "$baseNameWithoutExt ($counter).$ext" else "$baseNameWithoutExt ($counter)"
+                        targetFile = File(parentDir, finalTargetName)
+                        counter++
+                    }
 
-                if (targetFile.absolutePath == currentFile.absolutePath) {
-                    return@appResultOf RenameResult(
-                        newFilePath = currentPath,
-                        newFileName = currentFile.name,
+                    if (targetFile.absolutePath == currentFile.absolutePath) {
+                        return@appResultOf RenameResult(
+                            newFilePath = currentPath,
+                            newFileName = currentFile.name,
+                        )
+                    }
+
+                    val uri = Uri.parse(contentUri)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && contentUri.startsWith("content://")) {
+                        val values =
+                            ContentValues().apply {
+                                put(MediaStore.Audio.Media.DISPLAY_NAME, finalTargetName)
+                            }
+                        val updatedRows = context.contentResolver.update(uri, values, null, null)
+                        if (updatedRows <= 0) {
+                            if (!currentFile.renameTo(targetFile)) {
+                                throw IllegalStateException("Failed to rename file via MediaStore or direct filesystem")
+                            }
+                        }
+                    } else {
+                        if (!currentFile.renameTo(targetFile)) {
+                            throw IllegalStateException("Failed to rename file on storage")
+                        }
+                    }
+
+                    val newPath = targetFile.absolutePath
+                    MediaScannerConnection.scanFile(context, arrayOf(newPath), null, null)
+
+                    RenameResult(
+                        newFilePath = newPath,
+                        newFileName = finalTargetName,
                     )
                 }
-
-                val uri = Uri.parse(contentUri)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && contentUri.startsWith("content://")) {
-                    val values =
-                        ContentValues().apply {
-                            put(MediaStore.Audio.Media.DISPLAY_NAME, finalTargetName)
-                        }
-                    val updatedRows = context.contentResolver.update(uri, values, null, null)
-                    if (updatedRows <= 0) {
-                        if (!currentFile.renameTo(targetFile)) {
-                            throw IllegalStateException("Failed to rename file via MediaStore or direct filesystem")
-                        }
-                    }
-                } else {
-                    if (!currentFile.renameTo(targetFile)) {
-                        throw IllegalStateException("Failed to rename file on storage")
-                    }
-                }
-
-                val newPath = targetFile.absolutePath
-                MediaScannerConnection.scanFile(context, arrayOf(newPath), null, null)
-
-                RenameResult(
-                    newFilePath = newPath,
-                    newFileName = finalTargetName,
-                )
             }
-        }
     }

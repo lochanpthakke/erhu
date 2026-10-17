@@ -110,7 +110,7 @@ internal fun ArtistImageDialog(
     )
 
     pickedUri?.let { uri ->
-        SquareCropDialog(
+        CircularCropDialog(
             imageUri = uri,
             onDismiss = { pickedUri = null },
             onCropped = { bytes, preview ->
