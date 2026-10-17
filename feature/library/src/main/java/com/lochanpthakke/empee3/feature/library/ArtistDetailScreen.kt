@@ -39,7 +39,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,10 +58,15 @@ import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroDetails
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroTitle
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -81,8 +85,6 @@ private const val HERO_SCRIM_START = 0.35f
 private const val HERO_SCRIM_STEPS = 12
 private const val SMOOTHSTEP_A = 3f
 private const val SMOOTHSTEP_B = 2f
-private val TITLE_FADE_DISTANCE = 140.dp
-private const val COMPACT_HEADER_AT = 0.5f
 
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
 private val COMPACT_ALBUM_CARD_WIDTH = 110.dp
@@ -147,18 +149,14 @@ fun ArtistDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
-    val compactHeader by remember(listState) {
-        derivedStateOf {
-            val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == HERO_KEY }
-            hero == null || listState.firstVisibleItemScrollOffset > hero.size * COMPACT_HEADER_AT
-        }
-    }
+    val header = rememberCollapsingHeaderState(listState)
 
     AppScaffold(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(onBack),
-                title = detail?.artist?.name?.takeIf { compactHeader },
+                title = detail?.artist?.name,
+                collapsingHeader = header,
                 actions = {
                     val artist = detail?.artist
                     val allSongs = detail?.let { it.primarySongs.ifEmpty { it.featuredSongs } }.orEmpty()
@@ -262,6 +260,7 @@ fun ArtistDetailScreen(
                         ArtistHero(
                             artist = artist,
                             listState = listState,
+                            header = header,
                             onArtworkClick = { showImageDialog = true },
                         )
                     }
@@ -451,6 +450,7 @@ fun ArtistDetailScreen(
 private fun ArtistHero(
     artist: Artist,
     listState: LazyListState,
+    header: CollapsingHeaderState,
     onArtworkClick: () -> Unit,
 ) {
     val page = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
@@ -492,13 +492,11 @@ private fun ArtistHero(
         )
         ArtistTitleBlock(
             artist = artist,
+            header = header,
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer {
-                        val scrolled = heroScroll(listState, Float.MAX_VALUE)
-                        alpha = 1f - (scrolled / TITLE_FADE_DISTANCE.toPx()).coerceIn(0f, 1f)
-                    },
+                    .collapsingHeroBlock(header),
         )
     }
 }
@@ -506,6 +504,7 @@ private fun ArtistHero(
 @Composable
 private fun ArtistTitleBlock(
     artist: Artist,
+    header: CollapsingHeaderState,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -523,6 +522,8 @@ private fun ArtistTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            onTextLayout = header::onHeroTitleLayout,
+            modifier = Modifier.collapsingHeroTitle(header),
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
@@ -532,6 +533,7 @@ private fun ArtistTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.collapsingHeroDetails(header),
         )
     }
 }

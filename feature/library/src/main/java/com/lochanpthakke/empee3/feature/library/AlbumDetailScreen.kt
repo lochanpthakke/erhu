@@ -1,5 +1,8 @@
 package com.lochanpthakke.empee3.feature.library
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,9 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -36,12 +36,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +50,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,10 +59,15 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroDetails
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroTitle
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -95,14 +99,8 @@ private const val HERO_SCRIM_STEPS = 12
 private const val SMOOTHSTEP_A = 3f
 private const val SMOOTHSTEP_B = 2f
 
-/** Scrolled past this share of the hero, the album title moves into the floating header. */
-private const val COMPACT_HEADER_AT = 0.75f
-
 /** Width of the centered Play / Shuffle pair as a share of the screen (as on the artist page). */
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
-
-/** The title over the artwork fades out over this much scrolling. */
-private val TITLE_FADE_DISTANCE = 160.dp
 
 private const val MS_PER_MINUTE = 60_000L
 private const val MINUTES_PER_HOUR = 60L
@@ -181,19 +179,15 @@ fun AlbumDetailScreen(
         }
 
     val listState = rememberLazyListState()
-    val compactHeader by remember(listState) {
-        derivedStateOf {
-            val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == HERO_KEY }
-            hero == null || listState.firstVisibleItemScrollOffset > hero.size * COMPACT_HEADER_AT
-        }
-    }
+    val header = rememberCollapsingHeaderState(listState)
     AppScaffold(
-        // Floating glass back button over the cover; once the cover has scrolled away
-        // the album title joins it as a compact header.
+        // Floating glass back button over the cover; as the album title rises to it, the title
+        // hands over to the header's own (see CollapsingHeaderState) and the header turns solid.
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(onBack),
-                title = detail?.album?.title?.takeIf { compactHeader },
+                title = detail?.album?.title,
+                collapsingHeader = header,
                 actions = {
                     val album = detail?.album
                     val songs = detail?.songs.orEmpty()
@@ -307,7 +301,9 @@ fun AlbumDetailScreen(
                     // The cover starts at the very top, under the status bar and the floating header.
                     contentPadding = PaddingValues(bottom = Spacing.lg + scroll.contentBottom),
                 ) {
-                    item(key = HERO_KEY) { AlbumHero(album = album, songs = songs.takeIf { data.loaded }, listState = listState) }
+                    item(key = HERO_KEY) {
+                        AlbumHero(album = album, songs = songs.takeIf { data.loaded }, listState = listState, header = header)
+                    }
                     item(key = "actions") {
                         AlbumActions(
                             // Enabled while the tracks load too (no flicker); an empty album disables them.
@@ -403,6 +399,7 @@ private fun AlbumHero(
     album: Album,
     songs: List<Song>?,
     listState: LazyListState,
+    header: CollapsingHeaderState,
 ) {
     // The opaque colour the track list sits on (the theme background is translucent under glass).
     val page = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
@@ -446,13 +443,11 @@ private fun AlbumHero(
         AlbumTitleBlock(
             album = album,
             songs = songs,
+            header = header,
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer {
-                        val scrolled = heroScroll(listState, Float.MAX_VALUE)
-                        alpha = 1f - (scrolled / TITLE_FADE_DISTANCE.toPx()).coerceIn(0f, 1f)
-                    },
+                    .collapsingHeroBlock(header),
         )
     }
 }
@@ -462,6 +457,7 @@ private fun AlbumHero(
 private fun AlbumTitleBlock(
     album: Album,
     songs: List<Song>?,
+    header: CollapsingHeaderState,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -479,6 +475,8 @@ private fun AlbumTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            onTextLayout = header::onHeroTitleLayout,
+            modifier = Modifier.collapsingHeroTitle(header),
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
@@ -488,6 +486,7 @@ private fun AlbumTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.collapsingHeroDetails(header),
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         val factsText = songs?.let { albumFacts(album, it) }.orEmpty()
@@ -497,6 +496,7 @@ private fun AlbumTitleBlock(
         Row(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.collapsingHeroDetails(header),
         ) {
             Text(
                 text = if (isLossless && factsText.isNotBlank()) "$factsText · Lossless" else factsText,
