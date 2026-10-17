@@ -7,14 +7,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Close
@@ -206,6 +206,7 @@ fun SettingsCategoryScreen(
         else ->
             MetadataSettingsSubPage(
                 viewModel = libraryViewModel,
+                themeViewModel = themeViewModel,
                 title = title,
                 onBack = onBack,
                 onNavigateToMetadataEditor = onNavigateToMetadataEditor,
@@ -400,6 +401,7 @@ private fun parseFolderDisplayName(uri: Uri): String {
 @Composable
 private fun MetadataSettingsSubPage(
     viewModel: LibraryViewModel,
+    themeViewModel: ThemeViewModel,
     title: String,
     onBack: () -> Unit,
     onNavigateToMetadataEditor: () -> Unit,
@@ -408,6 +410,7 @@ private fun MetadataSettingsSubPage(
     val selectedFields by viewModel.selectedFields.collectAsState()
     val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
     val confidenceThreshold by viewModel.confidenceThreshold.collectAsState()
+    val fanartTvApiKey by themeViewModel.fanartTvApiKey.collectAsState()
     val context = LocalContext.current
     val hasAllFilesAccess =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -439,6 +442,8 @@ private fun MetadataSettingsSubPage(
         StorageAccessSection(hasAllFilesAccess = hasAllFilesAccess, context = context)
         ConfidenceThresholdSection(threshold = confidenceThreshold, onChange = viewModel::setConfidenceThreshold)
 
+        FanartTvApiKeySection(apiKey = fanartTvApiKey, onSaveApiKey = themeViewModel::setFanartTvApiKey)
+
         SettingsSection(
             title = "Primary Source Provider",
             footer = "Last.fm needs your own API key (lastfm.apiKey in local.properties, then rebuild); without one it is not queried.",
@@ -466,6 +471,44 @@ private fun MetadataSettingsSubPage(
         )
 
         FieldsToFixSection(selectedFields = selectedFields, onToggle = viewModel::toggleField)
+    }
+}
+
+@Composable
+private fun FanartTvApiKeySection(
+    apiKey: String,
+    onSaveApiKey: (String) -> Unit,
+) {
+    var textInput by remember(apiKey) { mutableStateOf(apiKey) }
+    SettingsSection(
+        title = "Fanart.tv API Key",
+        footer = "Fanart.tv provides high-resolution community artist thumbs and backgrounds. Get a free personal API key at fanart.tv/get-an-api-key/",
+    ) {
+        SettingsGroup {
+            row {
+                Column(modifier = Modifier.fillMaxWidth().padding(Spacing.md)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        OutlinedTextField(
+                            value = textInput,
+                            onValueChange = { textInput = it },
+                            label = { Text("Fanart.tv Personal API Key") },
+                            placeholder = { Text("e.g. 0123456789abcdef0123456789abcdef") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                        )
+                        Button(
+                            onClick = { onSaveApiKey(textInput) },
+                        ) {
+                            Text("Save")
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

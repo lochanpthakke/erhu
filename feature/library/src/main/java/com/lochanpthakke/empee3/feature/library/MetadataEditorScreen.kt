@@ -3,12 +3,12 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,15 +27,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -144,7 +144,7 @@ fun MetadataEditorScreen(
                         contentDescription = null,
                     )
                     Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text("Metadata & Artwork Settings")
+                    Text("Utility Settings")
                 }
             }
         },
@@ -471,7 +471,15 @@ fun MetadataEditorScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
                         Spacer(modifier = Modifier.width(Spacing.xs))
-                        Text(if (isReverting) "Reverting..." else if (selectedRevertIds.isEmpty()) "Revert Changes" else "Revert (${selectedRevertIds.size})")
+                        Text(
+                            if (isReverting) {
+                                "Reverting..."
+                            } else if (selectedRevertIds.isEmpty()) {
+                                "Revert Changes"
+                            } else {
+                                "Revert (${selectedRevertIds.size})"
+                            },
+                        )
                     }
                     Button(
                         onClick = {
@@ -551,16 +559,20 @@ fun MetadataEditorScreen(
                                         modifier = Modifier.weight(1f),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        val isCompleted = queueItem.status == "DONE" || queueItem.status == "PARTIAL_SUCCESS" || queueItem.successDetails != null
+                                        val isCompleted =
+                                            queueItem.status == "DONE" ||
+                                                queueItem.status == "PARTIAL_SUCCESS" ||
+                                                queueItem.successDetails != null
                                         if (isCompleted) {
                                             Checkbox(
                                                 checked = queueItem.song.id in selectedRevertIds,
                                                 onCheckedChange = { checked ->
-                                                    selectedRevertIds = if (checked) {
-                                                        selectedRevertIds + queueItem.song.id
-                                                    } else {
-                                                        selectedRevertIds - queueItem.song.id
-                                                    }
+                                                    selectedRevertIds =
+                                                        if (checked) {
+                                                            selectedRevertIds + queueItem.song.id
+                                                        } else {
+                                                            selectedRevertIds - queueItem.song.id
+                                                        }
                                                 },
                                             )
                                             Spacer(modifier = Modifier.width(Spacing.xs))
@@ -736,12 +748,18 @@ fun MetadataEditorScreen(
                                         exit = fadeOut() + shrinkVertically(),
                                     ) {
                                         Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = Spacing.md)
-                                                .padding(bottom = Spacing.md),
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = Spacing.md)
+                                                    .padding(bottom = Spacing.md),
                                         ) {
-                                            Text("Search Details", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                "Search Details",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
                                             // One text per field: a value can never run into the next label.
                                             searchDetailLines(diag).forEach { line ->
                                                 Row(modifier = Modifier.fillMaxWidth().padding(start = (line.indent * 12).dp)) {
@@ -760,21 +778,46 @@ fun MetadataEditorScreen(
 
                                             Spacer(modifier = Modifier.height(Spacing.xs))
 
-                                            Text("Provider Results", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                "Provider Results",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
                                             diag.providerOutcomes.forEach { outcome ->
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
                                                     horizontalArrangement = Arrangement.SpaceBetween,
                                                 ) {
-                                                    Text("• ${outcome.providerName}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                                                    Text(
+                                                        "• ${outcome.providerName}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.Medium,
+                                                    )
                                                     val statusText = providerStatusText(outcome)
-                                                    Text(statusText, style = MaterialTheme.typography.bodySmall, color = if (outcome.status == com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    Text(
+                                                        statusText,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color =
+                                                            if (outcome.status ==
+                                                                com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                                            ) {
+                                                                MaterialTheme.colorScheme.primary
+                                                            } else {
+                                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                                            },
+                                                    )
                                                 }
                                             }
 
                                             if (diag.topCandidates.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(Spacing.xs))
-                                                Text("Candidates Returned", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                                Text(
+                                                    "Candidates Returned",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
                                                 diag.topCandidates.forEach { candidate ->
                                                     val scorePct = (candidate.confidenceScore * 100).toInt()
                                                     val isAccepted = scorePct >= 85
@@ -787,14 +830,27 @@ fun MetadataEditorScreen(
                                                             style = MaterialTheme.typography.bodySmall,
                                                             modifier = Modifier.weight(1f),
                                                         )
-                                                        Text("$scorePct% (${candidate.sourceName}) ${if (isAccepted) "✓" else "✗"}", style = MaterialTheme.typography.labelSmall, color = if (isAccepted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                                                        Text(
+                                                            "$scorePct% (${candidate.sourceName}) ${if (isAccepted) "✓" else "✗"}",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = if (isAccepted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                                        )
                                                     }
                                                 }
                                             }
 
                                             Spacer(modifier = Modifier.height(Spacing.xs))
-                                            Text("Final Outcome", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                            Text(formatFailureReason(diag.finalReason ?: queueItem.failureReason), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                            Text(
+                                                "Final Outcome",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
+                                            Text(
+                                                formatFailureReason(diag.finalReason ?: queueItem.failureReason),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
                                         }
                                     }
                                 }
@@ -812,7 +868,10 @@ fun MetadataEditorScreen(
                                             modifier = Modifier.size(16.dp),
                                         )
                                         Spacer(modifier = Modifier.width(Spacing.xs))
-                                        Text(if (showChangesExpanded) "Show less" else "Show changes", style = MaterialTheme.typography.labelSmall)
+                                        Text(
+                                            if (showChangesExpanded) "Show less" else "Show changes",
+                                            style = MaterialTheme.typography.labelSmall,
+                                        )
                                     }
 
                                     AnimatedVisibility(
@@ -821,28 +880,58 @@ fun MetadataEditorScreen(
                                         exit = fadeOut() + shrinkVertically(),
                                     ) {
                                         Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = Spacing.md)
-                                                .padding(bottom = Spacing.md),
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = Spacing.md)
+                                                    .padding(bottom = Spacing.md),
                                         ) {
-                                            Text("Metadata Changes", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                "Metadata Changes",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
                                             if (succ.changes.isEmpty()) {
-                                                Text("• Tags already up to date (no tag changes needed)", style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    "• Tags already up to date (no tag changes needed)",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
                                             } else {
                                                 succ.changes.forEach { change ->
-                                                    Text("• ${change.fieldName}: ${change.oldValue?.takeIf { it.isNotBlank() } ?: "Blank"} → ${change.newValue}", style = MaterialTheme.typography.bodySmall)
+                                                    Text(
+                                                        "• ${change.fieldName}: ${change.oldValue?.takeIf {
+                                                            it.isNotBlank()
+                                                        } ?: "Blank"} → ${change.newValue}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                    )
                                                 }
                                             }
 
                                             Spacer(modifier = Modifier.height(Spacing.xs))
-                                            Text("File Renaming Result", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                            Text(
+                                                "File Renaming Result",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                            )
                                             if (succ.isRenamed && succ.newFilename != null) {
-                                                Text("✓ Renamed: ${succ.oldFilename} → ${succ.newFilename}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                                                Text(
+                                                    "✓ Renamed: ${succ.oldFilename} → ${succ.newFilename}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
                                             } else if (succ.renameError != null) {
-                                                Text("⚠️ Rename skipped: ${succ.renameError}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                                Text(
+                                                    "⚠️ Rename skipped: ${succ.renameError}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
                                             } else {
-                                                Text("• Filename unchanged: ${succ.oldFilename}", style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    "• Filename unchanged: ${succ.oldFilename}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
                                             }
                                         }
                                     }
@@ -917,7 +1006,11 @@ fun MetadataEditorScreen(
                                 .filter { it.status == RepairStatus.FAILED }
                                 .groupBy { formatFailureReason(it.failureReason) }
                         failedReasons.forEach { (reason, items) ->
-                            Text("  • ${items.size} × $reason", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            Text(
+                                "  • ${items.size} × $reason",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                         }
                     }
                 }
@@ -968,7 +1061,11 @@ private fun formatFailureReason(reason: String?): String =
         reason == "NO_MATCH" -> "No online match found"
         reason == "FILE_NOT_FOUND" -> "File not found on storage"
         reason == "NETWORK_ERROR" -> "Network error / Offline"
-        reason.contains("permission", ignoreCase = true) || reason.contains("writeAccess", ignoreCase = true) -> "Storage write permission denied"
+        reason.contains(
+            "permission",
+            ignoreCase = true,
+        ) ||
+            reason.contains("writeAccess", ignoreCase = true) -> "Storage write permission denied"
         reason.contains("read-only", ignoreCase = true) -> "File is read-only"
         else -> reason
     }

@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
@@ -35,11 +35,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,10 +47,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
@@ -59,18 +63,27 @@ import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
-import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.flow.combine
 
-private const val ARTWORK_WIDTH_FRACTION = 0.55f
+private const val HERO_KEY = "artist_hero"
+private const val HERO_PARALLAX = 0.4f
+private const val HERO_FADE = 0.5f
+private const val HERO_SCRIM_START = 0.35f
+private const val HERO_SCRIM_STEPS = 12
+private const val SMOOTHSTEP_A = 3f
+private const val SMOOTHSTEP_B = 2f
+private val TITLE_FADE_DISTANCE = 140.dp
+private const val COMPACT_HEADER_AT = 0.5f
+
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
 private val COMPACT_ALBUM_CARD_WIDTH = 110.dp
 
@@ -133,10 +146,19 @@ fun ArtistDetailScreen(
 
     var menuExpanded by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
+    val compactHeader by remember(listState) {
+        derivedStateOf {
+            val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == HERO_KEY }
+            hero == null || listState.firstVisibleItemScrollOffset > hero.size * COMPACT_HEADER_AT
+        }
+    }
+
     AppScaffold(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(onBack),
+                title = detail?.artist?.name?.takeIf { compactHeader },
                 actions = {
                     val artist = detail?.artist
                     val allSongs = detail?.let { it.primarySongs.ifEmpty { it.featuredSongs } }.orEmpty()
@@ -229,20 +251,31 @@ fun ArtistDetailScreen(
                 }
 
                 LazyColumn(
+                    state = listState,
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .padding(scroll.container),
-                    contentPadding = PaddingValues(top = scroll.contentTop, bottom = Spacing.lg + scroll.contentBottom),
+                    contentPadding = PaddingValues(bottom = Spacing.lg + scroll.contentBottom),
                 ) {
-                    item(key = "header") {
-                        ArtistHeader(
+                    item(key = HERO_KEY) {
+                        ArtistHero(
                             artist = artist,
-                            songs = allArtistSongs,
-                            onPlay = { viewModel.playInOrder(allArtistSongs) },
-                            onShuffle = { viewModel.playShuffled(allArtistSongs) },
+                            listState = listState,
                             onArtworkClick = { showImageDialog = true },
                         )
+                    }
+
+                    item(key = "actions") {
+                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            ArtistActions(
+                                enabled = allArtistSongs.isNotEmpty(),
+                                onPlay = { viewModel.playInOrder(allArtistSongs) },
+                                onShuffle = { viewModel.playShuffled(allArtistSongs) },
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.md))
                     }
 
                     val lps = albums.filter { it.songCount >= 7 }
@@ -380,7 +413,9 @@ fun ArtistDetailScreen(
     songForViewMetadata?.let { song ->
         ViewMetadataScreen(
             song = song,
-            viewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+            viewModel =
+                androidx.hilt.navigation.compose
+                    .hiltViewModel(),
             libraryViewModel = viewModel,
             onDismiss = { songForViewMetadata = null },
         )
@@ -413,36 +448,78 @@ fun ArtistDetailScreen(
 }
 
 @Composable
-private fun ArtistHeader(
+private fun ArtistHero(
     artist: Artist,
-    songs: List<Song>,
-    onPlay: () -> Unit,
-    onShuffle: () -> Unit,
+    listState: LazyListState,
     onArtworkClick: () -> Unit,
 ) {
-    Column(
+    val page = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
+    val scrim =
+        remember(page) {
+            List(HERO_SCRIM_STEPS + 1) { i ->
+                val t = i / HERO_SCRIM_STEPS.toFloat()
+                page.copy(alpha = t * t * (SMOOTHSTEP_A - SMOOTHSTEP_B * t))
+            }
+        }
+    Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(start = Spacing.screenGutter, end = Spacing.screenGutter, bottom = Spacing.sm),
-        horizontalAlignment = Alignment.CenterHorizontally,
+                .aspectRatio(1f)
+                .clipToBounds()
+                .clickable(onClickLabel = "Change artist image", onClick = onArtworkClick),
     ) {
         ArtistArtwork(
-            // "NONE…" means looked up, no photo: show the monogram.
             artworkUri = artist.artworkUri?.takeIf(ArtistArtworkCache::hasArtwork),
             artistName = artist.name,
+            clipToCircle = false,
             modifier =
                 Modifier
-                    .widthIn(max = ArtworkSize.heroMax)
-                    .fillMaxWidth(ARTWORK_WIDTH_FRACTION)
-                    .aspectRatio(1f)
-                    .clip(CircleShape)
-                    .clickable(onClickLabel = "Change artist image", onClick = onArtworkClick),
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        val scrolled = heroScroll(listState, size.height)
+                        translationY = scrolled * HERO_PARALLAX
+                        alpha = 1f - HERO_FADE * (scrolled / size.height).coerceIn(0f, 1f)
+                    },
         )
-        Spacer(modifier = Modifier.height(Spacing.lg))
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .drawBehind {
+                        drawRect(Brush.verticalGradient(scrim, startY = size.height * HERO_SCRIM_START, endY = size.height))
+                    },
+        )
+        ArtistTitleBlock(
+            artist = artist,
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        val scrolled = heroScroll(listState, Float.MAX_VALUE)
+                        alpha = 1f - (scrolled / TITLE_FADE_DISTANCE.toPx()).coerceIn(0f, 1f)
+                    },
+        )
+    }
+}
+
+@Composable
+private fun ArtistTitleBlock(
+    artist: Artist,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.heroGutter)
+                .padding(bottom = Spacing.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = artist.name,
-            style = TextStyles.pageTitle,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -456,9 +533,15 @@ private fun ArtistHeader(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(modifier = Modifier.height(Spacing.lg))
-        ArtistActions(enabled = songs.isNotEmpty(), onPlay = onPlay, onShuffle = onShuffle)
     }
+}
+
+private fun heroScroll(
+    listState: LazyListState,
+    maxScroll: Float,
+): Float {
+    val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == HERO_KEY } ?: return maxScroll
+    return (-hero.offset).coerceIn(0, maxScroll.toInt()).toFloat()
 }
 
 @Composable

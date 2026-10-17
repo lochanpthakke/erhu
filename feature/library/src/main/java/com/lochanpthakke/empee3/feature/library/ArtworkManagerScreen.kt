@@ -14,9 +14,12 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -27,8 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
@@ -45,12 +46,13 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -90,7 +92,13 @@ fun ArtworkManagerScreen(
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
-    var showCompletionDialog by remember { mutableStateOf(false) }
+    var appliedItemSuccessTitle by remember { mutableStateOf<String?>(null) }
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearArtworkDiagnostics()
+        }
+    }
 
     val artworkQueue by viewModel.artworkQueue.collectAsState()
     val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
@@ -106,34 +114,27 @@ fun ArtworkManagerScreen(
     val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
     val selectedProviderKey by viewModel.selectedProvider.collectAsState()
     val providerOptions = remember(sourceOptions) { sourceOptions.map { it.key to it.label } }
-    val currentProviderLabel = remember(selectedProviderKey, sourceOptions) {
-        sourceOptions.firstOrNull { it.key == selectedProviderKey }?.label ?: selectedProviderKey
-    }
+    val currentProviderLabel =
+        remember(selectedProviderKey, sourceOptions) {
+            sourceOptions.firstOrNull { it.key == selectedProviderKey }?.label ?: selectedProviderKey
+        }
     var providerDropdownExpanded by remember { mutableStateOf(false) }
 
     val activeQueueCount = if (selectedTab == 0) artworkQueue.size else artistArtworkQueue.size
-    val doneCount = if (selectedTab == 0) {
-        artworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
-    } else {
-        artistArtworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
-    }
-    val failedCount = if (selectedTab == 0) {
-        artworkQueue.count { it.status == "FAILED" }
-    } else {
-        artistArtworkQueue.count { it.status == "FAILED" }
-    }
-    val isQueueComplete = activeQueueCount > 0 && if (selectedTab == 0) {
-        artworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
-    } else {
-        artistArtworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
-    }
-    val progressFloat = if (activeQueueCount > 0) doneCount.toFloat() / activeQueueCount.toFloat() else 0f
-
-    LaunchedEffect(isQueueComplete) {
-        if (isQueueComplete) {
-            showCompletionDialog = true
+    val doneCount =
+        if (selectedTab == 0) {
+            artworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
+        } else {
+            artistArtworkQueue.count { it.status == "COMPLETED" || it.status == "DONE" || it.status == "SUCCESS" }
         }
-    }
+    val isQueueComplete =
+        activeQueueCount > 0 &&
+            if (selectedTab == 0) {
+                artworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
+            } else {
+                artistArtworkQueue.none { it.status == "PENDING" || it.status == "SEARCHING" || it.status == "WRITING" }
+            }
+    val progressFloat = if (activeQueueCount > 0) doneCount.toFloat() / activeQueueCount.toFloat() else 0f
 
     Scaffold(
         topBar = {
@@ -149,27 +150,6 @@ fun ArtworkManagerScreen(
                 },
             )
         },
-        bottomBar = {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Button(
-                    onClick = onNavigateToMetadataSettings,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-                    Text("Metadata & Artwork Settings")
-                }
-            }
-        },
         modifier = modifier,
     ) { innerPadding ->
         Column(
@@ -177,22 +157,29 @@ fun ArtworkManagerScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             TabRow(selectedTabIndex = selectedTab) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = {
-                        selectedTab = 0
-                        searchQuery = ""
+                        if (selectedTab != 0) {
+                            selectedTab = 0
+                            searchQuery = ""
+                            viewModel.clearArtworkDiagnostics()
+                        }
                     },
                     text = { Text("Albums") },
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = {
-                        selectedTab = 1
-                        searchQuery = ""
+                        if (selectedTab != 1) {
+                            selectedTab = 1
+                            searchQuery = ""
+                            viewModel.clearArtworkDiagnostics()
+                        }
                     },
                     text = { Text("Artists") },
                 )
@@ -343,7 +330,14 @@ fun ArtworkManagerScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             val currentContextTitle = if (selectedTab == 0) currentProcessingAlbum?.title else currentProcessingArtist?.name
-            val currentContextSub = if (selectedTab == 0) currentProcessingAlbum?.artist.orEmpty() else "${currentProcessingArtist?.songCount ?: 0} tracks"
+            val currentContextSub =
+                if (selectedTab ==
+                    0
+                ) {
+                    currentProcessingAlbum?.artist.orEmpty()
+                } else {
+                    "${currentProcessingArtist?.songCount ?: 0} tracks"
+                }
             var showDiagnosticsExpanded by remember { mutableStateOf(false) }
             val diagnostics by viewModel.artworkSearchDiagnostics.collectAsState()
 
@@ -358,12 +352,29 @@ fun ArtworkManagerScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = "Provider Results & Diagnostics",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
+                            Column {
+                                Text(
+                                    text = "Provider Results & Diagnostics",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                if (diagnostics?.searchQuery.orEmpty().isNotBlank()) {
+                                    Text(
+                                        text = "Search Query: ${diagnostics!!.searchQuery}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (diagnostics?.resolvedArtistInfo.orEmpty().isNotBlank()) {
+                                    Text(
+                                        text = diagnostics!!.resolvedArtistInfo!!,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                    )
+                                }
+                            }
                             Icon(
                                 imageVector = if (showDiagnosticsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                 contentDescription = null,
@@ -380,14 +391,22 @@ fun ArtworkManagerScreen(
                                 ) {
                                     Text("• ${outcome.providerName}", style = MaterialTheme.typography.bodySmall)
                                     Text(
-                                        text = when (outcome.status) {
-                                            com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS -> "✓ Found ${outcome.candidateCount} candidates"
-                                            com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED -> "Not configured"
-                                            com.lochanpthakke.empee3.core.model.ProviderStatus.UNAVAILABLE -> "Not available here"
-                                            else -> outcome.status.label
-                                        },
+                                        text =
+                                            when (outcome.status) {
+                                                com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS -> "✓ Found ${outcome.candidateCount} candidates"
+                                                com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED -> "Not configured"
+                                                com.lochanpthakke.empee3.core.model.ProviderStatus.UNAVAILABLE -> "Not available here"
+                                                else -> outcome.status.label
+                                            },
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (outcome.status == com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color =
+                                            if (outcome.status ==
+                                                com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                            ) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
                                     )
                                 }
                             }
@@ -423,7 +442,7 @@ fun ArtworkManagerScreen(
                         } else if (artworkCandidates.isNotEmpty()) {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
-                                modifier = Modifier.height(180.dp),
+                                modifier = Modifier.heightIn(max = 280.dp),
                                 contentPadding = PaddingValues(4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -454,11 +473,12 @@ fun ArtworkManagerScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (selectedTab == 0) {
-                        "IN QUEUE FOR ARTWORK ($doneCount / $activeQueueCount ALBUMS)"
-                    } else {
-                        "IN QUEUE FOR ARTIST PHOTOS ($doneCount / $activeQueueCount ARTISTS)"
-                    },
+                    text =
+                        if (selectedTab == 0) {
+                            "IN QUEUE FOR ARTWORK ($doneCount / $activeQueueCount ALBUMS)"
+                        } else {
+                            "IN QUEUE FOR ARTIST PHOTOS ($doneCount / $activeQueueCount ARTISTS)"
+                        },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -501,11 +521,13 @@ fun ArtworkManagerScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSearchingArtwork && if (selectedTab == 0) {
-                        artworkQueue.any { it.status == "PENDING" }
-                    } else {
-                        artistArtworkQueue.any { it.status == "PENDING" }
-                    },
+                    enabled =
+                        !isSearchingArtwork &&
+                            if (selectedTab == 0) {
+                                artworkQueue.any { it.status == "PENDING" }
+                            } else {
+                                artistArtworkQueue.any { it.status == "PENDING" }
+                            },
                 ) {
                     Icon(imageVector = Icons.Default.ImageSearch, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -528,7 +550,7 @@ fun ArtworkManagerScreen(
                         )
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(artworkQueue, key = { it.album.id }) { queueItem ->
                             AlbumQueueCard(
                                 title = queueItem.album.title,
@@ -542,7 +564,7 @@ fun ArtworkManagerScreen(
             } else {
                 if (artistArtworkQueue.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -552,7 +574,7 @@ fun ArtworkManagerScreen(
                         )
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(artistArtworkQueue, key = { it.artist.id }) { queueItem ->
                             AlbumQueueCard(
                                 title = queueItem.artist.name,
@@ -564,6 +586,22 @@ fun ArtworkManagerScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onNavigateToMetadataSettings,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = null,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Utility Settings")
+            }
+
+            Spacer(modifier = Modifier.height(110.dp))
         }
     }
 
@@ -579,6 +617,7 @@ fun ArtworkManagerScreen(
                             ImageRequest
                                 .Builder(LocalContext.current)
                                 .data(selectedEnlargedArtworkUrl)
+                                .setHeader("User-Agent", "empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
                                 .crossfade(true)
                                 .build(),
                         contentDescription = "Enlarged Artwork",
@@ -591,11 +630,12 @@ fun ArtworkManagerScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (currentProcessingAlbum != null) {
-                            "Do you want to embed this cover art into all tracks of $targetTitle?"
-                        } else {
-                            "Do you want to set this photo as $targetTitle's profile picture?"
-                        },
+                        text =
+                            if (currentProcessingAlbum != null) {
+                                "Do you want to embed this cover art into all tracks of $targetTitle?"
+                            } else {
+                                "Do you want to set this photo as $targetTitle's profile picture?"
+                            },
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -603,11 +643,19 @@ fun ArtworkManagerScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (currentProcessingAlbum != null) {
-                            viewModel.applyArtworkToAlbum(currentProcessingAlbum!!, selectedEnlargedArtworkUrl!!)
-                        } else if (currentProcessingArtist != null) {
-                            viewModel.applyArtistArtwork(currentProcessingArtist!!, selectedEnlargedArtworkUrl!!)
+                        val albumToApply = currentProcessingAlbum
+                        val artistToApply = currentProcessingArtist
+                        val urlToApply = selectedEnlargedArtworkUrl
+                        val title = albumToApply?.title ?: artistToApply?.name ?: ""
+
+                        if (albumToApply != null && urlToApply != null) {
+                            viewModel.applyArtworkToAlbum(albumToApply, urlToApply)
+                        } else if (artistToApply != null && urlToApply != null) {
+                            viewModel.applyArtistArtwork(artistToApply, urlToApply)
                         }
+
+                        viewModel.selectEnlargedArtwork(null)
+                        appliedItemSuccessTitle = title
                     },
                 ) {
                     Text("Apply Artwork")
@@ -621,33 +669,35 @@ fun ArtworkManagerScreen(
         )
     }
 
-    if (showCompletionDialog) {
+    if (appliedItemSuccessTitle != null) {
+        val appliedTitle = appliedItemSuccessTitle.orEmpty()
         AlertDialog(
-            onDismissRequest = { showCompletionDialog = false },
-            title = { Text("Artwork Fetcher Complete") },
+            onDismissRequest = { appliedItemSuccessTitle = null },
+            title = { Text("Artwork Applied Successfully") },
             text = {
-                Column {
-                    Text("✓ $doneCount items updated successfully", fontWeight = FontWeight.Bold)
-                    if (failedCount > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("❌ $failedCount items failed")
-                    }
-                }
+                Text(
+                    text = "Artwork for \"$appliedTitle\" has been updated.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        showCompletionDialog = false
+                        appliedItemSuccessTitle = null
+                    },
+                ) {
+                    Text("Fetch More Artwork")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        appliedItemSuccessTitle = null
                         if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
                         onNavigateToLibrary()
                     },
                 ) {
-                    Text("Finish & Return to Library")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCompletionDialog = false }) {
-                    Text("Keep Inspecting Queue")
+                    Text("Return to Library")
                 }
             },
         )
@@ -674,6 +724,7 @@ private fun SquareArtworkCandidateCard(
                     ImageRequest
                         .Builder(LocalContext.current)
                         .data(imageUrl)
+                        .setHeader("User-Agent", "empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
                         .crossfade(true)
                         .build(),
                 contentDescription = "Artwork Candidate",

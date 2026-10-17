@@ -24,10 +24,11 @@ class ITunesProvider
             artist: String?,
             album: String?,
         ): List<MetadataCandidate> {
-            val query = listOfNotNull(
-                artist?.takeIf { it.isNotBlank() && it != "Unknown Artist" },
-                title.takeIf { it.isNotBlank() },
-            ).joinToString(" ").trim()
+            val query =
+                listOfNotNull(
+                    artist?.takeIf { it.isNotBlank() && it != "Unknown Artist" },
+                    title.takeIf { it.isNotBlank() },
+                ).joinToString(" ").trim()
             if (query.isBlank()) return emptyList()
 
             return try {
@@ -36,7 +37,14 @@ class ITunesProvider
                 response.results
                     .filter { !it.trackName.isNullOrBlank() }
                     .map { dto ->
-                        val date = dto.releaseDate?.take(10)?.let { com.lochanpthakke.empee3.core.network.tagger.ReleaseDate.parse(it, today) }
+                        val date =
+                            dto.releaseDate
+                                ?.take(
+                                    10,
+                                )?.let {
+                                    com.lochanpthakke.empee3.core.network.tagger.ReleaseDate
+                                        .parse(it, today)
+                                }
                         com.lochanpthakke.empee3.core.model.MetadataCandidate(
                             id = "itunes_${dto.trackId ?: dto.collectionId ?: dto.trackName.hashCode()}",
                             title = dto.trackName.orEmpty(),
@@ -61,21 +69,24 @@ class ITunesProvider
             albumTitle: String,
             artist: String?,
         ): String? = fetchAlbumArtList(albumTitle, artist).firstOrNull()
+
         suspend fun fetchAlbumArtList(
             albumTitle: String,
             artist: String?,
         ): List<String> {
-            val query = listOfNotNull(artist?.takeIf { it.isNotBlank() && it != "Unknown Artist" }, albumTitle)
-                .joinToString(" ")
-                .trim()
+            val query =
+                listOfNotNull(artist?.takeIf { it.isNotBlank() && it != "Unknown Artist" }, albumTitle)
+                    .joinToString(" ")
+                    .trim()
             if (query.isBlank()) return emptyList()
 
             val urls = mutableListOf<String>()
             try {
                 val response = iTunesApi.search(term = query, entity = "album", limit = 10)
-                val highResUrls = response.results
-                    .mapNotNull { it.artworkUrl100 ?: it.artworkUrl60 }
-                    .map { upgradeArtworkUrl(it) }
+                val highResUrls =
+                    response.results
+                        .mapNotNull { it.artworkUrl100 ?: it.artworkUrl60 }
+                        .map { upgradeArtworkUrl(it) }
                 urls.addAll(highResUrls)
             } catch (e: CancellationException) {
                 throw e
@@ -86,9 +97,10 @@ class ITunesProvider
             if (urls.isEmpty() && albumTitle.isNotBlank()) {
                 try {
                     val fallbackResponse = iTunesApi.search(term = albumTitle, entity = "album", limit = 10)
-                    val fallbackUrls = fallbackResponse.results
-                        .mapNotNull { it.artworkUrl100 ?: it.artworkUrl60 }
-                        .map { upgradeArtworkUrl(it) }
+                    val fallbackUrls =
+                        fallbackResponse.results
+                            .mapNotNull { it.artworkUrl100 ?: it.artworkUrl60 }
+                            .map { upgradeArtworkUrl(it) }
                     urls.addAll(fallbackUrls)
                 } catch (e: CancellationException) {
                     throw e
@@ -101,13 +113,28 @@ class ITunesProvider
         }
 
         suspend fun fetchArtistArtworkList(artistName: String): List<String> {
-            // iTunes entity="album" returns album covers, not artist portraits.
-            // Artist portraits are fetched via Deezer searchArtist and Wikipedia Lead Image API.
-            return emptyList()
+            val trimmed = artistName.trim()
+            if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return emptyList()
+
+            return try {
+                val response = iTunesApi.search(term = trimmed, entity = "album", limit = 5)
+                val exactMatches = response.results.filter { it.artistName?.trim()?.equals(trimmed, ignoreCase = true) == true }
+                val targetResults = if (exactMatches.isNotEmpty()) exactMatches else response.results
+                targetResults
+                    .mapNotNull { it.artworkUrl100 ?: it.artworkUrl60 }
+                    .map { upgradeArtworkUrl(it) }
+                    .distinct()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.w(TAG, "iTunes artist artwork search failed for $artistName: ${e.message}", e)
+                emptyList()
+            }
         }
 
         private fun upgradeArtworkUrl(url: String): String =
-            url.replace("100x100bb", "1000x1000bb")
+            url
+                .replace("100x100bb", "1000x1000bb")
                 .replace("60x60bb", "1000x1000bb")
                 .replace("100x100", "1000x1000")
 

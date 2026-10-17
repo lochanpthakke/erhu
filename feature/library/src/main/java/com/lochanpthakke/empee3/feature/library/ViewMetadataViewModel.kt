@@ -100,7 +100,6 @@ class ViewMetadataViewModel
         private val sourceInspector: SourceInspector,
         private val fileRenamer: FileRenamer,
     ) : ViewModel() {
-
         private val _uiState = MutableStateFlow(InspectorUiState())
         val uiState: StateFlow<InspectorUiState> = _uiState.asStateFlow()
 
@@ -109,32 +108,35 @@ class ViewMetadataViewModel
                 _uiState.value = InspectorUiState(song = song, isLoading = true)
                 val filePath = libraryRepository.getSongFilePath(song.id)
                 if (filePath == null) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        userMessage = "Could not locate physical file for track",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isLoading = false,
+                            userMessage = "Could not locate physical file for track",
+                        )
                     return@launch
                 }
 
                 val tags = embeddedTagReader.readEmbeddedTags(filePath)
                 val diag = sourceInspector.inspect(song)
 
-                _uiState.value = InspectorUiState(
-                    song = song,
-                    filePath = filePath,
-                    tagData = tags,
-                    sourceDiagnostics = diag,
-                    isLoading = false,
-                    selectedArtworkBytes = tags.artworkBytes,
-                )
+                _uiState.value =
+                    InspectorUiState(
+                        song = song,
+                        filePath = filePath,
+                        tagData = tags,
+                        sourceDiagnostics = diag,
+                        isLoading = false,
+                        selectedArtworkBytes = tags.artworkBytes,
+                    )
             }
         }
 
         fun setSelectedArtwork(bytes: ByteArray?) {
-            _uiState.value = _uiState.value.copy(
-                selectedArtworkBytes = bytes,
-                isArtworkRemoved = bytes == null,
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    selectedArtworkBytes = bytes,
+                    isArtworkRemoved = bytes == null,
+                )
         }
 
         fun setEnlargedArtwork(bytes: ByteArray?) {
@@ -163,19 +165,20 @@ class ViewMetadataViewModel
 
                 val artworkBytes = if (currentState.isArtworkRemoved) byteArrayOf() else currentState.selectedArtworkBytes
 
-                val req = TagWriteRequest(
-                    contentUri = song.uri,
-                    filePath = filePath,
-                    title = fields.title.ifBlank { song.title },
-                    artist = fields.artist.ifBlank { song.artist },
-                    album = fields.album.ifBlank { song.album },
-                    year = fields.year.toIntOrNull(),
-                    genre = fields.genre.takeIf { it.isNotBlank() },
-                    trackNumber = fields.trackNumber.toIntOrNull(),
-                    bpm = fields.bpm.toIntOrNull(),
-                    lyrics = fields.lyrics.takeIf { it.isNotBlank() },
-                    artworkBytes = artworkBytes,
-                )
+                val req =
+                    TagWriteRequest(
+                        contentUri = song.uri,
+                        filePath = filePath,
+                        title = fields.title.ifBlank { song.title },
+                        artist = fields.artist.ifBlank { song.artist },
+                        album = fields.album.ifBlank { song.album },
+                        year = fields.year.toIntOrNull(),
+                        genre = fields.genre.takeIf { it.isNotBlank() },
+                        trackNumber = fields.trackNumber.toIntOrNull(),
+                        bpm = fields.bpm.toIntOrNull(),
+                        lyrics = fields.lyrics.takeIf { it.isNotBlank() },
+                        artworkBytes = artworkBytes,
+                    )
 
                 when (val result = metadataRepository.writeTagsToFile(req)) {
                     is AppResult.Success -> {
@@ -193,17 +196,19 @@ class ViewMetadataViewModel
                         }
 
                         libraryRepository.requestRescanAfterChange()
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            userMessage = "Metadata saved & verified successfully",
-                        )
+                        _uiState.value =
+                            _uiState.value.copy(
+                                isSaving = false,
+                                userMessage = "Metadata saved & verified successfully",
+                            )
                         onSuccess()
                     }
                     is AppResult.Error -> {
-                        _uiState.value = _uiState.value.copy(
-                            isSaving = false,
-                            userMessage = "Failed to write tags: ${result.error.message}",
-                        )
+                        _uiState.value =
+                            _uiState.value.copy(
+                                isSaving = false,
+                                userMessage = "Failed to write tags: ${result.error.message}",
+                            )
                     }
                 }
             }
@@ -220,51 +225,54 @@ class ViewMetadataViewModel
             viewModelScope.launch {
                 _uiState.value = currentState.copy(isSaving = true, showForceRepairConfirm = false)
 
-                val result = withContext(Dispatchers.IO) {
-                    try {
-                        val file = File(filePath)
-                        if (!file.exists()) return@withContext false
-                        val audioFile = AudioFileIO.read(file)
-                        audioFile.tag = audioFile.createDefaultTag()
-                        val tag = audioFile.tag
+                val result =
+                    withContext(Dispatchers.IO) {
+                        try {
+                            val file = File(filePath)
+                            if (!file.exists()) return@withContext false
+                            val audioFile = AudioFileIO.read(file)
+                            audioFile.tag = audioFile.createDefaultTag()
+                            val tag = audioFile.tag
 
-                        if (fields.title.isNotBlank()) tag.setField(FieldKey.TITLE, fields.title)
-                        if (fields.artist.isNotBlank()) tag.setField(FieldKey.ARTIST, fields.artist)
-                        if (fields.album.isNotBlank()) tag.setField(FieldKey.ALBUM, fields.album)
-                        if (fields.year.isNotBlank()) tag.setField(FieldKey.YEAR, fields.year)
-                        Genres.parse(fields.genre).takeIf { it.isNotEmpty() }?.let { tag.writeGenres(it) }
+                            if (fields.title.isNotBlank()) tag.setField(FieldKey.TITLE, fields.title)
+                            if (fields.artist.isNotBlank()) tag.setField(FieldKey.ARTIST, fields.artist)
+                            if (fields.album.isNotBlank()) tag.setField(FieldKey.ALBUM, fields.album)
+                            if (fields.year.isNotBlank()) tag.setField(FieldKey.YEAR, fields.year)
+                            Genres.parse(fields.genre).takeIf { it.isNotEmpty() }?.let { tag.writeGenres(it) }
 
-                        val artworkBytes = if (currentState.isArtworkRemoved) null else currentState.selectedArtworkBytes
-                        artworkBytes?.let { bytes ->
-                            val artFile = File(file.parentFile, "force-art.jpg")
-                            try {
-                                artFile.writeBytes(bytes)
-                                tag.setField(ArtworkFactory.createArtworkFromFile(artFile))
-                            } finally {
-                                artFile.delete()
+                            val artworkBytes = if (currentState.isArtworkRemoved) null else currentState.selectedArtworkBytes
+                            artworkBytes?.let { bytes ->
+                                val artFile = File(file.parentFile, "force-art.jpg")
+                                try {
+                                    artFile.writeBytes(bytes)
+                                    tag.setField(ArtworkFactory.createArtworkFromFile(artFile))
+                                } finally {
+                                    artFile.delete()
+                                }
                             }
-                        }
 
-                        AudioFileIO.write(audioFile)
-                        true
-                    } catch (e: Exception) {
-                        false
+                            AudioFileIO.write(audioFile)
+                            true
+                        } catch (e: Exception) {
+                            false
+                        }
                     }
-                }
 
                 if (result) {
                     ArtworkLoader.invalidate(song.uri)
                     libraryRepository.requestRescanAfterChange()
-                    _uiState.value = _uiState.value.copy(
-                        isSaving = false,
-                        userMessage = "Force tag header reconstruction complete",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isSaving = false,
+                            userMessage = "Force tag header reconstruction complete",
+                        )
                     onSuccess()
                 } else {
-                    _uiState.value = _uiState.value.copy(
-                        isSaving = false,
-                        userMessage = "Force repair failed: file corrupt or read-only",
-                    )
+                    _uiState.value =
+                        _uiState.value.copy(
+                            isSaving = false,
+                            userMessage = "Force repair failed: file corrupt or read-only",
+                        )
                 }
             }
         }

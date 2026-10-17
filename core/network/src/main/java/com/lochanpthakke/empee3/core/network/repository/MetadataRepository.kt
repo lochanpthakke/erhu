@@ -16,6 +16,12 @@ data class DetailedSearchResponse(
     val providerOutcomes: List<ProviderOutcome>,
 )
 
+data class ArtistArtworkSearchResponse(
+    val candidates: List<String>,
+    val providerCandidates: Map<String, List<String>> = emptyMap(),
+    val resolvedMbid: String? = null,
+)
+
 /** Outcome of a genre lookup for a matched track. */
 sealed interface GenreLookup {
     /** Every usable genre the source lists, most-voted first where it ranks them. */
@@ -40,6 +46,11 @@ sealed interface GenreLookup {
 /** Provider names as stored in settings ("ALL", "Deezer", "MusicBrainz", …). */
 object MetadataSources {
     const val ALL = "ALL"
+    const val GENIUS = "Genius"
+    const val DUCKDUCKGO = "DuckDuckGo"
+    const val FANART_TV = "FanartTv"
+    const val DISCOGS = "Discogs"
+    const val WIKIPEDIA = "Wikipedia"
     const val ITUNES = "iTunes"
     const val MUSICBRAINZ = "MusicBrainz"
     const val DEEZER = "Deezer"
@@ -49,11 +60,47 @@ object MetadataSources {
     fun matches(
         providerName: String,
         selection: String,
-    ): Boolean = selection == ALL || key(providerName) == key(selection)
+    ): Boolean {
+        if (selection.equals(ALL, ignoreCase = true) ||
+            selection.equals("All Sources", ignoreCase = true) ||
+            selection.equals("All Providers", ignoreCase = true) ||
+            selection.equals("All providers", ignoreCase = true)
+        ) {
+            return true
+        }
+        val pKey = canonicalKey(providerName)
+        val sKey = canonicalKey(selection)
+        return pKey == sKey || pKey.contains(sKey) || sKey.contains(pKey)
+    }
 
-    private fun key(name: String): String = name.lowercase().filter { it.isLetterOrDigit() }
+    private fun canonicalKey(name: String): String {
+        val raw = name.lowercase().filter { it.isLetterOrDigit() }
+        return when {
+            raw.startsWith("genius") -> "genius"
+            raw.startsWith("duckduckgo") || raw.startsWith("duck") -> "duckduckgo"
+            raw.startsWith("fanart") -> "fanarttv"
+            raw.startsWith("wikipedia") || raw.startsWith("wikimedia") -> "wikipedia"
+            raw.startsWith("discogs") -> "discogs"
+            raw.startsWith("deezer") -> "deezer"
+            raw.startsWith("itunes") || raw.startsWith("applemusic") -> "itunes"
+            raw.startsWith("musicbrainz") -> "musicbrainz"
+            raw.startsWith("lastfm") -> "lastfm"
+            else -> raw
+        }
+    }
 
-    private val HOSTS = listOf(ITUNES to "itunes.apple.com", MUSICBRAINZ to "musicbrainz.org", DEEZER to "api.deezer.com", LAST_FM to "ws.audioscrobbler.com")
+    private val HOSTS =
+        listOf(
+            GENIUS to "genius.com",
+            DUCKDUCKGO to "duckduckgo.com",
+            FANART_TV to "webservice.fanart.tv",
+            DISCOGS to "api.discogs.com",
+            WIKIPEDIA to "en.wikipedia.org",
+            ITUNES to "itunes.apple.com",
+            MUSICBRAINZ to "musicbrainz.org",
+            DEEZER to "api.deezer.com",
+            LAST_FM to "ws.audioscrobbler.com",
+        )
 
     /** The hosts [selection] will contact (for a DNS-only preflight); Last.fm only when it has a key. */
     fun hostsFor(
@@ -110,6 +157,11 @@ interface MetadataRepository {
         artistName: String,
         sourceProvider: String = "ALL",
     ): AppResult<List<String>>
+
+    suspend fun fetchArtistArtworkCandidatesDetailed(
+        artistName: String,
+        sourceProvider: String = "ALL",
+    ): AppResult<ArtistArtworkSearchResponse>
 
     suspend fun fetchLyrics(
         title: String,

@@ -189,7 +189,7 @@ internal fun decide(
         ranked.drop(1).filter {
             it.confidenceScore >= acceptAt &&
                 best.confidenceScore - it.confidenceScore <= TIE_MARGIN &&
-                writtenIdentity(it) != writtenIdentity(best)
+                !sameSongIdentity(it, best)
         }
     return when {
         best.confidenceScore < minOf(UNCERTAIN_THRESHOLD, acceptAt) ->
@@ -203,6 +203,18 @@ internal fun decide(
             )
         else -> MatchDecision.Confident(best)
     }
+}
+
+/** Whether two candidates represent the same underlying song (spelling, "feat." vs comma formatting aside). */
+private fun sameSongIdentity(
+    c1: MetadataCandidate,
+    c2: MetadataCandidate,
+): Boolean {
+    val sameTitle = foldForMatch(c1.title) == foldForMatch(c2.title)
+    val sameAlbum = foldForMatch(c1.album) == foldForMatch(c2.album) || c1.album.isBlank() || c2.album.isBlank()
+    val sameArtist = foldForMatch(primaryArtist(c1.artist)) == foldForMatch(primaryArtist(c2.artist)) ||
+        com.lochanpthakke.empee3.core.network.scorer.creditSimilarity(c1.artist, c2.artist) >= 0.80f
+    return sameTitle && sameAlbum && sameArtist
 }
 
 /** What a match would write, compared loosely (spelling noise and "feat." credits aside). */

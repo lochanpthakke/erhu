@@ -5,7 +5,9 @@ package com.lochanpthakke.empee3.core.model
  * [NOT_CONFIGURED] mean no request was sent; every failure status means one was sent and failed,
  * and none of them is ever reported as [NO_RESULTS].
  */
-enum class ProviderStatus(val label: String) {
+enum class ProviderStatus(
+    val label: String,
+) {
     IN_PROGRESS("Searching…"),
     NO_RESULTS("No results found"),
     CANDIDATES_FOUND("Candidates found"),
@@ -95,4 +97,64 @@ data class SuccessDetails(
     val oldFilename: String? = null,
     val newFilename: String? = null,
     val renameError: String? = null,
-)
+    val hadOriginalArtwork: Boolean = false,
+    val originalArtworkBytes: ByteArray? = null,
+    val hadEmbeddedTitle: Boolean = true,
+    val hadEmbeddedArtist: Boolean = true,
+    val hadEmbeddedAlbum: Boolean = true,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is SuccessDetails) return false
+        if (originalTitle != other.originalTitle) return false
+        if (originalArtist != other.originalArtist) return false
+        if (originalAlbum != other.originalAlbum) return false
+        if (originalYear != other.originalYear) return false
+        if (originalGenre != other.originalGenre) return false
+        if (updatedTitle != other.updatedTitle) return false
+        if (updatedArtist != other.updatedArtist) return false
+        if (updatedAlbum != other.updatedAlbum) return false
+        if (updatedYear != other.updatedYear) return false
+        if (updatedGenre != other.updatedGenre) return false
+        if (changes != other.changes) return false
+        if (isManualSelection != other.isManualSelection) return false
+        if (isRenamed != other.isRenamed) return false
+        if (oldFilename != other.oldFilename) return false
+        if (newFilename != other.newFilename) return false
+        if (renameError != other.renameError) return false
+        if (hadOriginalArtwork != other.hadOriginalArtwork) return false
+        if (originalArtworkBytes != null) {
+            if (other.originalArtworkBytes == null) return false
+            if (!originalArtworkBytes.contentEquals(other.originalArtworkBytes)) return false
+        } else if (other.originalArtworkBytes != null) return false
+        if (hadEmbeddedTitle != other.hadEmbeddedTitle) return false
+        if (hadEmbeddedArtist != other.hadEmbeddedArtist) return false
+        if (hadEmbeddedAlbum != other.hadEmbeddedAlbum) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = originalTitle.hashCode()
+        result = 31 * result + originalArtist.hashCode()
+        result = 31 * result + originalAlbum.hashCode()
+        result = 31 * result + (originalYear?.hashCode() ?: 0)
+        result = 31 * result + (originalGenre?.hashCode() ?: 0)
+        result = 31 * result + updatedTitle.hashCode()
+        result = 31 * result + updatedArtist.hashCode()
+        result = 31 * result + updatedAlbum.hashCode()
+        result = 31 * result + (updatedYear?.hashCode() ?: 0)
+        result = 31 * result + (updatedGenre?.hashCode() ?: 0)
+        result = 31 * result + changes.hashCode()
+        result = 31 * result + isManualSelection.hashCode()
+        result = 31 * result + isRenamed.hashCode()
+        result = 31 * result + (oldFilename?.hashCode() ?: 0)
+        result = 31 * result + (newFilename?.hashCode() ?: 0)
+        result = 31 * result + (renameError?.hashCode() ?: 0)
+        result = 31 * result + hadOriginalArtwork.hashCode()
+        result = 31 * result + (originalArtworkBytes?.contentHashCode() ?: 0)
+        result = 31 * result + hadEmbeddedTitle.hashCode()
+        result = 31 * result + hadEmbeddedArtist.hashCode()
+        result = 31 * result + hadEmbeddedAlbum.hashCode()
+        return result
+    }
+}

@@ -11,20 +11,48 @@ data class MetadataSourceOption(
 )
 
 /**
- * The sources offered for tag fixing, with what each really provides. Last.fm is offered with its
- * true state: without an API key it is listed as not configured (and refused when chosen alone);
+ * The sources offered for tag fixing, with what each really provides. Last.fm and Fanart.tv are offered with their
+ * true state: without an API key they are listed as not configured;
  * LRCLIB serves lyrics only (Lyrics page) and is not a tag source.
  */
-fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption> =
+fun metadataSourceOptions(
+    lastFmConfigured: Boolean,
+    fanartTvConfigured: Boolean = false,
+): List<MetadataSourceOption> =
     listOf(
         MetadataSourceOption(
             MetadataSources.ALL,
             "All providers",
-            if (lastFmConfigured) {
-                "iTunes, MusicBrainz, Deezer and Last.fm together; the best-scoring match is used"
+            "Genius, DuckDuckGo, Fanart.tv, Discogs, Wikipedia, iTunes, MusicBrainz, Deezer and Last.fm together",
+        ),
+        MetadataSourceOption(
+            MetadataSources.GENIUS,
+            "Genius",
+            "Keyless artist profile pictures and high-res header portraits",
+        ),
+        MetadataSourceOption(
+            MetadataSources.DUCKDUCKGO,
+            "DuckDuckGo Web Search",
+            "Resilient web image search fallback for artist portraits",
+        ),
+        MetadataSourceOption(
+            MetadataSources.FANART_TV,
+            "Fanart.tv",
+            if (fanartTvConfigured) {
+                "High-resolution community artist thumbs and backgrounds"
             } else {
-                "iTunes, MusicBrainz and Deezer together (Last.fm has no API key); the best-scoring match is used"
+                "Not configured: needs a Fanart.tv API key in Settings"
             },
+        ),
+        MetadataSourceOption(
+            MetadataSources.DISCOGS,
+            "Discogs",
+            "Music database catalog and artist profile pictures",
+        ),
+        MetadataSourceOption(
+            MetadataSources.WIKIPEDIA,
+            "Wikipedia / Wikimedia",
+            "Wikipedia lead photos and Wikimedia Commons public domain artist images",
         ),
         MetadataSourceOption(
             MetadataSources.ITUNES,
@@ -55,6 +83,11 @@ fun metadataSourceOptions(lastFmConfigured: Boolean): List<MetadataSourceOption>
 private val OFFERED_KEYS =
     listOf(
         MetadataSources.ALL,
+        MetadataSources.GENIUS,
+        MetadataSources.DUCKDUCKGO,
+        MetadataSources.FANART_TV,
+        MetadataSources.DISCOGS,
+        MetadataSources.WIKIPEDIA,
         MetadataSources.ITUNES,
         MetadataSources.MUSICBRAINZ,
         MetadataSources.DEEZER,

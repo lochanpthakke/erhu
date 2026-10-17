@@ -34,6 +34,75 @@ class MusicBrainzProvider
         private val gate = Mutex()
         private var lastRequestAtMs = 0L
         private val genresByReleaseGroup = ConcurrentHashMap<String, List<MusicBrainzGenreDto>>()
+        private val mbidCache = ConcurrentHashMap<String, String>()
+
+        /**
+         * Resolves all valid candidate MusicBrainz Artist IDs (MBIDs) for [artistName].
+         * Sorts exact name matches first, then prefers Person type, then descending score.
+         */
+        suspend fun resolveArtistMbids(artistName: String): List<String> {
+            val trimmed = artistName.trim()
+            if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return emptyList()
+
+            val cacheKey = trimmed.lowercase()
+            val cached = mbidCache[cacheKey]
+            if (cached != null) return if (cached.isBlank()) emptyList() else cached.split(",")
+
+            return try {
+                val escaped = escapePhrase(trimmed)
+                val query = "artist:\"$escaped\" OR alias:\"$escaped\""
+                val response = throttled { musicBrainzApi.searchArtist(query = query, limit = 25) }
+                val candidates = response.artists.filter { it.score >= 80 }
+
+                fun matchesNameOrAlias(dto: com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto): Int {
+                    val nameMatch = dto.name.trim().equals(trimmed, ignoreCase = true)
+                    val aliasMatch = dto.aliases.any { it.name.trim().equals(trimmed, ignoreCase = true) }
+                    val disambigMatch = dto.disambiguation?.contains(trimmed, ignoreCase = true) == true
+                    return if (nameMatch || aliasMatch || disambigMatch) 0 else 1
+                }
+
+                fun richnessScore(dto: com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto): Int {
+                    var score = 0
+                    if (!dto.disambiguation.isNullOrBlank()) score += 3
+                    if (!dto.country.isNullOrBlank()) score += 2
+                    if (dto.aliases.isNotEmpty()) score += 2
+                    if (dto.tags.isNotEmpty()) score += 2
+                    if (!dto.type.isNullOrBlank()) score += 1
+                    return score
+                }
+
+                val sorted = candidates.sortedWith(
+                    compareBy<com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto> { matchesNameOrAlias(it) }
+                        .thenByDescending { richnessScore(it) }
+                        .thenBy { if (it.name.trim().equals(trimmed, ignoreCase = true)) 0 else 1 }
+                        .thenByDescending { it.score },
+                )
+                val mbids = sorted.map { it.id }.filter { it.isNotBlank() }.distinct().take(8)
+                mbidCache[cacheKey] = mbids.joinToString(",")
+                mbids
+            } catch (e: Exception) {
+                logger.w(TAG, "MusicBrainz artist MBID lookup failed for $artistName: ${e.message}", e)
+                emptyList()
+            }
+        }
+
+        suspend fun resolveArtistMbid(artistName: String): String? =
+            resolveArtistMbids(artistName).firstOrNull()
+
+        private val urlRelsCache = ConcurrentHashMap<String, com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto>()
+
+        suspend fun lookupArtistUrlRels(mbid: String): com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto? {
+            if (mbid.isBlank()) return null
+            urlRelsCache[mbid]?.let { return it }
+            return try {
+                val dto = throttled { musicBrainzApi.lookupArtistUrlRels(artistId = mbid) }
+                urlRelsCache[mbid] = dto
+                dto
+            } catch (e: Exception) {
+                logger.w(TAG, "MusicBrainz artist url-rels lookup failed for $mbid: ${e.message}", e)
+                null
+            }
+        }
 
         override suspend fun searchTrack(
             title: String,
@@ -58,9 +127,7 @@ class MusicBrainzProvider
         override suspend fun fetchAlbumArt(
             albumTitle: String,
             artist: String?,
-        ): String? {
-            return fetchReleaseGroupArtList(albumTitle, artist).firstOrNull()
-        }
+        ): String? = fetchReleaseGroupArtList(albumTitle, artist).firstOrNull()
 
         suspend fun fetchReleaseGroupArtList(
             albumTitle: String,

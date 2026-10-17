@@ -41,6 +41,9 @@ interface ThemeRepository {
     /** Auto-accept threshold for metadata matches as stored (0 until the user changes it). */
     val metadataConfidenceThreshold: StateFlow<Float>
 
+    /** Fanart.tv personal API key as stored ("" until the user enters one). */
+    val fanartTvApiKey: StateFlow<String>
+
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
     suspend fun setWidgetTheme(themeId: String): AppResult<Unit>
@@ -56,6 +59,8 @@ interface ThemeRepository {
     suspend fun setMetadataFixAction(action: String): AppResult<Unit>
 
     suspend fun setMetadataConfidenceThreshold(threshold: Float): AppResult<Unit>
+
+    suspend fun setFanartTvApiKey(apiKey: String): AppResult<Unit>
 
     suspend fun setCustomScanLocation(
         uri: String,

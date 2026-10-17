@@ -12,59 +12,59 @@ import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
 import com.lochanpthakke.empee3.core.database.repository.SmartPlaylistRepository
+import com.lochanpthakke.empee3.core.datastore.RepairBatchPersistence
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.MetadataCandidate
+import com.lochanpthakke.empee3.core.model.MetadataField
+import com.lochanpthakke.empee3.core.model.PersistedRepairBatch
+import com.lochanpthakke.empee3.core.model.PersistedRepairItem
+import com.lochanpthakke.empee3.core.model.ProviderStatus
 import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TagChange
 import com.lochanpthakke.empee3.core.network.bpm.BpmFinder
 import com.lochanpthakke.empee3.core.network.bpm.BpmLookup
+import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatus
+import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatusSource
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsRepository
 import com.lochanpthakke.empee3.core.network.lyrics.ProviderResponse
+import com.lochanpthakke.empee3.core.network.provider.LastFmCredentials
 import com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse
 import com.lochanpthakke.empee3.core.network.repository.GenreLookup
 import com.lochanpthakke.empee3.core.network.repository.MatchDecision
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
+import com.lochanpthakke.empee3.core.network.repository.MetadataSources
 import com.lochanpthakke.empee3.core.network.repository.TrackIdentity
 import com.lochanpthakke.empee3.core.network.repository.TrackMatcher
 import com.lochanpthakke.empee3.core.network.repository.usableIdentityText
+import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.tagger.EditableTags
 import com.lochanpthakke.empee3.core.network.tagger.EmbeddedTagReader
 import com.lochanpthakke.empee3.core.network.tagger.FieldFixPlan
+import com.lochanpthakke.empee3.core.network.tagger.FieldSelection
 import com.lochanpthakke.empee3.core.network.tagger.FixField
 import com.lochanpthakke.empee3.core.network.tagger.LocalTrackTags
+import com.lochanpthakke.empee3.core.network.tagger.PLAUSIBLE_BPM
 import com.lochanpthakke.empee3.core.network.tagger.ReleaseDate
 import com.lochanpthakke.empee3.core.network.tagger.ReleaseDateDecision
+import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
+import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
+import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
+import com.lochanpthakke.empee3.core.network.tagger.fieldSelection
 import com.lochanpthakke.empee3.core.network.tagger.fields
 import com.lochanpthakke.empee3.core.network.tagger.isUsableTag
 import com.lochanpthakke.empee3.core.network.tagger.isUsableYearTag
 import com.lochanpthakke.empee3.core.network.tagger.planFieldFix
 import com.lochanpthakke.empee3.core.network.tagger.releaseDateFor
-import com.lochanpthakke.empee3.core.network.tagger.PLAUSIBLE_BPM
 import com.lochanpthakke.empee3.core.network.tagger.usableBpm
-import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
-import com.lochanpthakke.empee3.core.network.tagger.WriteAuthorization
-import com.lochanpthakke.empee3.core.network.tagger.buildTagWriteRequest
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
-import com.lochanpthakke.empee3.core.datastore.RepairBatchPersistence
-import com.lochanpthakke.empee3.core.model.PersistedRepairBatch
-import com.lochanpthakke.empee3.core.model.PersistedRepairItem
-import com.lochanpthakke.empee3.core.model.ProviderStatus
-import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatus
-import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatusSource
-import com.lochanpthakke.empee3.core.network.provider.LastFmCredentials
-import com.lochanpthakke.empee3.core.network.repository.MetadataSources
-import com.lochanpthakke.empee3.core.network.retry.classifyProviderFailure
-import kotlinx.coroutines.CancellationException
-import com.lochanpthakke.empee3.core.model.MetadataField
-import com.lochanpthakke.empee3.core.network.tagger.FieldSelection
-import com.lochanpthakke.empee3.core.network.tagger.fieldSelection
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -117,6 +117,8 @@ data class ArtworkCandidateDetail(
 
 data class ArtworkSearchDiagnostics(
     val targetName: String,
+    val searchQuery: String = "",
+    val resolvedArtistInfo: String? = null,
     val providerOutcomes: List<com.lochanpthakke.empee3.core.model.ProviderOutcome> = emptyList(),
     val candidates: List<ArtworkCandidateDetail> = emptyList(),
 )
@@ -132,6 +134,26 @@ data class ArtistArtworkQueueItem(
     val status: String = "PENDING", // PENDING, SEARCHING, WRITING, COMPLETED, FAILED
     val failureReason: String? = null,
 )
+
+sealed interface RecentSearchItem {
+    val key: String
+
+    data class AlbumItem(val album: Album) : RecentSearchItem {
+        override val key: String get() = "album_${album.id}"
+    }
+
+    data class ArtistItem(val artist: Artist) : RecentSearchItem {
+        override val key: String get() = "artist_${artist.id}"
+    }
+
+    data class SongItem(val song: Song) : RecentSearchItem {
+        override val key: String get() = "song_${song.id}"
+    }
+
+    data class PlaylistItem(val playlistId: Long, val title: String, val trackCount: Int) : RecentSearchItem {
+        override val key: String get() = "playlist_$playlistId"
+    }
+}
 
 @HiltViewModel
 @Suppress("TooManyFunctions", "LargeClass")
@@ -157,6 +179,7 @@ class LibraryViewModel
         private val repairBatchPersistence: RepairBatchPersistence,
         private val lastFmCredentials: LastFmCredentials,
         private val bpmFinder: BpmFinder,
+        private val fanartTvCredentials: com.lochanpthakke.empee3.core.network.provider.FanartTvCredentials,
     ) : ViewModel() {
         /**
          * The album artwork (one song per album, up to four) of each smart playlist card on
@@ -247,6 +270,12 @@ class LibraryViewModel
         private val _searchArtists = MutableStateFlow<List<Artist>>(emptyList())
         val searchArtists: StateFlow<List<Artist>> = _searchArtists.asStateFlow()
 
+        private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+        val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
+
+        private val _recentSearchItems = MutableStateFlow<List<RecentSearchItem>>(emptyList())
+        val recentSearchItems: StateFlow<List<RecentSearchItem>> = _recentSearchItems.asStateFlow()
+
         private val _isFixingQueue = MutableStateFlow(false)
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
 
@@ -321,25 +350,45 @@ class LibraryViewModel
             renameError: String? = null,
             isManual: Boolean = false,
             extraChanges: List<TagChange> = emptyList(),
+            hadOriginalArtwork: Boolean = false,
+            originalArtworkBytes: ByteArray? = null,
+            hadEmbeddedTitle: Boolean = true,
+            hadEmbeddedArtist: Boolean = true,
+            hadEmbeddedAlbum: Boolean = true,
         ): com.lochanpthakke.empee3.core.model.SuccessDetails {
             val changes = mutableListOf<com.lochanpthakke.empee3.core.model.TagChange>()
             if (oldTitle.trim() != newTitle.trim()) {
-                changes.add(com.lochanpthakke.empee3.core.model.TagChange("Title", oldTitle, newTitle))
+                changes.add(
+                    com.lochanpthakke.empee3.core.model
+                        .TagChange("Title", oldTitle, newTitle),
+                )
             }
             if (oldArtist.trim() != newArtist.trim()) {
-                changes.add(com.lochanpthakke.empee3.core.model.TagChange("Artist", oldArtist, newArtist))
+                changes.add(
+                    com.lochanpthakke.empee3.core.model
+                        .TagChange("Artist", oldArtist, newArtist),
+                )
             }
             if (oldAlbum.trim() != newAlbum.trim()) {
-                changes.add(com.lochanpthakke.empee3.core.model.TagChange("Album", oldAlbum, newAlbum))
+                changes.add(
+                    com.lochanpthakke.empee3.core.model
+                        .TagChange("Album", oldAlbum, newAlbum),
+                )
             }
             if (!oldYear.isNullOrBlank() || !newYear.isNullOrBlank()) {
                 if (oldYear?.trim() != newYear?.trim()) {
-                    changes.add(com.lochanpthakke.empee3.core.model.TagChange("Year", oldYear.orEmpty(), newYear.orEmpty()))
+                    changes.add(
+                        com.lochanpthakke.empee3.core.model
+                            .TagChange("Year", oldYear.orEmpty(), newYear.orEmpty()),
+                    )
                 }
             }
             if (!oldGenre.isNullOrBlank() || !newGenre.isNullOrBlank()) {
                 if (oldGenre?.trim() != newGenre?.trim()) {
-                    changes.add(com.lochanpthakke.empee3.core.model.TagChange("Genre", oldGenre.orEmpty(), newGenre.orEmpty()))
+                    changes.add(
+                        com.lochanpthakke.empee3.core.model
+                            .TagChange("Genre", oldGenre.orEmpty(), newGenre.orEmpty()),
+                    )
                 }
             }
             changes += extraChanges
@@ -361,6 +410,11 @@ class LibraryViewModel
                 oldFilename = oldFileName,
                 newFilename = newFileName,
                 renameError = renameError,
+                hadOriginalArtwork = hadOriginalArtwork,
+                originalArtworkBytes = originalArtworkBytes,
+                hadEmbeddedTitle = hadEmbeddedTitle,
+                hadEmbeddedArtist = hadEmbeddedArtist,
+                hadEmbeddedAlbum = hadEmbeddedAlbum,
             )
         }
 
@@ -723,10 +777,20 @@ class LibraryViewModel
             val currentQueue = _artworkQueue.value.toMutableList()
             currentQueue.removeAll { it.album.id == album.id }
             _artworkQueue.value = currentQueue
+            if (_currentProcessingAlbum.value?.id == album.id) {
+                _currentProcessingAlbum.value = null
+                _artworkCandidates.value = emptyList()
+                _artworkSearchDiagnostics.value = null
+                _selectedEnlargedArtworkUrl.value = null
+            }
         }
 
         fun clearArtworkQueue() {
             _artworkQueue.value = emptyList()
+            _currentProcessingAlbum.value = null
+            _artworkCandidates.value = emptyList()
+            _artworkSearchDiagnostics.value = null
+            _selectedEnlargedArtworkUrl.value = null
         }
 
         fun enqueueArtistForArtwork(artist: Artist) {
@@ -741,10 +805,20 @@ class LibraryViewModel
             val currentQueue = _artistArtworkQueue.value.toMutableList()
             currentQueue.removeAll { it.artist.id == artist.id }
             _artistArtworkQueue.value = currentQueue
+            if (_currentProcessingArtist.value?.id == artist.id) {
+                _currentProcessingArtist.value = null
+                _artworkCandidates.value = emptyList()
+                _artworkSearchDiagnostics.value = null
+                _selectedEnlargedArtworkUrl.value = null
+            }
         }
 
         fun clearArtistArtworkQueue() {
             _artistArtworkQueue.value = emptyList()
+            _currentProcessingArtist.value = null
+            _artworkCandidates.value = emptyList()
+            _artworkSearchDiagnostics.value = null
+            _selectedEnlargedArtworkUrl.value = null
         }
 
         fun scanForMissingCovers() {
@@ -778,6 +852,13 @@ class LibraryViewModel
         private val _artworkSearchDiagnostics = MutableStateFlow<ArtworkSearchDiagnostics?>(null)
         val artworkSearchDiagnostics: StateFlow<ArtworkSearchDiagnostics?> = _artworkSearchDiagnostics.asStateFlow()
 
+        fun clearArtworkDiagnostics() {
+            _artworkSearchDiagnostics.value = null
+            _artworkCandidates.value = emptyList()
+            _currentProcessingAlbum.value = null
+            _currentProcessingArtist.value = null
+        }
+
         fun selectEnlargedArtwork(url: String?) {
             _selectedEnlargedArtworkUrl.value = url
         }
@@ -787,30 +868,65 @@ class LibraryViewModel
                 _isSearchingArtwork.value = true
                 _currentProcessingAlbum.value = album
                 _currentProcessingArtist.value = null
+                val queryText = "\"${album.title}\" by ${album.artist}"
                 val result = metadataRepository.fetchAlbumArtCandidates(album.title, album.artist, selectedProvider.value)
                 val artUrls = result.getOrDefault(emptyList())
                 _artworkCandidates.value = artUrls
                 _isSearchingArtwork.value = false
 
-                val outcomes = listOf(
-                    com.lochanpthakke.empee3.core.model.ProviderOutcome("iTunes / Apple Music", candidateCount = artUrls.count { "mzstatic" in it.lowercase() || "apple" in it.lowercase() }, status = com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS),
-                    com.lochanpthakke.empee3.core.model.ProviderOutcome("MusicBrainz Cover Art Archive", candidateCount = artUrls.count { "coverartarchive" in it.lowercase() }, status = com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS),
-                    com.lochanpthakke.empee3.core.model.ProviderOutcome("Deezer", candidateCount = artUrls.count { "deezer" in it.lowercase() || "cover_xl" in it.lowercase() }, status = com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS),
-                )
-                val details = artUrls.map { url ->
-                    val provider = when {
-                        "mzstatic" in url.lowercase() || "apple" in url.lowercase() -> "iTunes / Apple Music"
-                        "coverartarchive" in url.lowercase() -> "MusicBrainz CAA"
-                        "lastfm" in url.lowercase() -> "Last.fm"
-                        else -> "Deezer"
+                val sel = selectedProvider.value
+                val itunesSelected = MetadataSources.matches(MetadataSources.ITUNES, sel)
+                val mbSelected = MetadataSources.matches(MetadataSources.MUSICBRAINZ, sel)
+                val deezerSelected = MetadataSources.matches(MetadataSources.DEEZER, sel)
+
+                val itunesCount = artUrls.count { "mzstatic" in it.lowercase() || "apple" in it.lowercase() }
+                val mbCount = artUrls.count { "coverartarchive" in it.lowercase() || "musicbrainz" in it.lowercase() }
+                val deezerCount = artUrls.count { "deezer" in it.lowercase() || "dzcdn" in it.lowercase() }
+                val lastFmCount = artUrls.count { "lastfm" in it.lowercase() || "audioscrobbler" in it.lowercase() }
+
+                val outcomes =
+                    listOf(
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "iTunes / Apple Music",
+                            candidateCount = itunesCount,
+                            status = if (!itunesSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (itunesCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "MusicBrainz Cover Art Archive",
+                            candidateCount = mbCount,
+                            status = if (!mbSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (mbCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Deezer",
+                            candidateCount = deezerCount,
+                            status = if (!deezerSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (deezerCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Last.fm",
+                            candidateCount = lastFmCount,
+                            status = if (lastFmCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                    )
+                val details =
+                    artUrls.map { url ->
+                        val lower = url.lowercase()
+                        val provider =
+                            when {
+                                "googleapis" in lower || "googleusercontent" in lower -> "Google Images"
+                                "mzstatic" in lower || "apple" in lower -> "iTunes / Apple Music"
+                                "coverartarchive" in lower || "musicbrainz" in lower -> "MusicBrainz"
+                                "lastfm" in lower || "audioscrobbler" in lower -> "Last.fm"
+                                else -> "Deezer"
+                            }
+                        ArtworkCandidateDetail(url = url, sourceProvider = provider)
                     }
-                    ArtworkCandidateDetail(url = url, sourceProvider = provider)
-                }
-                _artworkSearchDiagnostics.value = ArtworkSearchDiagnostics(
-                    targetName = album.title,
-                    providerOutcomes = outcomes,
-                    candidates = details,
-                )
+                _artworkSearchDiagnostics.value =
+                    ArtworkSearchDiagnostics(
+                        targetName = album.title,
+                        searchQuery = queryText,
+                        providerOutcomes = outcomes,
+                        candidates = details,
+                    )
             }
         }
 
@@ -819,28 +935,107 @@ class LibraryViewModel
                 _isSearchingArtwork.value = true
                 _currentProcessingArtist.value = artist
                 _currentProcessingAlbum.value = null
-                val result = metadataRepository.fetchArtistArtworkCandidates(artist.name, selectedProvider.value)
-                val artUrls = result.getOrDefault(emptyList())
+                val queryText = artist.name
+                val result = metadataRepository.fetchArtistArtworkCandidatesDetailed(artist.name, selectedProvider.value)
+                val searchData =
+                    when (result) {
+                        is AppResult.Success -> result.data
+                        is AppResult.Error ->
+                            com.lochanpthakke.empee3.core.network.repository
+                                .ArtistArtworkSearchResponse(emptyList())
+                    }
+                val artUrls = searchData.candidates
+                val pMap = searchData.providerCandidates
                 _artworkCandidates.value = artUrls
                 _isSearchingArtwork.value = false
 
-                val outcomes = listOf(
-                    com.lochanpthakke.empee3.core.model.ProviderOutcome("Deezer", candidateCount = artUrls.count { "deezer" in it.lowercase() || "picture" in it.lowercase() }, status = com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS),
-                    com.lochanpthakke.empee3.core.model.ProviderOutcome("Wikipedia", candidateCount = artUrls.count { "wikimedia" in it.lowercase() || "wikipedia" in it.lowercase() }, status = com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS),
-                )
-                val details = artUrls.map { url ->
-                    val provider = when {
-                        "wikimedia" in url.lowercase() || "wikipedia" in url.lowercase() -> "Wikipedia"
-                        "lastfm" in url.lowercase() -> "Last.fm"
-                        else -> "Deezer"
+                val sel = selectedProvider.value
+                val geniusSelected = MetadataSources.matches(MetadataSources.GENIUS, sel)
+                val duckSelected = MetadataSources.matches(MetadataSources.DUCKDUCKGO, sel)
+                val fanartSelected = MetadataSources.matches(MetadataSources.FANART_TV, sel)
+                val discogsSelected = MetadataSources.matches(MetadataSources.DISCOGS, sel)
+                val deezerSelected = MetadataSources.matches(MetadataSources.DEEZER, sel)
+                val wikiSelected = MetadataSources.matches(MetadataSources.WIKIPEDIA, sel)
+                val iTunesSelected = MetadataSources.matches(MetadataSources.ITUNES, sel)
+
+                val geniusCount = pMap["Genius"]?.size ?: 0
+                val duckCount = pMap["DuckDuckGo Web Search"]?.size ?: 0
+                val fanartCount = pMap["Fanart.tv"]?.size ?: 0
+                val discogsCount = pMap["Discogs"]?.size ?: 0
+                val deezerCount = pMap["Deezer"]?.size ?: 0
+                val wikiCount = pMap["Wikipedia / Wikimedia"]?.size ?: 0
+                val iTunesCount = pMap["iTunes / Apple Music"]?.size ?: 0
+
+                val outcomes =
+                    listOf(
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Genius",
+                            candidateCount = geniusCount,
+                            status = if (!geniusSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (geniusCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "DuckDuckGo Web Search",
+                            candidateCount = duckCount,
+                            status = if (!duckSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (duckCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Fanart.tv",
+                            candidateCount = fanartCount,
+                            status = if (!fanartSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (!fanartTvCredentials.isConfigured) com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED else if (fanartCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Discogs",
+                            candidateCount = discogsCount,
+                            status = if (!discogsSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (discogsCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Deezer",
+                            candidateCount = deezerCount,
+                            status = if (!deezerSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (deezerCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "Wikipedia / Wikimedia",
+                            candidateCount = wikiCount,
+                            status = if (!wikiSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (wikiCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                        com.lochanpthakke.empee3.core.model.ProviderOutcome(
+                            "iTunes / Apple Music",
+                            candidateCount = iTunesCount,
+                            status = if (!iTunesSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (iTunesCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                        ),
+                    )
+                val details =
+                    artUrls.map { url ->
+                        val returnedProvider = pMap.entries.firstOrNull { (_, list) -> url in list }?.key
+                        val lower = url.lowercase()
+                        val provider =
+                            returnedProvider ?: when {
+                                "genius" in lower || "rapgenius" in lower -> "Genius"
+                                "fanart.tv" in lower -> "Fanart.tv"
+                                "discogs" in lower -> "Discogs"
+                                "wikimedia" in lower || "wikipedia" in lower -> "Wikipedia / Wikimedia"
+                                "mzstatic" in lower || "apple" in lower -> "iTunes / Apple Music"
+                                "deezer" in lower || "dzcdn" in lower -> "Deezer"
+                                else -> "DuckDuckGo Web Search"
+                            }
+                        ArtworkCandidateDetail(url = url, sourceProvider = provider)
                     }
-                    ArtworkCandidateDetail(url = url, sourceProvider = provider)
-                }
-                _artworkSearchDiagnostics.value = ArtworkSearchDiagnostics(
-                    targetName = artist.name,
-                    providerOutcomes = outcomes,
-                    candidates = details,
-                )
+                val resolvedMbid = searchData.resolvedMbid
+                val resolvedInfo =
+                    if (!resolvedMbid.isNullOrBlank()) {
+                        "Resolved: ${artist.name} (MBID: $resolvedMbid)"
+                    } else {
+                        null
+                    }
+
+                _artworkSearchDiagnostics.value =
+                    ArtworkSearchDiagnostics(
+                        targetName = artist.name,
+                        searchQuery = queryText,
+                        resolvedArtistInfo = resolvedInfo,
+                        providerOutcomes = outcomes,
+                        candidates = details,
+                    )
             }
         }
 
@@ -856,68 +1051,96 @@ class LibraryViewModel
 
         fun revertSelectedChanges(selectedSongIds: Set<Long>) {
             if (_isReverting.value || _isFixingQueue.value) return
+            val currentQueue = _repairQueue.value.toMutableList()
+            val targetIndices = currentQueue.indices.filter {
+                currentQueue[it].song.id in selectedSongIds && currentQueue[it].successDetails != null
+            }
+            if (targetIndices.isEmpty()) return
+
             _isReverting.value = true
             viewModelScope.launch(Dispatchers.IO) {
-                var revertedCount = 0
-                val currentQueue = _repairQueue.value.toMutableList()
-                val toRevertIndices = currentQueue.indices.filter { currentQueue[it].song.id in selectedSongIds }
+                withWriteAccess(
+                    contentUris = targetIndices.map { currentQueue[it].song.uri },
+                    onGranted = {
+                        try {
+                            var revertedCount = 0
+                            for (index in targetIndices) {
+                                val item = currentQueue[index]
+                                val succ = item.successDetails ?: continue
+                                var currentPath = libraryRepository.getSongFilePath(item.song.id) ?: item.song.filePath.orEmpty()
 
-                try {
-                    for (index in toRevertIndices) {
-                        val item = currentQueue[index]
-                        val succ = item.successDetails ?: continue
-                        val currentPath = libraryRepository.getSongFilePath(item.song.id) ?: item.song.filePath.orEmpty()
-
-                        val origYear = succ.originalYear?.trim()?.takeIf { it.isNotBlank() }
-                        val origGenre = succ.originalGenre?.trim()?.takeIf { it.isNotBlank() }
-
-                        val request =
-                            TagWriteRequest(
-                                contentUri = item.song.uri,
-                                filePath = currentPath,
-                                title = succ.originalTitle,
-                                artist = succ.originalArtist,
-                                album = succ.originalAlbum,
-                                releaseDate = origYear,
-                                clearYear = origYear == null,
-                                genre = origGenre,
-                                clearGenre = origGenre == null,
-                            )
-                        val writeRes = metadataRepository.writeTagsToFile(request)
-                        if (writeRes is AppResult.Success) {
-                            libraryRepository.updateSongTags(
-                                songId = item.song.id,
-                                title = succ.originalTitle,
-                                artist = succ.originalArtist,
-                                album = succ.originalAlbum,
-                            )
-                            ArtworkLoader.invalidate(item.song.uri)
-                            val oldName = succ.oldFilename
-                            if (succ.isRenamed && !oldName.isNullOrBlank()) {
-                                val renameRes = fileRenamer.renameAudioFile(item.song.uri, currentPath, oldName)
-                                val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
-                                if (newPath != null) {
-                                    libraryRepository.updateFilePath(item.song.id, newPath)
+                                val oldName = succ.oldFilename
+                                if (succ.isRenamed && !oldName.isNullOrBlank()) {
+                                    val renameRes = fileRenamer.renameAudioFile(item.song.uri, currentPath, oldName)
+                                    if (renameRes is AppResult.Success) {
+                                        currentPath = renameRes.data.newFilePath
+                                        libraryRepository.updateFilePath(item.song.id, currentPath)
+                                    }
                                 }
-                            }
-                            val restoredSong =
-                                item.song.copy(
+
+                                val origTitle = succ.originalTitle.trim().takeIf { it.isNotBlank() && succ.hadEmbeddedTitle }
+                                val origArtist = succ.originalArtist.trim().takeIf { it.isNotBlank() && succ.hadEmbeddedArtist }
+                                val origAlbum = succ.originalAlbum.trim().takeIf { it.isNotBlank() && succ.hadEmbeddedAlbum }
+                                val origYear = succ.originalYear?.trim()?.takeIf { it.isNotBlank() }
+                                val origGenre = succ.originalGenre?.trim()?.takeIf { it.isNotBlank() }
+                                val artworkWasChanged = succ.changes.any { it.fieldName.equals("Artwork", ignoreCase = true) }
+
+                                val request = TagWriteRequest(
+                                    contentUri = item.song.uri,
+                                    filePath = currentPath,
+                                    title = origTitle,
+                                    clearTitle = origTitle == null,
+                                    artist = origArtist,
+                                    clearArtist = origArtist == null,
+                                    album = origAlbum,
+                                    clearAlbum = origAlbum == null,
+                                    releaseDate = origYear,
+                                    clearYear = origYear == null,
+                                    genre = origGenre,
+                                    clearGenre = origGenre == null,
+                                    artworkBytes = if (artworkWasChanged && succ.hadOriginalArtwork) succ.originalArtworkBytes else null,
+                                    clearArtwork = artworkWasChanged && !succ.hadOriginalArtwork,
+                                )
+
+                                val writeRes = metadataRepository.writeTagsToFile(request)
+                                if (writeRes is AppResult.Error) {
+                                    _userMessage.value = "Failed to revert tags for ${item.song.title}: ${writeRes.error.message}"
+                                    continue
+                                }
+
+                                libraryRepository.updateSongTags(
+                                    songId = item.song.id,
                                     title = succ.originalTitle,
                                     artist = succ.originalArtist,
                                     album = succ.originalAlbum,
                                 )
-                            currentQueue[index] = item.copy(song = restoredSong, status = "REVERTED", failureReason = "Changes reverted")
-                            revertedCount++
+                                ArtworkLoader.invalidate(item.song.uri)
+
+                                val restoredSong = item.song.copy(
+                                    title = succ.originalTitle,
+                                    artist = succ.originalArtist,
+                                    album = succ.originalAlbum,
+                                )
+                                currentQueue[index] = item.copy(song = restoredSong, status = "REVERTED", failureReason = "Changes reverted")
+                                revertedCount++
+                            }
+
+                            _repairQueue.value = currentQueue.toList()
+
+                            if (revertedCount > 0) {
+                                delay(500L)
+                                libraryRepository.requestRescanAfterChange()
+                                _revertCompletionMessage.value = "✓ $revertedCount tracks successfully reverted back to original tags"
+                            }
+                        } finally {
+                            _isReverting.value = false
                         }
-                    }
-                    _repairQueue.value = currentQueue.toList()
-                    libraryRepository.requestRescanAfterChange()
-                    if (revertedCount > 0) {
-                        _revertCompletionMessage.value = "✓ $revertedCount tracks successfully reverted back to original tags"
-                    }
-                } finally {
-                    _isReverting.value = false
-                }
+                    },
+                    onDenied = {
+                        _isReverting.value = false
+                        _userMessage.value = "Storage permission denied. Allow access when asked and try again to revert."
+                    },
+                )
             }
         }
 
@@ -937,8 +1160,9 @@ class LibraryViewModel
 
                 try {
                     val downloadResult = metadataRepository.downloadArtwork(artworkUrl)
-                    val imageBytes = (downloadResult as? AppResult.Success)?.data
-                        ?: throw IllegalStateException("Could not download artwork image")
+                    val imageBytes =
+                        (downloadResult as? AppResult.Success)?.data
+                            ?: throw IllegalStateException("Could not download artwork image")
 
                     val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
                     for (song in albumSongs) {
@@ -973,6 +1197,7 @@ class LibraryViewModel
                     _selectedEnlargedArtworkUrl.value = null
                     _artworkCandidates.value = emptyList()
                     _currentProcessingAlbum.value = null
+                    _artworkSearchDiagnostics.value = null
                     _isSearchingArtwork.value = false
                 }
             }
@@ -1005,20 +1230,64 @@ class LibraryViewModel
             }
         }
 
+        @Suppress("TooGenericExceptionCaught")
         fun applyArtistArtwork(
             artist: Artist,
             imageUrl: String,
         ) {
             viewModelScope.launch(Dispatchers.IO) {
-                when (val downloadResult = metadataRepository.downloadArtwork(imageUrl)) {
-                    is AppResult.Success -> {
-                        (artistArtworkRepository.setCustomArtwork(artist.id, downloadResult.data) as? AppResult.Error)?.let {
-                            _userMessage.value = it.error.message
+                _isSearchingArtwork.value = true
+                val queue = _artistArtworkQueue.value.toMutableList()
+                val queueIndex = queue.indexOfFirst { it.artist.id == artist.id }
+                if (queueIndex != -1) {
+                    queue[queueIndex] = queue[queueIndex].copy(status = "WRITING")
+                    _artistArtworkQueue.value = queue.toList()
+                }
+
+                try {
+                    when (val downloadResult = metadataRepository.downloadArtwork(imageUrl)) {
+                        is AppResult.Success -> {
+                            val result = artistArtworkRepository.setCustomArtwork(artist.id, downloadResult.data)
+                            if (result is AppResult.Error) {
+                                _userMessage.value = result.error.message
+                                if (queueIndex != -1) {
+                                    queue[queueIndex] = queue[queueIndex].copy(
+                                        status = "FAILED",
+                                        failureReason = result.error.message,
+                                    )
+                                    _artistArtworkQueue.value = queue.toList()
+                                }
+                            } else if (queueIndex != -1) {
+                                queue[queueIndex] = queue[queueIndex].copy(status = "COMPLETED")
+                                _artistArtworkQueue.value = queue.toList()
+                            }
+                        }
+                        is AppResult.Error -> {
+                            _userMessage.value = downloadResult.error.message
+                            if (queueIndex != -1) {
+                                queue[queueIndex] = queue[queueIndex].copy(
+                                    status = "FAILED",
+                                    failureReason = downloadResult.error.message,
+                                )
+                                _artistArtworkQueue.value = queue.toList()
+                            }
                         }
                     }
-                    is AppResult.Error -> {
-                        _userMessage.value = downloadResult.error.message
+                    libraryRepository.triggerLibraryScan()
+                } catch (e: Throwable) {
+                    if (queueIndex != -1) {
+                        queue[queueIndex] = queue[queueIndex].copy(
+                            status = "FAILED",
+                            failureReason = e.message ?: "WRITE_ERROR",
+                        )
+                        _artistArtworkQueue.value = queue.toList()
                     }
+                } finally {
+                    _selectedEnlargedArtworkUrl.value = null
+                    _artworkCandidates.value = emptyList()
+                    _currentProcessingArtist.value = null
+                    _artworkSearchDiagnostics.value = null
+                    _isSearchingArtwork.value = false
                 }
             }
         }
@@ -1065,19 +1334,58 @@ class LibraryViewModel
                 val allAlbums = libraryRepository.getAllAlbums().first()
                 _searchAlbums.value =
                     allAlbums.filter {
-                        it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.title, query) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.artist, query)
                     }
 
                 val allArtists = libraryRepository.getAllArtists().first()
                 _searchArtists.value =
                     allArtists.filter {
-                        it.name.contains(query, ignoreCase = true)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.name, query)
                     }
             }
         }
 
         fun setLibrarySearchQuery(query: String) {
             _librarySearchQuery.value = query
+        }
+
+        fun addRecentAlbum(album: Album) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.AlbumItem && it.album.id == album.id }
+            current.add(0, RecentSearchItem.AlbumItem(album))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun addRecentArtist(artist: Artist) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.ArtistItem && it.artist.id == artist.id }
+            current.add(0, RecentSearchItem.ArtistItem(artist))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun addRecentSong(song: Song) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.SongItem && it.song.id == song.id }
+            current.add(0, RecentSearchItem.SongItem(song))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun addRecentPlaylist(playlistId: Long, title: String, trackCount: Int) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it is RecentSearchItem.PlaylistItem && it.playlistId == playlistId }
+            current.add(0, RecentSearchItem.PlaylistItem(playlistId, title, trackCount))
+            _recentSearchItems.value = current.take(15)
+        }
+
+        fun removeRecentSearchItem(item: RecentSearchItem) {
+            val current = _recentSearchItems.value.toMutableList()
+            current.removeAll { it.key == item.key }
+            _recentSearchItems.value = current
+        }
+
+        fun clearRecentSearchItems() {
+            _recentSearchItems.value = emptyList()
         }
 
         fun enqueueSongForRepair(song: Song) {
@@ -1145,13 +1453,29 @@ class LibraryViewModel
             if (_isFixingQueue.value) pauseRequested = true
         }
 
-        /** The sources offered in Settings and the editor, with Last.fm's real configuration state. */
-        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> =
-            MutableStateFlow(metadataSourceOptions(lastFmConfigured = lastFmCredentials.isConfigured)).asStateFlow()
+        /** The sources offered in Settings and the editor, with Last.fm's & Fanart.tv's real configuration state. */
+        private val _metadataSourceOptions =
+            MutableStateFlow(
+                metadataSourceOptions(
+                    lastFmConfigured = lastFmCredentials.isConfigured,
+                    fanartTvConfigured = fanartTvCredentials.isConfigured,
+                ),
+            )
+        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> = _metadataSourceOptions.asStateFlow()
 
         private fun metadataSourceLabel(key: String): String = metadataSourceOptions.value.firstOrNull { it.key == key }?.label ?: key
 
         init {
+            viewModelScope.launch {
+                themeRepository.fanartTvApiKey.collect { key ->
+                    fanartTvCredentials.apiKey = key
+                    _metadataSourceOptions.value =
+                        metadataSourceOptions(
+                            lastFmConfigured = lastFmCredentials.isConfigured,
+                            fanartTvConfigured = key.isNotBlank(),
+                        )
+                }
+            }
             viewModelScope.launch {
                 restoreRepairBatch()
                 // Saved as it changes, so a batch survives the process; a track mid-lookup is saved as pending.
@@ -1328,6 +1652,9 @@ class LibraryViewModel
                     for (index in indices) {
                         val item = queue[index]
                         val request = writes[index]
+                        val filePath = request?.filePath ?: libraryRepository.getSongFilePath(item.song.id) ?: item.song.filePath.orEmpty()
+                        val preWriteEmbedded = embeddedTagReader.readEmbeddedTags(filePath)
+
                         val writeResult = request?.let { metadataRepository.writeTagsToFile(it) }
                         if (writeResult is AppResult.Error) {
                             queue[index] = item.copy(status = RepairStatus.FAILED, failureReason = writeResult.error.message)
@@ -1338,7 +1665,7 @@ class LibraryViewModel
                             changedAny = true
                             ArtworkLoader.invalidate(request.contentUri)
                         }
-                        val filePath = request?.filePath ?: libraryRepository.getSongFilePath(item.song.id) ?: item.song.filePath.orEmpty()
+
                         val renameRes =
                             renames[index]?.let { target -> fileRenamer.renameAudioFile(item.song.uri, filePath, target) }
                         val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
@@ -1347,31 +1674,40 @@ class LibraryViewModel
                             changedAny = true
                             libraryRepository.updateFilePath(item.song.id, newPath)
                         }
-                        val embedded = embeddedTagReader.readEmbeddedTags(filePath)
+
                         val successDetails =
                             buildSuccessDetails(
-                                oldTitle = item.song.title,
-                                oldArtist = item.song.artist,
-                                oldAlbum = item.song.album,
-                                oldYear = embedded.year,
-                                oldGenre = embedded.genre,
+                                oldTitle = preWriteEmbedded.title ?: item.song.title,
+                                oldArtist = preWriteEmbedded.artist ?: item.song.artist,
+                                oldAlbum = preWriteEmbedded.album ?: item.song.album,
+                                oldYear = preWriteEmbedded.year,
+                                oldGenre = preWriteEmbedded.genre,
                                 newTitle = request?.title ?: item.song.title,
                                 newArtist = request?.artist ?: item.song.artist,
                                 newAlbum = request?.album ?: item.song.album,
-                                newYear = request?.releaseDate ?: request?.year?.toString(),
-                                newGenre = request?.genre,
+                                newYear = request?.releaseDate ?: request?.year?.toString() ?: preWriteEmbedded.year,
+                                newGenre = request?.genre ?: preWriteEmbedded.genre,
                                 oldFileName = java.io.File(filePath).name,
                                 newFileName = newName,
                                 renameError = (renameRes as? AppResult.Error)?.error?.message,
                                 isManual = (_repairMode.value == RepairMode.MANUAL),
                                 extraChanges = plans[item.song.id]?.let(::nonTextChanges).orEmpty(),
+                                hadOriginalArtwork = preWriteEmbedded.artworkBytes != null,
+                                originalArtworkBytes = preWriteEmbedded.artworkBytes,
+                                hadEmbeddedTitle = !preWriteEmbedded.title.isNullOrBlank(),
+                                hadEmbeddedArtist = !preWriteEmbedded.artist.isNullOrBlank(),
+                                hadEmbeddedAlbum = !preWriteEmbedded.album.isNullOrBlank(),
                             )
                         // A selected field that couldn't be found (e.g. no BPM) makes it a partial fix, said so.
                         val unfilled = plans[item.song.id]?.unfilled.orEmpty()
                         queue[index] =
                             when {
                                 renameRes is AppResult.Error && request == null ->
-                                    item.copy(status = RepairStatus.FAILED, failureReason = renameRes.error.message, successDetails = successDetails)
+                                    item.copy(
+                                        status = RepairStatus.FAILED,
+                                        failureReason = renameRes.error.message,
+                                        successDetails = successDetails,
+                                    )
                                 renameRes is AppResult.Error || unfilled.isNotEmpty() ->
                                     item.copy(
                                         status = RepairStatus.PARTIAL_SUCCESS,
@@ -1589,6 +1925,14 @@ class LibraryViewModel
         fun toggleFavorite(song: Song) {
             viewModelScope.launch {
                 libraryRepository.toggleFavorite(song.id)
+                val current = _recentSearchItems.value.map { item ->
+                    if (item is RecentSearchItem.SongItem && item.song.id == song.id) {
+                        item.copy(song = item.song.copy(isFavorite = !item.song.isFavorite))
+                    } else {
+                        item
+                    }
+                }
+                _recentSearchItems.value = current
             }
         }
 

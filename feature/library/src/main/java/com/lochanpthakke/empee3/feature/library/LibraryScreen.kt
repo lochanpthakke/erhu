@@ -106,6 +106,7 @@ fun LibraryScreen(
     val searchResults by viewModel.librarySearchResults.collectAsState()
     val searchArtists by viewModel.librarySearchArtists.collectAsState()
     val searchAlbums by viewModel.librarySearchAlbums.collectAsState()
+    val recentSearchItems by viewModel.recentSearchItems.collectAsState()
     val recentAlbums by viewModel.recentAlbums.collectAsState()
     val recentPlaylists by playlistsViewModel.recentPlaylists.collectAsState()
     val playlists by playlistsViewModel.playlists.collectAsState()
@@ -200,9 +201,22 @@ fun LibraryScreen(
                 albums = searchAlbums,
                 artistArtwork = artistArtwork,
                 currentSongId = currentSongId,
-                onSongClick = { index -> viewModel.playSongsFromQueue(searchResults, index) },
-                onArtistClick = onOpenArtist,
-                onAlbumClick = onOpenAlbum,
+                recentSearchItems = recentSearchItems,
+                onRemoveRecentItem = viewModel::removeRecentSearchItem,
+                onClearRecentItems = viewModel::clearRecentSearchItems,
+                onSongClick = { index ->
+                    searchResults.getOrNull(index)?.let { viewModel.addRecentSong(it) }
+                    viewModel.playSongsFromQueue(searchResults, index)
+                },
+                onArtistClick = { artist ->
+                    viewModel.addRecentArtist(artist)
+                    onOpenArtist(artist)
+                },
+                onAlbumClick = { album ->
+                    viewModel.addRecentAlbum(album)
+                    onOpenAlbum(album)
+                },
+                onPlaylistClick = onOpenPlaylist,
                 actions = actions,
                 topInset = scroll.contentTop,
                 bottomInset = scroll.contentBottom,

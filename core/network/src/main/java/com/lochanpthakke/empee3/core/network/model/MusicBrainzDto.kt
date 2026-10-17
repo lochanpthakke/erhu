@@ -11,6 +11,59 @@ data class MusicBrainzSearchResponse(
 )
 
 @Serializable
+data class MusicBrainzArtistSearchResponse(
+    val artists: List<MusicBrainzArtistDto> = emptyList(),
+)
+
+@Serializable
+data class MusicBrainzArtistDto(
+    val id: String = "",
+    val name: String = "",
+    val score: Int = 0,
+    val disambiguation: String? = null,
+    val type: String? = null,
+    val country: String? = null,
+    val aliases: List<MusicBrainzAliasDto> = emptyList(),
+    val tags: List<MusicBrainzTagDto> = emptyList(),
+    @SerialName("life-span")
+    val lifeSpan: MusicBrainzLifeSpanDto? = null,
+    val relations: List<MusicBrainzRelationDto> = emptyList(),
+)
+
+@Serializable
+data class MusicBrainzAliasDto(
+    val name: String = "",
+    @SerialName("sort-name")
+    val sortName: String? = null,
+    val primary: Boolean? = null,
+)
+
+@Serializable
+data class MusicBrainzTagDto(
+    val name: String = "",
+    val count: Int = 0,
+)
+
+@Serializable
+data class MusicBrainzLifeSpanDto(
+    val begin: String? = null,
+    val end: String? = null,
+    val ended: Boolean? = null,
+)
+
+@Serializable
+data class MusicBrainzRelationDto(
+    val type: String = "",
+    val url: MusicBrainzUrlDto? = null,
+)
+
+@Serializable
+data class MusicBrainzUrlDto(
+    val id: String = "",
+    val resource: String = "",
+)
+
+@Serializable
 data class MusicBrainzReleaseGroupSearchResponse(
     @SerialName("release-groups")
     val releaseGroups: List<MusicBrainzReleaseGroupDto> = emptyList(),

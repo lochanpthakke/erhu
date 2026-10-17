@@ -17,6 +17,7 @@ import org.jaudiotagger.audio.exceptions.CannotWriteException
 import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException
 import org.jaudiotagger.audio.exceptions.ReadOnlyFileException
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.Tag
 import org.jaudiotagger.tag.TagException
 import org.jaudiotagger.tag.images.ArtworkFactory
 import java.io.ByteArrayOutputStream
@@ -91,9 +92,24 @@ class JAudioTaggerWriter
             val audioFile = AudioFileIO.read(file)
             val tag = audioFile.tagOrCreateAndSetDefault
 
-            request.title?.let { tag.setField(FieldKey.TITLE, it) }
-            request.artist?.let { tag.setField(FieldKey.ARTIST, it) }
-            request.album?.let { tag.setField(FieldKey.ALBUM, it) }
+            if (request.clearTitle || request.title?.isBlank() == true) {
+                tag.deleteField(FieldKey.TITLE)
+            } else {
+                request.title?.let { tag.setField(FieldKey.TITLE, it) }
+            }
+
+            if (request.clearArtist || request.artist?.isBlank() == true) {
+                tag.deleteField(FieldKey.ARTIST)
+            } else {
+                request.artist?.let { tag.setField(FieldKey.ARTIST, it) }
+            }
+
+            if (request.clearAlbum || request.album?.isBlank() == true) {
+                tag.deleteField(FieldKey.ALBUM)
+            } else {
+                request.album?.let { tag.setField(FieldKey.ALBUM, it) }
+            }
+
             if (request.clearYear) {
                 tag.deleteField(FieldKey.YEAR)
             } else {
@@ -104,24 +120,30 @@ class JAudioTaggerWriter
                     tag.setField(FieldKey.YEAR, value)
                 }
             }
+
             if (request.clearGenre) {
                 tag.deleteField(FieldKey.GENRE)
             } else {
                 // Several genres are kept as separate values where the format allows it (see writeGenres).
                 requestedGenres(request)?.let { tag.writeGenres(it) }
             }
+
             request.trackNumber?.let { tag.setField(FieldKey.TRACK, it.toString()) }
             request.bpm?.let { tag.setField(FieldKey.BPM, it.toString()) }
             request.lyrics?.let { tag.setField(FieldKey.LYRICS, it) }
 
-            request.artworkBytes?.let { bytes ->
-                val artworkFile = File(file.parentFile, "${file.nameWithoutExtension}-art.jpg")
-                try {
-                    artworkFile.writeBytes(downscaleArtwork(bytes))
-                    tag.deleteArtworkField()
-                    tag.setField(ArtworkFactory.createArtworkFromFile(artworkFile))
-                } finally {
-                    artworkFile.delete()
+            if (request.clearArtwork) {
+                tag.deleteArtworkField()
+            } else {
+                request.artworkBytes?.let { bytes ->
+                    val artworkFile = File(file.parentFile, "${file.nameWithoutExtension}-art.jpg")
+                    try {
+                        artworkFile.writeBytes(downscaleArtwork(bytes))
+                        tag.deleteArtworkField()
+                        tag.setField(ArtworkFactory.createArtworkFromFile(artworkFile))
+                    } finally {
+                        artworkFile.delete()
+                    }
                 }
             }
 
@@ -134,17 +156,18 @@ class JAudioTaggerWriter
             file: File,
             request: TagWriteRequest,
         ) {
-            val tag = AudioFileIO.read(file).tag ?: throw CannotWriteException("No tag after write")
-            val expected =
-                listOfNotNull(
-                    request.title?.let { FieldKey.TITLE to it },
-                    request.artist?.let { FieldKey.ARTIST to it },
-                    request.album?.let { FieldKey.ALBUM to it },
-                )
-            for ((key, value) in expected) {
-                val actual = tag.getFirst(key)
-                if (actual != value) throw CannotWriteException("Verification failed for $key: '$actual'")
+            val tag = AudioFileIO.read(file).tag
+            if (tag == null) {
+                if (!request.clearTitle && !request.clearArtist && !request.clearAlbum) {
+                    throw CannotWriteException("No tag after write")
+                }
+                return
             }
+
+            verifyText(tag, FieldKey.TITLE, request.title, request.clearTitle)
+            verifyText(tag, FieldKey.ARTIST, request.artist, request.clearArtist)
+            verifyText(tag, FieldKey.ALBUM, request.album, request.clearAlbum)
+
             // Every genre must come back, in order: a format that drops or merges some isn't trusted.
             if (request.clearGenre) {
                 val actualGenre = tag.getFirst(FieldKey.GENRE)
@@ -171,7 +194,35 @@ class JAudioTaggerWriter
             } else {
                 yearTagValue(request)?.let { expected ->
                     val actual = tag.getFirst(FieldKey.YEAR)
-                    if (actual != expected) throw CannotWriteException("Verification failed for YEAR: wrote '$expected', file reads '$actual'")
+                    if (actual != expected) {
+                        throw CannotWriteException("Verification failed for YEAR: wrote '$expected', file reads '$actual'")
+                    }
+                }
+            }
+
+            if (request.clearArtwork) {
+                if (tag.firstArtwork != null) {
+                    throw CannotWriteException("Verification failed for ARTWORK deletion: expected empty, found artwork")
+                }
+            }
+        }
+
+        /** A cleared (or blank) field must read back empty; a written one exactly as written. */
+        private fun verifyText(
+            tag: Tag,
+            key: FieldKey,
+            value: String?,
+            cleared: Boolean,
+        ) {
+            if (cleared || value?.isBlank() == true) {
+                val actual = tag.getFirst(key)
+                if (actual.isNotBlank()) {
+                    throw CannotWriteException("Verification failed for $key deletion: expected empty, found '$actual'")
+                }
+            } else if (value != null) {
+                val actual = tag.getFirst(key)
+                if (actual != value) {
+                    throw CannotWriteException("Verification failed for $key: wrote '$value', file reads '$actual'")
                 }
             }
         }

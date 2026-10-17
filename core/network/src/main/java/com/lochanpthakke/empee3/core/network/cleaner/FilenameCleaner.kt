@@ -66,11 +66,12 @@ class FilenameCleaner
             val allBlocklist = (DEFAULT_BLOCKLIST + customBlocklistTokens).distinct()
             for (token in allBlocklist) {
                 if (token.isNotBlank()) {
-                    val pattern = if (token.startsWith(".")) {
-                        Regex("(?i)" + Regex.escape(token) + "\\b")
-                    } else {
-                        Regex("(?i)\\b" + Regex.escape(token) + "\\b")
-                    }
+                    val pattern =
+                        if (token.startsWith(".")) {
+                            Regex("(?i)" + Regex.escape(token) + "\\b")
+                        } else {
+                            Regex("(?i)\\b" + Regex.escape(token) + "\\b")
+                        }
                     if (pattern.containsMatchIn(clean)) {
                         clean = clean.replace(pattern, "")
                         extractedJunk.add(token.trim('[', ']', '(', ')', ' '))
@@ -163,6 +164,7 @@ class FilenameCleaner
             private val DOMAIN_WATERMARK_REGEX = Regex("(?i)[a-zA-Z0-9-]+\\.(com|in|org|net|co|site|xyz|cc|io|club|mobi|audio|mp3)")
             private val BITRATE_REGEX = Regex("(?i)\\[?\\d{2,3}\\s*kbps]?|\\(128kbps\\)|\\(320kbps\\)|320kbps|128kbps|vbr|flac\\s*hd")
             private val BRACKET_NOISE_REGEX = Regex("(?i)\\[(official|video|audio|lyric|hd|4k|clean|remastered|mp3|download|single)]")
-            private val ATTRIBUTION_WATERMARK_REGEX = Regex("(?i)[_\\s-]+(tagged|downloaded|uploaded|ripped)[_\\s]+(by|from)[_\\s]+[a-zA-Z0-9._-]+$")
+            private val ATTRIBUTION_WATERMARK_REGEX =
+                Regex("(?i)[_\\s-]+(tagged|downloaded|uploaded|ripped)[_\\s]+(by|from)[_\\s]+[a-zA-Z0-9._-]+$")
         }
     }

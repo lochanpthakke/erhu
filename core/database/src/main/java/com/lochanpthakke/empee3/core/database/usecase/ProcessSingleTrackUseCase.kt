@@ -13,12 +13,12 @@ import com.lochanpthakke.empee3.core.database.entity.ProcessingStatus
 import com.lochanpthakke.empee3.core.model.MetadataFixAction
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.network.cleaner.FilenameCleaner
+import com.lochanpthakke.empee3.core.network.cleaner.TitleCandidateGenerator
 import com.lochanpthakke.empee3.core.network.repository.MetadataRepository
 import com.lochanpthakke.empee3.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.lochanpthakke.empee3.core.network.scorer.UNCERTAIN_THRESHOLD
-import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import com.lochanpthakke.empee3.core.network.tagger.FileRenamer
-import com.lochanpthakke.empee3.core.network.cleaner.TitleCandidateGenerator
+import com.lochanpthakke.empee3.core.network.tagger.TagWriteRequest
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -76,7 +76,7 @@ class ProcessSingleTrackUseCase
             val rawFilename = file.name
             val activeLearnedTokens = learnedWatermarkDao.getAllActiveTokensSync()
             val cleanerResult = filenameCleaner.cleanFilenameAndExtractJunk(rawFilename, customBlocklist + activeLearnedTokens)
-            
+
             // Auto-persist extracted junk tokens from filename cleaning
             cleanerResult.extractedJunkTokens.forEach { junkToken ->
                 learnedWatermarkDao.insertOrIncrement(junkToken)
@@ -84,15 +84,28 @@ class ProcessSingleTrackUseCase
 
             val searchTitle = cleanerResult.cleaned.title.ifBlank { song.title }
             val rawArtist = cleanerResult.cleaned.artistGuess ?: song.artist.takeIf { it != "Unknown Artist" }
-            val searchArtist = com.lochanpthakke.empee3.core.database.library.PrimaryArtistExtractor.extractPrimaryArtist(rawArtist)
+            val searchArtist =
+                com.lochanpthakke.empee3.core.database.library.PrimaryArtistExtractor
+                    .extractPrimaryArtist(rawArtist)
 
-            val candidateTitles = titleCandidateGenerator.generateCandidates(song.title.ifBlank { rawFilename }, customBlocklist + activeLearnedTokens)
+            val candidateTitles =
+                titleCandidateGenerator.generateCandidates(
+                    song.title.ifBlank { rawFilename },
+                    customBlocklist + activeLearnedTokens,
+                )
             var bestCandidate: com.lochanpthakke.empee3.core.model.MetadataCandidate? = null
             var successfulTitleQuery: String? = null
 
             for (index in candidateTitles.indices) {
                 val queryTitle = candidateTitles[index]
-                var queryArtist = if (!searchArtist.isNullOrBlank() && queryTitle.equals(searchArtist, ignoreCase = true)) null else searchArtist
+                var queryArtist =
+                    if (!searchArtist.isNullOrBlank() &&
+                        queryTitle.equals(searchArtist, ignoreCase = true)
+                    ) {
+                        null
+                    } else {
+                        searchArtist
+                    }
                 var searchResult =
                     metadataRepository.searchAndScoreTrack(
                         title = queryTitle,
@@ -134,12 +147,35 @@ class ProcessSingleTrackUseCase
                         TagWriteRequest(
                             contentUri = song.uri,
                             filePath = filePath,
-                            title = bestCandidate.title.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.TITLE_ONLY },
-                            artist = bestCandidate.artist.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.ARTIST_ONLY },
-                            album = bestCandidate.album.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.ALBUM_ONLY },
-                            bpm = bestCandidate.bpm.takeIf { fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.BPM_ONLY },
+                            title =
+                                bestCandidate.title.takeIf {
+                                    fixAction == MetadataFixAction.ALL_FIELDS ||
+                                        fixAction == MetadataFixAction.TITLE_ONLY
+                                },
+                            artist =
+                                bestCandidate.artist.takeIf {
+                                    fixAction == MetadataFixAction.ALL_FIELDS ||
+                                        fixAction == MetadataFixAction.ARTIST_ONLY
+                                },
+                            album =
+                                bestCandidate.album.takeIf {
+                                    fixAction == MetadataFixAction.ALL_FIELDS ||
+                                        fixAction == MetadataFixAction.ALBUM_ONLY
+                                },
+                            bpm =
+                                bestCandidate.bpm.takeIf {
+                                    fixAction == MetadataFixAction.ALL_FIELDS ||
+                                        fixAction == MetadataFixAction.BPM_ONLY
+                                },
                         )
-                    val writeResult = if (writeRequest.hasChanges) metadataRepository.writeTagsToFile(writeRequest) else AppResult.Success(Unit)
+                    val writeResult =
+                        if (writeRequest.hasChanges) {
+                            metadataRepository.writeTagsToFile(
+                                writeRequest,
+                            )
+                        } else {
+                            AppResult.Success(Unit)
+                        }
 
                     if (writeResult is AppResult.Success<*>) {
                         // Extract title difference between raw local title and verified clean API title
@@ -219,10 +255,25 @@ class ProcessSingleTrackUseCase
                 }
             }
             remainder = remainder.replace('_', ' ').replace('-', ' ').trim()
-            val ignoredWords = setOf(
-                "feat", "featuring", "with", "official", "video", "audio", "radio", "edit",
-                "live", "remastered", "single", "album", "version", "clean", "explicit", "deluxe"
-            )
+            val ignoredWords =
+                setOf(
+                    "feat",
+                    "featuring",
+                    "with",
+                    "official",
+                    "video",
+                    "audio",
+                    "radio",
+                    "edit",
+                    "live",
+                    "remastered",
+                    "single",
+                    "album",
+                    "version",
+                    "clean",
+                    "explicit",
+                    "deluxe",
+                )
             remainder.split(" ", "(", ")", "[", "]").forEach { token ->
                 val cleanedToken = token.trim(' ', '.', '-', '_', '[', ']', '(', ')')
                 if (cleanedToken.length >= 4 &&

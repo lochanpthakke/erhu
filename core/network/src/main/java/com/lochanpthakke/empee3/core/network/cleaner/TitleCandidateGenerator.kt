@@ -18,11 +18,12 @@ class TitleCandidateGenerator
             customBlocklistTokens: List<String> = emptyList(),
         ): List<String> {
             val extension = rawFilenameOrTitle.substringAfterLast('.', "")
-            val rawTitle = if (extension.isNotBlank() && recognizedAudioExtensions.contains(extension.lowercase())) {
-                rawFilenameOrTitle.substringBeforeLast('.').replace('_', ' ').trim()
-            } else {
-                rawFilenameOrTitle.replace('_', ' ').trim()
-            }
+            val rawTitle =
+                if (extension.isNotBlank() && recognizedAudioExtensions.contains(extension.lowercase())) {
+                    rawFilenameOrTitle.substringBeforeLast('.').replace('_', ' ').trim()
+                } else {
+                    rawFilenameOrTitle.replace('_', ' ').trim()
+                }
 
             val normalizedTitle = autoCompleteEnclosures(rawTitle)
             val candidates = mutableListOf<String>()
@@ -35,7 +36,13 @@ class TitleCandidateGenerator
             // Step 2: Fallback to title before any hyphen "-", stripping bracket/enclosure noise
             if (normalizedTitle.contains("-")) {
                 val headRaw = normalizedTitle.substringBefore("-").trim()
-                val cleanHead = headRaw.replace(Regex("""\[.*?\]|\(.*?\)"""), "").replace(Regex("\\s+"), " ").trim(' ', '-', '_', '[', ']', '(', ')')
+                val cleanHead =
+                    headRaw
+                        .replace(
+                            Regex("""\[.*?\]|\(.*?\)"""),
+                            "",
+                        ).replace(Regex("\\s+"), " ")
+                        .trim(' ', '-', '_', '[', ']', '(', ')')
                 if (cleanHead.isNotBlank() && cleanHead.length >= 2 && cleanHead != normalizedTitle) {
                     candidates.add(cleanHead)
                 }

@@ -16,6 +16,22 @@ interface MusicBrainzApi {
     ): MusicBrainzSearchResponse
 
     @Headers("User-Agent: empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
+    @GET("ws/2/artist")
+    suspend fun searchArtist(
+        @Query("query") query: String,
+        @Query("fmt") format: String = "json",
+        @Query("limit") limit: Int = 25,
+    ): com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistSearchResponse
+
+    @Headers("User-Agent: empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
+    @GET("ws/2/artist/{id}")
+    suspend fun lookupArtistUrlRels(
+        @Path("id") artistId: String,
+        @Query("inc") include: String = "url-rels",
+        @Query("fmt") format: String = "json",
+    ): com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto
+
+    @Headers("User-Agent: empee3/1.0.0 (https://github.com/lochanpthakke/empee3)")
     @GET("ws/2/release-group")
     suspend fun searchReleaseGroup(
         @Query("query") query: String,
