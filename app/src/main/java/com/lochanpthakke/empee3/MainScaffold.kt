@@ -81,9 +81,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.lochanpthakke.empee3.core.common.artwork.ArtworkLoader
+import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHeight
+import com.lochanpthakke.empee3.core.designsystem.component.ReportInteraction
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.reportScrolling
 import com.lochanpthakke.empee3.core.designsystem.foundation.LocalSharedTransitionScope
 import com.lochanpthakke.empee3.core.designsystem.foundation.ProvideMotionScope
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -324,6 +327,20 @@ fun MainScaffold() {
             val screensBackdrop = rememberGlassBackdrop()
             val shellBackdrop = rememberGlassBackdrop()
 
+            // Frame diagnostics (debug builds only): what is on screen and whether the player is moving.
+            ReportInteraction(Interactions.SCREEN) {
+                when {
+                    player.isSettledOpen -> "now-playing"
+                    isLibrarySearchActive -> "library-search"
+                    currentDestination?.hasRoute(Library::class) == true -> "library-${librarySection.name.lowercase()}"
+                    else -> currentDestination?.route?.let(::routeName)
+                }
+            }
+            ReportInteraction(Interactions.PLAYER) {
+                val progress = player.progress.value
+                if (progress > 0f && progress < 1f) "moving" else null
+            }
+
             // Opened by the menu button only: horizontal edge swipes are reserved for the
             // player. Once open, it can still be swiped or tapped closed.
             CompositionLocalProvider(LocalPlayerTransition provides player) {
@@ -393,7 +410,7 @@ fun MainScaffold() {
                     // to edge (no padding here) and their top bars own the status bar.
                     SharedTransitionLayout {
                         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
-                            Box(modifier = Modifier.fillMaxSize()) {
+                            Box(modifier = Modifier.fillMaxSize().reportScrolling()) {
                                 Scaffold(
                                     modifier = Modifier.glassBackdropSource(shellBackdrop),
                                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -636,6 +653,9 @@ fun MainScaffold() {
 
 /** Environment glass of the navigation drawer: lots of text, so half the mini player's strength. */
 private const val DRAWER_OPTICS = 0.5f
+
+/** A navigation route's class name, without package or arguments ("AlbumDetail"): no ids. */
+private fun routeName(route: String): String = route.substringBefore('/').substringBefore('?').substringAfterLast('.')
 
 private fun NavHostController.navigateTopLevel(route: Any) {
     navigate(route) {

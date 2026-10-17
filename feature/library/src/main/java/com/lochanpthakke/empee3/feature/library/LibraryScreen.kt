@@ -47,10 +47,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
+import com.lochanpthakke.empee3.core.designsystem.component.ReportInteraction
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
 import com.lochanpthakke.empee3.core.designsystem.component.selectionJiggle
@@ -99,6 +101,7 @@ fun LibraryScreen(
     val artistArtwork by viewModel.artistArtwork.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
+    ReportInteraction(Interactions.LIBRARY) { if (isScanning) "scanning" else null }
     val searchQuery by viewModel.librarySearchQuery.collectAsState()
     val searchResults by viewModel.librarySearchResults.collectAsState()
     val searchArtists by viewModel.librarySearchArtists.collectAsState()

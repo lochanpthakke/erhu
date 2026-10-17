@@ -8,6 +8,8 @@ import android.net.Uri
 import android.os.Build
 import android.util.LruCache
 import android.util.Size
+import com.lochanpthakke.empee3.core.common.perf.Interactions
+import com.lochanpthakke.empee3.core.common.perf.traced
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -83,9 +85,16 @@ object ArtworkLoader {
 
         val bitmap =
             withContext(Dispatchers.IO) {
-                loadThumbnail(context, songUri, sizePx)
-                    ?: albumArtUri?.let { loadFromStream(context, it, sizePx) }
-                    ?: loadEmbeddedPicture(context, songUri, sizePx)
+                decoding(+1)
+                try {
+                    traced("Artwork decode") {
+                        loadThumbnail(context, songUri, sizePx)
+                            ?: albumArtUri?.let { loadFromStream(context, it, sizePx) }
+                            ?: loadEmbeddedPicture(context, songUri, sizePx)
+                    }
+                } finally {
+                    decoding(-1)
+                }
             }
         if (bitmap != null) {
             bitmapCache.put(key, bitmap)
@@ -97,6 +106,18 @@ object ArtworkLoader {
             missCache.put(key, true)
         }
         return bitmap
+    }
+
+    /** Decodes running right now, reported to frame diagnostics while there are any. */
+    private var decodesInFlight = 0
+
+    @Synchronized
+    private fun decoding(change: Int) {
+        val before = decodesInFlight
+        decodesInFlight += change
+        if ((before == 0) != (decodesInFlight == 0)) {
+            Interactions.put(Interactions.ARTWORK, if (decodesInFlight > 0) "decoding" else null)
+        }
     }
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")

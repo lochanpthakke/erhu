@@ -51,6 +51,19 @@ android {
             )
             signingConfig = if (hasReleaseKeystore) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
+        // Measurement only (the :benchmark module): release code and R8, profileable, debug-signed,
+        // and always its own package so it can never replace an installed copy of the app.
+        create("benchmark") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".bench"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
+        debug {
+            // -PbenchApp: the same ".bench" package as a debug build, used to seed its data
+            // (run-as) and to compare debug with release-like frame timing on identical data.
+            if (project.hasProperty("benchApp")) applicationIdSuffix = ".bench"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -86,6 +99,8 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // Frame diagnostics (perf/FrameDiagnostics.kt): debug builds only.
+    debugImplementation(libs.androidx.metrics.performance)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.glance)
     implementation(libs.androidx.glance.appwidget)

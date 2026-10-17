@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
 import com.lochanpthakke.empee3.core.common.logging.Logger
+import com.lochanpthakke.empee3.core.common.perf.Interactions
+import com.lochanpthakke.empee3.core.common.perf.traced
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.vybe.EmbeddingRole
 import com.lochanpthakke.empee3.core.vybe.IndexedSong
@@ -157,9 +159,14 @@ class VybeEngine
         ): VybeAnswer? =
             withContext(dispatcher) {
                 val start = SystemClock.elapsedRealtime()
-                val discovery = discovery() ?: return@withContext null
-                discovery.search(query, library, limit).also {
-                    _timings.value = _timings.value.copy(lastQueryMs = SystemClock.elapsedRealtime() - start)
+                Interactions.put(Interactions.VYBE_SEARCH, "searching")
+                try {
+                    val discovery = discovery() ?: return@withContext null
+                    traced("VYBE search") { discovery.search(query, library, limit) }.also {
+                        _timings.value = _timings.value.copy(lastQueryMs = SystemClock.elapsedRealtime() - start)
+                    }
+                } finally {
+                    Interactions.put(Interactions.VYBE_SEARCH, null)
                 }
             }
 
@@ -193,9 +200,10 @@ class VybeEngine
         private suspend fun loadModel(): Boolean {
             if (embedder != null) return true
             _status.value = VybeStatus.LoadingModel
+            Interactions.put(Interactions.VYBE_MODEL, "loading")
             return try {
                 val start = SystemClock.elapsedRealtime()
-                val model = MediaPipeTextEmbedder.fromFile(context, modelFile())
+                val model = traced("VYBE load model") { MediaPipeTextEmbedder.fromFile(context, modelFile()) }
                 val dimension = model.dimension
                 embedder = model
                 index = VybeIndexFile(File(context.filesDir, INDEX_FILE), MODEL_ID, dimension)
@@ -206,6 +214,8 @@ class VybeEngine
                 logger.w(TAG, "Model load failed: ${e.message}")
                 _status.value = VybeStatus.Failed("The model couldn't be loaded: ${e.message}")
                 false
+            } finally {
+                Interactions.put(Interactions.VYBE_MODEL, null)
             }
         }
 
@@ -224,11 +234,12 @@ class VybeEngine
             val batch = mutableListOf<IndexedSong>()
             var embedded = 0
             var embedMs = 0L
+            if (missing.isNotEmpty()) Interactions.put(Interactions.VYBE_INDEX, "indexing")
             try {
                 for ((text, group) in byText) {
                     coroutineContext.ensureActive()
                     val start = SystemClock.elapsedRealtime()
-                    val vector = model.embed(text, EmbeddingRole.DOCUMENT)
+                    val vector = traced("VYBE embed") { model.embed(text, EmbeddingRole.DOCUMENT) }
                     embedMs += SystemClock.elapsedRealtime() - start
                     embedded++
                     group.forEach { batch += IndexedSong(it.songId, wanted.getValue(it.songId), vector) }
@@ -254,6 +265,8 @@ class VybeEngine
                 file.append(batch)
                 logger.w(TAG, "Indexing failed: ${e.message}")
                 _status.value = VybeStatus.Failed("Indexing stopped: ${e.message}")
+            } finally {
+                Interactions.put(Interactions.VYBE_INDEX, null)
             }
         }
 

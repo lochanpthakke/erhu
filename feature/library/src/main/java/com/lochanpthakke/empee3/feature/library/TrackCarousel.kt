@@ -24,6 +24,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.model.Song
 import kotlinx.coroutines.CoroutineScope
@@ -87,6 +88,7 @@ internal class TrackCarouselState(
     internal fun startDrag() {
         dragging = true
         settle?.cancel()
+        Interactions.put(Interactions.TRACK, "swipe")
     }
 
     internal fun dragBy(
@@ -131,6 +133,7 @@ internal class TrackCarouselState(
         skip: (Int) -> Unit,
     ) {
         pending += direction
+        Interactions.put(Interactions.TRACK, "swipe")
         // Opposite commands can cancel before a new state is composed. Keep
         // the visual target on the net requested neighbour, never beyond the
         // three pages we actually have ready to display.
@@ -183,6 +186,7 @@ internal class TrackCarouselState(
                 offset.animateTo(absolute, Motion.trackSettle(), initialVelocity = velocity) {
                     position = value + base
                 }
+                if (!dragging) Interactions.put(Interactions.TRACK, null)
             }
     }
 

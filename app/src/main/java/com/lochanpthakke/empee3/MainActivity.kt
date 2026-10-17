@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.lochanpthakke.empee3.core.playback.service.PlaybackServiceConnector
+import com.lochanpthakke.empee3.perf.FrameDiagnostics
 import com.lochanpthakke.empee3.ui.theme.Empee3Theme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -20,6 +21,8 @@ class MainActivity : ComponentActivity() {
         // notification / lock-screen controls) exist as soon as playback starts.
         playbackServiceConnector.ensureConnected()
         enableEdgeToEdge()
+        // Debug builds: slow frames logged with what the app was doing (no-op otherwise).
+        FrameDiagnostics.install(this)
         setContent {
             Empee3Theme {
                 MainScaffold()

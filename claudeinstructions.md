@@ -286,3 +286,65 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
 - Earlier pre-install app-data backup:
   `D:\android-toolchain\dbbackup\pre-swipe-last-20261016-233415\appdata.tar`.
   Do not restore older profiling backups over the user's newer queue/settings.
+
+## 7. Smoothness Engine (2026-10-17, IN PROGRESS, UNCOMMITTED; user said do not commit/push)
+The user's brief: app-wide jank reduction in stages. Stage 1 audit was reported. The user approved
+**steps 1–2 only** (measurement setup + diagnostics) and connected the phone. Steps 3+ (fixes) need approval.
+
+**Step 1 (done, uncommitted):** `app/proguard-rules.pro` adds a protobuf-lite keep rule. This fixes the
+release R8 crash, verified: the release-like build launches. The app has a `benchmark` build type that is
+always the `.bench` package (release + R8, profileable via `app/src/benchmark/AndroidManifest.xml`,
+debug-signed). Debug `-PbenchApp` gives the same `.bench` package. The new `:benchmark` module
+(Macrobenchmark 1.4.1, UiAutomator 2.3.0) has 8 journeys in `JourneyBenchmarks.kt`; see
+`benchmark/README.md`. Run via `adb shell am instrument` (never connected*Test, which uninstalls and
+loses the seed). `.bench` is seeded from `.perf`'s data (backup
+`D:\android-toolchain\dbbackup\bench-seed-from-perf-20261017-002646`). Glass is ON in `.bench`.
+**Step 2 (done, uncommitted):** `core:common` `perf/Interactions.kt` (labels + `traced()`);
+`core:designsystem` `component/InteractionReporting.kt` (`ReportInteraction`, `Modifier.reportScrolling()`).
+Wired into MainScaffold (screen, player moving, scroll on root Box), LibraryScreen (scanning),
+TrackCarousel (swipe), ArtworkLoader (decoding + trace), VybeEngine (model/index/search + traces).
+The JankStats sink is `app/src/debug/.../perf/FrameDiagnostics.kt` (logcat tag `Smoothness`); no-ops
+in src/release and src/benchmark. ktlint/detekt are clean for new code (feature:library and
+designsystem have existing findings). Unit tests: app 1, common 7, designsystem 20, library 63, all pass.
+**Measured (S23, 120 Hz, release-like, compilation partial):** results and traces are in
+`D:\android-toolchain\smoothness\` (`summarize.py`, `analyze_traces.py`, `rt_breakdown.py`, perfetto venv).
+- Shell journeys are RenderThread/GPU bound, not main-thread bound. The **glass-off A/B** proves the glass is the main cost:
+  albums scroll CPU p50 7.8→3.9 ms, overrun p50 +6.4→−0.7; tracks scroll 11.2→5.4; player expand p99 46→14;
+  RT drawing 6.3→2.5 ms/frame; frames over 8.3 ms 40%→1%. Glass is an approved design: make it cheaper, don't remove it.
+- Track swipe: each swipe starts a full-song waveform decode that is cancelled (flatMapLatest + SingleFlight)
+  before it can cache when the user swipes quickly, so it is wasted CPU. It does NOT correlate with missed frames (13% vs 17%).
+- Startup: TTID median 597 ms, TTFD 793 ms. Lyrics open p99 overrun 109 ms; album detail p90 overrun 17 ms.
+- Debug-build run done 2026-10-17 (`smoothness\debug-current\`, current code, battery 39%, 38.5→41.9 °C, hotter than
+  the release baseline). Versus the release baseline: cold start 597→1731 ms, TTFD 793→2337 ms;
+  p99 frame CPU: album detail 28→111, lyrics 77→217, track swipe 31→180, VYBE switch 43→124, tracks scroll 19→60 ms.
+  Debug spikes are 2–6× worse. A same-conditions release run on the CURRENT code is still needed to confirm.
+- **2026-10-17 13:31: the REAL app (`com.lochanpthakke.empee3`) is now the RELEASE build** (user's choice; R8, not
+  debuggable). `run-as` NO LONGER WORKS on it, so data backups must use another route. The pre-install backup is
+  `dbbackup\pre-release-install-20261017-133046\appdata.tar` (full, includes the VYBE model). The rollback APK (previous
+  debug, sha 90f4c9…) is `D:\android-toolchain\rollback\real-app-debug-before-release-20261017.apk`; same key and
+  versionCode, so `install -r` works.
+  Before installing, a release smoke test on `.bench` found **VYBE crashed under R8**: MediaPipe's Flogger
+  ("no caller found on the stack", Graph.<clinit>). It was fixed with keep rules for `com.google.mediapipe.**`,
+  `com.google.common.flogger.**` and `org.snakeyaml.engine.**`, then verified: model load plus search returned 30 results in 642 ms.
+  Any crash also triggers CrashThemeHandler, which RESETS THE USER'S THEME, so smoke-test release builds on `.bench`
+  first. The user is testing the other screens themselves (the smoke pass was stopped at their request).
+- **2026-10-17 13:33: only the release real app remains installed.** `.perf`, `.bench` and `.benchmark` were uninstalled
+  at the user's request (".perf" data backed up to `dbbackup\perf-before-uninstall-20261017-133311`). Reinstall and
+  re-seed them only when the user continues the Smoothness work. `.bench` can be seeded from that backup or
+  `bench-seed-from-perf-20261017-122241`; the VYBE model copy is in `smoothness\vybe-copy\`.
+- JankStats (debug) works: 18,024 frames / 347 janky, all labels recorded. It also showed `library=scanning`
+  during startup in 51 janky frames.
+**Storage incident (2026-10-17):** force-stopping the interrupted debug run left an orphaned
+`perfetto --background-wait` session writing `/data/misc/perfetto-traces/trace_output.pb`. It reached
+21 GB overnight and the phone was 97% full. The process was killed and the file deleted (about 19 GB freed).
+The same run also left Macrobenchmark's `shellWrapper.sh` and its `trace_processor_shell --http-port 9001`
+running for 11 h. **Rule now: run benchmarks ONLY via `benchmark/scripts/run-benchmarks.sh`, never raw `am instrument`.**
+- The runner checks USB, idle phone and ≥10 GB free, and always cleans up (trap on EXIT/INT/TERM/HUP).
+- Its `device-watchdog.sh` runs on the phone (setsid/nohup). It stops the run and deletes the trace if USB is
+  unplugged, the test process dies, the trace passes 3 GB, free space falls below 6 GB, or 3 h pass.
+- The phone's shell has 32-bit integers, so sizes are compared in KB.
+- Safety tests passed on 2026-10-17: a simulated unplug (`dumpsys battery unplug`) stopped the run in 2 s; a
+  force-stop with no PC cleanup (yesterday's failure) had its writer and file removed in about 11 s.
+`.bench` was re-seeded from `.perf` (backup `dbbackup\bench-seed-from-perf-20261017-122241`).
+The real app and `.perf` were not touched. The user's `.perf` copy and real app are debug builds; the debug-vs-release
+gap is still unmeasured.
