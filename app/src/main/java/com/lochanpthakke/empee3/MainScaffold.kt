@@ -42,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
@@ -61,12 +62,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -357,7 +360,12 @@ fun MainScaffold() {
                                     elevated = false,
                                     backdrop = shellBackdrop,
                                     optics = DRAWER_OPTICS,
-                                    environmentLens = true,
+                                    // A deeper tint of the theme's own background than other glass, so the
+                                    // labels read crisply while the backdrop still shows faintly through.
+                                    fill = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = DRAWER_FILL_ALPHA),
+                                    // No environment lens here: its bend zone scales with the surface, and on
+                                    // a panel this large it smeared everything behind the drawer.
+                                    environmentLens = false,
                                 ),
                         ) {
                             Column(
@@ -379,13 +387,27 @@ fun MainScaffold() {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            HorizontalDivider()
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = Spacing.xl),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = DRAWER_DIVIDER_ALPHA),
+                            )
                             Spacer(modifier = Modifier.height(Spacing.sm))
 
+                            // Selected: the accent on a soft accent pill; others: full-contrast labels.
+                            val itemColors =
+                                NavigationDrawerItemDefaults.colors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = DRAWER_SELECTED_ALPHA),
+                                    unselectedContainerColor = Color.Transparent,
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                )
                             DRAWER_DESTINATIONS.forEach { destination ->
                                 NavigationDrawerItem(
                                     icon = { Icon(destination.icon, contentDescription = null) },
-                                    label = { Text(destination.label) },
+                                    label = { Text(destination.label, fontWeight = FontWeight.Medium) },
                                     selected =
                                         currentDestination?.hasRoute(destination.route::class) == true ||
                                             (
@@ -399,6 +421,7 @@ fun MainScaffold() {
                                         navController.navigateTopLevel(destination.route)
                                     },
                                     modifier = Modifier.padding(horizontal = Spacing.md),
+                                    colors = itemColors,
                                 )
                             }
                         }
@@ -652,7 +675,16 @@ fun MainScaffold() {
 }
 
 /** Environment glass of the navigation drawer: lots of text, so half the mini player's strength. */
-private const val DRAWER_OPTICS = 0.5f
+private const val DRAWER_OPTICS = 0.3f
+
+/** The drawer's fill: dense enough for crisp labels, still letting the backdrop show through. */
+private const val DRAWER_FILL_ALPHA = 0.82f
+
+/** The selected destination's pill: a soft wash of the accent. */
+private const val DRAWER_SELECTED_ALPHA = 0.16f
+
+/** The hairline under the drawer's title. */
+private const val DRAWER_DIVIDER_ALPHA = 0.2f
 
 /** A navigation route's class name, without package or arguments ("AlbumDetail"): no ids. */
 private fun routeName(route: String): String = route.substringBefore('/').substringBefore('?').substringAfterLast('.')

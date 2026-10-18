@@ -1,5 +1,6 @@
 package com.lochanpthakke.empee3.core.designsystem.component
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
@@ -86,6 +87,16 @@ fun ReportTitleScroll(state: LazyListState) {
     val title = LocalCollapsingTitle.current ?: return
     DisposableEffect(title, state) {
         title.attach(state) { title.fromFirstItem(state.firstVisibleItemIndex, state.firstVisibleItemScrollOffset) }
+        onDispose { title.detach(state) }
+    }
+}
+
+/** This scrolling column drives the screen's collapsing title while it is shown (its scroll from the top). */
+@Composable
+fun ReportTitleScroll(state: ScrollState) {
+    val title = LocalCollapsingTitle.current ?: return
+    DisposableEffect(title, state) {
+        title.attach(state) { title.fromFirstItem(index = 0, offset = state.value) }
         onDispose { title.detach(state) }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -29,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,9 +44,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
-import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
+import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
+import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingTitleState
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
@@ -75,12 +80,23 @@ fun SoundCapsuleScreen(
     val month by viewModel.month.collectAsState()
     val capsule by viewModel.capsule.collectAsState()
 
+    // The app's floating header (round glass drawer button); the title merges into it on scroll.
+    val collapsingTitle = rememberCollapsingTitleState()
     AppScaffold(
-        topBar = { AppTopBar(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Sound Capsule") },
+        topBar = {
+            OverlayHeader(
+                navigation = TopBarNavigation.TopLevel(onOpenDrawer),
+                title = "Sound Capsule",
+                collapsingTitle = collapsingTitle,
+            )
+        },
         modifier = modifier,
     ) { innerPadding ->
-        val scroll = innerPadding.forScrollingContent()
+        val scroll = innerPadding.forScrollingContent(topOverlay = true)
+        val listState = rememberLazyListState()
+        CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) { ReportTitleScroll(listState) }
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(scroll.container),
             contentPadding = PaddingValues(top = Spacing.sm + scroll.contentTop, bottom = Spacing.xl + scroll.contentBottom),
         ) {

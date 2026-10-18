@@ -1,9 +1,7 @@
 package com.lochanpthakke.empee3.feature.settings.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -13,13 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -30,47 +26,41 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.IconBadge
+import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
+import com.lochanpthakke.empee3.core.designsystem.component.SectionHeading
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
-import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
+import com.lochanpthakke.empee3.core.designsystem.component.groupFillColor
+import com.lochanpthakke.empee3.core.designsystem.component.groupSurface
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingTitleState
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 
 /** Minimum height of a settings row: comfortably above the 48 dp touch target. */
 private val ROW_MIN_HEIGHT = 56.dp
 
-/** Round tinted badge behind a row's leading icon. */
-private val ICON_BADGE_SIZE = 36.dp
-
-/** Glass off: the group is a light step above the background in the theme's own surface variant. */
-private const val GROUP_FILL_ALPHA = 0.55f
-
-/** Tint behind a leading icon, in the theme accent. */
-private const val ICON_BADGE_ALPHA = 0.14f
-
 /** Hairline between rows of a group. */
-private const val DIVIDER_ALPHA = 0.18f
+private const val DIVIDER_ALPHA = 0.14f
 
-/**
- * Fill of a settings group. Glass on: the glass panel tint (no blur, no extra layer), so the
- * themed background continues underneath. Glass off: the theme's surface variant, softened.
- * Only theme roles the app's themes actually define are used (never the Material baseline roles).
- */
+/** Gap between a row's leading icon and its text. */
+private val ICON_TEXT_GAP = 14.dp
+
+/** The fill of a settings group: the app's shared group surface ([groupFillColor]). */
 @Composable
 @ReadOnlyComposable
-internal fun settingsGroupColor(): Color = EmPee3Glass.chromeColor(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = GROUP_FILL_ALPHA))
+internal fun settingsGroupColor(): Color = groupFillColor()
 
 /**
  * One Settings page: the app's floating header (round back / drawer button and title, the same
@@ -86,18 +76,22 @@ fun SettingsPage(
     snackbarHost: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // The page title merges into the header button as the page scrolls.
+    val collapsingTitle = rememberCollapsingTitleState()
     AppScaffold(
-        topBar = { OverlayHeader(navigation = navigation, title = title, actions = actions) },
+        topBar = { OverlayHeader(navigation = navigation, title = title, collapsingTitle = collapsingTitle, actions = actions) },
         snackbarHost = snackbarHost,
         modifier = modifier,
     ) { innerPadding ->
         val scroll = innerPadding.forScrollingContent(topOverlay = true)
+        val scrollState = rememberScrollState()
+        CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) { ReportTitleScroll(scrollState) }
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(scroll.container)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = Spacing.screenGutter)
                     .padding(top = scroll.contentTop + Spacing.sm, bottom = scroll.contentBottom + Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.xl),
@@ -115,17 +109,7 @@ fun SettingsSection(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        if (title != null) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier =
-                    Modifier
-                        .padding(start = Spacing.lg, bottom = Spacing.sm)
-                        .semantics { heading() },
-            )
-        }
+        if (title != null) SectionHeading(title = title)
         content()
         if (footer != null) {
             Text(
@@ -148,8 +132,9 @@ class SettingsGroupScope internal constructor() {
 }
 
 /**
- * Rows on one rounded surface in the theme's card shape, separated by hairlines. One surface per
- * group, never one per row. [selectable] marks a single-choice group for accessibility.
+ * Rows on one rounded surface in the theme's card shape (tinted, with a hairline edge), separated
+ * by hairlines. One surface per group, never one per row. [selectable] marks a single-choice group
+ * for accessibility.
  */
 @Composable
 fun SettingsGroup(
@@ -163,8 +148,7 @@ fun SettingsGroup(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(settingsGroupColor())
+                .groupSurface()
                 .then(if (selectable) Modifier.selectableGroup() else Modifier),
     ) {
         rows.forEachIndexed { index, row ->
@@ -184,34 +168,19 @@ fun SettingsPanel(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(settingsGroupColor())
+                .groupSurface()
                 .padding(Spacing.lg),
         content = content,
     )
 }
 
-/** Leading icon of a row: the accent on a soft round badge of the same accent. */
+/** Leading icon of a row: the shared accent [IconBadge]. */
 @Composable
 fun SettingsIcon(
     icon: ImageVector,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier =
-            modifier
-                .size(ICON_BADGE_SIZE)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = ICON_BADGE_ALPHA)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(IconSize.small),
-        )
-    }
+    IconBadge(icon = icon, modifier = modifier)
 }
 
 /** Shared row layout: optional leading slot, title and summary, optional trailing slot. */
@@ -235,18 +204,20 @@ private fun SettingsRowLayout(
     ) {
         if (leading != null) {
             leading()
-            Spacer(modifier = Modifier.width(Spacing.lg))
+            Spacer(modifier = Modifier.width(ICON_TEXT_GAP))
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             )
             if (!summary.isNullOrBlank()) {
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = SUMMARY_GAP),
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
                 )
             }
@@ -257,6 +228,9 @@ private fun SettingsRowLayout(
         }
     }
 }
+
+/** Space between a row's title and its summary. */
+private val SUMMARY_GAP = 2.dp
 
 /** Content alpha of disabled settings controls (Material disabled emphasis). */
 internal const val DISABLED_ALPHA = 0.38f
