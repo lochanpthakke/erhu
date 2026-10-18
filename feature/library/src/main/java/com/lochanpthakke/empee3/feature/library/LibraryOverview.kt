@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -85,7 +87,11 @@ internal fun LibraryOverview(
         // Card width follows the screen, within readable bounds.
         val cardWidth =
             ((maxWidth - Spacing.screenGutter - Spacing.md * 2) / CARDS_PER_WIDTH).coerceIn(CARD_MIN, CARD_MAX)
+        val listState = rememberLazyListState()
+        // The page title merges into the header button as this scrolls.
+        ReportTitleScroll(listState)
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.lg + bottomInset),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg),

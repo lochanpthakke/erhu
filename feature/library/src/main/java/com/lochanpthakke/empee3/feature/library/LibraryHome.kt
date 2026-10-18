@@ -13,7 +13,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,6 +23,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
@@ -56,6 +59,7 @@ internal fun HomeFeed(
     val hasSmartPlaylists = songs.itemCount > 0
     val hasShelves = recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty() || hasSmartPlaylists
     LazyColumn(
+        state = rememberLazyListState().also { ReportTitleScroll(it) }, // the page title merges into the header button
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.sm + bottomInset),
     ) {
@@ -201,7 +205,11 @@ private fun PlaylistsGrid(
     topInset: Dp,
     bottomInset: Dp,
 ) {
+    val gridState = rememberLazyGridState()
+    // The page title merges into the header button as this scrolls.
+    ReportTitleScroll(gridState)
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),

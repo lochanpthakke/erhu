@@ -53,6 +53,21 @@ class InteractionMotionTest {
     }
 
     @Test
+    fun kickWhenPopsOnlyOnTheChosenChange() {
+        // A navigation icon: pops as it becomes selected, stays still as it is deselected.
+        val state = SelectionMotionState(false)
+        val becomesSelected: (Any?) -> Boolean = { it == true }
+        val frames = mutableListOf<Float>()
+        runBlocking(FrameClock { frames += state.displacement.value }) { state.update(true, becomesSelected) }
+        assertTrue(frames.any { it != 0f })
+        assertEquals(0f, state.displacement.value, 0f)
+        frames.clear()
+        runBlocking(FrameClock { frames += state.displacement.value }) { state.update(false, becomesSelected) }
+        assertTrue("Deselection moved the icon", frames.all { it == 0f })
+        assertEquals(0f, state.displacement.value, 0f)
+    }
+
+    @Test
     fun rapidStateReversalDoesNotAccumulateRotation() {
         val state = SelectionMotionState(false)
         runBlocking(FrameClock()) {

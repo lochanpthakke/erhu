@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.feature.library.vybe
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -43,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,6 +56,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
+import com.lochanpthakke.empee3.core.designsystem.component.pressScale
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
@@ -106,7 +112,11 @@ fun VybeScreen(
     }
 
     val results = (query as? VybeQueryState.Done)?.results
+    val listState = rememberLazyListState()
+    // The page title merges into the header button as this scrolls.
+    ReportTitleScroll(listState)
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = topInset + Spacing.sm, bottom = bottomInset + Spacing.lg),
     ) {
@@ -295,14 +305,23 @@ private fun Suggestions(
     Text("Try", style = TextStyles.sectionTitle)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (canMatchCurrent) {
+            val press = remember { MutableInteractionSource() }
             AssistChip(
                 onClick = onCurrent,
+                interactionSource = press,
+                modifier = Modifier.pressScale(press, BUTTON_PRESSED_SCALE),
                 label = { Text("Like \"${currentTitle.orEmpty()}\"", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
             )
         }
         SUGGESTIONS.forEach { suggestion ->
-            AssistChip(onClick = { onSuggestion(suggestion) }, label = { Text(suggestion) })
+            val press = remember { MutableInteractionSource() }
+            AssistChip(
+                onClick = { onSuggestion(suggestion) },
+                label = { Text(suggestion) },
+                interactionSource = press,
+                modifier = Modifier.pressScale(press, BUTTON_PRESSED_SCALE),
+            )
         }
     }
 }
@@ -322,14 +341,25 @@ private fun ResultsHeader(
         if (results.songs.isNotEmpty()) {
             Spacer(Modifier.height(Spacing.sm))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                Button(onClick = onPlay) {
+                val playPress = remember { MutableInteractionSource() }
+                val shufflePress = remember { MutableInteractionSource() }
+                val queuePress = remember { MutableInteractionSource() }
+                Button(onClick = onPlay, interactionSource = playPress, modifier = Modifier.pressScale(playPress, BUTTON_PRESSED_SCALE)) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Text("Play ${results.songs.size}")
                 }
-                FilledTonalButton(onClick = onShuffle) {
+                FilledTonalButton(
+                    onClick = onShuffle,
+                    interactionSource = shufflePress,
+                    modifier = Modifier.pressScale(shufflePress, BUTTON_PRESSED_SCALE),
+                ) {
                     Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
                 }
-                FilledTonalButton(onClick = onQueue) {
+                FilledTonalButton(
+                    onClick = onQueue,
+                    interactionSource = queuePress,
+                    modifier = Modifier.pressScale(queuePress, BUTTON_PRESSED_SCALE),
+                ) {
                     Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Add all to queue")
                 }
             }

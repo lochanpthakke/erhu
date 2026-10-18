@@ -241,7 +241,11 @@ fun NowPlayingScreen(
                                     hero
                                         .playerArtworkLayout { bounds ->
                                             if (isCurrent) transition?.heroArtworkBounds = bounds
-                                        }.glassPanel(Radius.largeShape, backdrop = null)
+                                        }
+                                        // Settles with the rest of Now Playing as the player arrives; inside
+                                        // the measured bounds, so the artwork's destination never moves.
+                                        .graphicsLayer { translationY = transition?.expandedSettleOffset(this) ?: 0f }
+                                        .glassPanel(Radius.largeShape, backdrop = null)
                                         .clip(Radius.largeShape),
                             )
                         }
@@ -394,6 +398,7 @@ fun NowPlayingScreen(
                                         carousel.skipFromButton(-1) { playbackRepository.skipToPreviousItem() }
                                     }
                                 },
+                                nudge = -1,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
@@ -431,6 +436,7 @@ fun NowPlayingScreen(
                                     }
                                 },
                                 enabled = hasNext(playbackState),
+                                nudge = 1,
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,

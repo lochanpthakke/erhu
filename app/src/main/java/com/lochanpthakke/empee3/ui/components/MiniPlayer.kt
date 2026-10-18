@@ -51,6 +51,7 @@ import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import com.lochanpthakke.empee3.feature.library.AnimatedTrack
 import com.lochanpthakke.empee3.feature.library.LocalPlayerTransition
 import com.lochanpthakke.empee3.feature.library.SwapIcon
+import com.lochanpthakke.empee3.feature.library.applyCollapsedSettle
 import com.lochanpthakke.empee3.feature.library.collectPlaybackPosition
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.playerDrag
@@ -93,6 +94,8 @@ fun MiniPlayer(
                 .graphicsLayer {
                     val p = transition?.progress?.value ?: 0f
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
+                    // Landing settle after a collapse; after the bounds above are measured.
+                    transition?.applyCollapsedSettle(this)
                 }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)
                 .glassPressEffect(interactionSource, shape)
                 .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = 1f, environmentLens = true)
@@ -174,6 +177,7 @@ fun MiniPlayer(
                 PressIconButton(
                     onClick = { playbackRepository.skipPrevious() },
                     modifier = Modifier.collapseHorizontally(compact),
+                    nudge = -1,
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
@@ -201,6 +205,7 @@ fun MiniPlayer(
                 PressIconButton(
                     onClick = { playbackRepository.skipNext() },
                     modifier = Modifier.collapseHorizontally(compact),
+                    nudge = 1,
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,

@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
@@ -15,15 +16,19 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -39,6 +44,17 @@ private const val SETTLE_THRESHOLD = 0.65f
 
 /** A release faster than this (per second, in screen heights) decides the direction on its own. */
 private const val FLING_FRACTION_PER_SECOND = 1.2f
+
+/** The arrival settle's kick: with [Motion.playful] it peaks near 1 and rings out in ~0.4 s. */
+private const val ARRIVAL_IMPULSE = 32f
+private const val ARRIVAL_THRESHOLD = 0.001f
+
+/**
+ * The player has visibly LANDED within this much progress of rest (~15-20 px on a phone): its
+ * spring then only creeps the last pixels (critically damped, so that tail takes ~0.35 s more).
+ * The settle starts here, not after the creep, so it follows the landing at once.
+ */
+private const val LANDED_WITHIN = 0.01f
 
 /**
  * The player as ONE object with one continuous state: [progress] 0 = collapsed
@@ -68,16 +84,56 @@ class PlayerTransitionState {
     /** True while the player is open or opening (drives Back and accessibility). */
     val isOpen: Boolean get() = progress.targetValue > 0f
 
+    /**
+     * A brief settle as the player LANDS (0 = mini player, 1 = Now Playing), continuing the
+     * direction it travelled: it starts and ends at 0, peaks near 1. Read it only through
+     * [landing] / [arriving], in the draw phase, as small transforms inside the measured geometry:
+     * the transition itself (progress, bounds, the artwork handoff at 1) never overshoots.
+     */
+    val arrival = Animatable(0f, visibilityThreshold = ARRIVAL_THRESHOLD)
+
+    /** The settle as the mini player lands (0 unless it has just collapsed). */
+    val landing: Float get() = if (progress.value <= LANDED_WITHIN) arrival.value else 0f
+
+    /** The settle as Now Playing arrives (0 unless it has just opened). */
+    val arriving: Float get() = if (progress.value >= 1f - LANDED_WITHIN) arrival.value else 0f
+
     // Interrupting a running open/close keeps its current velocity, so reversing
     // mid-way turns around smoothly from where the player is instead of restarting.
-    suspend fun expand(velocity: Float = progress.velocity) =
-        progress.animateTo(1f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
+    suspend fun expand(velocity: Float = progress.velocity) = moveTo(1f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), velocity)
 
-    suspend fun collapse(velocity: Float = progress.velocity) =
-        progress.animateTo(0f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
+    suspend fun collapse(velocity: Float = progress.velocity) = moveTo(0f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), velocity)
 
     /** Direct manipulation: the finger moved by [delta] in units of the drag distance. */
-    internal suspend fun dragBy(delta: Float) = progress.snapTo((progress.value + delta).coerceIn(0f, 1f))
+    internal suspend fun dragBy(delta: Float) {
+        stopArrival()
+        progress.snapTo((progress.value + delta).coerceIn(0f, 1f))
+    }
+
+    /**
+     * Moves the player to [target]. As it lands (enters [LANDED_WITHIN] of the target, having
+     * come from further away) it settles, alongside the last pixels of the move; an interrupted
+     * move cancels its settle. Nothing waits for the settle.
+     */
+    private suspend fun moveTo(
+        target: Float,
+        spec: AnimationSpec<Float>,
+        velocity: Float,
+    ) = coroutineScope {
+        var settles = abs(progress.value - target) > LANDED_WITHIN
+        stopArrival()
+        progress.animateTo(target, spec, initialVelocity = velocity) {
+            if (settles && abs(value - target) <= LANDED_WITHIN) {
+                settles = false
+                launch { arrival.animateTo(0f, Motion.playful(ARRIVAL_THRESHOLD), initialVelocity = ARRIVAL_IMPULSE) }
+            }
+        }
+    }
+
+    /** Any new movement ends a settle at once, exactly at rest. */
+    private suspend fun stopArrival() {
+        if (arrival.isRunning || arrival.value != 0f) arrival.snapTo(0f)
+    }
 
     /**
      * Finishing a drag: a fast enough fling decides by its direction, otherwise
@@ -90,7 +146,7 @@ class PlayerTransitionState {
                 velocity < -FLING_FRACTION_PER_SECOND -> false
                 else -> progress.value > SETTLE_THRESHOLD
             }
-        progress.animateTo(if (expand) 1f else 0f, Motion.gestureSettle(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
+        moveTo(if (expand) 1f else 0f, Motion.gestureSettle(PROGRESS_VISIBILITY_THRESHOLD), velocity)
     }
 }
 
@@ -114,13 +170,76 @@ fun Modifier.revealWithPlayer(
         this
     } else {
         graphicsLayer {
-            val t = ((state.progress.value - start) / (end - start)).coerceIn(0f, 1f)
+            val p = state.progress.value
+            val t = ((p - start) / (end - start)).coerceIn(0f, 1f)
             alpha = t
-            translationY = (1f - Motion.Decelerate.transform(t)) * rise.toPx()
+            // Arriving: the content carries on upward a touch with the player, and settles
+            // (static layers such as the backdrop, rise 0, stay put).
+            val settle = if (rise != 0.dp) state.expandedSettleOffset(this) else 0f
+            translationY = (1f - Motion.Decelerate.transform(t)) * rise.toPx() + settle
         }
     }
 
 private val REVEAL_RISE_DEFAULT = 24.dp
+
+/** How far Now Playing's content carries on upward as the player arrives (at the settle's peak). */
+private val EXPANDED_SETTLE_RISE = 4.dp
+
+/** How far the mini player carries on down as it lands, and how much it squashes on its bottom edge. */
+private val COLLAPSED_SETTLE_DROP = 3.dp
+private const val COLLAPSED_SETTLE_SQUASH = 0.03f
+
+/** The mini player squashes onto its bottom edge, the edge it lands on. */
+private val LANDING_EDGE = TransformOrigin(pivotFractionX = 0.5f, pivotFractionY = 1f)
+
+/**
+ * The mini player landing (applied in its own layer, inside its measured bounds): it carries on
+ * down a touch, squashing slightly on its bottom edge, and settles. Identity except just after
+ * the player collapsed; the artwork and controls inside move with the surface.
+ */
+fun PlayerTransitionState.applyCollapsedSettle(scope: GraphicsLayerScope) {
+    val a = landing
+    with(scope) {
+        translationY = a * COLLAPSED_SETTLE_DROP.toPx()
+        scaleY = 1f - a * COLLAPSED_SETTLE_SQUASH
+        scaleX = 1f + a * COLLAPSED_SETTLE_SQUASH / 2f
+        transformOrigin = LANDING_EDGE
+    }
+}
+
+/**
+ * The travelling artwork during the landing's last pixels: placed at [left], [top] with [scale]
+ * (its layer's origin is its top-left corner), it gets exactly the mini player's landing transform
+ * (see [applyCollapsedSettle]), so artwork and card settle as one before the card's own artwork
+ * takes over at rest.
+ */
+fun PlayerTransitionState.applyLandingToArtwork(
+    scope: GraphicsLayerScope,
+    left: Float,
+    top: Float,
+    scale: Float,
+) {
+    val a = landing
+    val card = miniBounds
+    with(scope) {
+        if (a == 0f || card.width <= 0f) {
+            translationX = left
+            translationY = top
+            scaleX = scale
+            scaleY = scale
+            return
+        }
+        val squashY = 1f - a * COLLAPSED_SETTLE_SQUASH
+        val stretchX = 1f + a * COLLAPSED_SETTLE_SQUASH / 2f
+        translationX = card.center.x + (left - card.center.x) * stretchX
+        translationY = card.bottom - (card.bottom - top) * squashY + a * COLLAPSED_SETTLE_DROP.toPx()
+        scaleX = scale * stretchX
+        scaleY = scale * squashY
+    }
+}
+
+/** Now Playing's arrival settle as a vertical offset, px (0 except just after opening). */
+fun PlayerTransitionState.expandedSettleOffset(density: Density): Float = -arriving * with(density) { EXPANDED_SETTLE_RISE.toPx() }
 
 /**
  * Follows pointer [pointerId] until it lifts, reporting every movement to [onDelta] and

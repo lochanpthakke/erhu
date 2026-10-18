@@ -11,7 +11,7 @@ class CollapsingHeaderStateTest {
         index: Int,
         offset: Int,
         measured: Boolean = true,
-    ) = CollapsingHeaderState(LazyListState(index, offset), travelPx = 100f, wrappedRisePx = 0f).apply {
+    ) = CollapsingHeaderState(LazyListState(index, offset), travelPx = 100f).apply {
         barHeight = 200f
         if (measured) titleTop = 600f
     }

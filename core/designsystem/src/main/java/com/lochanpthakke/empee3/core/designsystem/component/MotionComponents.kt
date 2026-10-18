@@ -12,14 +12,18 @@ import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.theme.glassRippleConfiguration
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -29,6 +33,9 @@ private const val SCALE_THRESHOLD = 0.001f
 private const val QUICK_TAP_EPSILON = 0.005f
 private const val RELEASE_IMPULSE = 24f
 private const val SELECTION_IMPULSE = 32f
+
+/** Wide buttons and chips (Play / Shuffle, suggestions) dip less than small icons. */
+const val BUTTON_PRESSED_SCALE = 0.96f
 
 /** Tiny artwork compression; its parent keeps the original hit and layout bounds. */
 const val ARTWORK_PRESSED_SCALE = 0.975f
@@ -63,9 +70,13 @@ internal class SelectionMotionState(
     private var previousValue = initialValue
     val displacement = Animatable(0f, visibilityThreshold = SCALE_THRESHOLD)
 
-    suspend fun update(value: Any?) {
+    suspend fun update(
+        value: Any?,
+        kickWhen: (Any?) -> Boolean = { true },
+    ) {
         if (value == previousValue) return
         previousValue = value
+        if (!kickWhen(value)) return
         // Rapid changes can interrupt an existing pulse near its peak. Spend
         // only its remaining amplitude, rather than adding a full kick each tap.
         val remaining = (1f - abs(displacement.value)).coerceIn(0f, 1f)
@@ -73,15 +84,21 @@ internal class SelectionMotionState(
     }
 }
 
-/** Feedback belongs to the icon, not the button's touch target or surrounding layout. */
+/**
+ * Feedback belongs to the icon, not the button's touch target or surrounding layout.
+ * [kickWhen] picks the changes that jiggle (e.g. only becoming selected); every change is
+ * still remembered, so returning to a value later doesn't jiggle by itself.
+ */
 @Composable
 fun Modifier.selectionJiggle(
     value: Any?,
     identity: Any? = Unit,
     expressive: Boolean = false,
+    kickWhen: (Any?) -> Boolean = { true },
 ): Modifier {
     val state = remember(identity) { SelectionMotionState(value) }
-    LaunchedEffect(state, value) { state.update(value) }
+    val currentKickWhen by rememberUpdatedState(kickWhen)
+    LaunchedEffect(state, value) { state.update(value, currentKickWhen) }
     return graphicsLayer {
         val impulse = state.displacement.value
         rotationZ = impulse * if (expressive) FAVORITE_ROTATION else SELECTION_ROTATION
@@ -130,9 +147,35 @@ fun Modifier.pressScale(
 }
 
 /**
+ * A directional control's tap (previous / next): as the press is released the icon leans a
+ * touch towards [direction] (-1 = start, +1 = end) and springs back. Touch feedback only: the
+ * result (the track changing) has its own motion. Rapid taps spend the remaining amplitude.
+ */
+@Composable
+fun Modifier.releaseNudge(
+    interactionSource: InteractionSource,
+    direction: Int,
+    enabled: Boolean = true,
+): Modifier {
+    val offset = remember { Animatable(0f, visibilityThreshold = SCALE_THRESHOLD) }
+    LaunchedEffect(interactionSource, enabled) {
+        offset.snapTo(0f)
+        if (!enabled) return@LaunchedEffect
+        interactionSource.interactions.filterIsInstance<PressInteraction.Release>().collectLatest {
+            val remaining = (1f - abs(offset.value)).coerceIn(0f, 1f)
+            offset.animateTo(0f, Motion.playful(SCALE_THRESHOLD), initialVelocity = SELECTION_IMPULSE * remaining)
+        }
+    }
+    return graphicsLayer { translationX = offset.value * direction * NUDGE_DISTANCE.toPx() }
+}
+
+private val NUDGE_DISTANCE = 3.dp
+
+/**
  * Icon button for player and action controls: scale press feedback, and no
  * ripple under the Glass Effect (a ripple on glass reads as a second, ghost
- * surface). Glass off keeps the standard ripple as well.
+ * surface). Glass off keeps the standard ripple as well. [nudge] (-1 / +1) adds
+ * a [releaseNudge] for directional controls.
  */
 @Composable
 fun PressIconButton(
@@ -140,6 +183,7 @@ fun PressIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
+    nudge: Int = 0,
     content: @Composable () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -151,7 +195,11 @@ fun PressIconButton(
             colors = colors,
             interactionSource = interactionSource,
         ) {
-            Box(Modifier.pressScale(interactionSource, enabled = enabled)) { content() }
+            Box(
+                Modifier
+                    .pressScale(interactionSource, enabled = enabled)
+                    .then(if (nudge != 0) Modifier.releaseNudge(interactionSource, nudge, enabled) else Modifier),
+            ) { content() }
         }
     }
 }

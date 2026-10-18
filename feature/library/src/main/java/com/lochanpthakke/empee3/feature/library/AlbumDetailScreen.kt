@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.feature.library
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
 import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
@@ -67,6 +69,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
 import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroDetails
 import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroTitle
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.pressScale
 import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -567,12 +570,24 @@ private fun AlbumActions(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Button(onClick = onPlay, enabled = enabled, modifier = Modifier.weight(1f)) {
+            val playPress = remember { MutableInteractionSource() }
+            val shufflePress = remember { MutableInteractionSource() }
+            Button(
+                onClick = onPlay,
+                enabled = enabled,
+                interactionSource = playPress,
+                modifier = Modifier.weight(1f).pressScale(playPress, BUTTON_PRESSED_SCALE, enabled),
+            ) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Text("Play")
             }
-            FilledTonalButton(onClick = onShuffle, enabled = enabled, modifier = Modifier.weight(1f)) {
+            FilledTonalButton(
+                onClick = onShuffle,
+                enabled = enabled,
+                interactionSource = shufflePress,
+                modifier = Modifier.weight(1f).pressScale(shufflePress, BUTTON_PRESSED_SCALE, enabled),
+            ) {
                 Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Text("Shuffle")

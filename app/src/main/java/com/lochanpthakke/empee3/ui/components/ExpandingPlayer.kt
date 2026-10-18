@@ -42,6 +42,8 @@ import com.lochanpthakke.empee3.core.designsystem.component.LocalBottomChromeHei
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.PlayerTransitionState
+import com.lochanpthakke.empee3.feature.library.applyLandingToArtwork
+import com.lochanpthakke.empee3.feature.library.expandedSettleOffset
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -174,10 +176,9 @@ private fun TravellingArtwork(
                     val target = lerp(mini, state.heroArtworkBounds, p)
                     val scale = target.width / hero.width
                     transformOrigin = TransformOrigin(0f, 0f)
-                    translationX = target.left
-                    translationY = target.top
-                    scaleX = scale
-                    scaleY = scale
+                    // Placed at its point of the journey; as it lands or arrives it settles with the
+                    // card / Now Playing (the same transform), so nothing separates in the last pixels.
+                    state.applyLandingToArtwork(this, target.left, target.top + state.expandedSettleOffset(this), scale)
                     // Visual corner radius goes from the mini's to the hero's; undo the scale.
                     shape = RoundedCornerShape(lerp(miniCorner, heroCorner, p) / scale.coerceAtLeast(MIN_SCALE))
                     clip = true
