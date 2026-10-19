@@ -126,6 +126,8 @@ import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
 import com.lochanpthakke.empee3.feature.library.rememberPlayerTransitionState
+import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderScreen
+import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderViewModel
 import com.lochanpthakke.empee3.feature.settings.SettingsCategoryScreen
 import com.lochanpthakke.empee3.feature.settings.SettingsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
@@ -139,6 +141,7 @@ import com.lochanpthakke.empee3.navigation.ArtistDetail
 import com.lochanpthakke.empee3.navigation.ArtworkManager
 import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
+import com.lochanpthakke.empee3.navigation.LibraryBuilder
 import com.lochanpthakke.empee3.navigation.MetadataEditor
 import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Settings
@@ -170,6 +173,7 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Sound Capsule", Icons.Default.Insights, SoundCapsule),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
         DrawerDestination("Auto Fix Tags", Icons.Default.EditNote, MetadataEditor),
+        DrawerDestination("Library Builder", Icons.Default.Folder, LibraryBuilder),
         DrawerDestination("Artwork Fetcher", Icons.Default.ImageSearch, ArtworkManager),
         DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
@@ -563,6 +567,15 @@ fun MainScaffold() {
                                                         onNavigateToLibrary = {
                                                             navController.navigateTopLevel(Library)
                                                         },
+                                                    )
+                                                }
+                                            }
+                                            composable<LibraryBuilder> {
+                                                ProvideMotionScope(this) {
+                                                    val builderViewModel = hiltViewModel<LibraryBuilderViewModel>()
+                                                    LibraryBuilderScreen(
+                                                        viewModel = builderViewModel,
+                                                        onNavigateBack = { navController.popBackStack() },
                                                     )
                                                 }
                                             }

@@ -48,7 +48,10 @@ interface LibraryRepository {
 
     fun searchSongs(query: String): Flow<List<Song>>
 
-    suspend fun updateFilePath(songId: Long, newPath: String): AppResult<Unit>
+    suspend fun updateFilePath(
+        songId: Long,
+        newPath: String,
+    ): AppResult<Unit>
 
     /** The songs with these ids, in the order of [ids]; missing ones are left out. */
     suspend fun getSongsByIds(ids: List<Long>): List<Song>

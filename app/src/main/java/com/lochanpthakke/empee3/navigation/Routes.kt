@@ -39,6 +39,9 @@ object Equalizer
 object MetadataEditor
 
 @Serializable
+object LibraryBuilder
+
+@Serializable
 object ArtworkManager
 
 typealias ArtworkFetcher = ArtworkManager
