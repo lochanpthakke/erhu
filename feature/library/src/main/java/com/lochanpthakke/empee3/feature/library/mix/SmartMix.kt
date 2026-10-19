@@ -19,6 +19,15 @@ enum class MixKind(
     LATE_NIGHT("late-night", "Late Night", personal = false),
     A_LITTLE_DIFFERENT("a-little-different", "A Little Different", personal = true),
 
+    /** Library collections: each needs only tags the library really has (one artist, real years, lengths). */
+    SPOTLIGHT("spotlight", "Spotlight", personal = false),
+    THROWBACKS("throwbacks", "Throwbacks", personal = false),
+    QUICK_HITS("quick-hits", "Quick Hits", personal = false),
+    LONG_LISTENS("long-listens", "Long Listens", personal = false),
+
+    /** Unplayed songs: needs some history, or it would just be the whole library. */
+    YET_TO_HEAR("yet-to-hear", "Yet to Be Heard", personal = false),
+
     /** Fallbacks while there is little history: honest, non-personalised collections. */
     FAVOURITES("favourites", "Favourites", personal = false),
     FRESH("fresh", "Fresh in Your Library", personal = false),
@@ -29,11 +38,15 @@ enum class MixKind(
     }
 }
 
-/** One built mix: its songs in play order (no duplicates) and a truthful line about how it was made. */
+/**
+ * One built mix: its songs in play order (no duplicates), a truthful line about how it was made
+ * and its title (the kind's, or a specific one such as "Spotlight: Drake").
+ */
 data class SmartMix(
     val kind: MixKind,
     val songIds: List<Long>,
     val description: String,
+    val title: String = kind.title,
 )
 
 /**

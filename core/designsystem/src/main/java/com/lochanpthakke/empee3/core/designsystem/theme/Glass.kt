@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.common.perf.traced
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -198,7 +199,7 @@ fun Modifier.glassPanel(
             // Record a margin around the surface so the blur has real content at its edges.
             val margin = ceil(frostRadius * 2).toInt()
             val frostLayer =
-                if (clippedFrost != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (clippedFrost != null && !clippedFrost.preBlurred && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     // Full-width bars get no edge optics: they have no curved edge to bend light.
                     val lens = if (bar) null else edgeLens(glass, outline, margin, optics)
                     obtainGraphicsLayer().apply {
@@ -208,10 +209,9 @@ fun Modifier.glassPanel(
                     null
                 }
 
+            val backing = FrostBacking(clippedFrost, frostLayer, margin, environment, glass)
             onDrawBehind {
-                if (frostLayer != null && clippedFrost != null) {
-                    drawFrost(clippedFrost, frostLayer, position.offset, margin, environment)
-                }
+                drawBacking(backing, position)
                 drawGlassLayers(layers, outline, bar)
             }
         }
@@ -329,28 +329,31 @@ private const val SOFT_RIM_FRACTION = 0.6f
  * is first covered with the [environment] colour; otherwise the sharp content
  * would show through the frosted copy.
  */
-private fun DrawScope.drawFrost(
+internal fun DrawScope.drawFrost(
     backdrop: GlassBackdrop,
     frostLayer: GraphicsLayer,
     surfaceOffset: Offset,
     margin: Int,
     environment: Color,
-) {
-    if (!backdrop.hasContent || backdrop.isRecording) return
+): Boolean {
+    if (!backdrop.hasContent || backdrop.isRecording) return false
     // Read so this surface redraws whenever the source content changes.
     backdrop.contentVersion
     val offset = surfaceOffset - backdrop.sourceOffset
     drawRect(environment)
     frostLayer.topLeft = IntOffset(-margin, -margin)
-    frostLayer.record(IntSize(size.width.toInt() + margin * 2, size.height.toInt() + margin * 2)) {
-        translate(margin - offset.x, margin - offset.y) { drawLayer(backdrop.layer) }
+    traced(backdrop.frostSection) {
+        frostLayer.record(IntSize(size.width.toInt() + margin * 2, size.height.toInt() + margin * 2)) {
+            translate(margin - offset.x, margin - offset.y) { drawLayer(backdrop.layer) }
+        }
     }
     drawLayer(frostLayer)
+    return true
 }
 
 /** Where a glass surface is, in root coordinates; state so a move redraws its frost. */
 @Stable
-private class GlassPosition {
+internal class GlassPosition {
     var offset by mutableStateOf(Offset.Zero)
 }
 

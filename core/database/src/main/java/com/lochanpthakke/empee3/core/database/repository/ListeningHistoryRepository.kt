@@ -39,6 +39,7 @@ class ListeningHistoryRepository
                             durationMs = it.durationMs,
                             isFavorite = it.isFavorite,
                             addedAt = it.dateModified,
+                            year = it.year,
                         )
                     }
                 }.distinctUntilChanged()

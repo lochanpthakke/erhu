@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -135,6 +136,10 @@ fun ExpandingPlayer(
                         shape = ExpandingShape(bounds, lerp(mini.height / 2f, 0f, p))
                         clip = true
                         alpha = (p / SURFACE_FADE_SPAN).coerceAtMost(1f)
+                        // The fade (only the first moments of opening, the last of closing) is
+                        // applied to each drawing, not by rendering the whole player into a
+                        // screen-sized offscreen buffer first: no full-screen texture, no extra pass.
+                        compositingStrategy = CompositingStrategy.ModulateAlpha
                     }.background(environment),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {

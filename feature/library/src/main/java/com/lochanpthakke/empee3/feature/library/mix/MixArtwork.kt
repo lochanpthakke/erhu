@@ -37,10 +37,20 @@ fun MixArtwork(
     modifier: Modifier = Modifier,
 ) {
     val art = remember(kind) { MixArt.generate(kind) }
+    MixArtCanvas(art = art, description = "${kind.title} cover", modifier = modifier)
+}
+
+/** Draws already composed [art] (a cover, or a banner composed for its shape) at whatever size it is given. */
+@Composable
+fun MixArtCanvas(
+    art: MixArt,
+    description: String?,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier =
             modifier
-                .semantics { contentDescription = "${kind.title} cover" }
+                .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier)
                 .drawWithCache { drawArt(art) },
     )
 }

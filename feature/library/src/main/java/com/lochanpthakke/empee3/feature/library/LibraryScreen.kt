@@ -192,7 +192,7 @@ fun LibraryScreen(
             } else {
                 OverlayHeader(
                     navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                    title = section.label,
+                    title = section.pageTitle,
                     collapsingTitle = collapsingTitle,
                 )
             }
@@ -264,9 +264,11 @@ fun LibraryScreen(
                             LibrarySection.TRACKS -> {
                                 // Collected only on the Tracks section, which shows the smart mix cards.
                                 val smartMixes by viewModel.smartMixes.collectAsState()
+                                val featuredAlbums by hiltViewModel<FeaturedAlbumsViewModel>().albums.collectAsState()
                                 HomeFeed(
                                     songs = songs,
                                     smartMixes = smartMixes,
+                                    featuredAlbums = featuredAlbums,
                                     recentAlbums = recentAlbums,
                                     recentPlaylists = recentPlaylists,
                                     currentSongId = currentSongId,
@@ -275,6 +277,7 @@ fun LibraryScreen(
                                     onAlbumClick = onOpenAlbum,
                                     onPlaylistClick = { onOpenPlaylist(it.id) },
                                     onSmartPlaylistClick = onOpenSmartPlaylist,
+                                    onSmartPlaylistPlay = viewModel::playSmartMix,
                                     actions = actions,
                                     topInset = scroll.contentTop,
                                     bottomInset = scroll.contentBottom,

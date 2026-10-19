@@ -147,7 +147,7 @@ interface SongDao {
     /** Every song's facts for the smart mixes, by id. Emits again on any change to songs. */
     @Query(
         """
-        SELECT id, title, artist, artist_id, album, album_id, genre, bpm, duration_ms, is_favorite, date_modified
+        SELECT id, title, artist, artist_id, album, album_id, genre, bpm, year, duration_ms, is_favorite, date_modified
         FROM songs ORDER BY id
         """,
     )
@@ -190,6 +190,8 @@ data class TrackFactsRow(
     @ColumnInfo(name = "album_id") val albumId: Long,
     val genre: String?,
     val bpm: Int?,
+    /** The year tag as stored (0 or a placeholder such as 1970 when the file has none). */
+    val year: Int?,
     @ColumnInfo(name = "duration_ms") val durationMs: Long,
     @ColumnInfo(name = "is_favorite") val isFavorite: Boolean,
     @ColumnInfo(name = "date_modified") val dateModified: Long,

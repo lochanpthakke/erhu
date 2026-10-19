@@ -54,6 +54,14 @@ data class LyricsPalette(
     val secondary: Int,
     /** A restrained accent in the artwork's hue (the timed word), at least 4.5:1. */
     val accent: Int,
+    /**
+     * The carousel card's diagonal gradient, top-start to bottom-end: a lighter tone of the
+     * artwork's hue, [surface], and a deeper tone in the artwork's second colour when it has one
+     * (otherwise the hue turned). [content] reads on every stop.
+     */
+    val cardGradient: List<Int>,
+    /** A light (or, under dark text, deep) tint of the hue for the card's rim and edge light. */
+    val rim: Int,
 ) {
     companion object {
         /** No artwork (or not yet loaded): empee3's own deep burgundy. */
@@ -97,11 +105,29 @@ data class LyricsPalette(
             val y = band.sumOf { ys[it] }
             val bandVotes = band.sumOf { votes[it] }
             val hue = ((Math.toDegrees(atan2(y, x)) + 360.0) % 360.0).toFloat()
+            // A second colour: the strongest hue band well away from the first, if it carries real weight.
+            val second =
+                votes.indices
+                    .filter { bin -> binDistance(bin, best) >= SECOND_HUE_MIN_BINS }
+                    .maxByOrNull { votes[it] }
+                    ?.takeIf { votes[it] >= votes[best] * SECOND_HUE_SHARE }
+                    ?.let { ((Math.toDegrees(atan2(ys[it], xs[it])) + 360.0) % 360.0).toFloat() }
             // Neutral when the artwork as a whole has hardly any colour; otherwise as colourful as its strongest colour.
             val overall = colourfulness / counted
             val saturation = if (overall < NEUTRAL_COLOURFULNESS) 0f else (bandVotes / bandPixels(pixels, band)).toFloat()
-            return from(hue, saturation, (lightness / counted).toFloat())
+            return from(hue, saturation, (lightness / counted).toFloat(), second)
         }
+
+        private fun binDistance(
+            a: Int,
+            b: Int,
+        ): Int = minOf(abs(a - b), HUE_BINS - abs(a - b))
+
+        /** The second colour's band starts this many bins (15° each) from the first... */
+        private const val SECOND_HUE_MIN_BINS = 3
+
+        /** ...and needs at least this share of the first colour's votes. */
+        private const val SECOND_HUE_SHARE = 0.3
 
         /** How many opaque pixels fall in the hue [band] (for the band's average colourfulness). */
         private fun bandPixels(
@@ -123,6 +149,7 @@ data class LyricsPalette(
             hue: Float,
             saturation: Float,
             artworkLightness: Float,
+            secondHue: Float? = null,
         ): LyricsPalette {
             val neutral = saturation < NEUTRAL_SATURATION
             val surfaceSaturation =
@@ -155,7 +182,9 @@ data class LyricsPalette(
                         lightText,
                     ),
                 )
-            val weakest = gradient.minBy { contrast(content, it) }
+            val cardGradient = cardGradient(hue, secondHue, surfaceSaturation, surfaceLightness, surface, content, lightText)
+            // Secondary text and the accent read on the lyrics gradient and on the card gradient alike.
+            val weakest = (gradient + cardGradient).minBy { contrast(content, it) }
             val dark = relativeLuminance(weakest) < HALF
             val secondary = blendUntil(content, weakest, alpha = SECONDARY_ALPHA, minimumContrast = SECONDARY_CONTRAST)
             val accent =
@@ -164,8 +193,53 @@ data class LyricsPalette(
                 } else {
                     accentOn(weakest, hue, dark)
                 }
-            return LyricsPalette(surface, gradient, content, secondary, accent)
+            val rim =
+                hslToArgb(
+                    hue,
+                    (surfaceSaturation + RIM_SATURATION_BOOST).coerceAtMost(MAX_SURFACE_SATURATION),
+                    if (lightText) RIM_LIGHT else RIM_DEEP,
+                )
+            return LyricsPalette(surface, gradient, content, secondary, accent, cardGradient, rim)
         }
+
+        /** See [LyricsPalette.cardGradient]. */
+        @Suppress("LongParameterList")
+        private fun cardGradient(
+            hue: Float,
+            secondHue: Float?,
+            saturation: Float,
+            lightness: Float,
+            surface: Int,
+            content: Int,
+            lightText: Boolean,
+        ): List<Int> =
+            listOf(
+                readableStop(
+                    hue - CARD_HUE_TURN,
+                    saturation * CARD_UPPER_SATURATION,
+                    (lightness + CARD_LIGHTER).coerceAtMost(MAX_STOP),
+                    content,
+                    lightText,
+                ),
+                surface,
+                readableStop(
+                    secondHue ?: (hue + HUE_TURN_DOWN),
+                    saturation * CARD_LOWER_SATURATION,
+                    (lightness - CARD_DEEPER).coerceAtLeast(MIN_STOP),
+                    content,
+                    lightText,
+                ),
+            )
+
+        /** The card gradient: a lighter, slightly turned tone at the top-start, a deeper one at the bottom-end. */
+        private const val CARD_HUE_TURN = 8f
+        private const val CARD_UPPER_SATURATION = 0.95f
+        private const val CARD_LOWER_SATURATION = 0.8f
+        private const val CARD_LIGHTER = 0.08f
+        private const val CARD_DEEPER = 0.1f
+        private const val RIM_SATURATION_BOOST = 0.1f
+        private const val RIM_LIGHT = 0.74f
+        private const val RIM_DEEP = 0.38f
 
         private const val OPAQUE = 128
 
@@ -374,6 +448,9 @@ data class LyricsColors(
     val content: Color,
     val secondary: Color,
     val accent: Color,
+    /** The carousel card's gradient (top-start to bottom-end), see [LyricsPalette.cardGradient]. */
+    val cardGradient: List<Color>,
+    val rim: Color,
 )
 
 /**
@@ -411,7 +488,10 @@ fun rememberLyricsColors(song: Song?): LyricsColors {
     val content by animateColorAsState(Color(palette.content), spec, label = "lyricsContent")
     val secondary by animateColorAsState(Color(palette.secondary), spec, label = "lyricsSecondary")
     val accent by animateColorAsState(Color(palette.accent), spec, label = "lyricsAccent")
-    return LyricsColors(surface, listOf(top, middle, bottom), content, secondary, accent)
+    val cardStart by animateColorAsState(Color(palette.cardGradient[0]), spec, label = "cardStart")
+    val cardEnd by animateColorAsState(Color(palette.cardGradient[2]), spec, label = "cardEnd")
+    val rim by animateColorAsState(Color(palette.rim), spec, label = "cardRim")
+    return LyricsColors(surface, listOf(top, middle, bottom), content, secondary, accent, listOf(cardStart, surface, cardEnd), rim)
 }
 
 private fun paletteOf(bitmap: Bitmap): LyricsPalette {

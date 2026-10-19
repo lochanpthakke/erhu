@@ -91,7 +91,7 @@ internal fun SmartMixTile(
                     .clip(Radius.mediumShape),
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
-        Text(text = mix.kind.title, style = TextStyles.tileTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = mix.title, style = TextStyles.tileTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
             text = countLabel(mix.songIds.size, "song"),
             style = TextStyles.tileSubtitle,
@@ -236,6 +236,7 @@ fun SmartPlaylistDetailScreen(
             item(key = "header") {
                 SmartMixHeader(
                     kind = kind,
+                    title = content.mix?.title,
                     description = content.mix?.description,
                     songs = songs,
                     onPlay = { libraryViewModel.playInOrder(songs) },
@@ -293,6 +294,7 @@ fun SmartPlaylistDetailScreen(
 @Composable
 private fun SmartMixHeader(
     kind: MixKind?,
+    title: String?,
     description: String?,
     songs: List<Song>,
     onPlay: () -> Unit,
@@ -313,7 +315,7 @@ private fun SmartMixHeader(
                 .clip(Radius.largeShape)
         if (kind != null) MixArtwork(kind = kind, modifier = cover) else Spacer(modifier = cover)
         Spacer(modifier = Modifier.height(Spacing.lg))
-        Text(text = kind?.title ?: "Smart Playlist", style = TextStyles.pageTitle, textAlign = TextAlign.Center, maxLines = 1)
+        Text(text = title ?: kind?.title ?: "Smart Playlist", style = TextStyles.pageTitle, textAlign = TextAlign.Center, maxLines = 1)
         if (description != null) {
             Spacer(modifier = Modifier.height(Spacing.xs))
             Text(

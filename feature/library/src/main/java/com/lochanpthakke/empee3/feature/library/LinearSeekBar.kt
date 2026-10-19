@@ -9,15 +9,25 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -32,6 +42,11 @@ import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.model.AbLoopState
 import com.lochanpthakke.empee3.core.model.WaveformTimeline
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.sin
 
 /** The touch area: the whole row, not just the line (well above the 48 dp target). */
 private val TOUCH_HEIGHT = 48.dp
@@ -70,6 +85,37 @@ private val MARKER_WIDTH = 2.dp
 private val MARKER_HEIGHT = 12.dp
 private val BOOKMARK_RADIUS = 2.dp
 private val BOOKMARK_GAP = 7.dp
+
+/**
+ * The liquid crest on the played part: its upper edge rises above the line by up to
+ * [LIQUID_RISE] in two slow overlapping swells that drift while playing, so the fill reads as
+ * something poured rather than a rigid bar. The lower edge stays straight, on the line.
+ */
+private val LIQUID_RISE = 3.dp
+
+/** The crest's wavelengths (two, unrelated, so the contour never looks periodic). */
+private val LIQUID_WAVE_LONG = 74.dp
+private val LIQUID_WAVE_SHORT = 31.dp
+
+/** The crest grows in from the start of the line over this distance. */
+private val LIQUID_LEAD_IN = 22.dp
+
+/** One sample of the contour every this many dp. */
+private val LIQUID_STEP = 3.dp
+
+/** Paused (or with reduced motion) the contour stays, lower and still. */
+private const val LIQUID_SETTLED = 0.45f
+
+/** The fill is a pastel version of the accent: lifted a little towards white. */
+private const val PASTEL_LIFT = 0.18f
+
+/** After a seek, the head holds the requested position until the player reports one this close (or the wait times out). */
+private const val SEEK_SETTLE_TOLERANCE_MS = 750L
+private const val SEEK_SETTLE_TIMEOUT_MS = 1_500L
+
+private const val NANOS_PER_SECOND = 1_000_000_000f
+private const val ARC_FROM_BOTTOM = 90f
+private const val HALF_TURN = 180f
 
 /**
  * Now Playing's seek bar: one slim straight line with rounded ends. The played part runs in the
@@ -115,9 +161,15 @@ internal fun LinearSeekBar(
         animationSpec = if (reduceMotion) tween(0) else spring(dampingRatio = 0.8f, stiffness = 500f),
         label = "seekScrub",
     )
+    val liquid by rememberLiquidStrength(isPlaying, reduceMotion)
+    val drift = rememberLiquidDrift(isPlaying, reduceMotion)
+    var settling by rememberSeekSettle(smooth, durationMs)
     val preview by rememberUpdatedState(previewPositionMs)
     val latestDuration by rememberUpdatedState(durationMs)
-    val latestOnSeek by rememberUpdatedState(onSeek)
+    val latestOnSeek by rememberUpdatedState<(Long) -> Unit>({ target ->
+        settling = target
+        onSeek(target)
+    })
     val latestOnPreview by rememberUpdatedState(onPreview)
 
     Box(
@@ -169,8 +221,18 @@ internal fun LinearSeekBar(
                     val knobRadius = KNOB_RADIUS.toPx()
                     val contourWidth = CONTOUR_WIDTH.toPx()
                     val shadeExtra = SHADE_EXTRA.toPx()
-                    val tail = accent.copy(alpha = accent.alpha * TAIL_ALPHA)
+                    val body = lerp(accent, Color.White, PASTEL_LIFT)
+                    val tail = body.copy(alpha = body.alpha * TAIL_ALPHA)
                     val head = lerp(accent, Color.White, HEAD_LIFT)
+                    val liquidPath = Path()
+                    val crest =
+                        LiquidCrest(
+                            rise = LIQUID_RISE.toPx(),
+                            longWave = LIQUID_WAVE_LONG.toPx(),
+                            shortWave = LIQUID_WAVE_SHORT.toPx(),
+                            leadIn = LIQUID_LEAD_IN.toPx(),
+                        )
+                    val step = LIQUID_STEP.toPx()
                     val centre = lerp(head, Color.White, CENTRE_LIFT)
                     val contour = lerp(head, Color.White, CONTOUR_LIFT).copy(alpha = CONTOUR_ALPHA)
                     onDrawBehind {
@@ -180,18 +242,13 @@ internal fun LinearSeekBar(
                         val y = size.height / 2
                         val thickness = thin + (thick - thin) * scrub
                         val duration = latestDuration
-                        val fraction = WaveformTimeline.fractionOf(preview ?: smooth.value, duration)
+                        val fraction = WaveformTimeline.fractionOf(preview ?: settling ?: smooth.value, duration)
                         val headX = left + fraction * width
                         drawLoop(loop, duration, left, width, y, accent)
                         drawLine(track, Offset(left, y), Offset(left + width, y), thickness, StrokeCap.Round)
                         if (headX > left) {
-                            drawLine(
-                                brush = Brush.horizontalGradient(listOf(tail, accent, head), startX = left, endX = headX),
-                                start = Offset(left, y),
-                                end = Offset(headX, y),
-                                strokeWidth = thickness,
-                                cap = StrokeCap.Round,
-                            )
+                            liquidPath.liquidFill(crest, left, headX, y, thickness / 2, step, drift.value, liquid)
+                            drawPath(liquidPath, Brush.horizontalGradient(listOf(tail, body, head), startX = left, endX = headX))
                         }
                         drawHead(
                             Offset(headX, y),
@@ -212,6 +269,138 @@ internal fun LinearSeekBar(
                     }
                 },
     )
+}
+
+/** The crest's motion strength: full while playing, lower when paused or with reduced motion (eased, never pulsing). */
+@Composable
+private fun rememberLiquidStrength(
+    isPlaying: Boolean,
+    reduceMotion: Boolean,
+): State<Float> =
+    animateFloatAsState(
+        targetValue = if (isPlaying && !reduceMotion) 1f else LIQUID_SETTLED,
+        animationSpec = tween(if (reduceMotion) 0 else Motion.HERO, easing = Motion.Standard),
+        label = "seekLiquid",
+    )
+
+/**
+ * The crest's drift time in seconds: advances with the frame clock only while playing (and
+ * motion is allowed), holds when paused. Read while drawing, so it redraws the bar only.
+ */
+@Composable
+private fun rememberLiquidDrift(
+    isPlaying: Boolean,
+    reduceMotion: Boolean,
+): State<Float> {
+    val drift = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(isPlaying, reduceMotion) {
+        if (!isPlaying || reduceMotion) return@LaunchedEffect
+        var last = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { now ->
+                drift.floatValue += (now - last) / NANOS_PER_SECOND
+                last = now
+            }
+        }
+    }
+    return drift
+}
+
+/**
+ * A released seek's target, shown until the player reports a position near it (or a short
+ * timeout passes), so the head never springs back to the old position in between. Cleared when
+ * the track changes ([durationMs]).
+ */
+@Composable
+private fun rememberSeekSettle(
+    smooth: State<Long>,
+    durationMs: Long,
+): MutableState<Long?> {
+    val settling = remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(settling.value) {
+        val target = settling.value ?: return@LaunchedEffect
+        withTimeoutOrNull(SEEK_SETTLE_TIMEOUT_MS) {
+            snapshotFlow { smooth.value }.first { abs(it - target) <= SEEK_SETTLE_TOLERANCE_MS }
+        }
+        settling.value = null
+    }
+    LaunchedEffect(durationMs) { settling.value = null }
+    return settling
+}
+
+/**
+ * The crest of the played part above the line at x (px from the line's start), for drift time
+ * (seconds) and motion strength (0..1): two overlapping swells drifting in opposite directions,
+ * always above the line (between a quarter of [rise] and all of it), growing in over [leadIn]
+ * from the start so the line keeps its rounded end.
+ */
+internal class LiquidCrest(
+    private val rise: Float,
+    longWave: Float,
+    shortWave: Float,
+    private val leadIn: Float,
+) {
+    private val longK = (2 * PI / longWave).toFloat()
+    private val shortK = (2 * PI / shortWave).toFloat()
+
+    fun heightAt(
+        x: Float,
+        time: Float,
+        strength: Float,
+    ): Float {
+        val swell =
+            LONG_SHARE * sin(x * longK - time * DRIFT_LONG) +
+                (1f - LONG_SHARE) * sin(x * shortK + time * DRIFT_SHORT + SHORT_OFFSET)
+        // swell is -1..1: the crest stays between BASE_SHARE and the full rise.
+        val wave = BASE_SHARE + (1f - BASE_SHARE) * (swell + 1f) / 2f
+        val t = (x / leadIn).coerceIn(0f, 1f)
+        val envelope = t * t * (SMOOTHSTEP_A - SMOOTHSTEP_B * t)
+        return rise * strength * wave * envelope
+    }
+
+    private companion object {
+        const val LONG_SHARE = 0.62f
+        const val BASE_SHARE = 0.25f
+        const val SHORT_OFFSET = 1.3f
+
+        /** Smoothstep (3t² − 2t³): the crest eases in from the line's start. */
+        const val SMOOTHSTEP_A = 3f
+        const val SMOOTHSTEP_B = 2f
+
+        /** Drift of the swells, radians per second: slow, a breath rather than a ripple. */
+        const val DRIFT_LONG = 0.9f
+        const val DRIFT_SHORT = 1.6f
+    }
+}
+
+/**
+ * The played part as one shape: a rounded start, a straight lower edge on the line and the
+ * liquid crest as its upper edge, up to [headX] (the head covers the end). Rebuilds the path in
+ * place: no allocation per frame.
+ */
+@Suppress("LongParameterList")
+private fun Path.liquidFill(
+    crest: LiquidCrest,
+    left: Float,
+    headX: Float,
+    y: Float,
+    half: Float,
+    step: Float,
+    time: Float,
+    strength: Float,
+) {
+    rewind()
+    moveTo(left, y + half)
+    // The rounded start: half a circle from the bottom, round the left, to the top.
+    arcTo(Rect(left - half, y - half, left + half, y + half), ARC_FROM_BOTTOM, HALF_TURN, false)
+    var x = left
+    while (x < headX) {
+        lineTo(x, y - half - crest.heightAt(x - left, time, strength))
+        x += step
+    }
+    lineTo(headX, y - half - crest.heightAt(headX - left, time, strength))
+    lineTo(headX, y + half)
+    close()
 }
 
 /**

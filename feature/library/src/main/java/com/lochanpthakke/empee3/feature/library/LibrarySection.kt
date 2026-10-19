@@ -16,14 +16,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * The primary destinations, switched by [LibraryNavigationBar] (Search is the
- * separate button beside it): Tracks (home feed), Albums, Library, VYBE (on-device discovery).
+ * separate button beside it): Tracks (the Home page: the home feed and every track), Albums, Library, VYBE (on-device discovery).
  */
 enum class LibrarySection(
     val label: String,
     val icon: ImageVector,
     val selectedIcon: ImageVector,
+    /** The page's own title in its header; the navigation keeps [label]. */
+    val pageTitle: String = label,
 ) {
-    TRACKS("Tracks", Icons.Outlined.MusicNote, Icons.Filled.MusicNote),
+    TRACKS("Tracks", Icons.Outlined.MusicNote, Icons.Filled.MusicNote, pageTitle = "Home"),
     ALBUMS("Albums", Icons.Outlined.Album, Icons.Filled.Album),
     LIBRARY("Library", Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic),
     VYBE("VYBE", Icons.Outlined.AutoAwesome, Icons.Filled.AutoAwesome),

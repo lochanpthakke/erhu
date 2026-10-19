@@ -157,6 +157,7 @@ object SmartMixEngine {
         mood(profile, MixKind.CHILL, Moods::isChill)?.let(built::add)
         mood(profile, MixKind.LATE_NIGHT, Moods::isLateNight)?.let(built::add)
         if (personal) aLittleDifferent(profile, taste, exclude = deepCuts?.songIds.orEmpty().toSet())?.let(built::add)
+        built += LibraryMixes.build(profile)
         if (built.count { it.kind.personal } < MIN_PERSONAL_BEFORE_FALLBACKS) {
             favourites(profile)?.let(built::add)
             fresh(profile)?.let(built::add)
@@ -374,7 +375,7 @@ object SmartMixEngine {
 
     // ---- Shared ordering and diversity.
 
-    private fun finish(
+    internal fun finish(
         profile: ListeningProfile,
         kind: MixKind,
         ranked: List<Pair<Long, Float>>,

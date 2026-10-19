@@ -330,8 +330,25 @@ fun MainScaffold() {
 
             // Glass backdrops: the screens frost under the bottom chrome; the whole
             // shell frosts under the drawer.
-            val screensBackdrop = rememberGlassBackdrop()
-            val shellBackdrop = rememberGlassBackdrop()
+            val screensBackdrop = rememberGlassBackdrop("screens")
+            val shellBackdrop = rememberGlassBackdrop("shell")
+            // The drawer frosts the shell only while it can be seen. Closed, it stays composed
+            // off-screen, and with the backdrop it re-blurred the whole screen every time the shell
+            // redrew (every frame of the player opening, of scrolling...) for nothing.
+            val drawerVisible by remember(drawerState) {
+                derivedStateOf { drawerState.isOpen || drawerState.isAnimationRunning }
+            }
+            // While the player opens, is open or closes, the shell's glass (mini player, library
+            // navigation, search, header buttons) is sliding away or covered: it keeps what it last
+            // rendered (taken at rest, so it is right again when the chrome returns) instead of a
+            // blur and lens pass on every frame of the motion.
+            LaunchedEffect(player, screensBackdrop, shellBackdrop) {
+                // Also through the mini player's landing bounce after closing (progress is 0 by then).
+                snapshotFlow { player.progress.value > 0f || player.arrival.value != 0f }.distinctUntilChanged().collect { covered ->
+                    screensBackdrop.frozen = covered
+                    shellBackdrop.frozen = covered
+                }
+            }
 
             // Frame diagnostics (debug builds only): what is on screen and whether the player is moving.
             ReportInteraction(Interactions.SCREEN) {
@@ -361,7 +378,7 @@ fun MainScaffold() {
                                     shape = DrawerDefaults.shape,
                                     level = GlassLevel.Strong,
                                     elevated = false,
-                                    backdrop = shellBackdrop,
+                                    backdrop = shellBackdrop.takeIf { drawerVisible },
                                     optics = DRAWER_OPTICS,
                                     // A deeper tint of the theme's own background than other glass, so the
                                     // labels read crisply while the backdrop still shows faintly through.

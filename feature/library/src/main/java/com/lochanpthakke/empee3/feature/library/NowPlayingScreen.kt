@@ -224,7 +224,8 @@ fun NowPlayingScreen(
     // The backdrop sits behind the whole scaffold, so it also fills the area
     // behind the status and gesture bars.
     // The artwork backdrop is what the glass controls frost.
-    val artworkBackdrop = rememberGlassBackdrop()
+    // Already a strong blur of the artwork: the glass over it needs no blur of its own.
+    val artworkBackdrop = rememberGlassBackdrop("nowPlayingArtwork", preBlurred = true)
     // The lyrics surfaces take their colours from the playing song's artwork (cached per artwork).
     val lyricsColors = rememberLyricsColors(song)
     Box(modifier = modifier.fillMaxSize()) {
@@ -239,6 +240,8 @@ fun NowPlayingScreen(
         }
         AppScaffold(
             contentBackdrop = artworkBackdrop,
+            // Its top bar is not glass: nothing samples the page itself.
+            contentIsBackdrop = false,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 AppTopBar(

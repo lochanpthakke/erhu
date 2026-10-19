@@ -53,7 +53,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
@@ -129,7 +128,7 @@ internal fun CarouselCard(
                 Modifier
                     .width(artSide + CARD_PADDING * 2)
                     .then(select)
-                    .nowPlayingSurface(colors, CARD_SHAPE)
+                    .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
                     .clip(CARD_SHAPE)
                     .drawWithContent {
                         drawContent()
@@ -154,15 +153,15 @@ internal fun CarouselCard(
                         .clip(Radius.largeShape),
             )
             LyricsSurfaceTheme(colors) {
-            CardMetadata(
-                track = track,
-                showAlbum = showAlbum,
-                favorite = if (isCurrent) ({ FavoriteButton(isFavorite, track.id, onToggleFavorite) }) else null,
-                modifier =
-                    settle
-                        .height(metadataHeight)
-                        .then(if (isCurrent) Modifier.revealWithPlayer(transition, start = 0.35f, end = 0.8f) else Modifier),
-            )
+                CardMetadata(
+                    track = track,
+                    showAlbum = showAlbum,
+                    favorite = if (isCurrent) ({ FavoriteButton(isFavorite, track.id, onToggleFavorite) }) else null,
+                    modifier =
+                        settle
+                            .height(metadataHeight)
+                            .then(if (isCurrent) Modifier.revealWithPlayer(transition, start = 0.35f, end = 0.8f) else Modifier),
+                )
             }
         }
     }

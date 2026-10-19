@@ -18,6 +18,8 @@ data class TrackFacts(
     val isFavorite: Boolean,
     /** MediaStore modification time of the file, seconds (when it was added or last changed). */
     val addedAt: Long,
+    /** The year tag as stored: null, 0 or a placeholder (1970) when the file has no real year. */
+    val year: Int? = null,
 )
 
 /**

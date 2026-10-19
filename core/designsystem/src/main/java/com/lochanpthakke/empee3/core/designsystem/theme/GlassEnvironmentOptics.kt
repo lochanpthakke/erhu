@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
+import com.lochanpthakke.empee3.core.common.perf.traced
 import kotlin.math.ceil
 
 /*
@@ -233,7 +234,14 @@ internal fun Modifier.environmentFrost(
             obtainGraphicsLayer().apply {
                 renderEffect = environmentOptics(blurPx, glass.frostSaturation, glass.frostDim, glass.frostLift, lens)
             }
+        // Whether layer holds a rendering this cache can show again while the backdrop is frozen.
+        var rendered = false
         onDrawBehind {
+            // Frozen: the last rendering, without reading the position (no redraw, no lens pass as it moves).
+            if (backdrop.frozen && rendered) {
+                drawLayer(layer)
+                return@onDrawBehind
+            }
             if (!backdrop.hasContent || backdrop.isRecording) return@onDrawBehind
             // Read so this surface redraws whenever the source content changes.
             backdrop.contentVersion
@@ -244,9 +252,12 @@ internal fun Modifier.environmentFrost(
             val visible = Rect(offset, size).overlaps(Rect(Offset.Zero, source.toSize()))
             if (!visible) return@onDrawBehind
             layer.topLeft = IntOffset(-margin, -margin)
-            layer.record(layerSize) {
-                translate(margin - offset.x, margin - offset.y) { drawLayer(backdrop.layer) }
+            traced(backdrop.lensSection) {
+                layer.record(layerSize) {
+                    translate(margin - offset.x, margin - offset.y) { drawLayer(backdrop.layer) }
+                }
             }
+            rendered = true
             drawLayer(layer)
         }
     }

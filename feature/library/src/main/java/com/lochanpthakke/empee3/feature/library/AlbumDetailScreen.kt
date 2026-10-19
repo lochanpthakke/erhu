@@ -353,7 +353,9 @@ fun AlbumDetailScreen(
     songForViewMetadata?.let { song ->
         ViewMetadataScreen(
             song = song,
-            viewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+            viewModel =
+                androidx.hilt.navigation.compose
+                    .hiltViewModel(),
             libraryViewModel = viewModel,
             onDismiss = { songForViewMetadata = null },
         )

@@ -33,7 +33,7 @@ class LyricsPaletteTest {
 
     /** Text must read on the surface and on every stop of the opaque gradient. */
     private fun assertReadable(palette: LyricsPalette) {
-        (palette.gradient + palette.surface).forEach { stop ->
+        (palette.gradient + palette.cardGradient + palette.surface).forEach { stop ->
             assertTrue("content ${contrast(palette.content, stop)}", contrast(palette.content, stop) >= 4.5)
             assertTrue("secondary ${contrast(palette.secondary, stop)}", contrast(palette.secondary, stop) >= 3.0)
             assertTrue("accent ${contrast(palette.accent, stop)}", contrast(palette.accent, stop) >= 4.5)
@@ -49,6 +49,22 @@ class LyricsPaletteTest {
         assertTrue(relativeLuminance(bottom) < relativeLuminance(middle))
         // The deeper stop turns away from the dominant hue (a complementary tone, not the same colour darker).
         assertTrue(hueDistance(hueOf(bottom), hueOf(middle)) > 10f)
+    }
+
+    @Test
+    fun twoColourArtwork_cardGradientEndsInTheSecondColour() {
+        // Mostly red with a real share of blue.
+        val palette = LyricsPalette.fromPixels(artwork(0xFFE0202A.toInt(), 0xFFE0202A.toInt(), 0xFF1E50D8.toInt()))
+        assertTrue(hueDistance(hueOf(palette.cardGradient[0]), 0f) < 20f)
+        assertTrue("end hue ${hueOf(palette.cardGradient[2])}", hueDistance(hueOf(palette.cardGradient[2]), 225f) < 20f)
+        assertReadable(palette)
+    }
+
+    @Test
+    fun singleColourArtwork_cardGradientStaysNearItsHue() {
+        val palette = LyricsPalette.fromPixels(artwork(0xFFE0202A.toInt()))
+        palette.cardGradient.forEach { assertTrue(hueDistance(hueOf(it), 0f) < 40f) }
+        assertTrue(palette.cardGradient.toSet().size == 3)
     }
 
     @Test
