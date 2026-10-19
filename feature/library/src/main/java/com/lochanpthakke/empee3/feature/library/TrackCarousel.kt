@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -25,6 +26,8 @@ import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -284,25 +287,47 @@ internal fun TrackCarousel(
     reduceMotion: Boolean = false,
     content: @Composable (song: Song, isCurrent: Boolean, distance: () -> Float) -> Unit,
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        val pages = listOfNotNull(previous?.let { -1 to it }, 0 to current, next?.let { 1 to it })
-        pages.forEach { (slot, song) ->
-            // A song can be its own neighbour (2-song repeat, single song): keep keys unique.
-            val duplicate = slot != 0 && (song.id == current.id || (slot == 1 && song.id == previous?.id))
-            key(if (duplicate) "${song.id}#$slot" else song.id) {
-                val distance = { state.distance(slot) }
-                // The card nearest the centre is drawn on top. Flips once per swipe, not per frame.
-                val inFront by remember(slot) { derivedStateOf { abs(state.distance(slot)) < FRONT_DISTANCE } }
-                Box(
-                    modifier =
-                        Modifier
-                            .zIndex(if (inFront) 1f else 0f)
-                            .graphicsLayer { depthCard(distance(), reduceMotion) }
-                            // One page is the distance between two cards: the cards follow the finger one to one.
-                            .then(if (slot == 0) Modifier.onSizeChanged { state.page = it.width * SIDE_SPACING } else Modifier),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    content(song, slot == 0, distance)
+    val transition = LocalPlayerTransition.current
+    Box(
+        modifier =
+            modifier.onGloballyPositioned { coordinates ->
+                transition?.carouselBounds = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        // Layout stays at its final size. One transform carries the cards together;
+        // the child layers only unfold the neighbours, never the central artwork.
+        Box(
+            modifier = Modifier.fillMaxSize().playerCardTravel(transition),
+            contentAlignment = Alignment.Center,
+        ) {
+            val pages = listOfNotNull(previous?.let { -1 to it }, 0 to current, next?.let { 1 to it })
+            pages.forEach { (slot, song) ->
+                // A song can be its own neighbour (2-song repeat, single song): keep keys unique.
+                val duplicate = slot != 0 && (song.id == current.id || (slot == 1 && song.id == previous?.id))
+                key(if (duplicate) "${song.id}#$slot" else song.id) {
+                    val distance = { state.distance(slot) }
+                    // The card nearest the centre is drawn on top. Flips once per swipe, not per frame.
+                    val inFront by remember(slot, transition) {
+                        derivedStateOf {
+                            if (transition?.isSettledOpen == false) slot == 0 else abs(state.distance(slot)) < FRONT_DISTANCE
+                        }
+                    }
+                    Box(
+                        modifier =
+                            Modifier
+                                .zIndex(if (inFront) 1f else 0f)
+                                .graphicsLayer {
+                                    val reveal = transition?.let { playerNeighbourReveal(it.fraction) } ?: 1f
+                                    depthCard(distance() * reveal, reduceMotion)
+                                    if (slot != 0) alpha *= reveal
+                                }
+                                // One page is the distance between two cards: the cards follow the finger one to one.
+                                .then(if (slot == 0) Modifier.onSizeChanged { state.page = it.width * SIDE_SPACING } else Modifier),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        content(song, slot == 0, distance)
+                    }
                 }
             }
         }

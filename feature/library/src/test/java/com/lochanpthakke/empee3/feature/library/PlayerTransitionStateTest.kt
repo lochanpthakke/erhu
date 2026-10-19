@@ -13,6 +13,30 @@ import kotlin.math.abs
 
 class PlayerTransitionStateTest {
     @Test
+    fun releaseVelocityStillOverridesThePositionThresholdInBothDirections() = runTest {
+        val closing = PlayerTransitionState()
+        closing.progress.snapTo(0.85f)
+        withContext(RecordingFrameClock {}) { closing.release(-2f) }
+        assertEquals(0f, closing.fraction, 0f)
+        val opening = PlayerTransitionState()
+        opening.progress.snapTo(0.2f)
+        withContext(RecordingFrameClock {}) { opening.release(2f) }
+        assertEquals(1f, opening.fraction, 0f)
+    }
+
+    @Test
+    fun fastEndpointReleasesKeepEveryDrawingFractionInBounds() = runTest {
+        for (velocity in listOf(-4f, 4f)) {
+            val state = PlayerTransitionState()
+            state.progress.snapTo(if (velocity > 0f) 0.95f else 0.05f)
+            val frames = mutableListOf<Float>()
+            withContext(RecordingFrameClock { frames += state.fraction }) { state.release(velocity) }
+            assertTrue(frames.all { it in 0f..1f })
+            assertEquals(if (velocity > 0f) 1f else 0f, state.fraction, 0f)
+        }
+    }
+
+    @Test
     fun collapseReachesThumbnailBeforeHandingOff() = runTest {
         val state = PlayerTransitionState()
         state.progress.snapTo(1f)
@@ -22,7 +46,7 @@ class PlayerTransitionStateTest {
     }
 
     @Test
-    fun expandReachesHeroBeforeHandingOff() = runTest {
+    fun expansionReachesItsExactEndpointWithoutCorrection() = runTest {
         val state = PlayerTransitionState()
         val frames = mutableListOf<Float>()
         withContext(RecordingFrameClock { frames += state.progress.value }) { state.expand() }
@@ -39,7 +63,7 @@ class PlayerTransitionStateTest {
     }
 
     @Test
-    fun heroIsNotRevealedBeforeExactEndpoint() = runTest {
+    fun expandedLayeringOnlyResumesAtVisualEndpoint() = runTest {
         val state = PlayerTransitionState()
         state.progress.snapTo(0.9995f)
         assertFalse(state.isSettledOpen)
@@ -48,61 +72,85 @@ class PlayerTransitionStateTest {
     }
 
     @Test
-    fun collapseLandsThenSettlesExactlyToRest() = runTest {
+    fun collapseEndsAtRestWithoutASecondMotionOwner() = runTest {
         val state = PlayerTransitionState()
         state.progress.snapTo(1f)
-        val progress = mutableListOf<Float>()
-        val arrival = mutableListOf<Float>()
-        withContext(RecordingFrameClock { progress += state.progress.value; arrival += state.arrival.value }) { state.collapse() }
-        // The transition itself never overshoots; the settle happens as it lands.
-        assertTrue(progress.all { it in 0f..1f })
-        val settleFrames = arrival.indices.filter { arrival[it] != 0f }
-        assertTrue("No settle after collapsing", settleFrames.isNotEmpty())
-        assertTrue(settleFrames.all { progress[it] <= 0.01f })
-        // Right after it lands, not after the spring's last-pixel creep to exactly 0.
-        val landed = progress.indexOfFirst { it <= 0.01f }
-        val atRest = progress.indexOfFirst { it == 0f }
-        // This clock counts every frame request: with the settle running beside the move, each real
-        // frame is two records, and a spring's first frame hasn't moved yet. 4 records = 2 frames.
-        assertTrue("Settle started ${settleFrames.first() - landed} records after landing", settleFrames.first() - landed <= 4)
-        assertTrue("Settle waited for the creep to rest", settleFrames.first() < atRest)
-        assertTrue("Settle too weak: ${arrival.max()}", arrival.max() > 0.5f)
-        assertTrue("Settle too strong: ${arrival.max()}", arrival.max() <= 1f)
-        assertTrue("Settle must rebound once", arrival.any { it < 0f })
-        assertEquals(0f, state.arrival.value, 0f)
+        val frames = mutableListOf<Float>()
+        withContext(RecordingFrameClock { frames += state.fraction }) { state.collapse() }
+        assertTrue(frames.all { it in 0f..1f })
+        assertEquals(0f, state.fraction, 0f)
+        assertFalse(state.progress.isRunning)
     }
 
     @Test
     fun expandNeverOvershootsAndSettlesAtTheHero() = runTest {
         val state = PlayerTransitionState()
         val progress = mutableListOf<Float>()
-        withContext(RecordingFrameClock { progress += state.progress.value }) { state.expand() }
+        withContext(RecordingFrameClock { progress += state.fraction }) { state.expand() }
         assertTrue(progress.all { it in 0f..1f })
         assertTrue(state.isSettledOpen)
-        assertEquals(0f, state.arrival.value, 0f)
+        assertFalse(state.progress.isRunning)
     }
 
     @Test
     fun noSettleWhenThePlayerWasAlreadyResting() = runTest {
         val state = PlayerTransitionState()
-        val arrival = mutableListOf<Float>()
-        withContext(RecordingFrameClock { arrival += state.arrival.value }) { state.collapse() }
-        assertTrue(arrival.all { it == 0f })
+        val frames = mutableListOf<Float>()
+        withContext(RecordingFrameClock { frames += state.fraction }) { state.collapse() }
+        assertTrue(frames.all { it == 0f })
     }
 
     @Test
-    fun aNewDragEndsTheSettleAtOnceAtRest() = runTest {
+    fun draggingFromCollapsedRestHasNoResidualTransform() = runTest {
+        val state = PlayerTransitionState()
+        state.dragBy(0.1f)
+        assertEquals(0.1f, state.fraction, 1e-6f)
+        assertTrue(state.isOpen)
+        assertFalse(state.progress.isRunning)
+    }
+
+    @Test
+    fun dragFeedbackIsImmediateAndReversesWithoutAnotherJob() = runTest {
         val state = PlayerTransitionState()
         state.progress.snapTo(1f)
+        state.dragBy(-0.4f)
+        assertEquals(0.6f, state.fraction, 1e-6f)
+        state.dragBy(0.2f)
+        assertEquals(0.8f, state.fraction, 1e-6f)
+        withContext(RecordingFrameClock {}) { state.release(0f) }
+        assertEquals(1f, state.fraction, 0f)
+    }
+
+    @Test
+    fun fingerTakesOverAnInProgressExpansionUntilRelease() = runTest {
+        val state = PlayerTransitionState()
         withContext(RecordingFrameClock {}) {
+            val opening = launch { state.expand() }
+            while (state.fraction < 0.3f) delay(16)
+            state.dragBy(-0.1f)
+            val held = state.fraction
+            delay(80)
+            assertEquals(held, state.fraction, 0f)
+            state.release(-2f)
+            opening.join()
+        }
+        assertEquals(0f, state.fraction, 0f)
+    }
+
+    @Test
+    fun rapidTapCommandsFinishAtTheLatestRequestedState() = runTest {
+        val state = PlayerTransitionState()
+        withContext(RecordingFrameClock {}) {
+            val opening = launch { state.expand() }
+            delay(32)
             val closing = launch { state.collapse() }
-            // Run until the settle is under way, then grab the player again.
-            while (state.progress.value != 0f || state.arrival.value == 0f) delay(16)
-            state.dragBy(0.1f)
+            delay(32)
+            state.expand()
+            opening.join()
             closing.join()
         }
-        assertEquals(0f, state.arrival.value, 0f)
-        assertEquals(0.1f, state.progress.value, 1e-6f)
+        assertEquals(1f, state.fraction, 0f)
+        assertFalse(state.progress.isRunning)
     }
 
     private fun assertSubpixelHandoff(frames: List<Float>, endpoint: Float) {

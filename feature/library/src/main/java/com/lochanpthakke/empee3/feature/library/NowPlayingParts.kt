@@ -38,9 +38,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,8 +99,7 @@ private const val INACTIVE_ALPHA = 0.6f
  * one rounded card. It takes the room it is given: the artwork is as large as the width and height
  * allow, and the album line shows only when there is height for it.
  *
- * The current card's artwork is the player's hero artwork (measured for the open / close travel,
- * hidden while the travelling artwork stands in for it) and its card carries the favourite button;
+ * The complete current card travels as one composition and carries the favourite button;
  * neighbours are dimmed with their distance and select their track when tapped.
  */
 @Composable
@@ -120,14 +122,17 @@ internal fun CarouselCard(
         val select = if (isCurrent) Modifier else Modifier.clickable(onClickLabel = "Play this track", onClick = onSelect)
         // Each card in its own artwork's colours (cached per artwork, cross-faded on change).
         val colors = rememberLyricsColors(track)
-        // Settles with the rest of Now Playing as the player arrives (inside the measured bounds,
-        // so the artwork's destination never moves).
-        val settle = Modifier.graphicsLayer { translationY = transition?.expandedSettleOffset(this) ?: 0f }
+        val inset = with(LocalDensity.current) { CARD_PADDING.toPx() }
         Column(
             modifier =
                 Modifier
                     .width(artSide + CARD_PADDING * 2)
-                    .then(select)
+                    .onSizeChanged {
+                        if (isCurrent && transition != null) {
+                            transition.cardSize = Size(it.width.toFloat(), it.height.toFloat())
+                            transition.cardArtworkInset = inset
+                        }
+                    }.then(select)
                     .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
                     .clip(CARD_SHAPE)
                     .drawWithContent {
@@ -136,21 +141,13 @@ internal fun CarouselCard(
                         if (dim > 0f) drawRect(Color.Black.copy(alpha = dim))
                     }.padding(CARD_PADDING),
         ) {
-            val hero =
-                if (isCurrent) {
-                    Modifier.graphicsLayer { alpha = if (transition == null || transition.isSettledOpen) 1f else 0f }
-                } else {
-                    Modifier
-                }
             SongArtwork(
                 song = track,
                 contentDescription = if (isCurrent) "Album artwork" else "${track.title} by ${track.artist}",
                 modifier =
-                    hero
+                    Modifier
                         .size(artSide)
-                        .playerArtworkLayout { bounds -> if (isCurrent) transition?.heroArtworkBounds = bounds }
-                        .then(settle)
-                        .clip(Radius.largeShape),
+                        .then(if (isCurrent) Modifier.playerArtworkClip(transition) else Modifier.clip(Radius.largeShape)),
             )
             LyricsSurfaceTheme(colors) {
                 CardMetadata(
@@ -158,9 +155,9 @@ internal fun CarouselCard(
                     showAlbum = showAlbum,
                     favorite = if (isCurrent) ({ FavoriteButton(isFavorite, track.id, onToggleFavorite) }) else null,
                     modifier =
-                        settle
-                            .height(metadataHeight)
-                            .then(if (isCurrent) Modifier.revealWithPlayer(transition, start = 0.35f, end = 0.8f) else Modifier),
+                        Modifier.height(metadataHeight).graphicsLayer {
+                            if (isCurrent && transition != null) alpha = (transition.fraction / 0.25f).coerceIn(0f, 1f)
+                        },
                 )
             }
         }

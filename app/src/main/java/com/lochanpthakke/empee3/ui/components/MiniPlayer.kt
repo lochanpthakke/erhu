@@ -23,6 +23,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -51,7 +52,6 @@ import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import com.lochanpthakke.empee3.feature.library.AnimatedTrack
 import com.lochanpthakke.empee3.feature.library.LocalPlayerTransition
 import com.lochanpthakke.empee3.feature.library.SwapIcon
-import com.lochanpthakke.empee3.feature.library.applyCollapsedSettle
 import com.lochanpthakke.empee3.feature.library.collectPlaybackPosition
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.playerDrag
@@ -82,6 +82,7 @@ fun MiniPlayer(
     // expanding surface and the travelling artwork start here), fades as the
     // surface grows over it, and can be dragged up to expand.
     val transition = LocalPlayerTransition.current
+    val fullyExpanded by remember(transition) { derivedStateOf { transition?.isSettledOpen == true } }
 
     Card(
         modifier =
@@ -92,10 +93,8 @@ fun MiniPlayer(
                 // Glass: a borderless material layer over the content (tone + sheen, no stroke or shadow).
                 .onGloballyPositioned { coordinates -> transition?.miniBounds = coordinates.boundsInRoot() }
                 .graphicsLayer {
-                    val p = transition?.progress?.value ?: 0f
+                    val p = transition?.fraction ?: 0f
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
-                    // Landing settle after a collapse; after the bounds above are measured.
-                    transition?.applyCollapsedSettle(this)
                 }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)
                 .glassPressEffect(interactionSource, shape)
                 .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = 1f, environmentLens = true)
@@ -133,7 +132,7 @@ fun MiniPlayer(
                     contentAlignment = Alignment.CenterStart,
                     // The expanded surface fully covers this representation. Keep its
                     // content current without running a second, invisible page transition.
-                    animate = transition?.isSettledOpen != true,
+                    animate = !fullyExpanded,
                 ) { track ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SongArtwork(
@@ -144,7 +143,7 @@ fun MiniPlayer(
                                     .onGloballyPositioned { coordinates -> transition?.miniArtworkBounds = coordinates.boundsInRoot() }
                                     // The player's artwork is ONE object: once it starts travelling, the
                                     // travelling copy (same bitmap, same place) is the only one drawn.
-                                    .graphicsLayer { alpha = if ((transition?.progress?.value ?: 0f) > 0f) 0f else 1f }
+                                    .graphicsLayer { alpha = if ((transition?.fraction ?: 0f) > 0f) 0f else 1f }
                                     .size(ArtworkSize.miniPlayer)
                                     .clip(Radius.smallShape),
                         )

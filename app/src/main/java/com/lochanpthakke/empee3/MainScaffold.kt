@@ -343,8 +343,7 @@ fun MainScaffold() {
             // rendered (taken at rest, so it is right again when the chrome returns) instead of a
             // blur and lens pass on every frame of the motion.
             LaunchedEffect(player, screensBackdrop, shellBackdrop) {
-                // Also through the mini player's landing bounce after closing (progress is 0 by then).
-                snapshotFlow { player.progress.value > 0f || player.arrival.value != 0f }.distinctUntilChanged().collect { covered ->
+                snapshotFlow { player.fraction > 0f }.distinctUntilChanged().collect { covered ->
                     screensBackdrop.frozen = covered
                     shellBackdrop.frozen = covered
                 }
@@ -360,7 +359,7 @@ fun MainScaffold() {
                 }
             }
             ReportInteraction(Interactions.PLAYER) {
-                val progress = player.progress.value
+                val progress = player.fraction
                 if (progress > 0f && progress < 1f) "moving" else null
             }
 

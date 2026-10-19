@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-19. Branch `kshitij`, latest code commit `7ff9564` (pushed with these notes)._
+_Last updated: 2026-10-20. Branch `kshitij`; complete-card player transition work and validation are documented in 3.11._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -288,6 +288,45 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   screen under it each frame — next idea: stop drawing the covered library once the player is fully open.
 - Note: early A/B numbers were skewed by phone temperature — always rerun the baseline warm.
 
+### 3.11 Complete-card player expansion/collapse (2026-10-20)
+- User requested one coherent transition: neighbours unfold/fold behind the central card, no
+  whole-page jiggle, and the full card (not detached artwork) travels into the mini player.
+- Removed `ExpandingPlayer.TravellingArtwork`. `TrackCarousel` now moves the existing full
+  carousel in one uniform layer; `PlayerCardTransform.kt` maps the measured thumbnail to the
+  exact expanded artwork bounds. Its layout measurement lives outside the moving layer, so
+  drawing cannot retarget its own geometry. Final card sizes, perspective, colours and layout
+  remain unchanged. Neighbours use a bounded reversible smoothstep of the same fraction and
+  stay behind the current card while opening/closing. No new artwork loader or dependency.
+- `PlayerTransitionState.fraction`: direct synchronous pointer feedback, bounded 0..1; release
+  hands the exact drawing value to the existing spring. Thresholds/directions are unchanged.
+  Back is owned while the player is visibly closing or dragged, via a derived Boolean.
+- Removed the independent `arrival` impulses and their content/mini-player transforms. The
+  critically damped journey spring now supplies all settling, with no second page kick or
+  thumbnail squash. Other approved button/selection spring feedback remains intact.
+- Removed the redundant whole-player opacity fade (it dimmed the travelling card before the
+  opaque mini artwork took over). The reveal mask starts at the thumbnail and its own corner;
+  backdrop/section reveals remain animated. Card metadata fades late into the normal mini
+  representation; artwork corners match at handoff. Resting Liquid Glass mini/top-bar styling
+  is unchanged. Playback/DSP, queue, lyrics timing, metadata, VYBE and schemas were not changed.
+- 151 app/library unit tests pass, including geometry, high-velocity bounds, unchanged fling
+  thresholds, direct/reversed dragging, mid-animation takeover and rapid command retargeting.
+  Debug/release APKs build; app/library ktlint and app detekt pass. Library detekt retains 27
+  existing findings, none in changed files. A transient Android lint internal analyzer crash
+  was resolved by retry; no lint/build gates were weakened.
+- S23 debug AND final release checks/recordings passed repeated cycles, short slow return-to-open, fast/long
+  collapse, Back, reversal, cancellation and playback through collapse/reopen. Track/queue
+  stayed Sweet Home, 2/30; playback was paused and seek restored to 0 (MediaSession verified).
+  The release APK installed at 01:07 matches the saved release SHA-256:
+  `992c0a13449b9bf8a55e9d113c66be156e0456c579ae597daad044af7bcd8f44`.
+  Final verification and exact changed files are in the task's `outputs/player-transition-report.md`.
+- Do not force short synthetic ADB strokes to count as flings: diagnostics measured 0.85/0
+  screen-heights/sec for the initially failing assertion, below the existing 1.2 threshold.
+  Temporary recognition/logging experiments were removed; genuine velocity overrides are
+  unit-tested. No artificial velocity or new gesture threshold was introduced.
+- No numerical frame-performance improvement is claimed. Other screen sizes, rotation,
+  cold/missing artwork, both themes and reduced-motion device settings are not exhaustively
+  verified. This is transition work, not the full Smoothness Engine. Do not commit/push unless asked.
+
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
   manual "Time words" tool, local enhanced-LRC copies) — built 2026-10-11, the user scrapped it and
@@ -394,6 +433,14 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-10-20:** the current transition build contains the complete-card changes
+  described in 3.11; the user requested committing these changes to `kshitij` (no push requested).
+  Latest paired APKs: `D:\android-toolchain\build-card-transition\real-release.apk`
+  and `real-debug.apk` (same code, debug is for future data backups). Only the real package is
+  used; no `.perf`/`.bench` copy was installed for this task. Do not reinstall `7ff9564` thinking
+  it contains the new complete-card transition. Final release is installed and visually checked;
+  only `com.lochanpthakke.empee3` is installed. Latest pre-install data backup:
+  `D:\android-toolchain\dbbackup\pre-card-release-20261020-010726\appdata.tar`.
 - **2026-10-19 23:42:** the main app (`com.lochanpthakke.empee3`) is the **release** build of `7ff9564`
   (R8, not debuggable). Pre-install data backup:
   `D:\android-toolchain\dbbackup\pre-perf-pass-20261019-234223\appdata.tar`.
