@@ -11,7 +11,6 @@ import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
-import com.lochanpthakke.empee3.core.database.repository.SmartPlaylistRepository
 import com.lochanpthakke.empee3.core.datastore.RepairBatchPersistence
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
@@ -22,7 +21,6 @@ import com.lochanpthakke.empee3.core.model.MetadataField
 import com.lochanpthakke.empee3.core.model.PersistedRepairBatch
 import com.lochanpthakke.empee3.core.model.PersistedRepairItem
 import com.lochanpthakke.empee3.core.model.ProviderStatus
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TagChange
 import com.lochanpthakke.empee3.core.network.bpm.BpmFinder
@@ -63,6 +61,8 @@ import com.lochanpthakke.empee3.core.network.tagger.planFieldFix
 import com.lochanpthakke.empee3.core.network.tagger.releaseDateFor
 import com.lochanpthakke.empee3.core.network.tagger.usableBpm
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
+import com.lochanpthakke.empee3.feature.library.mix.SmartMixRepository
+import com.lochanpthakke.empee3.feature.library.mix.SmartMixes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -168,7 +168,7 @@ class LibraryViewModel
         private val artistArtworkRepository: ArtistArtworkRepository,
         private val artistArtworkUpdater: ArtistArtworkUpdater,
         recentlyPlayed: RecentlyPlayedRecorder,
-        smartPlaylistRepository: SmartPlaylistRepository,
+        private val smartMixRepository: SmartMixRepository,
         private val onlineLyrics: OnlineLyricsRepository,
         private val learnedWatermarkDao: com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao,
         private val fileRenamer: com.lochanpthakke.empee3.core.network.tagger.FileRenamer,
@@ -182,13 +182,22 @@ class LibraryViewModel
         private val fanartTvCredentials: com.lochanpthakke.empee3.core.network.provider.FanartTvCredentials,
     ) : ViewModel() {
         /**
-         * The album artwork (one song per album, up to four) of each smart playlist card on
-         * the Tracks page, from the playlists' current songs. Queried only while the cards show.
+         * The smart mixes on the Tracks page: built from local listening history and tags, cached
+         * app-wide and rebuilt only when that data changes (null until the first build).
          */
-        val smartPlaylistCovers: StateFlow<Map<SmartPlaylist, List<Song>>> =
-            combine(HOME_SMART_PLAYLISTS.map { playlist -> smartPlaylistRepository.observeCover(playlist).map { playlist to it } }) {
-                it.toMap()
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+        val smartMixes: StateFlow<SmartMixes?> = smartMixRepository.mixes
+
+        /** Songs the user hid from Smart Playlists (Now Playing's menu). */
+        val hiddenFromMixes: StateFlow<Set<Long>> =
+            smartMixRepository.hidden.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
+
+        /** Hides [songId] from (or returns it to) Smart Playlists; the song itself is untouched. */
+        fun setHiddenFromMixes(
+            songId: Long,
+            hidden: Boolean,
+        ) {
+            viewModelScope.launch { smartMixRepository.setHidden(songId, hidden) }
+        }
 
         val isCustomScanLocationEnabled: StateFlow<Boolean> = themeRepository.isCustomScanLocationEnabled
         val customScanLocationPath: StateFlow<String> = themeRepository.customScanLocationPath

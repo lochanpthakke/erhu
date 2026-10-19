@@ -10,7 +10,7 @@ data class PlaylistDetail(
     val playlistId: Long,
 )
 
-/** A smart playlist's page ([playlist] is a SmartPlaylist name), opened from the Tracks page. */
+/** A smart mix's page ([playlist] is the mix's key, see MixKind), opened from the Tracks page. */
 @Serializable
 data class SmartPlaylistDetail(
     val playlist: String,

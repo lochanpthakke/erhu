@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -18,12 +19,15 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.model.Song
@@ -70,8 +74,17 @@ internal class TrackCarouselState(
     /** Page shifts applied when the current track changed (see the class doc). */
     private var base = 0f
 
-    /** Distance between two pages (the player's width), in px. */
+    /**
+     * Distance between two pages, in px: the drag distance that moves one track over (the
+     * artwork cards' spacing, so the cards follow the finger one to one).
+     */
     var page by mutableFloatStateOf(0f)
+
+    /**
+     * Where page [slot] stands, in pages from the centre: 0 = current and at rest, -1 one place to
+     * the left. Fractional while dragging or settling. Read in the draw phase.
+     */
+    fun distance(slot: Int): Float = if (page > 0f) slot + position / page else slot.toFloat()
 
     /** Where the strip is drawn, relative to the current page at rest (0). Read in the draw phase. */
     var position by mutableFloatStateOf(0f)
@@ -253,10 +266,13 @@ private class LastNeighbours {
 }
 
 /**
- * The strip itself: [previous], [current] and [next] side by side, [page] apart,
- * moved by the shared position in the draw phase only (no recomposition per frame).
- * Pages are keyed by song, so when the strip re-centres a page keeps its
- * composition (and its loaded artwork) as it becomes the current one.
+ * The strip itself: [previous], [current] and [next] as cards in depth (the current one in front;
+ * its neighbours to either side, smaller, turned towards the centre and dimmed, partly visible),
+ * moved by the shared position in the draw phase only (no recomposition per frame). Pages are keyed by song, so when the strip re-centres a
+ * page keeps its composition (and its loaded artwork) as it becomes the current one.
+ *
+ * [content] gets each page's song, whether it is the current one, and its live distance from the
+ * centre (see [TrackCarouselState.distance]) for effects drawn inside the page.
  */
 @Composable
 internal fun TrackCarousel(
@@ -265,7 +281,8 @@ internal fun TrackCarousel(
     current: Song,
     next: Song?,
     modifier: Modifier = Modifier,
-    content: @Composable (song: Song, isCurrent: Boolean) -> Unit,
+    reduceMotion: Boolean = false,
+    content: @Composable (song: Song, isCurrent: Boolean, distance: () -> Float) -> Unit,
 ) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         val pages = listOfNotNull(previous?.let { -1 to it }, 0 to current, next?.let { 1 to it })
@@ -273,21 +290,57 @@ internal fun TrackCarousel(
             // A song can be its own neighbour (2-song repeat, single song): keep keys unique.
             val duplicate = slot != 0 && (song.id == current.id || (slot == 1 && song.id == previous?.id))
             key(if (duplicate) "${song.id}#$slot" else song.id) {
+                val distance = { state.distance(slot) }
+                // The card nearest the centre is drawn on top. Flips once per swipe, not per frame.
+                val inFront by remember(slot) { derivedStateOf { abs(state.distance(slot)) < FRONT_DISTANCE } }
                 Box(
                     modifier =
-                        Modifier.graphicsLayer {
-                            val x = slot * state.page + state.position
-                            translationX = x
-                            // A page entirely off screen stays composed (its artwork stays loaded) but is not drawn.
-                            alpha = if (abs(x) >= state.page && state.page > 0f) 0f else 1f
-                        },
+                        Modifier
+                            .zIndex(if (inFront) 1f else 0f)
+                            .graphicsLayer { depthCard(distance(), reduceMotion) }
+                            // One page is the distance between two cards: the cards follow the finger one to one.
+                            .then(if (slot == 0) Modifier.onSizeChanged { state.page = it.width * SIDE_SPACING } else Modifier),
                     contentAlignment = Alignment.Center,
                 ) {
-                    content(song, slot == 0)
+                    content(song, slot == 0, distance)
                 }
             }
         }
     }
+}
+
+/** Below this distance from the centre a page is drawn in front of its neighbours. */
+private const val FRONT_DISTANCE = 0.5f
+
+/** Side cards: where they stand (share of a card's width from the centre), how small, how turned. */
+private const val SIDE_SPACING = 0.62f
+private const val SIDE_SCALE = 0.78f
+private const val SIDE_TURN_DEGREES = 32f
+private const val REDUCED_SIDE_SCALE = 0.86f
+
+/** Beyond one place over, cards shrink and fade out by this distance. */
+private const val VANISH_DISTANCE = 1.6f
+private const val CAMERA_DISTANCE = 14f
+
+/**
+ * One card of the depth carousel at [distance] places from the centre: moved sideways by a share of
+ * its width, scaled down and turned towards the centre as it leaves, fading only past one place.
+ * With [reduceMotion] the cards slide and scale but never turn.
+ */
+private fun GraphicsLayerScope.depthCard(
+    distance: Float,
+    reduceMotion: Boolean,
+) {
+    val away = abs(distance)
+    val near = away.coerceAtMost(1f)
+    val sideScale = if (reduceMotion) REDUCED_SIDE_SCALE else SIDE_SCALE
+    val scale = 1f - (1f - sideScale) * near
+    scaleX = scale
+    scaleY = scale
+    translationX = distance * size.width * SIDE_SPACING
+    rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * near
+    cameraDistance = CAMERA_DISTANCE * density
+    alpha = (1f - (away - 1f).coerceAtLeast(0f) / (VANISH_DISTANCE - 1f)).coerceIn(0f, 1f)
 }
 
 /**

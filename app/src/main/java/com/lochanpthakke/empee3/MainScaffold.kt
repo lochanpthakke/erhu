@@ -106,7 +106,6 @@ import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
@@ -125,6 +124,7 @@ import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
 import com.lochanpthakke.empee3.feature.library.SmartPlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.SoundCapsuleScreen
+import com.lochanpthakke.empee3.feature.library.ViewMetadataScreen
 import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
@@ -325,6 +325,9 @@ fun MainScaffold() {
 
             var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
+            // Now Playing's "Music information": the track's tags, in the app's metadata viewer.
+            var songForMusicInfo by remember { mutableStateOf<Song?>(null) }
+
             // Glass backdrops: the screens frost under the bottom chrome; the whole
             // shell frosts under the drawer.
             val screensBackdrop = rememberGlassBackdrop()
@@ -495,7 +498,7 @@ fun MainScaffold() {
                                                         onOpenAlbum = { openAlbum(it) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                         onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                                                        onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it.name)) },
+                                                        onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it)) },
                                                         onSelectSection = { librarySection = it },
                                                         isSearchActive = isLibrarySearchActive,
                                                         onSearchActiveChange = { isLibrarySearchActive = it },
@@ -531,7 +534,7 @@ fun MainScaffold() {
                                                 ProvideMotionScope(this) {
                                                     val route = entry.toRoute<SmartPlaylistDetail>()
                                                     SmartPlaylistDetailScreen(
-                                                        playlist = SmartPlaylist.valueOf(route.playlist),
+                                                        mixKey = route.playlist,
                                                         viewModel = hiltViewModel(),
                                                         libraryViewModel = libraryViewModel,
                                                         playlistsViewModel = playlistsViewModel,
@@ -636,6 +639,8 @@ fun MainScaffold() {
                                 val playerState by playbackRepository.collectStablePlaybackState()
                                 ExpandingPlayer(state = player, song = playerState.currentSong) {
                                     val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
+                                    val hiddenFromMixes by libraryViewModel.hiddenFromMixes.collectAsState()
+                                    val currentSongId by libraryViewModel.currentSongId.collectAsState()
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
                                     NowPlayingScreen(
                                         playbackRepository = playbackRepository,
@@ -655,6 +660,9 @@ fun MainScaffold() {
                                             minimizePlayer()
                                             navController.navigate(SettingsCategory("audio"))
                                         },
+                                        onShowMusicInfo = { songForMusicInfo = it },
+                                        isHiddenFromMixes = currentSongId in hiddenFromMixes,
+                                        onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
                                     )
                                 }
                             }
@@ -668,6 +676,14 @@ fun MainScaffold() {
                     song = song,
                     viewModel = playlistsViewModel,
                     onDismiss = { songForPlaylist = null },
+                )
+            }
+            songForMusicInfo?.let { song ->
+                ViewMetadataScreen(
+                    song = song,
+                    viewModel = hiltViewModel(),
+                    libraryViewModel = libraryViewModel,
+                    onDismiss = { songForMusicInfo = null },
                 )
             }
         }
@@ -729,7 +745,7 @@ private fun LibraryRoute(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
-    onOpenSmartPlaylist: (SmartPlaylist) -> Unit,
+    onOpenSmartPlaylist: (mixKey: String) -> Unit,
     onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,

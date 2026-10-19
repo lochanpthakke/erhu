@@ -50,6 +50,9 @@ message PlaybackStateProto {
   float metadata_confidence_threshold = 29;
   // User-supplied Fanart.tv personal API key for high-resolution artist thumbs and backgrounds.
   string fanart_tv_api_key = 30;
+  // Songs the user hid from Smart Playlists (recommendations only: the files, the library and
+  // the user's own playlists are untouched). Empty = none hidden.
+  repeated int64 hidden_from_recommendations = 31;
 }
 
 message RepairBatchProto {

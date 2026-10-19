@@ -3,6 +3,8 @@ package com.lochanpthakke.empee3.core.datastore.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStoreFile
+import com.lochanpthakke.empee3.core.datastore.HiddenTracksPersistence
+import com.lochanpthakke.empee3.core.datastore.HiddenTracksPersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistence
 import com.lochanpthakke.empee3.core.datastore.PlaybackStatePersistenceImpl
 import com.lochanpthakke.empee3.core.datastore.PlaybackStateProtoSerializer
@@ -70,4 +72,9 @@ object DataStoreModule {
     @Singleton
     fun provideTransitionSettingsPersistence(dataStore: DataStore<PlaybackStateProto>): TransitionSettingsPersistence =
         TransitionSettingsPersistenceImpl(dataStore)
+
+    @Provides
+    @Singleton
+    fun provideHiddenTracksPersistence(dataStore: DataStore<PlaybackStateProto>): HiddenTracksPersistence =
+        HiddenTracksPersistenceImpl(dataStore)
 }

@@ -278,6 +278,8 @@ val LocalPlayerTransition = staticCompositionLocalOf<PlayerTransitionState?> { n
 fun Modifier.playerDrag(
     state: PlayerTransitionState,
     expandsUpward: Boolean,
+    /** Whether a drag may start now (Now Playing: only while its page is scrolled to the top). */
+    canStart: () -> Boolean = { true },
 ): Modifier {
     val scope = rememberCoroutineScope()
     return pointerInput(state, expandsUpward) {
@@ -289,7 +291,7 @@ fun Modifier.playerDrag(
                     // Only claim clearly vertical drags in this handler's direction.
                     val vertical = abs(over.y) > abs(over.x)
                     val rightWay = if (expandsUpward) over.y < 0 else over.y > 0
-                    if (vertical && rightWay) {
+                    if (vertical && rightWay && canStart()) {
                         change.consume()
                         slop = over
                     }

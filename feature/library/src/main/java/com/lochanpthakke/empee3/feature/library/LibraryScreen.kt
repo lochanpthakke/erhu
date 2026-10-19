@@ -67,7 +67,6 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 
 /** Actions offered for a single song wherever it is listed. */
@@ -91,7 +90,7 @@ fun LibraryScreen(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
-    onOpenSmartPlaylist: (SmartPlaylist) -> Unit,
+    onOpenSmartPlaylist: (mixKey: String) -> Unit,
     onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
@@ -263,11 +262,11 @@ fun LibraryScreen(
                     LibraryContentMotion(section, shownShelf, sectionStates) { activeSection, activeShelf ->
                         when (activeSection) {
                             LibrarySection.TRACKS -> {
-                                // Collected only on the Tracks section, which shows the smart playlist cards.
-                                val smartPlaylistCovers by viewModel.smartPlaylistCovers.collectAsState()
+                                // Collected only on the Tracks section, which shows the smart mix cards.
+                                val smartMixes by viewModel.smartMixes.collectAsState()
                                 HomeFeed(
                                     songs = songs,
-                                    smartPlaylistCovers = smartPlaylistCovers,
+                                    smartMixes = smartMixes,
                                     recentAlbums = recentAlbums,
                                     recentPlaylists = recentPlaylists,
                                     currentSongId = currentSongId,

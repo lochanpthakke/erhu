@@ -65,6 +65,18 @@ class VybeIndexFile(
         }
     }
 
+    /** The current vectors of the [wanted] songs among [live] (id -> hash), in one streamed pass. */
+    fun vectorsOf(
+        live: Map<Long, Long>,
+        wanted: Set<Long>,
+    ): Map<Long, FloatArray> {
+        if (wanted.isEmpty()) return emptyMap()
+        val current = latestRecords(live.filterKeys { it in wanted })
+        val found = HashMap<Long, FloatArray>()
+        forEachRecord(withVectors = true) { index, id, _, vector -> if (current[id] == index) found[id] = vector }
+        return found
+    }
+
     /** The stored vector of [songId], or null. */
     fun vectorOf(songId: Long): FloatArray? {
         var found: FloatArray? = null
@@ -195,10 +207,33 @@ class VybeIndexFile(
         }
     }
 
-    private companion object {
-        const val MAGIC = "VYBEIDX1"
-        const val FORMAT_VERSION = 1
-        const val BUFFER = 64 * 1024
+    companion object {
+        private const val MAGIC = "VYBEIDX1"
+        private const val FORMAT_VERSION = 1
+        private const val BUFFER = 64 * 1024
+
+        /**
+         * The vector size [file] was written with, when it is an index of [modelId]: lets the
+         * stored vectors be read without loading the model. Null when missing or incompatible.
+         */
+        @Suppress("ReturnCount")
+        fun storedDimension(
+            file: File,
+            modelId: String,
+        ): Int? {
+            if (!file.isFile) return null
+            return try {
+                DataInputStream(BufferedInputStream(FileInputStream(file))).use { input ->
+                    val magic = ByteArray(MAGIC.length)
+                    input.readFully(magic)
+                    if (String(magic) != MAGIC || input.readInt() != FORMAT_VERSION) return null
+                    val dimension = input.readInt()
+                    dimension.takeIf { it > 0 && input.readUTF() == modelId }
+                }
+            } catch (_: IOException) {
+                null
+            }
+        }
     }
 }
 

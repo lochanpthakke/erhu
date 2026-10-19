@@ -30,8 +30,9 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Playlist
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.feature.library.mix.SmartMix
+import com.lochanpthakke.empee3.feature.library.mix.SmartMixes
 
 /**
  * The Tracks destination as the home feed: recently played albums and playlists
@@ -42,7 +43,7 @@ import com.lochanpthakke.empee3.core.model.Song
 @Suppress("LongParameterList")
 internal fun HomeFeed(
     songs: LazyPagingItems<Song>,
-    smartPlaylistCovers: Map<SmartPlaylist, List<Song>>,
+    smartMixes: SmartMixes?,
     recentAlbums: List<Album>,
     recentPlaylists: List<Playlist>,
     currentSongId: Long?,
@@ -50,13 +51,15 @@ internal fun HomeFeed(
     onSongClick: (Song) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
-    onSmartPlaylistClick: (SmartPlaylist) -> Unit,
+    onSmartPlaylistClick: (mixKey: String) -> Unit,
     actions: SongActions,
     topInset: Dp,
     bottomInset: Dp,
     emptyMessage: String = "No songs found on this device",
 ) {
-    val hasSmartPlaylists = songs.itemCount > 0
+    val mixes = smartMixes?.mixes.orEmpty()
+    // Shown once the library has songs: the mixes, and a note while history is still short.
+    val hasSmartPlaylists = songs.itemCount > 0 && (mixes.isNotEmpty() || smartMixes?.needsMoreListening == true)
     val hasShelves = recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty() || hasSmartPlaylists
     LazyColumn(
         state = rememberLazyListState().also { ReportTitleScroll(it) }, // the page title merges into the header button
@@ -86,18 +89,7 @@ internal fun HomeFeed(
                         }
                     }
                 }
-                if (hasSmartPlaylists) {
-                    Shelf(title = "Smart Playlists") {
-                        items(HOME_SMART_PLAYLISTS, key = { it.name }) { playlist ->
-                            SmartPlaylistTile(
-                                playlist = playlist,
-                                covers = smartPlaylistCovers[playlist].orEmpty(),
-                                onClick = { onSmartPlaylistClick(playlist) },
-                                modifier = Modifier.width(ArtworkSize.shelf),
-                            )
-                        }
-                    }
-                }
+                if (hasSmartPlaylists) SmartMixShelf(mixes, smartMixes?.needsMoreListening == true, onSmartPlaylistClick)
                 if (hasShelves) SectionHeading("Tracks")
             }
         }
@@ -114,6 +106,27 @@ internal fun HomeFeed(
                     LibrarySongRow(song = song, isCurrent = song.id == currentSongId, onClick = { onSongClick(song) }, actions = actions)
                 }
             }
+        }
+    }
+}
+
+/** The smart mixes, each with its generated cover; a note at the end while history is short. */
+@Composable
+private fun SmartMixShelf(
+    mixes: List<SmartMix>,
+    needsMoreListening: Boolean,
+    onMixClick: (mixKey: String) -> Unit,
+) {
+    Shelf(title = "Smart Playlists") {
+        items(mixes, key = { it.kind.key }) { mix ->
+            SmartMixTile(
+                mix = mix,
+                onClick = { onMixClick(mix.kind.key) },
+                modifier = Modifier.width(ArtworkSize.shelf),
+            )
+        }
+        if (needsMoreListening) {
+            item(key = "more-listening") { MoreListeningNote(modifier = Modifier.width(ArtworkSize.shelf)) }
         }
     }
 }
