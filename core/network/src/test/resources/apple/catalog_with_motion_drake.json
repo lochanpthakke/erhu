@@ -1,0 +1,1185 @@
+﻿{
+    "data":  [
+                 {
+                     "id":  "6814097810",
+                     "type":  "albums",
+                     "href":  "/v1/catalog/us/albums/6814097810",
+                     "attributes":  {
+                                        "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                        "artwork":  {
+                                                        "bgColor":  "010507",
+                                                        "hasP3":  false,
+                                                        "height":  3000,
+                                                        "textColor1":  "effafa",
+                                                        "textColor2":  "dfe0d9",
+                                                        "textColor3":  "bfc9ca",
+                                                        "textColor4":  "b2b4af",
+                                                        "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                        "width":  3000
+                                                    },
+                                        "audioTraits":  [
+                                                            "lossless",
+                                                            "lossy-stereo"
+                                                        ],
+                                        "contentRating":  "clean",
+                                        "copyright":  "℗ 2025 OVO Sound under exclusive license to Santa Anna Label Group and OVO under exclusive license to Republic Records, a division of UMG Recordings",
+                                        "editorialNotes":  {
+                                                               "short":  "The OVO power duo’s epic “EP” is as surprising as it is sprawling.",
+                                                               "standard":  "\u003ci\u003eA note from the artists:\u003c/i\u003e\n\n$$$4U\n74 PERSONAL MINUTES BY PARTYNEXTDOOR \u0026 DRAKE\nFOR THE CITY OF TORONTO FOR CANADA AND FOR THE WORLD THAT HAS TUNED IN TO THIS SOUND OF OURS FROM TIME\n\nOVO OMO FERINA\n\n“Maybe it was karma that caused a reversal in my luck and family fortunes” \n\n— You most likely in the near future \n",
+                                                               "tagline":  "New Album"
+                                                           },
+                                        "genreNames":  [
+                                                           "R\u0026B/Soul",
+                                                           "Music"
+                                                       ],
+                                        "isCompilation":  false,
+                                        "isComplete":  true,
+                                        "isMasteredForItunes":  false,
+                                        "isPrerelease":  false,
+                                        "isSingle":  false,
+                                        "name":  "$ome $exy $ongs 4 U",
+                                        "playParams":  {
+                                                           "id":  "6814097810",
+                                                           "kind":  "album"
+                                                       },
+                                        "recordLabel":  "OVO Sound",
+                                        "releaseDate":  "2025-02-13",
+                                        "trackCount":  21,
+                                        "upc":  "808391285897",
+                                        "url":  "https://music.apple.com/us/album/%24ome-%24exy-%24ongs-4-u/6814097810"
+                                    },
+                     "relationships":  {
+                                           "artists":  {
+                                                           "href":  "/v1/catalog/us/albums/6814097810/artists",
+                                                           "data":  [
+                                                                        {
+                                                                            "id":  "666648192",
+                                                                            "type":  "artists",
+                                                                            "href":  "/v1/catalog/us/artists/666648192"
+                                                                        },
+                                                                        {
+                                                                            "id":  "271256",
+                                                                            "type":  "artists",
+                                                                            "href":  "/v1/catalog/us/artists/271256"
+                                                                        }
+                                                                    ]
+                                                       },
+                                           "tracks":  {
+                                                          "href":  "/v1/catalog/us/albums/6814097810/tracks",
+                                                          "data":  [
+                                                                       {
+                                                                           "id":  "6814097813",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814097813",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  241890,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772040",
+                                                                                              "name":  "CN TOWER",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814097813",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/a0/46/55/a0465514-63fa-6a24-3397-e921135b7a91/mzaf_5368017317323723966.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  1,
+                                                                                              "url":  "https://music.apple.com/us/album/cn-tower/6814097810?i=6814097813"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814097814",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814097814",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  212629,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772041",
+                                                                                              "name":  "MOTH BALLS",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814097814",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/fb/0f/95/fb0f95b5-3e44-ffb3-4606-11aae02a7b42/mzaf_11669447376547685280.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  2,
+                                                                                              "url":  "https://music.apple.com/us/album/moth-balls/6814097810?i=6814097814"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098004",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098004",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, George Herrera, J. Brathwaite, Omar Isaiah Lupuku \u0026 Tyshane Thompson",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  218682,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772042",
+                                                                                              "name":  "SOMETHING ABOUT YOU",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098004",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/a2/0e/fc/a20efcf5-1f7e-ebfd-bafc-7395d17d0a2a/mzaf_15730499562008987741.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  3,
+                                                                                              "url":  "https://music.apple.com/us/album/something-about-you/6814097810?i=6814098004"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098006",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098006",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  199603,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772043",
+                                                                                              "name":  "CRYING IN CHANEL",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098006",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/06/8f/0b/068f0b93-b912-b7e6-eaab-be543a1bd42f/mzaf_16906363082562252337.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  4,
+                                                                                              "url":  "https://music.apple.com/us/album/crying-in-chanel/6814097810?i=6814098006"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098010",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098010",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, J. Brathwaite \u0026 Vata Goodwin Sonzi",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  203894,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772044",
+                                                                                              "name":  "SPIDER-MAN SUPERMAN",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098010",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/e3/25/9b/e3259be9-0969-e853-fe8f-7d16db42424a/mzaf_2707580148554273409.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  5,
+                                                                                              "url":  "https://music.apple.com/us/album/spider-man-superman/6814097810?i=6814098010"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098011",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098011",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  172338,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772045",
+                                                                                              "name":  "DEEPER",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098011",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/8f/8e/2b/8f8e2bfb-8abe-376b-3ff1-a473cbdf8f8e/mzaf_161930314214771367.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  6,
+                                                                                              "url":  "https://music.apple.com/us/album/deeper/6814097810?i=6814098011"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098012",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098012",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  148510,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772046",
+                                                                                              "name":  "SMALL TOWN FAME",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098012",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/5a/2d/07/5a2d075c-292c-74f7-1110-e1c868e32d59/mzaf_12447255102627030502.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  7,
+                                                                                              "url":  "https://music.apple.com/us/album/small-town-fame/6814097810?i=6814098012"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098013",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098013",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Pimmie, PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "P. Truong",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  118154,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772047",
+                                                                                              "name":  "PIMMIE\u0027S DILEMMA",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098013",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/65/a1/b2/65a1b25d-3f86-2dfe-2e87-162c3013cd34/mzaf_7299117078649491182.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  8,
+                                                                                              "url":  "https://music.apple.com/us/album/pimmies-dilemma/6814097810?i=6814098013"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098015",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098015",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, Donald L. Alford, Frederick Taylor \u0026 Keyshia M. Cole",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  111407,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772048",
+                                                                                              "name":  "BRIAN STEEL",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098015",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/42/51/4e/42514e9a-2ad4-bdaf-9d27-21bfe753d788/mzaf_11103964797323079157.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  9,
+                                                                                              "url":  "https://music.apple.com/us/album/brian-steel/6814097810?i=6814098015"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098018",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098018",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  193054,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772049",
+                                                                                              "name":  "GIMME A HUG",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098018",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d3/58/ef/d358ef49-67b6-7129-fae9-b42d6f9fcaf9/mzaf_6686089075651108078.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  10,
+                                                                                              "url":  "https://music.apple.com/us/album/gimme-a-hug/6814097810?i=6814098018"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098020",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098020",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  244931,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772050",
+                                                                                              "name":  "RAINING IN HOUSTON",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098020",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/c4/cc/72/c4cc72e8-b338-929c-64b3-b6f84f2bcd88/mzaf_15034811460928678354.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  11,
+                                                                                              "url":  "https://music.apple.com/us/album/raining-in-houston/6814097810?i=6814098020"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098025",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098025",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  198692,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772051",
+                                                                                              "name":  "LASERS",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098025",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/29/ae/86/29ae8626-f702-6c07-cb30-4499d180b01a/mzaf_13993801430970145082.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  12,
+                                                                                              "url":  "https://music.apple.com/us/album/lasers/6814097810?i=6814098025"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098028",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098028",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR, Drake \u0026 Chino Pacas",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, C. Vega \u0026 J. Brathwaite",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  271059,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772052",
+                                                                                              "name":  "MEET YOUR PADRE",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098028",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/cc/90/77/cc90770d-4a00-fc65-eb7d-49ee9373e55a/mzaf_15811982476836325561.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  13,
+                                                                                              "url":  "https://music.apple.com/us/album/meet-your-padre/6814097810?i=6814098028"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098030",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098030",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  241023,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772053",
+                                                                                              "name":  "NOKIA",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098030",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/da/9e/33/da9e3394-c0b6-22aa-503f-65cec6949f12/mzaf_11833120008255381319.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  14,
+                                                                                              "url":  "https://music.apple.com/us/album/nokia/6814097810?i=6814098030"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098335",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098335",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR, Drake \u0026 Yebba",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, A. Smith \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  195432,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772054",
+                                                                                              "name":  "DIE TRYING",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098335",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/2c/96/3c/2c963cd5-5a73-bb9b-d701-c7654e378157/mzaf_11491682944763947079.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  15,
+                                                                                              "url":  "https://music.apple.com/us/album/die-trying/6814097810?i=6814098335"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098338",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098338",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  182768,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772055",
+                                                                                              "name":  "SOMEBODY LOVES ME",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098338",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/0b/93/8a/0b938aec-0475-fd87-10ed-ecf8050191c9/mzaf_9052955839016700211.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  16,
+                                                                                              "url":  "https://music.apple.com/us/album/somebody-loves-me/6814097810?i=6814098338"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098343",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098343",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  235621,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772056",
+                                                                                              "name":  "CELIBACY",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098343",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/42/4a/60/424a60b2-55b2-55f4-ec8e-e93f33767854/mzaf_5955045165264475965.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  17,
+                                                                                              "url":  "https://music.apple.com/us/album/celibacy/6814097810?i=6814098343"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098346",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098346",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  233031,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772057",
+                                                                                              "name":  "OMW",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098346",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f4/ff/06/f4ff064c-055d-ef6e-1456-4e419da26dec/mzaf_1320499317153130994.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  18,
+                                                                                              "url":  "https://music.apple.com/us/album/omw/6814097810?i=6814098346"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098361",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098361",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, J. Brathwaite \u0026 Maxime Breton",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  205083,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772058",
+                                                                                              "name":  "GLORIOUS",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098361",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/23/93/05/239305cf-4808-26ad-adfd-7963170d541e/mzaf_17305552092449961098.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  19,
+                                                                                              "url":  "https://music.apple.com/us/album/glorious/6814097810?i=6814098361"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098493",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098493",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham \u0026 J. Brathwaite",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  209836,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772059",
+                                                                                              "name":  "WHEN HE\u0027S GONE",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098493",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/46/ed/5f/46ed5fad-ffe4-354b-dbc1-3d317fee08ba/mzaf_10481715476417631478.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  20,
+                                                                                              "url":  "https://music.apple.com/us/album/when-hes-gone/6814097810?i=6814098493"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "6814098498",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/6814098498",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "albumName":  "$ome $exy $ongs 4 U",
+                                                                                              "artistName":  "PARTYNEXTDOOR \u0026 Drake",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "010507",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "effafa",
+                                                                                                              "textColor2":  "dfe0d9",
+                                                                                                              "textColor3":  "bfc9ca",
+                                                                                                              "textColor4":  "b2b4af",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/65/a1/d8/65a1d809-dede-adf4-d85e-964070e77f58/808391285897.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aubrey Drake Graham, Elijah Fox \u0026 J. Brathwaite",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  386165,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USLD91772060",
+                                                                                              "name":  "GREEDY",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "6814098498",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/6f/57/61/6f5761ed-1b88-6a84-5627-632c2aee8106/mzaf_16120177832657718914.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2025-02-14",
+                                                                                              "trackNumber":  21,
+                                                                                              "url":  "https://music.apple.com/us/album/greedy/6814097810?i=6814098498"
+                                                                                          }
+                                                                       }
+                                                                   ]
+                                                      }
+                                       }
+                 }
+             ]
+}

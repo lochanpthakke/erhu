@@ -1,0 +1,28 @@
+﻿{
+    "resultCount":  1,
+    "results":  [
+                    {
+                        "wrapperType":  "collection",
+                        "collectionType":  "Album",
+                        "artistId":  1081606072,
+                        "collectionId":  1750755782,
+                        "amgArtistId":  3231255,
+                        "artistName":  "$uicideboy$",
+                        "collectionName":  "New World Depression",
+                        "collectionCensoredName":  "New World Depression",
+                        "artistViewUrl":  "https://music.apple.com/us/artist/%24uicideboy%24/1081606072?uo=4",
+                        "collectionViewUrl":  "https://music.apple.com/us/album/new-world-depression/1750755782?uo=4",
+                        "artworkUrl60":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/60x60bb.jpg",
+                        "artworkUrl100":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/100x100bb.jpg",
+                        "collectionPrice":  4.99,
+                        "collectionExplicitness":  "cleaned",
+                        "contentAdvisoryRating":  "Clean",
+                        "trackCount":  13,
+                        "copyright":  "℗ 2024 G59 Records",
+                        "country":  "USA",
+                        "currency":  "USD",
+                        "releaseDate":  "2024-06-13T07:00:00Z",
+                        "primaryGenreName":  "Hip-Hop"
+                    }
+                ]
+}

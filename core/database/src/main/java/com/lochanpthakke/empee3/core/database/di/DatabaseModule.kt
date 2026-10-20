@@ -6,12 +6,14 @@ import com.lochanpthakke.empee3.core.database.EmPee3Database
 import com.lochanpthakke.empee3.core.database.MIGRATION_10_11
 import com.lochanpthakke.empee3.core.database.MIGRATION_11_12
 import com.lochanpthakke.empee3.core.database.MIGRATION_12_13
+import com.lochanpthakke.empee3.core.database.MIGRATION_13_14
 import com.lochanpthakke.empee3.core.database.MIGRATION_5_6
 import com.lochanpthakke.empee3.core.database.MIGRATION_6_7
 import com.lochanpthakke.empee3.core.database.MIGRATION_7_8
 import com.lochanpthakke.empee3.core.database.MIGRATION_8_9
 import com.lochanpthakke.empee3.core.database.MIGRATION_9_10
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
+import com.lochanpthakke.empee3.core.database.dao.AnimatedArtworkDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
@@ -52,6 +54,7 @@ object DatabaseModule {
                 MIGRATION_10_11,
                 MIGRATION_11_12,
                 MIGRATION_12_13,
+                MIGRATION_13_14,
             ).fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
@@ -88,4 +91,7 @@ object DatabaseModule {
 
     @Provides
     fun provideLearnedWatermarkDao(database: EmPee3Database): LearnedWatermarkDao = database.learnedWatermarkDao()
+
+    @Provides
+    fun provideAnimatedArtworkDao(database: EmPee3Database): AnimatedArtworkDao = database.animatedArtworkDao()
 }

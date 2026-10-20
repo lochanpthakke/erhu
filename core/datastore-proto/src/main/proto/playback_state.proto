@@ -3,6 +3,11 @@ syntax = "proto3";
 option java_package = "com.lochanpthakke.empee3.core.datastore.proto";
 option java_multiple_files = true;
 
+enum AnimatedArtOrientationProto {
+  SQUARE_1_1 = 0;
+  TALL_3_4 = 1;
+}
+
 message PlaybackStateProto {
   repeated int64 queue_song_ids = 1;
   int32 current_index = 2;
@@ -20,6 +25,7 @@ message PlaybackStateProto {
   SoundSettingsProto sound_settings = 13;
   // 14 was used by an unreleased development build.
   reserved 14;
+  AnimatedArtOrientationProto animated_art_orientation = 15;
   // Glass material on floating surfaces, independent of the theme. Unset = off.
   optional bool glass_effect_enabled = 15;
   string custom_scan_location_uri = 16;

@@ -1,0 +1,28 @@
+﻿{
+    "resultCount":  1,
+    "results":  [
+                    {
+                        "wrapperType":  "collection",
+                        "collectionType":  "Album",
+                        "artistId":  605800394,
+                        "collectionId":  1658650093,
+                        "amgArtistId":  2882873,
+                        "artistName":  "SZA",
+                        "collectionName":  "SOS",
+                        "collectionCensoredName":  "SOS",
+                        "artistViewUrl":  "https://music.apple.com/us/artist/sza/605800394?uo=4",
+                        "collectionViewUrl":  "https://music.apple.com/us/album/sos/1658650093?uo=4",
+                        "artworkUrl60":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/60x60bb.jpg",
+                        "artworkUrl100":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/100x100bb.jpg",
+                        "collectionPrice":  14.99,
+                        "collectionExplicitness":  "cleaned",
+                        "contentAdvisoryRating":  "Clean",
+                        "trackCount":  23,
+                        "copyright":  "℗ 2022 Top Dawg Entertainment, under exclusive license to RCA Records",
+                        "country":  "USA",
+                        "currency":  "USD",
+                        "releaseDate":  "2022-12-09T08:00:00Z",
+                        "primaryGenreName":  "R\u0026B/Soul"
+                    }
+                ]
+}
