@@ -101,6 +101,7 @@ import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
+import com.lochanpthakke.empee3.core.designsystem.theme.WithoutGlass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
@@ -658,28 +659,32 @@ fun MainScaffold() {
                                     val hiddenFromMixes by libraryViewModel.hiddenFromMixes.collectAsState()
                                     val currentSongId by libraryViewModel.currentSongId.collectAsState()
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
-                                    NowPlayingScreen(
-                                        playbackRepository = playbackRepository,
-                                        isFavorite = isFavorite,
-                                        lyrics = lyrics,
-                                        lyricsActions = libraryViewModel.lyricsActions,
-                                        onBackClick = minimizePlayer,
-                                        onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
-                                        onAddToPlaylist = { songForPlaylist = it },
-                                        onSaveQueueAsPlaylist = { name, songs, onResult ->
-                                            playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
-                                        },
-                                        extras = playerExtrasViewModel,
-                                        visualizer = visualizerViewModel,
-                                        audioDetails = audioDetailsViewModel,
-                                        onOpenEqualizer = {
-                                            minimizePlayer()
-                                            navController.navigate(SettingsCategory("audio"))
-                                        },
-                                        onShowMusicInfo = { songForMusicInfo = it },
-                                        isHiddenFromMixes = currentSongId in hiddenFromMixes,
-                                        onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
-                                    )
+                                    // The expanded player is drawn without the Glass Effect (as with the setting off):
+                                    // the glass cost frames here and looked the same. The rest of the app keeps it.
+                                    WithoutGlass {
+                                        NowPlayingScreen(
+                                            playbackRepository = playbackRepository,
+                                            isFavorite = isFavorite,
+                                            lyrics = lyrics,
+                                            lyricsActions = libraryViewModel.lyricsActions,
+                                            onBackClick = minimizePlayer,
+                                            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
+                                            onAddToPlaylist = { songForPlaylist = it },
+                                            onSaveQueueAsPlaylist = { name, songs, onResult ->
+                                                playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
+                                            },
+                                            extras = playerExtrasViewModel,
+                                            visualizer = visualizerViewModel,
+                                            audioDetails = audioDetailsViewModel,
+                                            onOpenEqualizer = {
+                                                minimizePlayer()
+                                                navController.navigate(SettingsCategory("audio"))
+                                            },
+                                            onShowMusicInfo = { songForMusicInfo = it },
+                                            isHiddenFromMixes = currentSongId in hiddenFromMixes,
+                                            onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
+                                        )
+                                    }
                                 }
                             }
                         }

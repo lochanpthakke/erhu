@@ -118,6 +118,7 @@ fun EmPee3Theme(
         LocalEmPee3Skin provides skinManifest,
         LocalEmPee3WidgetConfig provides (skinManifest?.widgetConfig ?: themeManifest.widgetConfig),
         LocalGlassTokens provides glass,
+        LocalPlainColorScheme provides baseColorScheme,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -127,6 +128,22 @@ fun EmPee3Theme(
             // would remount the whole app (and reset navigation) on every theme switch.
             GlassBackground(glass = glass, content = content)
         }
+    }
+}
+
+/** The theme's colour scheme without the glass containers: what the app uses with the Glass Effect off. */
+val LocalPlainColorScheme = staticCompositionLocalOf<ColorScheme?> { null }
+
+/**
+ * [content] exactly as with the Glass Effect off, whatever the setting: no glass material (so no
+ * frosting, blur or glass layers) and the theme's plain, opaque colour scheme. For screens whose
+ * glass costs more than it gives (the expanded player).
+ */
+@Composable
+fun WithoutGlass(content: @Composable () -> Unit) {
+    val plain = LocalPlainColorScheme.current ?: MaterialTheme.colorScheme
+    CompositionLocalProvider(LocalGlassTokens provides null) {
+        MaterialTheme(colorScheme = plain, shapes = MaterialTheme.shapes, typography = MaterialTheme.typography, content = content)
     }
 }
 
