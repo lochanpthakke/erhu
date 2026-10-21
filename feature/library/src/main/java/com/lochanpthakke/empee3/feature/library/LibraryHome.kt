@@ -13,7 +13,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,25 +24,28 @@ import androidx.compose.ui.unit.Dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Playlist
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.feature.library.mix.SmartMixes
 
 /**
- * The Tracks destination as the home feed: recently played albums and playlists
- * (from real playback history; a shelf with nothing in it is not shown), the smart
- * playlists (whenever the library has songs), then the full track list. One lazy list, so the shelves scroll away with the tracks.
+ * The Tracks destination as the home feed, top to bottom: the Smart Playlists as a hero banner
+ * (whenever the library has songs), Featured Albums (local picks, see [FeaturedAlbums]), Recently
+ * Played albums and playlists (from real playback history), then the full track list. One lazy
+ * list, so the shelves scroll away with the tracks; each shelf scrolls sideways on its own.
  */
 @Composable
 @Suppress("LongParameterList")
 internal fun HomeFeed(
     songs: LazyPagingItems<Song>,
-    smartPlaylistCovers: Map<SmartPlaylist, List<Song>>,
+    smartMixes: SmartMixes?,
+    featuredAlbums: List<Album>,
     recentAlbums: List<Album>,
     recentPlaylists: List<Playlist>,
     currentSongId: Long?,
@@ -47,15 +53,20 @@ internal fun HomeFeed(
     onSongClick: (Song) -> Unit,
     onAlbumClick: (Album) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
-    onSmartPlaylistClick: (SmartPlaylist) -> Unit,
+    onSmartPlaylistClick: (mixKey: String) -> Unit,
+    onSmartPlaylistPlay: (mixKey: String) -> Unit,
     actions: SongActions,
     topInset: Dp,
     bottomInset: Dp,
     emptyMessage: String = "No songs found on this device",
 ) {
-    val hasSmartPlaylists = songs.itemCount > 0
-    val hasShelves = recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty() || hasSmartPlaylists
+    val mixes = smartMixes?.mixes.orEmpty()
+    val hasSongs = songs.itemCount > 0
+    // Shown once the library has songs: the mixes, and a note while history is still short.
+    val hasSmartPlaylists = hasSongs && (mixes.isNotEmpty() || smartMixes?.needsMoreListening == true)
+    val hasShelves = hasSongs || recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty()
     LazyColumn(
+        state = rememberLazyListState().also { ReportTitleScroll(it) }, // the page title merges into the header button
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.sm + bottomInset),
     ) {
@@ -64,36 +75,16 @@ internal fun HomeFeed(
         // into view instead of being inserted above the visible position.
         item(key = "home_header", contentType = "header") {
             Column(modifier = Modifier.fillMaxWidth()) {
-                if (recentAlbums.isNotEmpty()) {
-                    Shelf(title = "Recently played albums") {
-                        items(recentAlbums, key = { it.id }) { album ->
-                            AlbumTile(album = album, onClick = { onAlbumClick(album) }, modifier = Modifier.width(ArtworkSize.shelf))
-                        }
-                    }
-                }
-                if (recentPlaylists.isNotEmpty()) {
-                    Shelf(title = "Recently played playlists") {
-                        items(recentPlaylists, key = { it.id }) { playlist ->
-                            PlaylistTile(
-                                playlist = playlist,
-                                onClick = { onPlaylistClick(playlist) },
-                                modifier = Modifier.width(ArtworkSize.shelf),
-                            )
-                        }
-                    }
-                }
                 if (hasSmartPlaylists) {
-                    Shelf(title = "Smart Playlists") {
-                        items(HOME_SMART_PLAYLISTS, key = { it.name }) { playlist ->
-                            SmartPlaylistTile(
-                                playlist = playlist,
-                                covers = smartPlaylistCovers[playlist].orEmpty(),
-                                onClick = { onSmartPlaylistClick(playlist) },
-                                modifier = Modifier.width(ArtworkSize.shelf),
-                            )
-                        }
-                    }
+                    SmartMixHero(
+                        mixes = mixes,
+                        needsMoreListening = smartMixes?.needsMoreListening == true,
+                        onOpen = onSmartPlaylistClick,
+                        onPlay = onSmartPlaylistPlay,
+                        modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.lg),
+                    )
                 }
+                AlbumShelves(featuredAlbums, recentAlbums, recentPlaylists, showRecentNote = hasSongs, onAlbumClick, onPlaylistClick)
                 if (hasShelves) SectionHeading("Tracks")
             }
         }
@@ -111,6 +102,66 @@ internal fun HomeFeed(
                 }
             }
         }
+    }
+}
+
+/**
+ * Featured Albums, then Recently Played albums (or, once the library has songs but nothing has
+ * been played, a note saying they will appear) and playlists. A shelf with nothing in it is not shown.
+ */
+@Composable
+@Suppress("LongParameterList")
+private fun AlbumShelves(
+    featuredAlbums: List<Album>,
+    recentAlbums: List<Album>,
+    recentPlaylists: List<Playlist>,
+    showRecentNote: Boolean,
+    onAlbumClick: (Album) -> Unit,
+    onPlaylistClick: (Playlist) -> Unit,
+) {
+    if (featuredAlbums.isNotEmpty()) {
+        Shelf(title = "Featured Albums") {
+            items(featuredAlbums, key = { it.id }) { album ->
+                AlbumTile(album = album, onClick = { onAlbumClick(album) }, modifier = Modifier.width(ArtworkSize.shelf))
+            }
+        }
+    }
+    if (recentAlbums.isNotEmpty()) {
+        Shelf(title = "Recently played albums") {
+            items(recentAlbums, key = { it.id }) { album ->
+                AlbumTile(album = album, onClick = { onAlbumClick(album) }, modifier = Modifier.width(ArtworkSize.shelf))
+            }
+        }
+    } else if (showRecentNote) {
+        ShelfNote(title = "Recently played albums", note = "Albums you play show up here.")
+    }
+    if (recentPlaylists.isNotEmpty()) {
+        Shelf(title = "Recently played playlists") {
+            items(recentPlaylists, key = { it.id }) { playlist ->
+                PlaylistTile(
+                    playlist = playlist,
+                    onClick = { onPlaylistClick(playlist) },
+                    modifier = Modifier.width(ArtworkSize.shelf),
+                )
+            }
+        }
+    }
+}
+
+/** A shelf with nothing in it yet: its heading and one quiet line saying what will appear. */
+@Composable
+private fun ShelfNote(
+    title: String,
+    note: String,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.lg)) {
+        SectionHeading(title)
+        Text(
+            text = note,
+            style = TextStyles.supporting,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Spacing.screenGutter),
+        )
     }
 }
 
@@ -201,7 +252,11 @@ private fun PlaylistsGrid(
     topInset: Dp,
     bottomInset: Dp,
 ) {
+    val gridState = rememberLazyGridState()
+    // The page title merges into the header button as this scrolls.
+    ReportTitleScroll(gridState)
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
         modifier = Modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.lg),

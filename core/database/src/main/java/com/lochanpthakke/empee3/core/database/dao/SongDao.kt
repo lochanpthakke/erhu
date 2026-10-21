@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.database.dao
 
 import androidx.paging.PagingSource
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
@@ -143,6 +144,15 @@ interface SongDao {
         bpm: Int? = null,
     ): Int
 
+    /** Every song's facts for the smart mixes, by id. Emits again on any change to songs. */
+    @Query(
+        """
+        SELECT id, title, artist, artist_id, album, album_id, genre, bpm, year, duration_ms, is_favorite, date_modified
+        FROM songs ORDER BY id
+        """,
+    )
+    fun observeTrackFacts(): Flow<List<TrackFactsRow>>
+
     /** Every song's discovery text (VYBE): tags only, lyrics cut to an excerpt. Emits again on any change. */
     @Query(
         """
@@ -169,6 +179,23 @@ interface SongDao {
 
 /** Lyrics characters read for discovery: an excerpt is all VYBE uses. */
 const val LYRICS_EXCERPT_CHARS = 600
+
+/** What the smart mixes read of each song: identity, grouping and stored tags, no lyrics. */
+data class TrackFactsRow(
+    val id: Long,
+    val title: String,
+    val artist: String,
+    @ColumnInfo(name = "artist_id") val artistId: Long,
+    val album: String,
+    @ColumnInfo(name = "album_id") val albumId: Long,
+    val genre: String?,
+    val bpm: Int?,
+    /** The year tag as stored (0 or a placeholder such as 1970 when the file has none). */
+    val year: Int?,
+    @ColumnInfo(name = "duration_ms") val durationMs: Long,
+    @ColumnInfo(name = "is_favorite") val isFavorite: Boolean,
+    @ColumnInfo(name = "date_modified") val dateModified: Long,
+)
 
 /** A row of [SongDao.observeSongTags]. */
 data class SongTagsRow(

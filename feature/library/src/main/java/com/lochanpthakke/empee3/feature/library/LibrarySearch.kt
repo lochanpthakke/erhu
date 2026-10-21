@@ -8,7 +8,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -135,8 +135,7 @@ internal fun SearchHeader(
                         } else {
                             Modifier.glassFallback()
                         },
-                    )
-                    .padding(start = Spacing.lg, end = Spacing.xs),
+                    ).padding(start = Spacing.lg, end = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(modifier = Modifier.weight(1f)) {

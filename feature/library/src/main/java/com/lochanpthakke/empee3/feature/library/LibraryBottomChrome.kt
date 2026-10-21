@@ -143,7 +143,7 @@ private const val CONTROLS_FADE_SPAN = 0.3f
 /** As the player expands, the library controls sink and fade: the player owns the screen. */
 private fun Modifier.stepAsideForPlayer(transition: PlayerTransitionState?): Modifier =
     graphicsLayer {
-        val p = transition?.progress?.value ?: 0f
+        val p = transition?.fraction ?: 0f
         translationY = p * size.height
         alpha = (1f - p / CONTROLS_FADE_SPAN).coerceIn(0f, 1f)
     }

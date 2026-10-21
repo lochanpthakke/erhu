@@ -25,6 +25,14 @@ data class ArtistPlays(
     @ColumnInfo(name = "plays") val plays: Int,
 )
 
+/** One song's counted plays in one month (smart mixes). */
+data class SongMonthPlays(
+    @ColumnInfo(name = "song_id") val songId: Long,
+    @ColumnInfo(name = "month_key") val monthKey: String,
+    @ColumnInfo(name = "play_count") val playCount: Int,
+    @ColumnInfo(name = "last_played_at") val lastPlayedAt: Long,
+)
+
 data class MonthTotals(
     @ColumnInfo(name = "plays") val plays: Int,
     @ColumnInfo(name = "listened_ms") val listenedMs: Long,
@@ -198,6 +206,21 @@ interface ListeningStatsDao {
         """,
     )
     fun observeRecentlyPlayedSongs(limit: Int): Flow<List<SongEntity>>
+
+    /**
+     * Every month row with counted plays, for songs still in the library (smart mixes). Listening
+     * time is left out on purpose: it is updated while a song plays, and the mixes only change
+     * when a play is counted.
+     */
+    @Query(
+        """
+        SELECT st.song_id, st.month_key, st.play_count, st.last_played_at FROM listening_stats st
+        INNER JOIN songs s ON s.id = st.song_id
+        WHERE st.play_count > 0
+        ORDER BY st.song_id ASC, st.month_key ASC
+        """,
+    )
+    fun observeMonthlyPlays(): Flow<List<SongMonthPlays>>
 
     /** Songs without a single counted play, by title. */
     @Query(

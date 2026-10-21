@@ -80,13 +80,18 @@ fun AppScaffold(
     floatingActionButton: @Composable () -> Unit = {},
     containerColor: Color = MaterialTheme.colorScheme.background,
     contentBackdrop: GlassBackdrop? = LocalGlassBackdrop.current,
+    /**
+     * Whether the content is recorded as the backdrop of this screen's own glass bars. A screen
+     * whose bars are not glass passes false: recording a whole screen nobody samples is waste.
+     */
+    contentIsBackdrop: Boolean = true,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val bottomChrome = LocalBottomChromeHeight.current
     // Glass in this screen's bars frosts the screen's own content. Glass inside
     // the content frosts [contentBackdrop] instead (inherited by default, usually
     // none), so nothing ever samples the source it is drawn in.
-    val screenBackdrop = rememberGlassBackdrop()
+    val screenBackdrop = rememberGlassBackdrop("screen")
     Scaffold(
         modifier = modifier,
         topBar = { CompositionLocalProvider(LocalGlassBackdrop provides screenBackdrop) { topBar() } },
@@ -109,7 +114,7 @@ fun AppScaffold(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .glassBackdropSource(screenBackdrop),
+                    .then(if (contentIsBackdrop) Modifier.glassBackdropSource(screenBackdrop) else Modifier),
         ) {
             // Glass inside the content frosts [contentBackdrop] (e.g. Now Playing's
             // artwork), never the content's own source.

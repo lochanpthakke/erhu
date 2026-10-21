@@ -1,10 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -26,49 +23,38 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.BottomChrome
+import com.lochanpthakke.empee3.core.designsystem.component.CapsuleSlots
+import com.lochanpthakke.empee3.core.designsystem.component.LiquidCapsule
+import com.lochanpthakke.empee3.core.designsystem.component.capsuleContent
+import com.lochanpthakke.empee3.core.designsystem.component.capsuleDrag
+import com.lochanpthakke.empee3.core.designsystem.component.capsuleEmphasis
+import com.lochanpthakke.empee3.core.designsystem.component.capsuleSlot
+import com.lochanpthakke.empee3.core.designsystem.component.pressScale
+import com.lochanpthakke.empee3.core.designsystem.component.selectionJiggle
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
-import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /** Selected icon scale: a small lift, not a pop. */
 private const val SELECTED_ICON_SCALE = 1.08f
 
-/** Tonal strength of the selection surface without glass: a tint, not a filled block. */
-private const val SELECTED_PILL_ALPHA = 0.16f
-
-/**
- * Indicator size: exactly the item's icon box (icon plus its padding), a
- * horizontal pill rather than a cell-sized rounded square.
- */
-private val INDICATOR_WIDTH = IconSize.standard + Spacing.lg * 2
-private val INDICATOR_HEIGHT = IconSize.standard + Spacing.xs * 2
-
-/**
- * Liquid feel while moving: the indicator stretches along its motion in
- * proportion to its speed (in sections per second) and gives back a little
- * height. At rest the velocity is zero, so it is a clean pill again.
- */
-private const val STRETCH_PER_VELOCITY = 0.03f
-private const val MAX_STRETCH = 0.12f
-private const val SQUASH_RATIO = 0.4f
+/** An item's icon box: the icon plus its padding (the capsule wraps it together with the label). */
+private val ICON_BOX_WIDTH = IconSize.standard + Spacing.lg * 2
+private val ICON_BOX_HEIGHT = IconSize.standard + Spacing.xs * 2
 
 internal fun getOrderedSections(start: LibrarySection): List<LibrarySection> {
     val defaultList = listOf(LibrarySection.TRACKS, LibrarySection.ALBUMS, LibrarySection.LIBRARY, LibrarySection.VYBE)
@@ -129,19 +115,28 @@ fun LibraryNavigationBar(
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         shadowElevation = if (glass) 0.dp else BottomChrome.elevation,
     ) {
+        val slots = remember(sections.size) { CapsuleSlots(sections.size) }
+        val currentIndex by rememberUpdatedState(selectedIndex)
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.xs),
+                    .padding(horizontal = Spacing.xs)
+                    // Drag the capsule to another section: one selection, on release.
+                    .capsuleDrag(
+                        position = indicatorPosition,
+                        slots = slots,
+                        current = { currentIndex },
+                        enabled = !isCompact && !searching,
+                        onSettle = { index -> onSelect(sections[index]) },
+                    ),
         ) {
-            SelectionIndicator(
+            LiquidCapsule(
                 position = indicatorPosition,
-                itemCount = sections.size,
-                modifier =
-                    Modifier
-                        .matchParentSize()
-                        .graphicsLayer { alpha = indicatorAlpha * expandedAlpha(compact()) },
+                slots = slots,
+                accent = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.matchParentSize(),
+                visibility = { indicatorAlpha * expandedAlpha(compact()) },
             )
             Row(
                 modifier =
@@ -150,10 +145,13 @@ fun LibraryNavigationBar(
                         .graphicsLayer { alpha = expandedAlpha(compact()) }
                         .selectableGroup(),
             ) {
-                sections.forEach { section ->
+                sections.forEachIndexed { index, section ->
                     LibraryNavigationItem(
                         section = section,
                         selected = section == selected && !searching,
+                        index = index,
+                        slots = slots,
+                        emphasis = { capsuleEmphasis(indicatorPosition.value, index) * indicatorAlpha },
                         onClick = { onSelect(section) },
                         modifier = Modifier.weight(1f),
                     )
@@ -209,92 +207,27 @@ private fun CompactSectionButton(
 }
 
 /**
- * The sliding selection surface: a horizontal pill around the selected icon
- * that stretches and squashes while moving. Drawn as a layout child that
- * offsets itself, so position updates avoid recomposition.
+ * One section item: icon plus small label underneath, spaced tightly. Its highlight follows the
+ * capsule's position ([emphasis], read while drawing): the accent copy fades in under the capsule
+ * as it arrives, also while it is dragged, so the label never jumps ahead of the glass.
  */
-@Composable
-private fun SelectionIndicator(
-    position: Animatable<Float, AnimationVector1D>,
-    itemCount: Int,
-    modifier: Modifier = Modifier,
-) {
-    val glass = EmPee3Glass.isActive
-    val shape = Radius.pillShape
-    val color =
-        if (glass) {
-            Color.Transparent
-        } else {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = SELECTED_PILL_ALPHA)
-        }
-
-    Box(
-        modifier =
-            modifier
-                .layout { measurable, constraints ->
-                    val width = constraints.maxWidth
-                    val height = constraints.maxHeight
-                    val itemWidth = width.toFloat() / itemCount.coerceAtLeast(1)
-
-                    val placeable =
-                        measurable.measure(
-                            Constraints.fixed(
-                                INDICATOR_WIDTH.roundToPx(),
-                                INDICATOR_HEIGHT.roundToPx(),
-                            ),
-                        )
-
-                    layout(width, height) {
-                        val current = position.value
-                        val velocity = position.velocity
-
-                        val center = (current + 0.5f) * itemWidth
-                        val x = (center - placeable.width / 2f).roundToInt()
-                        val y = Spacing.xs.roundToPx()
-
-                        // Velocity stretch along the direction of motion.
-                        val stretch = (abs(velocity) * STRETCH_PER_VELOCITY).coerceAtMost(MAX_STRETCH)
-                        val scaleX = 1f + stretch
-                        val scaleY = (1f - stretch * SQUASH_RATIO).coerceAtLeast(0.5f)
-
-                        placeable.placeWithLayer(x, y) {
-                            this.scaleX = scaleX
-                            this.scaleY = scaleY
-                        }
-                    }
-                }.glassPanel(
-                    shape = shape,
-                    strong = false,
-                    elevated = false,
-                    outlined = false,
-                    bar = true,
-                ).background(color, shape),
-    )
-}
-
-/** One section item: icon plus small label underneath, spaced tightly. */
 @Composable
 private fun LibraryNavigationItem(
     section: LibrarySection,
     selected: Boolean,
+    index: Int,
+    slots: CapsuleSlots,
+    emphasis: () -> Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val iconColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = Motion.fade(),
-        label = "libraryNavItemColor",
-    )
-    val iconScale by animateFloatAsState(
-        targetValue = if (selected) SELECTED_ICON_SCALE else 1f,
-        animationSpec = Motion.fade(),
-        label = "libraryNavItemScale",
-    )
+    val accent = MaterialTheme.colorScheme.primary
+    val quiet = MaterialTheme.colorScheme.onSurfaceVariant
     val interactionSource = remember { MutableInteractionSource() }
-
-    Column(
+    Box(
         modifier =
             modifier
+                .capsuleSlot(slots, index)
                 .selectable(
                     selected = selected,
                     interactionSource = interactionSource,
@@ -305,32 +238,63 @@ private fun LibraryNavigationItem(
                 .clearAndSetSemantics {
                     contentDescription = section.label
                 },
-        horizontalAlignment = Alignment.CenterHorizontally,
+        contentAlignment = Alignment.Center,
     ) {
-        Box(
+        Column(
             modifier =
                 Modifier
-                    .size(INDICATOR_WIDTH, INDICATOR_HEIGHT)
-                    .graphicsLayer {
-                        scaleX = iconScale
-                        scaleY = iconScale
-                    },
-            contentAlignment = Alignment.Center,
+                    .capsuleContent(slots, index)
+                    // Tactile: dips under the finger, and pops once as it becomes the current section.
+                    .pressScale(interactionSource)
+                    .selectionJiggle(selected, identity = section, kickWhen = { it == true }),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Icon(
-                imageVector = if (selected) section.selectedIcon else section.icon,
-                contentDescription = null,
-                tint = iconColor,
-            )
+            Box(
+                modifier =
+                    Modifier
+                        .size(ICON_BOX_WIDTH, ICON_BOX_HEIGHT)
+                        .graphicsLayer {
+                            val scale = 1f + (SELECTED_ICON_SCALE - 1f) * emphasis()
+                            scaleX = scale
+                            scaleY = scale
+                        },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = section.icon,
+                    contentDescription = null,
+                    tint = quiet,
+                    modifier = Modifier.graphicsLayer { alpha = 1f - emphasis() },
+                )
+                Icon(
+                    imageVector = section.selectedIcon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.graphicsLayer { alpha = emphasis() },
+                )
+            }
+            Box(contentAlignment = Alignment.Center) {
+                NavigationLabel(section.label, quiet, Modifier.graphicsLayer { alpha = 1f - emphasis() })
+                NavigationLabel(section.label, accent, Modifier.graphicsLayer { alpha = emphasis() })
+            }
         }
-        Text(
-            text = section.label,
-            style = TextStyles.metadata,
-            color = iconColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
+}
+
+@Composable
+private fun NavigationLabel(
+    text: String,
+    color: Color,
+    modifier: Modifier,
+) {
+    Text(
+        text = text,
+        style = TextStyles.metadata,
+        color = color,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
 }
 
 /** Environment glass of the section bar: the mini player's material, thinner. */

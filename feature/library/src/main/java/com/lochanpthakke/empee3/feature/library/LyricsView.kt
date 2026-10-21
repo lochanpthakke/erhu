@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
@@ -158,6 +160,18 @@ internal fun SongLyricsView(
     }
 }
 
+/**
+ * How lyrics are set: [compact] for the panel inside Now Playing (smaller lines, the current one
+ * nearer the top), [alignStart] to read from the left like the panel's heading. The defaults are
+ * the full-page lyrics.
+ */
+internal data class LyricsLook(
+    val compact: Boolean = false,
+    val alignStart: Boolean = false,
+)
+
+internal val LocalLyricsLook = staticCompositionLocalOf { LyricsLook() }
+
 @Composable
 internal fun LyricsContent(
     lyrics: SongLyrics,
@@ -205,13 +219,14 @@ private fun NoLyrics() {
 private fun PlainLyrics(lyrics: Lyrics.Plain) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = Spacing.xl, vertical = Spacing.lg),
+        contentPadding = PaddingValues(horizontal = if (LocalLyricsLook.current.compact) Spacing.lg else Spacing.xl, vertical = Spacing.lg),
     ) {
         itemsIndexed(lyrics.lines) { _, line ->
+            val look = LocalLyricsLook.current
             Text(
                 text = line,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
+                style = if (look.compact) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
+                textAlign = if (look.alignStart) TextAlign.Start else TextAlign.Center,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
             )
         }
@@ -237,6 +252,9 @@ private fun SyncedLyrics(
         listState.interactionSource.interactions.collect { if (it is DragInteraction.Start) following = false }
     }
 
+    val look = LocalLyricsLook.current
+    val gutter = if (look.compact) Spacing.lg else Spacing.xl
+    val anchor = if (look.compact) COMPACT_ANCHOR_FRACTION else ANCHOR_FRACTION
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // The current line rests a little above the middle (the list's top padding), leaving room for what comes next.
         FollowCurrentLine(listState, currentLine, following)
@@ -245,9 +263,9 @@ private fun SyncedLyrics(
             modifier = Modifier.fillMaxSize(),
             contentPadding =
                 PaddingValues(
-                    start = Spacing.xl,
-                    end = Spacing.xl,
-                    top = maxHeight * ANCHOR_FRACTION,
+                    start = gutter,
+                    end = gutter,
+                    top = maxHeight * anchor,
                     bottom =
                         maxHeight * TAIL_FRACTION,
                 ),
@@ -305,7 +323,7 @@ private fun FollowCurrentLine(
  * running more than [MAX_EXTRAPOLATION_MS] ahead. The player stays the only source of time.
  */
 @Composable
-private fun rememberSmoothPosition(
+internal fun rememberSmoothPosition(
     position: State<Long>,
     isPlaying: Boolean,
 ): State<Long> {
@@ -349,33 +367,46 @@ private fun LyricLineItem(
         animationSpec = tween(Motion.CONTENT, easing = Motion.Standard),
         label = "lyricEmphasis",
     )
-    // Lines fade with their distance from the current one; the current line is full size.
-    val restingAlpha = (1f - distance * DISTANCE_FADE).coerceAtLeast(MIN_ALPHA)
+    val look = LocalLyricsLook.current
+    // Lines fade with their distance from the current one; the current line is full size. In the
+    // compact panel every line keeps its size and stays readable: only the colour marks the current one.
+    val restingAlpha = if (look.compact) 1f else (1f - distance * DISTANCE_FADE).coerceAtLeast(MIN_ALPHA)
+    val inactiveScale = if (look.compact) 1f else INACTIVE_SCALE
     val base = MaterialTheme.colorScheme.onSurface
     val dim = MaterialTheme.colorScheme.onSurfaceVariant
     val words = line.words
+    val align = if (look.alignStart) TextAlign.Start else TextAlign.Center
     val modifier =
         Modifier
             .fillMaxWidth()
-            .padding(vertical = Spacing.sm)
+            .padding(vertical = if (look.compact) Spacing.xs else Spacing.sm)
             .graphicsLayer {
-                val scale = INACTIVE_SCALE + (1f - INACTIVE_SCALE) * emphasis
+                val scale = inactiveScale + (1f - inactiveScale) * emphasis
                 scaleX = scale
                 scaleY = scale
-                transformOrigin = TransformOrigin(0.5f, 0.5f)
+                transformOrigin = TransformOrigin(if (look.alignStart) 0f else 0.5f, 0.5f)
                 alpha = restingAlpha + (1f - restingAlpha) * emphasis
             }
-    val style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+    val style =
+        if (look.compact) {
+            MaterialTheme.typography.titleMedium.copy(
+                fontSize = COMPACT_LINE_SIZE,
+                lineHeight = COMPACT_LINE_HEIGHT,
+                fontWeight = FontWeight.Bold,
+            )
+        } else {
+            MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+        }
     if (words == null || !isCurrent) {
         Text(
             text = line.text.ifBlank { "♪" },
             style = style,
             color = lerp(dim, base, emphasis),
-            textAlign = TextAlign.Center,
+            textAlign = align,
             modifier = modifier.clickable { onSeek(line.timeMs) },
         )
     } else {
-        TimedWordsLine(words, activeWord, style.color.takeIf { it != Color.Unspecified } ?: base, dim, onSeek, modifier, style)
+        TimedWordsLine(words, activeWord, style.color.takeIf { it != Color.Unspecified } ?: base, dim, onSeek, modifier, style, align)
     }
 }
 
@@ -389,6 +420,7 @@ private fun TimedWordsLine(
     onSeek: (Long) -> Unit,
     modifier: Modifier,
     style: androidx.compose.ui.text.TextStyle,
+    align: TextAlign,
 ) {
     val accent = MaterialTheme.colorScheme.primary
     // One short animation per word change (not per position update).
@@ -416,7 +448,7 @@ private fun TimedWordsLine(
     Text(
         text = text,
         style = style,
-        textAlign = TextAlign.Center,
+        textAlign = align,
         onTextLayout = { layout = it },
         modifier =
             modifier.pointerInput(starts) {
@@ -430,6 +462,11 @@ private fun TimedWordsLine(
 }
 
 private const val ANCHOR_FRACTION = 0.35f
+
+/** In the compact panel the current line sits nearer the top, leaving most of the panel for what comes next. */
+private const val COMPACT_ANCHOR_FRACTION = 0.06f
+private val COMPACT_LINE_SIZE = 19.sp
+private val COMPACT_LINE_HEIGHT = 26.sp
 private const val TAIL_FRACTION = 0.6f
 private const val INACTIVE_SCALE = 0.9f
 private const val DISTANCE_FADE = 0.18f

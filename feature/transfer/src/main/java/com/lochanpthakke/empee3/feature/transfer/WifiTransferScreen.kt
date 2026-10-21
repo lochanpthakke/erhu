@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -54,9 +56,12 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingTitleState
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 
@@ -81,12 +86,23 @@ fun WifiTransferScreen(
         context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
     }
 
+    // The page title merges into the header button as the list scrolls.
+    val collapsingTitle = rememberCollapsingTitleState()
     AppScaffold(
-        topBar = { OverlayHeader(navigation = TopBarNavigation.TopLevel(onOpenDrawer), title = "Wi-Fi Transfer") },
+        topBar = {
+            OverlayHeader(
+                navigation = TopBarNavigation.TopLevel(onOpenDrawer),
+                title = "Wi-Fi Transfer",
+                collapsingTitle = collapsingTitle,
+            )
+        },
         modifier = modifier,
     ) { innerPadding ->
         val scroll = innerPadding.forScrollingContent(topOverlay = true)
+        val listState = rememberLazyListState()
+        CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) { ReportTitleScroll(listState) }
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().padding(scroll.container),
             contentPadding =
                 PaddingValues(

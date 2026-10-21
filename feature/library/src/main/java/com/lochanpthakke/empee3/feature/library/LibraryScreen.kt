@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -29,6 +31,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,18 +53,20 @@ import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.component.ReportInteraction
+import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingTitleState
 import com.lochanpthakke.empee3.core.designsystem.component.selectionJiggle
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 
 /** Actions offered for a single song wherever it is listed. */
@@ -85,7 +90,7 @@ fun LibraryScreen(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
-    onOpenSmartPlaylist: (SmartPlaylist) -> Unit,
+    onOpenSmartPlaylist: (mixKey: String) -> Unit,
     onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,
@@ -168,6 +173,8 @@ fun LibraryScreen(
         }
     }
 
+    // The page title (section or shelf) merges into the header button as the visible list scrolls.
+    val collapsingTitle = rememberCollapsingTitleState()
     AppScaffold(
         topBar = {
             if (isSearchActive) {
@@ -180,11 +187,13 @@ fun LibraryScreen(
                 OverlayHeader(
                     navigation = TopBarNavigation.Detail(onBack = { openShelf = null }),
                     title = shownShelf.label,
+                    collapsingTitle = collapsingTitle,
                 )
             } else {
                 OverlayHeader(
                     navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                    title = section.label,
+                    title = section.pageTitle,
+                    collapsingTitle = collapsingTitle,
                 )
             }
         },
@@ -249,80 +258,85 @@ fun LibraryScreen(
                 },
             ) {
                 // Sections are switched by LibraryNavigationBar in the shell's bottom chrome.
-                LibraryContentMotion(section, shownShelf, sectionStates) { activeSection, activeShelf ->
-                    when (activeSection) {
-                        LibrarySection.TRACKS -> {
-                            // Collected only on the Tracks section, which shows the smart playlist cards.
-                            val smartPlaylistCovers by viewModel.smartPlaylistCovers.collectAsState()
-                            HomeFeed(
-                                songs = songs,
-                                smartPlaylistCovers = smartPlaylistCovers,
-                                recentAlbums = recentAlbums,
-                                recentPlaylists = recentPlaylists,
-                                currentSongId = currentSongId,
-                                isScanning = isScanning,
-                                onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
-                                onAlbumClick = onOpenAlbum,
-                                onPlaylistClick = { onOpenPlaylist(it.id) },
-                                onSmartPlaylistClick = onOpenSmartPlaylist,
-                                actions = actions,
-                                topInset = scroll.contentTop,
-                                bottomInset = scroll.contentBottom,
-                                emptyMessage = emptyMessage,
-                            )
-                        }
-                        LibrarySection.ALBUMS ->
-                            AlbumsTab(
-                                albums = albums,
-                                topInset = scroll.contentTop,
-                                bottomInset = scroll.contentBottom,
-                                onAlbumClick = onOpenAlbum,
-                            )
-                        LibrarySection.LIBRARY ->
-                            if (activeShelf == null) {
-                                LibraryOverview(
-                                    playlists = playlists,
-                                    favoriteSongs = favoriteSongs,
+                CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) {
+                    LibraryContentMotion(section, shownShelf, sectionStates) { activeSection, activeShelf ->
+                        when (activeSection) {
+                            LibrarySection.TRACKS -> {
+                                // Collected only on the Tracks section, which shows the smart mix cards.
+                                val smartMixes by viewModel.smartMixes.collectAsState()
+                                val featuredAlbums by hiltViewModel<FeaturedAlbumsViewModel>().albums.collectAsState()
+                                HomeFeed(
                                     songs = songs,
-                                    artists = artists,
-                                    artistArtwork = artistArtwork,
-                                    isScanning = isScanning,
-                                    actions =
-                                        LibraryOverviewActions(
-                                            onMore = { openShelf = it },
-                                            onMoreSongs = { onSelectSection(LibrarySection.TRACKS) },
-                                            onPlaylistClick = { onOpenPlaylist(it.id) },
-                                            onNewPlaylist = { showNewPlaylist = true },
-                                            onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
-                                            onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
-                                            onArtistClick = onOpenArtist,
-                                        ),
-                                    topInset = scroll.contentTop,
-                                    bottomInset = scroll.contentBottom,
-                                )
-                            } else {
-                                LibraryHub(
-                                    shelf = activeShelf,
-                                    playlists = playlists,
-                                    favoriteSongs = favoriteSongs,
-                                    artists = artists,
-                                    artistArtwork = artistArtwork,
+                                    smartMixes = smartMixes,
+                                    featuredAlbums = featuredAlbums,
+                                    recentAlbums = recentAlbums,
+                                    recentPlaylists = recentPlaylists,
                                     currentSongId = currentSongId,
-                                    onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
+                                    isScanning = isScanning,
+                                    onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
+                                    onAlbumClick = onOpenAlbum,
                                     onPlaylistClick = { onOpenPlaylist(it.id) },
-                                    onNewPlaylist = { showNewPlaylist = true },
-                                    onArtistClick = onOpenArtist,
+                                    onSmartPlaylistClick = onOpenSmartPlaylist,
+                                    onSmartPlaylistPlay = viewModel::playSmartMix,
                                     actions = actions,
                                     topInset = scroll.contentTop,
                                     bottomInset = scroll.contentBottom,
+                                    emptyMessage = emptyMessage,
                                 )
                             }
-                        LibrarySection.VYBE ->
-                            com.lochanpthakke.empee3.feature.library.vybe.VybeScreen(
-                                topInset = scroll.contentTop,
-                                bottomInset = scroll.contentBottom,
-                                currentSongId = currentSongId,
-                            )
+                            LibrarySection.ALBUMS ->
+                                AlbumsTab(
+                                    albums = albums,
+                                    topInset = scroll.contentTop,
+                                    bottomInset = scroll.contentBottom,
+                                    onAlbumClick = onOpenAlbum,
+                                )
+                            LibrarySection.LIBRARY ->
+                                if (activeShelf == null) {
+                                    LibraryOverview(
+                                        playlists = playlists,
+                                        favoriteSongs = favoriteSongs,
+                                        songs = songs,
+                                        artists = artists,
+                                        artistArtwork = artistArtwork,
+                                        isScanning = isScanning,
+                                        actions =
+                                            LibraryOverviewActions(
+                                                onMore = { openShelf = it },
+                                                onMoreSongs = { onSelectSection(LibrarySection.TRACKS) },
+                                                onPlaylistClick = { onOpenPlaylist(it.id) },
+                                                onNewPlaylist = { showNewPlaylist = true },
+                                                onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
+                                                onSongClick = { viewModel.playFromLibrary(it, SongSource.ALL_SONGS) },
+                                                onArtistClick = onOpenArtist,
+                                            ),
+                                        topInset = scroll.contentTop,
+                                        bottomInset = scroll.contentBottom,
+                                    )
+                                } else {
+                                    LibraryHub(
+                                        shelf = activeShelf,
+                                        playlists = playlists,
+                                        favoriteSongs = favoriteSongs,
+                                        artists = artists,
+                                        artistArtwork = artistArtwork,
+                                        currentSongId = currentSongId,
+                                        onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
+                                        onPlaylistClick = { onOpenPlaylist(it.id) },
+                                        onNewPlaylist = { showNewPlaylist = true },
+                                        onArtistClick = onOpenArtist,
+                                        actions = actions,
+                                        topInset = scroll.contentTop,
+                                        bottomInset = scroll.contentBottom,
+                                    )
+                                }
+                            LibrarySection.VYBE ->
+                                com.lochanpthakke.empee3.feature.library.vybe.VybeScreen(
+                                    topInset = scroll.contentTop,
+                                    bottomInset = scroll.contentBottom,
+                                    currentSongId = currentSongId,
+                                )
+                        }
                     }
                 }
             }
@@ -390,7 +404,11 @@ internal fun SongsTab(
             modifier = Modifier.padding(top = topInset, bottom = bottomInset),
         )
     } else {
+        val listState = rememberLazyListState()
+        // The page title merges into the header button as this scrolls.
+        ReportTitleScroll(listState)
         LazyColumn(
+            state = listState,
             modifier = modifier.fillMaxSize(),
             contentPadding = listContentPadding(topInset, bottomInset),
         ) {
@@ -515,7 +533,11 @@ private fun AlbumsTab(
         )
     } else {
         // Column count follows the available width (2 on a typical phone).
+        val gridState = rememberLazyGridState()
+        // The page title merges into the header button as this scrolls.
+        ReportTitleScroll(gridState)
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
             modifier = modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
@@ -558,7 +580,11 @@ internal fun ArtistsTab(
         )
     } else {
         // Same artwork-first grid as Albums.
+        val gridState = rememberLazyGridState()
+        // The page title merges into the header button as this scrolls.
+        ReportTitleScroll(gridState)
         LazyVerticalGrid(
+            state = gridState,
             columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
             modifier = modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.lg),

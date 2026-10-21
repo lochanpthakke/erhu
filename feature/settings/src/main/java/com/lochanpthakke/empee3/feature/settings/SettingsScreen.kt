@@ -230,7 +230,7 @@ private fun NavigationSettingsSubPage(
         ) {
             SettingsGroup(selectable = true) {
                 listOf(
-                    "TRACKS" to ("Tracks" to "Recently played shelves and the full track list"),
+                    "TRACKS" to ("Tracks" to "Home: Smart Playlists, featured and recent albums, and every track"),
                     "ALBUMS" to ("Albums" to "Grid of all your albums"),
                     "LIBRARY" to ("Library" to "Playlists, favorites, artists and songs"),
                 ).forEach { (key, info) ->

@@ -1,11 +1,13 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +17,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
@@ -41,9 +44,9 @@ private const val SETTLE_THRESHOLD = 0.65f
 private const val FLING_FRACTION_PER_SECOND = 1.2f
 
 /**
- * The player as ONE object with one continuous state: [progress] 0 = collapsed
+ * The player as ONE object with one continuous state: [fraction] 0 = collapsed
  * (the mini player), 1 = expanded (Now Playing). Everything that belongs to the
- * player — the expanding surface, the travelling artwork, the content fading in,
+ * player — the expanding surface, the complete travelling card, the content fading in,
  * the bottom chrome stepping aside — is drawn from this single value, so a tap,
  * a drag and a release all move the same timeline and can interrupt each other
  * at any point.
@@ -55,29 +58,60 @@ private const val FLING_FRACTION_PER_SECOND = 1.2f
 class PlayerTransitionState {
     val progress = Animatable(0f, visibilityThreshold = PROGRESS_VISIBILITY_THRESHOLD)
 
+    private var dragProgress by mutableStateOf<Float?>(null)
+
+    /** Drawing follows the finger synchronously; the spring takes over at exactly this value. */
+    val fraction: Float get() = (dragProgress ?: progress.value).coerceIn(0f, 1f)
+
+    var carouselBounds by mutableStateOf(Rect.Zero)
+    var cardSize by mutableStateOf(Size.Zero)
+    var cardArtworkInset by mutableStateOf(0f)
+
+    /** Derived from untransformed layout, never from a moving graphics layer. */
+    val cardArtworkBounds: Rect
+        get() {
+            val side = (cardSize.width - 2f * cardArtworkInset).coerceAtLeast(0f)
+            val left = carouselBounds.center.x - side / 2f
+            val top = carouselBounds.center.y - cardSize.height / 2f + cardArtworkInset
+            return Rect(left, top, left + side, top + side)
+        }
+
     /** The mini player surface, and its artwork, in root coordinates. */
     var miniBounds by mutableStateOf(Rect.Zero)
     var miniArtworkBounds by mutableStateOf(Rect.Zero)
 
-    /** Now Playing's hero artwork in root coordinates (in the expanded layout). */
-    var heroArtworkBounds by mutableStateOf(Rect.Zero)
+    /** Fully expanded: the card transform is identity and normal carousel layering resumes. */
+    val isSettledOpen: Boolean get() = fraction == 1f
 
-    /** Fully expanded: the real Now Playing artwork shows instead of the travelling one. */
-    val isSettledOpen: Boolean get() = progress.value == 1f
+    private val openState = derivedStateOf { fraction > 0f || progress.targetValue > 0f }
 
-    /** True while the player is open or opening (drives Back and accessibility). */
-    val isOpen: Boolean get() = progress.targetValue > 0f
+    /** Own Back while any part is visible, including a direct drag or an interrupted close. */
+    val isOpen: Boolean get() = openState.value
 
     // Interrupting a running open/close keeps its current velocity, so reversing
     // mid-way turns around smoothly from where the player is instead of restarting.
-    suspend fun expand(velocity: Float = progress.velocity) =
-        progress.animateTo(1f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
+    suspend fun expand(velocity: Float = progress.velocity) = moveTo(1f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), velocity)
 
-    suspend fun collapse(velocity: Float = progress.velocity) =
-        progress.animateTo(0f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
+    suspend fun collapse(velocity: Float = progress.velocity) = moveTo(0f, Motion.hero(PROGRESS_VISIBILITY_THRESHOLD), velocity)
 
     /** Direct manipulation: the finger moved by [delta] in units of the drag distance. */
-    internal suspend fun dragBy(delta: Float) = progress.snapTo((progress.value + delta).coerceIn(0f, 1f))
+    internal fun dragBy(delta: Float) {
+        dragProgress = (fraction + delta).coerceIn(0f, 1f)
+    }
+
+    /** One interruptible spring owns the journey, including the exact final geometry. */
+    private suspend fun moveTo(
+        target: Float,
+        spec: AnimationSpec<Float>,
+        velocity: Float,
+    ) {
+        val dragged = dragProgress
+        if (dragged != null) {
+            progress.snapTo(dragged)
+            dragProgress = null
+        }
+        progress.animateTo(target, spec, initialVelocity = velocity)
+    }
 
     /**
      * Finishing a drag: a fast enough fling decides by its direction, otherwise
@@ -88,9 +122,9 @@ class PlayerTransitionState {
             when {
                 velocity > FLING_FRACTION_PER_SECOND -> true
                 velocity < -FLING_FRACTION_PER_SECOND -> false
-                else -> progress.value > SETTLE_THRESHOLD
+                else -> fraction > SETTLE_THRESHOLD
             }
-        progress.animateTo(if (expand) 1f else 0f, Motion.gestureSettle(PROGRESS_VISIBILITY_THRESHOLD), initialVelocity = velocity)
+        moveTo(if (expand) 1f else 0f, Motion.gestureSettle(PROGRESS_VISIBILITY_THRESHOLD), velocity)
     }
 }
 
@@ -114,7 +148,8 @@ fun Modifier.revealWithPlayer(
         this
     } else {
         graphicsLayer {
-            val t = ((state.progress.value - start) / (end - start)).coerceIn(0f, 1f)
+            val p = state.fraction
+            val t = ((p - start) / (end - start)).coerceIn(0f, 1f)
             alpha = t
             translationY = (1f - Motion.Decelerate.transform(t)) * rise.toPx()
         }
@@ -159,6 +194,8 @@ val LocalPlayerTransition = staticCompositionLocalOf<PlayerTransitionState?> { n
 fun Modifier.playerDrag(
     state: PlayerTransitionState,
     expandsUpward: Boolean,
+    /** Whether a drag may start now (Now Playing: only while its page is scrolled to the top). */
+    canStart: () -> Boolean = { true },
 ): Modifier {
     val scope = rememberCoroutineScope()
     return pointerInput(state, expandsUpward) {
@@ -170,7 +207,7 @@ fun Modifier.playerDrag(
                     // Only claim clearly vertical drags in this handler's direction.
                     val vertical = abs(over.y) > abs(over.x)
                     val rightWay = if (expandsUpward) over.y < 0 else over.y > 0
-                    if (vertical && rightWay) {
+                    if (vertical && rightWay && canStart()) {
                         change.consume()
                         slop = over
                     }
@@ -179,11 +216,16 @@ fun Modifier.playerDrag(
             // A full transition is the distance from the mini player to the top of the screen.
             val travel = state.miniBounds.top.takeIf { it > 0f } ?: size.height.toFloat().coerceAtLeast(1f)
             val tracker = VelocityTracker()
+            tracker.addPosition(down.uptimeMillis, down.position)
+            start.historical.forEach { tracker.addPosition(it.uptimeMillis, it.position) }
             tracker.addPosition(start.uptimeMillis, start.position)
-            scope.launch { state.dragBy(-slop.y / travel) }
-            trackDrag(start.id, tracker) { delta -> scope.launch { state.dragBy(-delta.y / travel) } }
-            val velocity = -tracker.calculateVelocity().y / travel
-            scope.launch { state.release(velocity) }
+            state.dragBy(-slop.y / travel)
+            try {
+                if (start.pressed) trackDrag(start.id, tracker) { delta -> state.dragBy(-delta.y / travel) }
+            } finally {
+                val velocity = -tracker.calculateVelocity().y / travel
+                scope.launch { state.release(velocity) }
+            }
         }
     }
 }

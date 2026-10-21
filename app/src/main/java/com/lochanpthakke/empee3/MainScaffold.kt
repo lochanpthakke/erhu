@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
@@ -62,12 +63,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -99,12 +102,12 @@ import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
+import com.lochanpthakke.empee3.core.designsystem.theme.WithoutGlass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
@@ -124,6 +127,7 @@ import com.lochanpthakke.empee3.feature.library.PlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.PlaylistsViewModel
 import com.lochanpthakke.empee3.feature.library.SmartPlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.SoundCapsuleScreen
+import com.lochanpthakke.empee3.feature.library.ViewMetadataScreen
 import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
@@ -334,10 +338,29 @@ fun MainScaffold() {
 
             var songForPlaylist by remember { mutableStateOf<Song?>(null) }
 
+            // Now Playing's "Music information": the track's tags, in the app's metadata viewer.
+            var songForMusicInfo by remember { mutableStateOf<Song?>(null) }
+
             // Glass backdrops: the screens frost under the bottom chrome; the whole
             // shell frosts under the drawer.
-            val screensBackdrop = rememberGlassBackdrop()
-            val shellBackdrop = rememberGlassBackdrop()
+            val screensBackdrop = rememberGlassBackdrop("screens")
+            val shellBackdrop = rememberGlassBackdrop("shell")
+            // The drawer frosts the shell only while it can be seen. Closed, it stays composed
+            // off-screen, and with the backdrop it re-blurred the whole screen every time the shell
+            // redrew (every frame of the player opening, of scrolling...) for nothing.
+            val drawerVisible by remember(drawerState) {
+                derivedStateOf { drawerState.isOpen || drawerState.isAnimationRunning }
+            }
+            // While the player opens, is open or closes, the shell's glass (mini player, library
+            // navigation, search, header buttons) is sliding away or covered: it keeps what it last
+            // rendered (taken at rest, so it is right again when the chrome returns) instead of a
+            // blur and lens pass on every frame of the motion.
+            LaunchedEffect(player, screensBackdrop, shellBackdrop) {
+                snapshotFlow { player.fraction > 0f }.distinctUntilChanged().collect { covered ->
+                    screensBackdrop.frozen = covered
+                    shellBackdrop.frozen = covered
+                }
+            }
 
             // Frame diagnostics (debug builds only): what is on screen and whether the player is moving.
             ReportInteraction(Interactions.SCREEN) {
@@ -349,7 +372,7 @@ fun MainScaffold() {
                 }
             }
             ReportInteraction(Interactions.PLAYER) {
-                val progress = player.progress.value
+                val progress = player.fraction
                 if (progress > 0f && progress < 1f) "moving" else null
             }
 
@@ -367,9 +390,14 @@ fun MainScaffold() {
                                     shape = DrawerDefaults.shape,
                                     level = GlassLevel.Strong,
                                     elevated = false,
-                                    backdrop = shellBackdrop,
+                                    backdrop = shellBackdrop.takeIf { drawerVisible },
                                     optics = DRAWER_OPTICS,
-                                    environmentLens = true,
+                                    // A deeper tint of the theme's own background than other glass, so the
+                                    // labels read crisply while the backdrop still shows faintly through.
+                                    fill = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = DRAWER_FILL_ALPHA),
+                                    // No environment lens here: its bend zone scales with the surface, and on
+                                    // a panel this large it smeared everything behind the drawer.
+                                    environmentLens = false,
                                     frostFactor = sidebarGlassyness,
                                 ),
                         ) {
@@ -392,13 +420,27 @@ fun MainScaffold() {
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            HorizontalDivider()
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = Spacing.xl),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = DRAWER_DIVIDER_ALPHA),
+                            )
                             Spacer(modifier = Modifier.height(Spacing.sm))
 
+                            // Selected: the accent on a soft accent pill; others: full-contrast labels.
+                            val itemColors =
+                                NavigationDrawerItemDefaults.colors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = DRAWER_SELECTED_ALPHA),
+                                    unselectedContainerColor = Color.Transparent,
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                )
                             DRAWER_DESTINATIONS.forEach { destination ->
                                 NavigationDrawerItem(
                                     icon = { Icon(destination.icon, contentDescription = null) },
-                                    label = { Text(destination.label) },
+                                    label = { Text(destination.label, fontWeight = FontWeight.Medium) },
                                     selected =
                                         currentDestination?.hasRoute(destination.route::class) == true ||
                                             (
@@ -412,6 +454,7 @@ fun MainScaffold() {
                                         navController.navigateTopLevel(destination.route)
                                     },
                                     modifier = Modifier.padding(horizontal = Spacing.md),
+                                    colors = itemColors,
                                 )
                             }
                         }
@@ -485,7 +528,7 @@ fun MainScaffold() {
                                                         onOpenAlbum = { openAlbum(it) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                         onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                                                        onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it.name)) },
+                                                        onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it)) },
                                                         onSelectSection = { librarySection = it },
                                                         isSearchActive = isLibrarySearchActive,
                                                         onSearchActiveChange = { isLibrarySearchActive = it },
@@ -521,7 +564,7 @@ fun MainScaffold() {
                                                 ProvideMotionScope(this) {
                                                     val route = entry.toRoute<SmartPlaylistDetail>()
                                                     SmartPlaylistDetailScreen(
-                                                        playlist = SmartPlaylist.valueOf(route.playlist),
+                                                        mixKey = route.playlist,
                                                         viewModel = hiltViewModel(),
                                                         libraryViewModel = libraryViewModel,
                                                         playlistsViewModel = playlistsViewModel,
@@ -643,28 +686,37 @@ fun MainScaffold() {
                                 val playerState by playbackRepository.collectStablePlaybackState()
                                 ExpandingPlayer(state = player, song = playerState.currentSong) {
                                     val isFavorite by libraryViewModel.currentSongIsFavorite.collectAsState()
+                                    val hiddenFromMixes by libraryViewModel.hiddenFromMixes.collectAsState()
+                                    val currentSongId by libraryViewModel.currentSongId.collectAsState()
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
-                                    NowPlayingScreen(
-                                        playbackRepository = playbackRepository,
-                                        libraryRepository = libraryViewModel.libraryRepository,
-                                        animatedArtworkRepository = libraryViewModel.animatedArtworkRepository,
-                                        isFavorite = isFavorite,
-                                        lyrics = lyrics,
-                                        lyricsActions = libraryViewModel.lyricsActions,
-                                        onBackClick = minimizePlayer,
-                                        onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
-                                        onAddToPlaylist = { songForPlaylist = it },
-                                        onSaveQueueAsPlaylist = { name, songs, onResult ->
-                                            playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
-                                        },
-                                        extras = playerExtrasViewModel,
-                                        visualizer = visualizerViewModel,
-                                        audioDetails = audioDetailsViewModel,
-                                        onOpenEqualizer = {
-                                            minimizePlayer()
-                                            navController.navigate(SettingsCategory("audio"))
-                                        },
-                                    )
+                                    // The expanded player is drawn without the Glass Effect (as with the setting off):
+                                    // the glass cost frames here and looked the same. The rest of the app keeps it.
+                                    WithoutGlass {
+                                        NowPlayingScreen(
+                                            playbackRepository = playbackRepository,
+                                            libraryRepository = libraryViewModel.libraryRepository,
+                                            animatedArtworkRepository = libraryViewModel.animatedArtworkRepository,
+                                            isFavorite = isFavorite,
+                                            lyrics = lyrics,
+                                            lyricsActions = libraryViewModel.lyricsActions,
+                                            onBackClick = minimizePlayer,
+                                            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
+                                            onAddToPlaylist = { songForPlaylist = it },
+                                            onSaveQueueAsPlaylist = { name, songs, onResult ->
+                                                playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
+                                            },
+                                            extras = playerExtrasViewModel,
+                                            visualizer = visualizerViewModel,
+                                            audioDetails = audioDetailsViewModel,
+                                            onOpenEqualizer = {
+                                                minimizePlayer()
+                                                navController.navigate(SettingsCategory("audio"))
+                                            },
+                                            onShowMusicInfo = { songForMusicInfo = it },
+                                            isHiddenFromMixes = currentSongId in hiddenFromMixes,
+                                            onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -679,12 +731,29 @@ fun MainScaffold() {
                     onDismiss = { songForPlaylist = null },
                 )
             }
+            songForMusicInfo?.let { song ->
+                ViewMetadataScreen(
+                    song = song,
+                    viewModel = hiltViewModel(),
+                    libraryViewModel = libraryViewModel,
+                    onDismiss = { songForMusicInfo = null },
+                )
+            }
         }
     }
 }
 
 /** Environment glass of the navigation drawer: lots of text, so half the mini player's strength. */
-private const val DRAWER_OPTICS = 0.5f
+private const val DRAWER_OPTICS = 0.3f
+
+/** The drawer's fill: dense enough for crisp labels, still letting the backdrop show through. */
+private const val DRAWER_FILL_ALPHA = 0.82f
+
+/** The selected destination's pill: a soft wash of the accent. */
+private const val DRAWER_SELECTED_ALPHA = 0.16f
+
+/** The hairline under the drawer's title. */
+private const val DRAWER_DIVIDER_ALPHA = 0.2f
 
 /** A navigation route's class name, without package or arguments ("AlbumDetail"): no ids. */
 private fun routeName(route: String): String = route.substringBefore('/').substringBefore('?').substringAfterLast('.')
@@ -729,7 +798,7 @@ private fun LibraryRoute(
     onOpenAlbum: (Album) -> Unit,
     onOpenArtist: (Artist) -> Unit,
     onOpenPlaylist: (Long) -> Unit,
-    onOpenSmartPlaylist: (SmartPlaylist) -> Unit,
+    onOpenSmartPlaylist: (mixKey: String) -> Unit,
     onSelectSection: (LibrarySection) -> Unit,
     isSearchActive: Boolean,
     onSearchActiveChange: (Boolean) -> Unit,

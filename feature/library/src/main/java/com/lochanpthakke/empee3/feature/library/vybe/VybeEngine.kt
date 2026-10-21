@@ -18,6 +18,7 @@ import com.lochanpthakke.empee3.core.vybe.VybeMatch
 import com.lochanpthakke.empee3.core.vybe.VybeText
 import com.lochanpthakke.empee3.core.vybe.mediapipe.MediaPipeTextEmbedder
 import com.lochanpthakke.empee3.core.vybe.mediapipe.VybeEmbedderException
+import com.lochanpthakke.empee3.core.vybe.tasteNeighbours
 import com.lochanpthakke.empee3.core.vybe.textHash
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
@@ -175,6 +177,44 @@ class VybeEngine
             songId: Long,
             limit: Int,
         ): VybeAnswer.SimilarTo? = withContext(dispatcher) { discovery()?.similarToSong(songId, limit) }
+
+        /**
+         * Indexed songs nearest to a listening taste: [seeds] (song id -> weight) averaged into one
+         * point and every other song scored against it, by cosine similarity of the stored vectors.
+         * For the smart mixes. Never loads the model and never starts indexing: it reads the index
+         * file as it stands (null when there is none yet). Runs on VYBE's thread, between
+         * embeddings; the last answer is kept until the seeds, the index or the library change.
+         */
+        suspend fun tasteNeighbours(
+            seeds: Map<Long, Float>,
+            limit: Int,
+        ): Map<Long, Float>? =
+            withContext(dispatcher) {
+                val indexFile = File(context.filesDir, INDEX_FILE)
+                val dimension = VybeIndexFile.storedDimension(indexFile, MODEL_ID) ?: return@withContext null
+                val songs = library.ifEmpty { libraryRepository.observeSongTags().first().map(VybeText::fromTags) }
+                val live = songs.associate { it.songId to documentHash(it) }
+                val key = TasteKey(seeds, limit, indexFile.length(), indexFile.lastModified(), live.hashCode())
+                tasteCache?.takeIf { it.first == key }?.let { return@withContext it.second }
+                val file = index ?: VybeIndexFile(indexFile, MODEL_ID, dimension)
+                val stored = file.entries()
+                val current = live.filter { (id, hash) -> stored[id] == hash }
+                val result =
+                    traced("VYBE taste") { tasteNeighbours(file, current, seeds, limit) }
+                        .associate { it.songId to it.score }
+                tasteCache = key to result
+                result
+            }
+
+        private data class TasteKey(
+            val seeds: Map<Long, Float>,
+            val limit: Int,
+            val indexLength: Long,
+            val indexModified: Long,
+            val library: Int,
+        )
+
+        private var tasteCache: Pair<TasteKey, Map<Long, Float>>? = null
 
         /** Reloads the model if it was released while VYBE was away. */
         @Suppress("ReturnCount")

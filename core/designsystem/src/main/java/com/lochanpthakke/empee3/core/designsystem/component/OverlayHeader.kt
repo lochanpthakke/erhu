@@ -24,12 +24,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -52,6 +65,9 @@ private const val SCRIM_MID_ALPHA = 0.6f
 /** Where (0..1 of the header height) the scrim reaches [SCRIM_MID_ALPHA]. */
 private const val SCRIM_MID_STOP = 0.5f
 
+/** A collapsing title stops being announced (accessibility) past this point of its collapse. */
+private const val TITLE_ANNOUNCED_UNTIL = 0.5f
+
 /**
  * Minimal edge-to-edge header that floats over scrolling content: a round
  * navigation button with an optional page title on the existing screen background.
@@ -61,6 +77,15 @@ private const val SCRIM_MID_STOP = 0.5f
  *
  * Owns the status-bar inset like [AppTopBar], so [AppScaffold] reports its full
  * height as top padding. Pair it with `forScrollingContent(topOverlay = true)`.
+ *
+ * Collapsing titles merge into the left button as the page scrolls, and are gone (no title stays
+ * pinned over the content); scrolling back brings them out again. The button itself never changes:
+ * same action, same touch target, same semantics.
+ * - [collapsingHeader] (detail pages with a hero): [title] takes over from the hero's large title
+ *   at its place and size and travels into the back button ([CollapsingHeaderState]).
+ * - [collapsingTitle] (pages whose title sits here): [title] moves from its place beside the button
+ *   into it as the visible list scrolls ([CollapsingTitleState]).
+ * All of it is read in the draw phase: scrolling doesn't recompose the header.
  */
 @Composable
 @Suppress("LongMethod")
@@ -68,14 +93,24 @@ fun OverlayHeader(
     navigation: TopBarNavigation,
     modifier: Modifier = Modifier,
     title: String? = null,
+    collapsingHeader: CollapsingHeaderState? = null,
+    collapsingTitle: CollapsingTitleState? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val scrim = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background)
+    val merge = remember { TitleMerge() }
+    val collapse: () -> Float = { collapsingHeader?.progress ?: collapsingTitle?.progress ?: 0f }
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
-                .drawBehind {
+                .then(
+                    if (collapsingHeader != null) {
+                        Modifier.onSizeChanged { collapsingHeader.barHeight = it.height.toFloat() }
+                    } else {
+                        Modifier
+                    },
+                ).drawBehind {
                     drawRect(
                         Brush.verticalGradient(
                             0f to scrim.copy(alpha = SCRIM_TOP_ALPHA),
@@ -96,12 +131,26 @@ fun OverlayHeader(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(
+                // Where a collapsing title merges (layout only: the button's action and touch target are untouched).
+                modifier =
+                    Modifier.onGloballyPositioned {
+                        val centre = it.positionInRoot() + Offset(it.size.width / 2f, it.size.height / 2f)
+                        merge.button = centre
+                        collapsingHeader?.button = centre
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 Box(
                     modifier =
                         Modifier
                             .size(HEADER_BUTTON_SIZE)
-                            .glassPressEffect(interactionSource, CircleShape)
+                            // The glass swells a touch as it takes the title in (drawing only).
+                            .graphicsLayer {
+                                val pulse = mergePulse(smoothstep(collapse()))
+                                scaleX = pulse
+                                scaleY = pulse
+                            }.glassPressEffect(interactionSource, CircleShape)
                             .glassPanel(CircleShape, level = GlassLevel.Strong, elevated = false),
                 )
                 CompositionLocalProvider(LocalRippleConfiguration provides glassRippleConfiguration()) {
@@ -119,13 +168,27 @@ fun OverlayHeader(
             }
             if (!title.isNullOrBlank()) {
                 Spacer(modifier = Modifier.width(Spacing.md))
+                // A detail page's hero title is the one announced; a merging title only while it shows.
+                val announced by remember(collapsingHeader, collapsingTitle) {
+                    derivedStateOf { collapsingHeader == null && (collapsingTitle?.progress ?: 0f) < TITLE_ANNOUNCED_UNTIL }
+                }
                 Text(
                     text = title,
                     style = TextStyles.screenTitle,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .then(if (announced) Modifier else Modifier.clearAndSetSemantics {})
+                            .then(
+                                when {
+                                    collapsingHeader != null -> Modifier.collapsingBarTitle(collapsingHeader)
+                                    collapsingTitle != null -> Modifier.mergingTitle(collapsingTitle, merge)
+                                    else -> Modifier
+                                },
+                            ),
                 )
             } else {
                 Spacer(modifier = Modifier.weight(1f))
@@ -134,3 +197,36 @@ fun OverlayHeader(
         }
     }
 }
+
+/** Where the header's left button is (and where a merging title rests), in root coordinates. */
+@Stable
+private class TitleMerge {
+    var button by mutableStateOf(Offset.Unspecified)
+    var left by mutableFloatStateOf(Float.NaN)
+    var top by mutableFloatStateOf(Float.NaN)
+    var height by mutableFloatStateOf(0f)
+
+    val measured: Boolean get() = button.isSpecified && !left.isNaN() && height > 0f
+}
+
+/** A title beside the button, merging into it as [state] collapses. */
+private fun Modifier.mergingTitle(
+    state: CollapsingTitleState,
+    merge: TitleMerge,
+): Modifier =
+    onGloballyPositioned {
+        val position = it.positionInRoot()
+        merge.left = position.x
+        merge.top = position.y
+        merge.height = it.size.height.toFloat()
+    }.graphicsLayer {
+        if (merge.measured) {
+            mergeIntoButton(
+                t = smoothstep(state.progress),
+                button = merge.button,
+                restLeft = merge.left,
+                restTop = merge.top,
+                height = merge.height,
+            )
+        }
+    }

@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-17. Branch `kshitij`; animation source at `bd9b861`, followed by these handoff notes._
+_Last updated: 2026-10-20. Branch `kshitij`; complete-card player transition work and validation are documented in 3.11._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -55,6 +55,13 @@ is still open. Verify anything specific (file names, functions) against the code
 
 | Commit | What |
 |---|---|
+| `7ff9564` | **Glass Now Playing cards**, **liquid seek bar**, **Home redesign** (Smart Playlist hero banner, new library concepts, five Featured Albums, page titled Home) and the **player-motion performance pass**; see 3.8–3.10 |
+| `17ddedd` | **Smart Playlists 2.0** (real local recommendations, generative cover art) and **Now Playing redesign** (3D card carousel, scrolling page, artwork-palette lyrics panel, glass/gradient surfaces, linear seek bar, overflow menu); see 3.7 |
+| `f76ec0d` | Theme unification: shared group components (`Groups.kt`, `GroupRows.kt`), Artwork Fetcher and Auto Fix Tags restyle, clearer drawer, collapsing titles on Settings / Wi-Fi Transfer / Sound Capsule |
+| `2163e8c` | Spring motion pass, liquid navigation capsule (drag to navigate), titles collapsing into the header button |
+| `e8cfef7` | Collapsing header for album and artist pages |
+| `ba60260` | Merge `origin/lochan`: artist artwork fetcher, search fix and UI, fullscreen artists |
+| `cef0c55` | Release build fixes (R8 keep rules for MediaPipe/Flogger), benchmark setup and frame diagnostics (Smoothness steps 1–2) |
 | `bd9b861` | Expanded-player swipe feedback and track handoff; see 3.6 for the subsequent installed-version correction |
 | `0f910f2` | Shared tactile spring feedback and bounded selection jiggles |
 | `e553558` | Exact player artwork endpoint handoff; remove residual expand/collapse resize |
@@ -179,6 +186,147 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   does not establish a measured causal link between the theme and jank. No global theme-default
   change was requested or made. Both packages remain installed; do not remove one by guessing.
 
+### 3.7 Smart Playlists 2.0 + Now Playing redesign (`17ddedd`, 2026-10-19)
+**Smart Playlists** (`feature/library/.../mix/`, `SmartPlaylists.kt`, `LibraryHome.kt`):
+- `SmartMixEngine` (pure, unit-tested) builds mixes from real data only: monthly play counts per
+  song with recency decay (21-day "recent", 120-day "lasting" half-lives), favourites, genre, BPM.
+  There is **no skip data** in the app; nothing is inferred from skips.
+- Mixes: In Your Rotation, Your Kind of Sound, Forgotten Favourites, Deep Cuts, High Energy /
+  Chill / Late Night (`Moods.kt`: genre decides; BPM only supports it and is trusted only in
+  70–175, outside that it may be half/double time), A Little Different. Fallbacks (Favourites,
+  Fresh in Your Library) plus a "keep listening" card while history is short (< 5 songs / 10 plays).
+- VYBE reuse **without loading the model**: `VybeEngine.tasteNeighbours` reads the stored index
+  vectors (`VybeIndexFile.storedDimension`, `vectorsOf`; `core/vybe/VybeTaste.kt`), ranks songs
+  against a weighted centroid of the most-played songs, cached until seeds / index / library change.
+- `SmartMixSource` / `SmartMixRepository`: Room flows (new read-only queries
+  `observeTrackFacts`, `observeMonthlyPlays`; no schema change) → debounced (1.5 s, first value
+  immediate) → built off the main thread → app-wide cache. Detail page resolves the same ids.
+- Generative covers (`MixArt.kt` spec + `MixArtwork.kt` drawer): seed = FNV hash of the mix key,
+  12 palettes, 6 compositions, Compose primitives only. No album art, collages, images or network.
+- Hide from Smart Playlists: proto field `hidden_from_recommendations = 31`
+  (`HiddenTracksPersistence`), undo via snackbar / menu. Files, library and user playlists untouched.
+
+**Now Playing** (`NowPlayingScreen.kt`, `NowPlayingParts.kt`, `NowPlayingLyrics.kt`,
+`NowPlayingMenu*.kt`, `TrackCarousel.kt`, `LyricsPalette.kt`, `LinearSeekBar.kt`):
+- The existing queue strip (`TrackCarouselState`) became a 3D depth carousel: cohesive cards
+  (artwork + title, artist, album when there is room, favourite), card 80% of the width, neighbours
+  scaled 0.78, turned 32° and dimmed; tap a side card to select it. `page` is measured from the
+  current card (`onSizeChanged`), so cards follow the finger 1:1. Reduced motion: no rotation.
+- One scrolling page: card + seek bar + controls on the first screen, lyrics heading peeking;
+  the lyrics panel below (62% of the viewport, 300–560 dp). `playerDrag(canStart)` collapses the
+  player only while the page is scrolled to the top.
+- Lyrics: the existing `SongLyricsView` / `LyricsContent` with a `LyricsLook` (compact, left-aligned,
+  19 sp) for the panel; expanded view over the player (`ExpandedLyrics`). Sync uses the player's
+  position + `rememberSmoothPosition` (now shared); lookup is triggered once per song (`onShown`).
+- `LyricsPalette`: strongest hue of the cover (hue-band vote, not an average), contrast-checked
+  text (≥ 4.5:1 active, ≥ 3:1 secondary) across a three-stop gradient; cached per artwork, sampled
+  32 px off the main thread, cross-faded. `nowPlayingSurface()`: **Glass Effect on** = tinted
+  `glassPanel` (Strong) over the album backdrop; **off** = the opaque gradient.
+- Overflow menu: Music information (`ViewMetadataScreen`), Audio details, Bookmark this moment,
+  Bookmarks & A-B loop, Add to playlist, Hide from Smart Playlists, Queue, Visualizer, Equalizer.
+- `LinearSeekBar` replaces the waveform in Now Playing (the old `WaveformSeekBar.kt` is unused but
+  kept): artwork-accent played part, round head with glow (static half glow when paused), 48 dp
+  touch row, same tap/drag seek and bookmark/A-B markers.
+
+### 3.8 Now Playing cards + liquid seek bar (`7ff9564`)
+- `NowPlayingCardSurface.kt` (`carouselCardSurface`): one card material for both Glass modes. Glass:
+  `glassPanel` (frost, shadow) + the card gradient at 0.4 around the artwork, denser behind the text
+  (`glassTextAlpha`: the alpha that keeps 4.5:1 against the brightest/darkest backdrop the glass could
+  show), album-tinted rim, upper light, lower shade, soft step under the artwork. No glass: the same
+  details over the opaque diagonal `cardGradient`. The horizontal bands are merged into ONE gradient
+  (`VerticalBand`/`flatten`): three draws per card.
+- `LyricsPalette` gained `cardGradient` (lighter hue top-start → surface → the artwork's SECOND colour,
+  if it has a real one, bottom-end) and `rim`; secondary/accent are checked against both gradients.
+  The lyrics panel still uses `nowPlayingSurface` (unchanged look).
+- `LinearSeekBar`: the played part is one path with a liquid crest (`LiquidCrest`: two drifting swells,
+  ≤ 3 dp, eased in from the start); drift advances only while playing, settles to 45% when paused,
+  still with reduced motion; fill is the accent lifted 18% to pastel. A released seek is held
+  (`rememberSeekSettle`) until the player reports a position within 750 ms (1.5 s timeout), so the head
+  never springs back. No second playback timer: the drift is a frame-clock value read in draw only.
+
+### 3.9 Home redesign (`7ff9564`)
+- The Tracks section's page header says **Home** (`LibrarySection.pageTitle`); the bottom-navigation
+  tab still says **Tracks** (the user asked not to rename the tab). Order: hero → Featured Albums →
+  Recently played albums (empty-state note) → Recently played playlists → Tracks.
+- Hero (`HomeHero.kt`): HorizontalPager of mixes, manual swipe (no timer), max 6, order fixed per app
+  session (`HomeSession`, new on each launch, keyed by mix key so rebuilds keep it). Art:
+  `MixArt.banner(kind, aspect)` = the cover's seed/palette/composition laid out for the banner (focus to
+  the right, left `BANNER_TEXT_SIDE` = 0.46 keeps only backdrop + glow, shapes in shorter-side units so
+  nothing stretches). Existing square covers were verified IDENTICAL (layer hashes vs `17ddedd`).
+  `BannerLook`: light text on dark palettes, dark on light; a veil of the palette's own tone only as
+  strong as needed for 6:1 against every text-side colour (≤ 0.7 for all palettes). Glass on: a light
+  rim + sheen drawn over the art. Play = `LibraryViewModel.playSmartMix` (same as the mix page's Play).
+- New mix kinds in `mix/LibraryMixes.kt` (library-only, offered only with enough songs): Spotlight
+  ("Spotlight: <artist>", `SmartMix.title`), Throwbacks (year tags ≥ 10 years old; 1970/0 ignored —
+  `year` added to the read-only `observeTrackFacts` query and `TrackFacts`), Quick Hits (< 2:40), Long
+  Listens (≥ 5 min), Yet to Be Heard (unplayed; only with ≥ 10 counted plays). Mood concepts the
+  tags cannot support (142/153 songs have no genre) are deliberately NOT offered. New palettes:
+  Night drive, Soul, Vintage, Slate.
+- Featured Albums (`FeaturedAlbums.kt`, `FeaturedAlbumsViewModel`): 5 distinct albums — most played,
+  then favourite-holding, then a daily rotation (fuller albums, then singles, then Recently played
+  albums only to fill). Fully offline; nothing labelled personal without data.
+
+### 3.10 Player-motion performance pass (`7ff9564`, measured)
+Measured with `JourneyBenchmarks#playerExpandCollapse` on the S23 (`.bench`, seeded from the user's data,
+Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scripts there
+(`rt_breakdown.py`, `layers.py`, `glasscount.py`, `slices.py`). Named trace sections now exist:
+`GlassSource:<name>`, `GlassFrost:<name>`, `GlassLens:<name>` (backdrops: `screens`, `shell`, `screen`,
+`nowPlayingArtwork`).
+- The closed drawer kept re-blurring a full-screen layer whenever the shell redrew: its backdrop is
+  now given only while it is open or animating (`MainScaffold`, `drawerVisible`).
+- `GlassBackdrop(preBlurred = true)` for Now Playing's artwork backdrop (already a 40 dp blur): glass
+  over it draws the region directly + the frost's dim/lift tone, no second blur or offscreen layer
+  (`FrostBacking.kt`). Lost: the frost's 1.35 saturation and edge light on those surfaces only.
+- `GlassBackdrop.frozen`: set for `screens` and `shell` while the player is opening, open, closing or
+  landing (`progress > 0 || arrival != 0`); their glass reuses its last rendering (taken at rest) and
+  stops reading its position, so the sliding chrome does no lens/blur pass per frame.
+- `ExpandingPlayer`'s fade uses `CompositingStrategy.ModulateAlpha` (no full-screen offscreen buffer).
+- `AppScaffold(contentIsBackdrop = false)` for Now Playing (its top bar is not glass).
+- Numbers (journey, warm phone): frame CPU p50 23.4 → 13.9 ms, p90 64 → 28, p99 114 → 45;
+  RenderThread drawing 15.8 → 8.9 ms/frame; frames drawn 1933 → 3060. (`17ddedd` warm: p50 25.0,
+  p99 108.) 62% of frames still exceed 8.33 ms (120 Hz): what remains is drawing Now Playing plus the
+  screen under it each frame — next idea: stop drawing the covered library once the player is fully open.
+- Note: early A/B numbers were skewed by phone temperature — always rerun the baseline warm.
+
+### 3.11 Complete-card player expansion/collapse (2026-10-20)
+- User requested one coherent transition: neighbours unfold/fold behind the central card, no
+  whole-page jiggle, and the full card (not detached artwork) travels into the mini player.
+- Removed `ExpandingPlayer.TravellingArtwork`. `TrackCarousel` now moves the existing full
+  carousel in one uniform layer; `PlayerCardTransform.kt` maps the measured thumbnail to the
+  exact expanded artwork bounds. Its layout measurement lives outside the moving layer, so
+  drawing cannot retarget its own geometry. Final card sizes, perspective, colours and layout
+  remain unchanged. Neighbours use a bounded reversible smoothstep of the same fraction and
+  stay behind the current card while opening/closing. No new artwork loader or dependency.
+- `PlayerTransitionState.fraction`: direct synchronous pointer feedback, bounded 0..1; release
+  hands the exact drawing value to the existing spring. Thresholds/directions are unchanged.
+  Back is owned while the player is visibly closing or dragged, via a derived Boolean.
+- Removed the independent `arrival` impulses and their content/mini-player transforms. The
+  critically damped journey spring now supplies all settling, with no second page kick or
+  thumbnail squash. Other approved button/selection spring feedback remains intact.
+- Removed the redundant whole-player opacity fade (it dimmed the travelling card before the
+  opaque mini artwork took over). The reveal mask starts at the thumbnail and its own corner;
+  backdrop/section reveals remain animated. Card metadata fades late into the normal mini
+  representation; artwork corners match at handoff. Resting Liquid Glass mini/top-bar styling
+  is unchanged. Playback/DSP, queue, lyrics timing, metadata, VYBE and schemas were not changed.
+- 151 app/library unit tests pass, including geometry, high-velocity bounds, unchanged fling
+  thresholds, direct/reversed dragging, mid-animation takeover and rapid command retargeting.
+  Debug/release APKs build; app/library ktlint and app detekt pass. Library detekt retains 27
+  existing findings, none in changed files. A transient Android lint internal analyzer crash
+  was resolved by retry; no lint/build gates were weakened.
+- S23 debug AND final release checks/recordings passed repeated cycles, short slow return-to-open, fast/long
+  collapse, Back, reversal, cancellation and playback through collapse/reopen. Track/queue
+  stayed Sweet Home, 2/30; playback was paused and seek restored to 0 (MediaSession verified).
+  The release APK installed at 01:07 matches the saved release SHA-256:
+  `992c0a13449b9bf8a55e9d113c66be156e0456c579ae597daad044af7bcd8f44`.
+  Final verification and exact changed files are in the task's `outputs/player-transition-report.md`.
+- Do not force short synthetic ADB strokes to count as flings: diagnostics measured 0.85/0
+  screen-heights/sec for the initially failing assertion, below the existing 1.2 threshold.
+  Temporary recognition/logging experiments were removed; genuine velocity overrides are
+  unit-tested. No artificial velocity or new gesture threshold was introduced.
+- No numerical frame-performance improvement is claimed. Other screen sizes, rotation,
+  cold/missing artwork, both themes and reduced-motion device settings are not exhaustively
+  verified. This is transition work, not the full Smoothness Engine. Do not commit/push unless asked.
+
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
   manual "Time words" tool, local enhanced-LRC copies) — built 2026-10-11, the user scrapped it and
@@ -197,6 +345,16 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   headphone unplug, lock-screen controls, Bluetooth vs speaker latency.
 - Audio inspector on real outputs (wired/USB/Bluetooth/LE Audio), offload behaviour.
 - Online lyrics on real songs: match quality, wrong-lyrics cases, rate limiting, offline reuse.
+- **Now Playing (`17ddedd`)**: card size and fit, swipe / tap-side-card feel, scroll into the lyrics
+  and back, collapse from the top, glass-on vs glass-off surfaces on bright / dark / mono / missing
+  covers, seek-bar head while dragging and paused, every overflow-menu action, hide + undo.
+- **Smart Playlists (`17ddedd`)**: personal mixes once there is enough history (the user's history
+  was too short on 2026-10-19: only High Energy and Fresh showed), VYBE-matched "Your Kind of Sound".
+- **`7ff9564` (installed as release 2026-10-19 23:42, not yet looked at on the phone by Claude)**: the
+  user confirmed the glass cards and liquid seek bar "all work"; still to check: banner art and text on
+  every concept, banner swipe vs page scroll, banner Play starts the shown mix, Featured Albums shows
+  five and opens the right album, last row clears the mini player, Glass on/off, and whether opening /
+  closing the player now feels smooth (with music playing and paused).
 
 ### 5.2 Known limitations / deferred features
 - Not implemented (shown as unavailable, not faked): transition **effects** (reverb/echo),
@@ -205,12 +363,20 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
 - Online lyrics: LRCLIB word-synced records are rare; `lyricsfile` is a newer field and may change
   (falls back to line timing). External `.lrc` sidecar files are not read (embedded tags only).
 - Cue points apply to single pairs only (not album/global defaults).
+- Now Playing carousel shows one neighbour per side (the player exposes only previous / next).
+- The player still decodes each track's waveform in the background although Now Playing no
+  longer draws it (`PlayerExtrasViewModel.waveform`); the queue sheet's lyrics tab still exists.
+- The old `SmartPlaylist` enum and `SmartPlaylistRepository` are no longer used by the UI (kept, tested).
+  `SmartMixTile` / `MoreListeningNote` are no longer used by Home (kept).
+- Bottom-navigation tab still reads "Tracks" while its page is titled "Home" (user's instruction;
+  offer to rename if they want them to match).
 - Playlist occurrence identity relies on positions never being renumbered — if a playlist
   **reorder** feature is ever added, give entries a durable id (Room migration) first.
 
 ### 5.3 Pre-existing lint/static-analysis debt (not caused by recent work; left alone)
 - detekt: `SoundSettingsMapper` (LongMethod), `SongArtworkBitmapLoader` (ReturnCount),
-  `MediaStoreScanner`, `JAudioTaggerEnricher`, designsystem `Glass.kt`/`DominantColorExtractor`.
+  `MediaStoreScanner`, `JAudioTaggerEnricher`, designsystem `DominantColorExtractor`; core:model
+  `RepairDiagnostics` (detekt + ktlint); feature:library has 27 old findings (e.g. `LibraryViewModel`).
 - Android lint: ~40 Media3 `UnsafeOptInUsageError` in `PlaybackModule`, `CustomEqAudioProcessor`,
   `PlayerMessageLoopScheduler`, `PlaybackControllerImpl` (audio session), `PlaybackServiceConnector`.
   Android lint is therefore not a clean gate; check new files only.
@@ -220,7 +386,9 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   on the phone in this log. Lochan's Deezer metadata/genre work is his — don't edit it.
 - VYBE (`core:vybe`, `core:vybe-mediapipe`) exists from `084bc7f`; leave it unless asked.
 
-### 5.5 Metadata & Artwork audit + VYBE revisit (2026-10-13, UNCOMMITTED, not installed)
+_5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (`6f32c31`, `dbfc792`, `d7e9ab2`)._
+
+### 5.5 Metadata & Artwork audit + VYBE revisit (2026-10-13)
 - Deezer: `api.deezer.com/infos` → `country_iso IN, open false`. Track/album search returns `total>0`
   with empty `data` from India; artist search and `track/{id}`, `album/{id}` lookups work. Track BPM is 0.
   Now reported as FAILED ("isn't available in this country"), not "no results".
@@ -237,7 +405,7 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   source exists). Added `VybeQueryRouter` (exact artist/album/title routing) and dropped album names from
   embedded text. No UI/indexing built: blocked on model delivery and a mood source (user decision).
 
-### 5.6 Year support (2026-10-13, UNCOMMITTED, not installed)
+### 5.6 Year support (2026-10-13)
 - Year Only action + year in All Fields (fills only blank / "1970" / unparseable years). Date from
   MusicBrainz: earliest official release of the chosen album, full precision (`ReleaseDate.kt`);
   bootleg/promo/compilation dates rejected; equally good matches with different years → no year.
@@ -245,7 +413,7 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   ("1970-11-19"); the writer now deletes YEAR first and verifies the exact read-back. ID3v2.3 can't
   store year-month (it invents "-01"), so those are saved as the year with a note.
 
-### 5.7 Mojibake + matching (2026-10-13, UNCOMMITTED, not installed)
+### 5.7 Mojibake + matching (2026-10-13)
 - "IGORâ€™S THEME": the file's UTF-16 TIT2 is correct; Android's MediaStore misreads it (string-dependent
   charset guess; "WHAT’S GOOD" in an identical tag is fine). Scanner now keeps the file tag's title when
   MediaStore's value is exactly its Windows-1252 misreading (`MojibakeText.correctedFromTag`). No file rewrite.
@@ -253,7 +421,7 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
   against the embedded identity (not the query text); ties that would write different tags -> NEEDS_REVIEW.
 - Library audit (read-only, 153 songs): 1 misread title, 0 corrupted files, 75 year-1970, 142 no genre.
 
-### 5.8 Batch network failures + Last.fm (2026-10-14, UNCOMMITTED, not installed)
+### 5.8 Batch network failures + Last.fm (2026-10-14)
 - Cause of "No address associated with hostname" x84: Battery Saver on (low_power=1); Android blocks network
   for background apps (netpolicy UID 10485 blocked=BATTERY_SAVER|APP_BACKGROUND). Reproduced: run-as empee3
   can't resolve musicbrainz.org while the shell can. Wi-Fi also flapped ~19:50.
@@ -265,29 +433,40 @@ Settings redesign, Liquid Glass theme/mini-player, Sound Capsule, smart playlist
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
-- Animation application source is `bd9b861`, pushed to `origin/kshitij`; this handoff update
-  is being committed/pushed separately at the user's request. Check HEAD for the latest notes.
-- Original swipe APK remains in `com.lochanpthakke.empee3`, installed 2026-10-16 at 23:34.
-  Its installed APK SHA-256 matched the earlier saved real-package APK:
-  `90f4c9ead024f4725c35983090f9dd5350961a308d055cb41c8ebc9b383200c1`.
-  Automatic rotation was restored after the portrait-locked profiling runs.
-- **Subsequent correction (2026-10-17):** the user reported that the retained copy still lagged.
-  The saved `final-scoped-debug.apk` profiling copy has been reinstalled. With the phone idle,
-  current real-app data was backed up to
-  `D:\android-toolchain\dbbackup\pre-other-player-20261017-000230\appdata.tar`;
-  its databases and playback proto were copied to the recovered profiling package, then only
-  the clone's theme was set to `default_dark` to match its prior diagnostic configuration.
-  Real-app data was not overwritten. The user confirmed this recovered copy and requested
-  committing/pushing it. Its source-to-APK verification is recorded in 3.6. Keep it installed
-  with `default_dark`; keep the original real package as a data-safe fallback for now.
-- Test-setting follow-up: repeat was temporarily changed from Off to All during profiling.
-  The user subsequently changed tracks/queue; do not overwrite their current preferences
-  or restore an old data snapshot. Confirm their desired repeat mode before changing it.
-- Earlier pre-install app-data backup:
-  `D:\android-toolchain\dbbackup\pre-swipe-last-20261016-233415\appdata.tar`.
-  Do not restore older profiling backups over the user's newer queue/settings.
+- **2026-10-20:** the current transition build contains the complete-card changes
+  described in 3.11; the user requested committing these changes to `kshitij` (no push requested).
+  Latest paired APKs: `D:\android-toolchain\build-card-transition\real-release.apk`
+  and `real-debug.apk` (same code, debug is for future data backups). Only the real package is
+  used; no `.perf`/`.bench` copy was installed for this task. Do not reinstall `7ff9564` thinking
+  it contains the new complete-card transition. Final release is installed and visually checked;
+  only `com.lochanpthakke.empee3` is installed. Latest pre-install data backup:
+  `D:\android-toolchain\dbbackup\pre-card-release-20261020-010726\appdata.tar`.
+- **2026-10-19 23:42:** the main app (`com.lochanpthakke.empee3`) is the **release** build of `7ff9564`
+  (R8, not debuggable). Pre-install data backup:
+  `D:\android-toolchain\dbbackup\pre-perf-pass-20261019-234223\appdata.tar`.
+  Build outputs: `D:\android-toolchain\build-perf-pass\` (`real-release.apk`, `real-debug.apk`; the debug
+  one is the same-code build to install for a data backup). Previous: `build-home-dynamic\`.
+- Branch `kshitij`: `7ff9564` and these notes are pushed to `origin/kshitij` (2026-10-19).
+- Only the main app is installed; `.bench` and the benchmark runner were removed after the runs.
+  Re-seed when needed: build `:app:assembleDebug -PbenchApp`, install it, push a tar of
+  `databases files shared_prefs no_backup` from the latest backup, `run-as … tar -xf`, grant
+  READ_MEDIA_AUDIO + MANAGE_EXTERNAL_STORAGE, then `install -r` the `assembleBenchmark` APK and the
+  `:benchmark` runner. Use `MSYS_NO_PATHCONV=1` and `D:/…` paths with adb in Git Bash.
+- A worktree of `17ddedd` for A/B builds is at `D:\android-toolchain\ab-baseline-17ddedd` (it has
+  copies of the card files in it from an experiment; safe to remove with `git worktree remove`).
+- Backing up the release app: install the same-code debug build (same key), `run-as tar` the data,
+  then reinstall the release. Never restore an old backup over the user's newer data.
+- `ktlintFormat` formats the WHOLE module: snapshot `src` first and restore every file you did not
+  touch (it once reformatted six unrelated files, which were then committed in `7ff9564` as
+  formatting-only changes with the user's "commit everything").
+- Phone automation: check the test app is focused before every input, tap only UI-dump-located
+  targets, never fixed coordinates or BACK without confirmed state. The user may be using the phone
+  at the same time: stop sending input as soon as the state changes unexpectedly.
 
-## 7. Smoothness Engine (2026-10-17, IN PROGRESS, UNCOMMITTED; user said do not commit/push)
+## 7. Smoothness Engine (2026-10-17; steps 1–2 committed in `cef0c55`; player-motion fixes in 3.10)
+Status 2026-10-19: steps 1–2 (benchmark module, `.bench` package, diagnostics) were committed in
+`cef0c55`; the user said no more benchmarking until more animations are added. Step 3+ (fixes, e.g.
+cheaper glass, the wasted waveform decode) still needs the user's approval. History below.
 The user's brief: app-wide jank reduction in stages. Stage 1 audit was reported. The user approved
 **steps 1–2 only** (measurement setup + diagnostics) and connected the phone. Steps 3+ (fixes) need approval.
 

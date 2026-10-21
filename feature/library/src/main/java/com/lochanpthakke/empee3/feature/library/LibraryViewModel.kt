@@ -12,7 +12,6 @@ import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkReposito
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
-import com.lochanpthakke.empee3.core.database.repository.SmartPlaylistRepository
 import com.lochanpthakke.empee3.core.datastore.RepairBatchPersistence
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.Album
@@ -23,7 +22,6 @@ import com.lochanpthakke.empee3.core.model.MetadataField
 import com.lochanpthakke.empee3.core.model.PersistedRepairBatch
 import com.lochanpthakke.empee3.core.model.PersistedRepairItem
 import com.lochanpthakke.empee3.core.model.ProviderStatus
-import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TagChange
 import com.lochanpthakke.empee3.core.network.bpm.BpmFinder
@@ -64,6 +62,8 @@ import com.lochanpthakke.empee3.core.network.tagger.planFieldFix
 import com.lochanpthakke.empee3.core.network.tagger.releaseDateFor
 import com.lochanpthakke.empee3.core.network.tagger.usableBpm
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
+import com.lochanpthakke.empee3.feature.library.mix.SmartMixRepository
+import com.lochanpthakke.empee3.feature.library.mix.SmartMixes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -139,19 +139,29 @@ data class ArtistArtworkQueueItem(
 sealed interface RecentSearchItem {
     val key: String
 
-    data class AlbumItem(val album: Album) : RecentSearchItem {
+    data class AlbumItem(
+        val album: Album,
+    ) : RecentSearchItem {
         override val key: String get() = "album_${album.id}"
     }
 
-    data class ArtistItem(val artist: Artist) : RecentSearchItem {
+    data class ArtistItem(
+        val artist: Artist,
+    ) : RecentSearchItem {
         override val key: String get() = "artist_${artist.id}"
     }
 
-    data class SongItem(val song: Song) : RecentSearchItem {
+    data class SongItem(
+        val song: Song,
+    ) : RecentSearchItem {
         override val key: String get() = "song_${song.id}"
     }
 
-    data class PlaylistItem(val playlistId: Long, val title: String, val trackCount: Int) : RecentSearchItem {
+    data class PlaylistItem(
+        val playlistId: Long,
+        val title: String,
+        val trackCount: Int,
+    ) : RecentSearchItem {
         override val key: String get() = "playlist_$playlistId"
     }
 }
@@ -170,7 +180,7 @@ class LibraryViewModel
         private val artistArtworkRepository: ArtistArtworkRepository,
         private val artistArtworkUpdater: ArtistArtworkUpdater,
         recentlyPlayed: RecentlyPlayedRecorder,
-        smartPlaylistRepository: SmartPlaylistRepository,
+        private val smartMixRepository: SmartMixRepository,
         private val onlineLyrics: OnlineLyricsRepository,
         private val learnedWatermarkDao: com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao,
         private val fileRenamer: com.lochanpthakke.empee3.core.network.tagger.FileRenamer,
@@ -184,13 +194,22 @@ class LibraryViewModel
         private val fanartTvCredentials: com.lochanpthakke.empee3.core.network.provider.FanartTvCredentials,
     ) : ViewModel() {
         /**
-         * The album artwork (one song per album, up to four) of each smart playlist card on
-         * the Tracks page, from the playlists' current songs. Queried only while the cards show.
+         * The smart mixes on the Tracks page: built from local listening history and tags, cached
+         * app-wide and rebuilt only when that data changes (null until the first build).
          */
-        val smartPlaylistCovers: StateFlow<Map<SmartPlaylist, List<Song>>> =
-            combine(HOME_SMART_PLAYLISTS.map { playlist -> smartPlaylistRepository.observeCover(playlist).map { playlist to it } }) {
-                it.toMap()
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+        val smartMixes: StateFlow<SmartMixes?> = smartMixRepository.mixes
+
+        /** Songs the user hid from Smart Playlists (Now Playing's menu). */
+        val hiddenFromMixes: StateFlow<Set<Long>> =
+            smartMixRepository.hidden.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
+
+        /** Hides [songId] from (or returns it to) Smart Playlists; the song itself is untouched. */
+        fun setHiddenFromMixes(
+            songId: Long,
+            hidden: Boolean,
+        ) {
+            viewModelScope.launch { smartMixRepository.setHidden(songId, hidden) }
+        }
 
         val isCustomScanLocationEnabled: StateFlow<Boolean> = themeRepository.isCustomScanLocationEnabled
         val customScanLocationPath: StateFlow<String> = themeRepository.customScanLocationPath
@@ -891,22 +910,56 @@ class LibraryViewModel
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "iTunes / Apple Music",
                             candidateCount = itunesCount,
-                            status = if (!itunesSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (itunesCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!itunesSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (itunesCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "MusicBrainz Cover Art Archive",
                             candidateCount = mbCount,
-                            status = if (!mbSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (mbCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!mbSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (mbCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Deezer",
                             candidateCount = deezerCount,
-                            status = if (!deezerSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (deezerCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!deezerSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (deezerCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Last.fm",
                             candidateCount = lastFmCount,
-                            status = if (lastFmCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (lastFmCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                     )
                 val details =
@@ -973,37 +1026,102 @@ class LibraryViewModel
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Genius",
                             candidateCount = geniusCount,
-                            status = if (!geniusSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (geniusCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!geniusSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (geniusCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "DuckDuckGo Web Search",
                             candidateCount = duckCount,
-                            status = if (!duckSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (duckCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!duckSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (duckCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Fanart.tv",
                             candidateCount = fanartCount,
-                            status = if (!fanartSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (!fanartTvCredentials.isConfigured) com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED else if (fanartCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!fanartSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (!fanartTvCredentials.isConfigured) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NOT_CONFIGURED
+                                } else if (fanartCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Discogs",
                             candidateCount = discogsCount,
-                            status = if (!discogsSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (discogsCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!discogsSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (discogsCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Deezer",
                             candidateCount = deezerCount,
-                            status = if (!deezerSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (deezerCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!deezerSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (deezerCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "Wikipedia / Wikimedia",
                             candidateCount = wikiCount,
-                            status = if (!wikiSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (wikiCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!wikiSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (wikiCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                         com.lochanpthakke.empee3.core.model.ProviderOutcome(
                             "iTunes / Apple Music",
                             candidateCount = iTunesCount,
-                            status = if (!iTunesSelected) com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED else if (iTunesCount > 0) com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS else com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS,
+                            status =
+                                if (!iTunesSelected) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SKIPPED
+                                } else if (iTunesCount >
+                                    0
+                                ) {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.SUCCESS
+                                } else {
+                                    com.lochanpthakke.empee3.core.model.ProviderStatus.NO_RESULTS
+                                },
                         ),
                     )
                 val details =
@@ -1054,9 +1172,10 @@ class LibraryViewModel
         fun revertSelectedChanges(selectedSongIds: Set<Long>) {
             if (_isReverting.value || _isFixingQueue.value) return
             val currentQueue = _repairQueue.value.toMutableList()
-            val targetIndices = currentQueue.indices.filter {
-                currentQueue[it].song.id in selectedSongIds && currentQueue[it].successDetails != null
-            }
+            val targetIndices =
+                currentQueue.indices.filter {
+                    currentQueue[it].song.id in selectedSongIds && currentQueue[it].successDetails != null
+                }
             if (targetIndices.isEmpty()) return
 
             _isReverting.value = true
@@ -1087,22 +1206,30 @@ class LibraryViewModel
                                 val origGenre = succ.originalGenre?.trim()?.takeIf { it.isNotBlank() }
                                 val artworkWasChanged = succ.changes.any { it.fieldName.equals("Artwork", ignoreCase = true) }
 
-                                val request = TagWriteRequest(
-                                    contentUri = item.song.uri,
-                                    filePath = currentPath,
-                                    title = origTitle,
-                                    clearTitle = origTitle == null,
-                                    artist = origArtist,
-                                    clearArtist = origArtist == null,
-                                    album = origAlbum,
-                                    clearAlbum = origAlbum == null,
-                                    releaseDate = origYear,
-                                    clearYear = origYear == null,
-                                    genre = origGenre,
-                                    clearGenre = origGenre == null,
-                                    artworkBytes = if (artworkWasChanged && succ.hadOriginalArtwork) succ.originalArtworkBytes else null,
-                                    clearArtwork = artworkWasChanged && !succ.hadOriginalArtwork,
-                                )
+                                val request =
+                                    TagWriteRequest(
+                                        contentUri = item.song.uri,
+                                        filePath = currentPath,
+                                        title = origTitle,
+                                        clearTitle = origTitle == null,
+                                        artist = origArtist,
+                                        clearArtist = origArtist == null,
+                                        album = origAlbum,
+                                        clearAlbum = origAlbum == null,
+                                        releaseDate = origYear,
+                                        clearYear = origYear == null,
+                                        genre = origGenre,
+                                        clearGenre = origGenre == null,
+                                        artworkBytes =
+                                            if (artworkWasChanged &&
+                                                succ.hadOriginalArtwork
+                                            ) {
+                                                succ.originalArtworkBytes
+                                            } else {
+                                                null
+                                            },
+                                        clearArtwork = artworkWasChanged && !succ.hadOriginalArtwork,
+                                    )
 
                                 val writeRes = metadataRepository.writeTagsToFile(request)
                                 if (writeRes is AppResult.Error) {
@@ -1118,12 +1245,14 @@ class LibraryViewModel
                                 )
                                 ArtworkLoader.invalidate(item.song.uri)
 
-                                val restoredSong = item.song.copy(
-                                    title = succ.originalTitle,
-                                    artist = succ.originalArtist,
-                                    album = succ.originalAlbum,
-                                )
-                                currentQueue[index] = item.copy(song = restoredSong, status = "REVERTED", failureReason = "Changes reverted")
+                                val restoredSong =
+                                    item.song.copy(
+                                        title = succ.originalTitle,
+                                        artist = succ.originalArtist,
+                                        album = succ.originalAlbum,
+                                    )
+                                currentQueue[index] =
+                                    item.copy(song = restoredSong, status = "REVERTED", failureReason = "Changes reverted")
                                 revertedCount++
                             }
 
@@ -1253,10 +1382,11 @@ class LibraryViewModel
                             if (result is AppResult.Error) {
                                 _userMessage.value = result.error.message
                                 if (queueIndex != -1) {
-                                    queue[queueIndex] = queue[queueIndex].copy(
-                                        status = "FAILED",
-                                        failureReason = result.error.message,
-                                    )
+                                    queue[queueIndex] =
+                                        queue[queueIndex].copy(
+                                            status = "FAILED",
+                                            failureReason = result.error.message,
+                                        )
                                     _artistArtworkQueue.value = queue.toList()
                                 }
                             } else if (queueIndex != -1) {
@@ -1267,10 +1397,11 @@ class LibraryViewModel
                         is AppResult.Error -> {
                             _userMessage.value = downloadResult.error.message
                             if (queueIndex != -1) {
-                                queue[queueIndex] = queue[queueIndex].copy(
-                                    status = "FAILED",
-                                    failureReason = downloadResult.error.message,
-                                )
+                                queue[queueIndex] =
+                                    queue[queueIndex].copy(
+                                        status = "FAILED",
+                                        failureReason = downloadResult.error.message,
+                                    )
                                 _artistArtworkQueue.value = queue.toList()
                             }
                         }
@@ -1278,10 +1409,11 @@ class LibraryViewModel
                     libraryRepository.triggerLibraryScan()
                 } catch (e: Throwable) {
                     if (queueIndex != -1) {
-                        queue[queueIndex] = queue[queueIndex].copy(
-                            status = "FAILED",
-                            failureReason = e.message ?: "WRITE_ERROR",
-                        )
+                        queue[queueIndex] =
+                            queue[queueIndex].copy(
+                                status = "FAILED",
+                                failureReason = e.message ?: "WRITE_ERROR",
+                            )
                         _artistArtworkQueue.value = queue.toList()
                     }
                 } finally {
@@ -1336,14 +1468,17 @@ class LibraryViewModel
                 val allAlbums = libraryRepository.getAllAlbums().first()
                 _searchAlbums.value =
                     allAlbums.filter {
-                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.title, query) ||
-                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.artist, query)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer
+                            .matches(it.title, query) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer
+                                .matches(it.artist, query)
                     }
 
                 val allArtists = libraryRepository.getAllArtists().first()
                 _searchArtists.value =
                     allArtists.filter {
-                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(it.name, query)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer
+                            .matches(it.name, query)
                     }
             }
         }
@@ -1373,7 +1508,11 @@ class LibraryViewModel
             _recentSearchItems.value = current.take(15)
         }
 
-        fun addRecentPlaylist(playlistId: Long, title: String, trackCount: Int) {
+        fun addRecentPlaylist(
+            playlistId: Long,
+            title: String,
+            trackCount: Int,
+        ) {
             val current = _recentSearchItems.value.toMutableList()
             current.removeAll { it is RecentSearchItem.PlaylistItem && it.playlistId == playlistId }
             current.add(0, RecentSearchItem.PlaylistItem(playlistId, title, trackCount))
@@ -1927,13 +2066,14 @@ class LibraryViewModel
         fun toggleFavorite(song: Song) {
             viewModelScope.launch {
                 libraryRepository.toggleFavorite(song.id)
-                val current = _recentSearchItems.value.map { item ->
-                    if (item is RecentSearchItem.SongItem && item.song.id == song.id) {
-                        item.copy(song = item.song.copy(isFavorite = !item.song.isFavorite))
-                    } else {
-                        item
+                val current =
+                    _recentSearchItems.value.map { item ->
+                        if (item is RecentSearchItem.SongItem && item.song.id == song.id) {
+                            item.copy(song = item.song.copy(isFavorite = !item.song.isFavorite))
+                        } else {
+                            item
+                        }
                     }
-                }
                 _recentSearchItems.value = current
             }
         }
@@ -2004,6 +2144,15 @@ class LibraryViewModel
             if (songs.isEmpty()) return
             playbackRepository.setShuffleModeEnabled(true)
             playbackRepository.playCollection(songs, songs.indices.random(), origin)
+        }
+
+        /**
+         * Plays the smart mix [mixKey] in mix order (the home banner's Play), exactly as its page's
+         * Play button does. Nothing happens when the mix isn't offered right now.
+         */
+        fun playSmartMix(mixKey: String) {
+            val mix = smartMixes.value?.mixes?.firstOrNull { it.kind.key == mixKey } ?: return
+            viewModelScope.launch { playInOrder(libraryRepository.getSongsByIds(mix.songIds)) }
         }
 
         fun shufflePlayLibrary() {

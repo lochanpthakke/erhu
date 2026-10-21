@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import com.lochanpthakke.empee3.core.common.perf.traced
 
 /**
  * What glass surfaces see through themselves. Content marked with
@@ -37,7 +38,18 @@ import androidx.compose.ui.layout.positionInRoot
 @Stable
 class GlassBackdrop internal constructor(
     internal val layer: GraphicsLayer,
+    /** Names this backdrop in traces: when it re-records, and which surfaces frost it again. */
+    name: String = "backdrop",
+    /**
+     * The source is already a strong blur (Now Playing's artwork backdrop): glass over it shows
+     * its region directly, toned, without blurring a blur again (no offscreen pass per surface).
+     */
+    internal val preBlurred: Boolean = false,
 ) {
+    internal val sourceSection = "GlassSource:$name"
+    internal val frostSection = "GlassFrost:$name"
+    internal val lensSection = "GlassLens:$name"
+
     /** Source position in the root, to map a glass surface onto the recording. */
     internal var sourceOffset by mutableStateOf(Offset.Zero)
 
@@ -48,12 +60,23 @@ class GlassBackdrop internal constructor(
 
     /** Guard against a misplaced glass surface sampling the source it is drawn in. */
     internal var isRecording = false
+
+    /**
+     * While true, glass over this backdrop keeps what it last rendered instead of rendering
+     * again as it moves (e.g. the shell's chrome while the player opens over it and slides it
+     * away): no blur or lens pass per frame for surfaces that are leaving or covered. When it
+     * turns false again, every surface renders afresh.
+     */
+    var frozen by mutableStateOf(false)
 }
 
 @Composable
-fun rememberGlassBackdrop(): GlassBackdrop {
+fun rememberGlassBackdrop(
+    name: String = "backdrop",
+    preBlurred: Boolean = false,
+): GlassBackdrop {
     val layer = rememberGraphicsLayer()
-    return remember(layer) { GlassBackdrop(layer) }
+    return remember(layer, name, preBlurred) { GlassBackdrop(layer, name, preBlurred) }
 }
 
 /** The backdrop glass surfaces blur by default; null means tint-only glass. */
@@ -75,7 +98,7 @@ fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier {
         .onGloballyPositioned { backdrop.sourceOffset = it.positionInRoot() }
         .drawWithContent {
             backdrop.isRecording = true
-            backdrop.layer.record { this@drawWithContent.drawContent() }
+            traced(backdrop.sourceSection) { backdrop.layer.record { this@drawWithContent.drawContent() } }
             backdrop.isRecording = false
             drawLayer(backdrop.layer)
             backdrop.hasContent = true

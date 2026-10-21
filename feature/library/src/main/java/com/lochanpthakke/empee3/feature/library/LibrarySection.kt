@@ -17,12 +17,14 @@ import com.lochanpthakke.empee3.core.designsystem.R
 
 /**
  * The primary destinations, switched by [LibraryNavigationBar] (Search is the
- * separate button beside it): Tracks (home feed), Albums, Library, VYBE (on-device discovery).
+ * separate button beside it): Tracks (the Home page: the home feed and every track), Albums, Library, VYBE (on-device discovery).
  */
 enum class LibrarySection(
     val label: String,
+    /** The page's own title in its header; the navigation keeps [label]. */
+    val pageTitle: String = label,
 ) {
-    TRACKS("Tracks"),
+    TRACKS("Tracks", pageTitle = "Home"),
     ALBUMS("Albums"),
     LIBRARY("Library"),
     VYBE("VYBE");

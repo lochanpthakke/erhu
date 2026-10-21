@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,10 +59,17 @@ import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtistArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
+import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
+import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroDetails
+import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroTitle
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.pressScale
+import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
@@ -81,8 +88,6 @@ private const val HERO_SCRIM_START = 0.35f
 private const val HERO_SCRIM_STEPS = 12
 private const val SMOOTHSTEP_A = 3f
 private const val SMOOTHSTEP_B = 2f
-private val TITLE_FADE_DISTANCE = 140.dp
-private const val COMPACT_HEADER_AT = 0.5f
 
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
 private val COMPACT_ALBUM_CARD_WIDTH = 110.dp
@@ -147,18 +152,14 @@ fun ArtistDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
-    val compactHeader by remember(listState) {
-        derivedStateOf {
-            val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == HERO_KEY }
-            hero == null || listState.firstVisibleItemScrollOffset > hero.size * COMPACT_HEADER_AT
-        }
-    }
+    val header = rememberCollapsingHeaderState(listState)
 
     AppScaffold(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(onBack),
-                title = detail?.artist?.name?.takeIf { compactHeader },
+                title = detail?.artist?.name,
+                collapsingHeader = header,
                 actions = {
                     val artist = detail?.artist
                     val allSongs = detail?.let { it.primarySongs.ifEmpty { it.featuredSongs } }.orEmpty()
@@ -264,6 +265,7 @@ fun ArtistDetailScreen(
                             artist = artist,
                             songs = allArtistSongs,
                             listState = listState,
+                            header = header,
                             onPlay = { viewModel.playInOrder(allArtistSongs) },
                             onShuffle = { viewModel.playShuffled(allArtistSongs) },
                             onArtworkClick = { showImageDialog = true },
@@ -444,6 +446,7 @@ private fun ArtistHero(
     artist: Artist,
     songs: List<Song>,
     listState: LazyListState,
+    header: CollapsingHeaderState,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     onArtworkClick: () -> Unit,
@@ -487,16 +490,14 @@ private fun ArtistHero(
         )
         ArtistTitleBlock(
             artist = artist,
+            header = header,
             songs = songs,
             onPlay = onPlay,
             onShuffle = onShuffle,
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer {
-                        val scrolled = heroScroll(listState, Float.MAX_VALUE)
-                        alpha = 1f - (scrolled / TITLE_FADE_DISTANCE.toPx()).coerceIn(0f, 1f)
-                    },
+                    .collapsingHeroBlock(header),
         )
     }
 }
@@ -504,6 +505,7 @@ private fun ArtistHero(
 @Composable
 private fun ArtistTitleBlock(
     artist: Artist,
+    header: CollapsingHeaderState,
     songs: List<Song>,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
@@ -524,6 +526,8 @@ private fun ArtistTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            onTextLayout = header::onHeroTitleLayout,
+            modifier = Modifier.collapsingHeroTitle(header),
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
@@ -533,6 +537,7 @@ private fun ArtistTitleBlock(
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.collapsingHeroDetails(header),
         )
         Spacer(modifier = Modifier.height(Spacing.lg))
         ArtistActions(
@@ -562,12 +567,24 @@ private fun ArtistActions(
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Button(onClick = onPlay, enabled = enabled, modifier = Modifier.weight(1f)) {
+        val playPress = remember { MutableInteractionSource() }
+        val shufflePress = remember { MutableInteractionSource() }
+        Button(
+            onClick = onPlay,
+            enabled = enabled,
+            interactionSource = playPress,
+            modifier = Modifier.weight(1f).pressScale(playPress, BUTTON_PRESSED_SCALE, enabled),
+        ) {
             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
             Spacer(modifier = Modifier.width(Spacing.sm))
             Text("Play")
         }
-        FilledTonalButton(onClick = onShuffle, enabled = enabled, modifier = Modifier.weight(1f)) {
+        FilledTonalButton(
+            onClick = onShuffle,
+            enabled = enabled,
+            interactionSource = shufflePress,
+            modifier = Modifier.weight(1f).pressScale(shufflePress, BUTTON_PRESSED_SCALE, enabled),
+        ) {
             Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
             Spacer(modifier = Modifier.width(Spacing.sm))
             Text("Shuffle")

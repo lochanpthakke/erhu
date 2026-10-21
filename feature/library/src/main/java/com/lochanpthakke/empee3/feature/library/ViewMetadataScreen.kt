@@ -2,7 +2,6 @@
 
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.hilt.navigation.compose.hiltViewModel
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
@@ -58,6 +57,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Song
@@ -70,7 +70,9 @@ import com.lochanpthakke.empee3.core.network.tagger.parseBpmTag
 fun ViewMetadataScreen(
     song: Song,
     viewModel: ViewMetadataViewModel,
-    libraryViewModel: LibraryViewModel = androidx.hilt.navigation.compose.hiltViewModel(),
+    libraryViewModel: LibraryViewModel =
+        androidx.hilt.navigation.compose
+            .hiltViewModel(),
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -103,19 +105,20 @@ fun ViewMetadataScreen(
     var pendingBpmCorrection by remember { mutableStateOf<Triple<Int, Int, BpmCorrection>?>(null) }
     val libraryMessage by libraryViewModel.userMessage.collectAsState()
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-    ) { uri: Uri? ->
-        uri?.let {
-            try {
-                val inputStream = context.contentResolver.openInputStream(it)
-                val bytes = inputStream?.readBytes()
-                viewModel.setSelectedArtwork(bytes)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Failed to read image", Toast.LENGTH_SHORT).show()
+    val imagePickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            uri?.let {
+                try {
+                    val inputStream = context.contentResolver.openInputStream(it)
+                    val bytes = inputStream?.readBytes()
+                    viewModel.setSelectedArtwork(bytes)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Failed to read image", Toast.LENGTH_SHORT).show()
+                }
             }
         }
-    }
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
@@ -134,53 +137,72 @@ fun ViewMetadataScreen(
         text = {
             if (uiState.isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator()
                 }
             } else {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
                 ) {
                     // 1. EMBEDDED ARTWORK SECTION
-                    Text("Embedded Album Cover", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Embedded Album Cover",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     val artBytes = uiState.selectedArtworkBytes
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (artBytes != null && artBytes.isNotEmpty()) {
-                            val bitmap = remember(artBytes) {
-                                BitmapFactory.decodeByteArray(artBytes, 0, artBytes.size)
-                            }
+                            val bitmap =
+                                remember(artBytes) {
+                                    BitmapFactory.decodeByteArray(artBytes, 0, artBytes.size)
+                                }
                             if (bitmap != null) {
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
                                     contentDescription = "Embedded Cover Art",
                                     contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clickable { viewModel.setEnlargedArtwork(artBytes) },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxSize()
+                                            .clickable { viewModel.setEnlargedArtwork(artBytes) },
                                 )
                             } else {
                                 Icon(imageVector = Icons.Default.MusicNote, contentDescription = null, modifier = Modifier.size(48.dp))
                             }
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(imageVector = Icons.Default.Image, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 Spacer(modifier = Modifier.height(Spacing.xs))
-                                Text("No embedded artwork in file", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "No embedded artwork in file",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -211,7 +233,12 @@ fun ViewMetadataScreen(
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     // 2. BASIC METADATA SECTION
-                    Text("Basic Information", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Basic Information",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     OutlinedTextField(
@@ -252,7 +279,12 @@ fun ViewMetadataScreen(
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     // 3. RELEASE & TRACK METADATA
-                    Text("Release & Track Info", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Release & Track Info",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -307,7 +339,12 @@ fun ViewMetadataScreen(
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     // 4. CREDITS & EXTRA TAGS
-                    Text("Credits & Lyrics", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Credits & Lyrics",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     OutlinedTextField(
@@ -339,7 +376,12 @@ fun ViewMetadataScreen(
                     Spacer(modifier = Modifier.height(Spacing.md))
 
                     // 5. TECHNICAL FILE & AUDIO STREAM PROPERTIES (READ-ONLY)
-                    Text("File & Audio Stream Properties (Read-Only)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "File & Audio Stream Properties (Read-Only)",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     Card(
@@ -471,20 +513,21 @@ fun ViewMetadataScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val fields = EditableInspectorFields(
-                            title = title,
-                            artist = artist,
-                            albumArtist = albumArtist,
-                            album = album,
-                            year = year,
-                            genre = genre,
-                            trackNumber = trackNumber,
-                            discNumber = discNumber,
-                            composer = composer,
-                            comment = comment,
-                            lyrics = lyrics,
-                            bpm = bpm,
-                        )
+                        val fields =
+                            EditableInspectorFields(
+                                title = title,
+                                artist = artist,
+                                albumArtist = albumArtist,
+                                album = album,
+                                year = year,
+                                genre = genre,
+                                trackNumber = trackNumber,
+                                discNumber = discNumber,
+                                composer = composer,
+                                comment = comment,
+                                lyrics = lyrics,
+                                bpm = bpm,
+                            )
                         viewModel.executeForceRepair(fields, onSuccess = onDismiss)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
