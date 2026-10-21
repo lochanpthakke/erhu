@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.network.apple
 import com.lochanpthakke.empee3.core.network.scorer.MetadataScorer
 import com.lochanpthakke.empee3.core.network.apple.model.ItunesAlbumDto
 import javax.inject.Inject
+import kotlin.math.max
 
 class CatalogCandidateScorer @Inject constructor(
     private val metadataScorer: MetadataScorer
@@ -10,6 +11,7 @@ class CatalogCandidateScorer @Inject constructor(
     fun score(localArtist: String, localAlbum: String, candidates: List<ItunesAlbumDto>, localTrackCount: Int? = null): ItunesAlbumDto? {
         val cleanedLocalAlbum = AlbumTagNormalizer.cleanAlbumTitle(localAlbum)
         val foldedCleanedLocalAlbum = AlbumTagNormalizer.fold(cleanedLocalAlbum)
+        val noSpaceLocalAlbum = foldedCleanedLocalAlbum.replace(" ", "")
         
         val localArtistCandidates = AlbumTagNormalizer.cleanArtist(localArtist)
         
@@ -22,18 +24,27 @@ class CatalogCandidateScorer @Inject constructor(
             val candidateArtist = candidate.artistName ?: ""
             val candidateAlbum = candidate.collectionName ?: ""
             
+            val candidateArtistCandidates = AlbumTagNormalizer.cleanArtist(candidateArtist)
+            
             val cleanedCandidateAlbum = AlbumTagNormalizer.cleanAlbumTitle(candidateAlbum)
             val foldedCleanedCandidateAlbum = AlbumTagNormalizer.fold(cleanedCandidateAlbum)
+            val noSpaceCandidateAlbum = foldedCleanedCandidateAlbum.replace(" ", "")
             
             val candidateSequelTokens = extractSequelTokens(cleanedCandidateAlbum)
             
-            val artistScore = localArtistCandidates.maxOfOrNull { 
-                metadataScorer.jaroWinklerDistance(it, AlbumTagNormalizer.fold(candidateArtist))
-            } ?: 0.0f
+            var artistScore = 0.0f
+            for (localArt in localArtistCandidates) {
+                for (candArt in candidateArtistCandidates) {
+                    val sim = metadataScorer.jaroWinklerDistance(localArt, candArt)
+                    if (sim > artistScore) artistScore = sim
+                }
+            }
             
             if (artistScore < 0.75f) continue
             
-            var albumScore = metadataScorer.jaroWinklerDistance(foldedCleanedLocalAlbum, foldedCleanedCandidateAlbum)
+            val plainAlbumSim = metadataScorer.jaroWinklerDistance(foldedCleanedLocalAlbum, foldedCleanedCandidateAlbum)
+            val noSpaceAlbumSim = metadataScorer.jaroWinklerDistance(noSpaceLocalAlbum, noSpaceCandidateAlbum)
+            var albumScore = max(plainAlbumSim, noSpaceAlbumSim)
             
             if (localSequelTokens != candidateSequelTokens) {
                 albumScore = 0.0f

@@ -27,11 +27,10 @@ object AlbumTagNormalizer {
     
     fun cleanArtist(artist: String): List<String> {
         val noFeat = artist.replace("(?i)\\s+(feat\\.|ft\\.|featuring)\\s+.*$".toRegex(), "").trim()
-        val splits = noFeat.split(Regex("\\s*(?:&|,|;| x )\\s*"))
-        val firstSplit = splits.firstOrNull()?.trim()
-        return listOfNotNull(
-            foldForMatch(noFeat).takeIf { it.isNotBlank() },
-            firstSplit?.let { foldForMatch(it) }?.takeIf { it.isNotBlank() }
-        ).distinct()
+        val splits = noFeat.split(Regex("\\s*(?:&|,|;| x |/)\\s*"))
+        val foldedFull = foldForMatch(noFeat)
+        val foldedSplits = splits.map { foldForMatch(it) }.filter { it.isNotBlank() }
+        
+        return (listOf(foldedFull) + foldedSplits).distinct().filter { it.isNotBlank() }
     }
 }
