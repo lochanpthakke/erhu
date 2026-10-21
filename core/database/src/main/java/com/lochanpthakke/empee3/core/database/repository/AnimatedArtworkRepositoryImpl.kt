@@ -221,7 +221,9 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
         val catalogAlbumId = updatingEntity.catalogAlbumId
         val storefront = updatingEntity.storefront
 
-        if (catalogAlbumId != null && storefront != null) {
+        // A refresh matches the album again: the remembered edition may be the wrong one (e.g. a
+        // clean edition without the motion cover, from before editions were compared).
+        if (!forceRefresh && catalogAlbumId != null && storefront != null) {
             return@withContext performFetchAndStoreDirect(albumId, albumArtist, album, catalogAlbumId, storefront, orientation, forceRefresh)
         }
 

@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.core.network.apple
 
 import java.net.URI
+import kotlin.math.max
 import kotlin.math.min
 
 data class HlsSegmentRef(
@@ -84,9 +85,23 @@ object HlsPlaylistParser {
         return variants.sortedByDescending { it.bandwidth }
     }
 
+    /**
+     * The variant to download for display on the phone: the largest whose short edge is at most
+     * [maxShortEdgePx] (a Now Playing card is ~800 px, the album header 1080 px), else the smallest.
+     * Apple's top variants (e.g. 2048x2732 HEVC Main 10, 17 Mbit/s) are far beyond what a cover
+     * needs and stall the phone's decoder. [variants] may be in any order.
+     */
+    fun displayVariant(
+        variants: List<HlsVariantStream>,
+        maxShortEdgePx: Int = AnimatedArtworkConfig.maxShortEdgePx,
+    ): HlsVariantStream? {
+        val bySize = variants.sortedByDescending { min(it.width, it.height) * 1L * max(it.width, it.height) + it.bandwidth }
+        return bySize.firstOrNull { min(it.width, it.height) in 1..maxShortEdgePx } ?: bySize.lastOrNull()
+    }
+
     fun selectBestVariantUrl(masterUrl: String, masterContent: String, maxShortEdgePx: Int): String? {
         val variants = parseMasterPlaylistVariants(masterUrl, masterContent)
-        val candidate = variants.find { min(it.width, it.height) <= maxShortEdgePx } ?: variants.lastOrNull()
+        val candidate = displayVariant(variants, maxShortEdgePx)
         return candidate?.variantUrl
     }
 

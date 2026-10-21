@@ -5,6 +5,9 @@ import com.lochanpthakke.empee3.core.network.apple.model.ItunesAlbumDto
 import javax.inject.Inject
 import kotlin.math.max
 
+private const val EXPLICIT = "explicit"
+private const val CLEANED = "cleaned"
+
 class CatalogCandidateScorer @Inject constructor(
     private val metadataScorer: MetadataScorer
 ) {
@@ -77,6 +80,29 @@ class CatalogCandidateScorer @Inject constructor(
         return bestCandidate
     }
     
+    /**
+     * The editions of [best] to try, in order: [siblings] (the artist's albums) with the same
+     * title and track count are the same album in another edition. Apple attaches the motion
+     * cover to the explicit edition, so a clean match is tried after its explicit edition; an
+     * explicit (or unrated) match stays first, with the others as fallbacks.
+     */
+    fun editionOrder(best: ItunesAlbumDto, siblings: List<ItunesAlbumDto>): List<ItunesAlbumDto> {
+        val title = AlbumTagNormalizer.fold(AlbumTagNormalizer.cleanAlbumTitle(best.collectionName ?: ""))
+        val editions = siblings.filter { sibling ->
+            sibling.collectionId != null &&
+                sibling.collectionId != best.collectionId &&
+                AlbumTagNormalizer.fold(AlbumTagNormalizer.cleanAlbumTitle(sibling.collectionName ?: "")) == title &&
+                (best.trackCount == null || sibling.trackCount == null || sibling.trackCount == best.trackCount)
+        }
+        val explicitFirst = editions.sortedBy { if (it.collectionExplicitness == EXPLICIT) 0 else 1 }
+        return if (best.collectionExplicitness == CLEANED) {
+            explicitFirst.filter { it.collectionExplicitness == EXPLICIT } + best +
+                explicitFirst.filter { it.collectionExplicitness != EXPLICIT }
+        } else {
+            listOf(best) + explicitFirst
+        }
+    }
+
     private fun extractSequelTokens(title: String): Set<String> {
         val tokens = mutableSetOf<String>()
         val words = title.lowercase().split(Regex("\\s+"))

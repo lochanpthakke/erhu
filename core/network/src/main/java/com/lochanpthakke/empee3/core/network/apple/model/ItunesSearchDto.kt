@@ -10,8 +10,11 @@ data class ItunesSearchResponse(
 @Serializable
 data class ItunesAlbumDto(
     val collectionId: Long? = null,
+    val artistId: Long? = null,
     val artistName: String? = null,
     val collectionName: String? = null,
     val trackCount: Int? = null,
-    val country: String? = null
+    val country: String? = null,
+    /** "explicit", "cleaned" or "notExplicit". */
+    val collectionExplicitness: String? = null
 )

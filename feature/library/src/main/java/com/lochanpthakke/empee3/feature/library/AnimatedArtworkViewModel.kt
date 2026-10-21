@@ -9,7 +9,9 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
 import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
 import com.lochanpthakke.empee3.core.model.LocalAnimatedArtwork
+import com.lochanpthakke.empee3.core.network.apple.HlsPlaylistParser
 import com.lochanpthakke.empee3.core.network.apple.HlsVariantStream
+import com.lochanpthakke.empee3.core.network.apple.RateLimitException
 import com.lochanpthakke.empee3.core.network.apple.ResolveOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -186,7 +188,8 @@ class AnimatedArtworkViewModel @Inject constructor(
                         }
                     }
                     is AppResult.Error -> {
-                        _errorMessage.value = "Failed to resolve album: ${resolveResult.error.message}"
+                        _errorMessage.value = rateLimitMessage(resolveResult.error.cause)
+                            ?: "Failed to resolve album: ${resolveResult.error.message}"
                     }
                 }
             } finally {
@@ -198,7 +201,8 @@ class AnimatedArtworkViewModel @Inject constructor(
     private suspend fun handleMasterUrlsFetched(album: Album, catalogAlbumId: String, storefront: String) {
         val masterUrlsResult = animatedArtworkRepository.fetchMasterUrls(catalogAlbumId, storefront)
         if (masterUrlsResult !is AppResult.Success) {
-            _errorMessage.value = "Failed to fetch catalog artwork details from Apple Music."
+            _errorMessage.value = (masterUrlsResult as? AppResult.Error)?.let { rateLimitMessage(it.error.cause) }
+                ?: "Failed to fetch catalog artwork details from Apple Music."
             return
         }
 
@@ -225,7 +229,8 @@ class AnimatedArtworkViewModel @Inject constructor(
         if (variantsResult is AppResult.Success && variantsResult.data.isNotEmpty()) {
             val variants = variantsResult.data
             _availableVariants.value = variants
-            val defaultVariant = variants.first()
+            // Sized for the phone, not the top variant (2048x2732 at 17 Mbit/s stalled the decoder).
+            val defaultVariant = HlsPlaylistParser.displayVariant(variants) ?: variants.first()
             _selectedVariant.value = defaultVariant
             _previewStreamUrl.value = defaultVariant.variantUrl
         } else {
@@ -306,4 +311,11 @@ class AnimatedArtworkViewModel @Inject constructor(
             _totalStorageBytes.value = animatedArtworkRepository.totalStorageBytes()
         }
     }
+}
+
+/** When [cause] (or what caused it) is Apple's rate limit (HTTP 429): what to tell the user. */
+private fun rateLimitMessage(cause: Throwable?): String? {
+    val limit = generateSequence(cause) { it.cause }.filterIsInstance<RateLimitException>().firstOrNull() ?: return null
+    val minutes = limit.minutesLeft()
+    return "Apple Music is limiting requests right now. Try again in $minutes ${if (minutes == 1) "minute" else "minutes"}."
 }

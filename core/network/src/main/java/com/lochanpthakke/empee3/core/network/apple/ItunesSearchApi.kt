@@ -12,4 +12,16 @@ interface ItunesSearchApi {
         @Query("limit") limit: Int = 25,
         @Query("country") country: String = "us"
     ): ItunesSearchResponse
+
+    /**
+     * The artist's albums (the first result is the artist itself). Search often returns only
+     * one edition of an album (e.g. the clean one); every edition is listed here.
+     */
+    @GET("lookup")
+    suspend fun lookupArtistAlbums(
+        @Query("id") artistId: Long,
+        @Query("entity") entity: String = "album",
+        @Query("limit") limit: Int = 200,
+        @Query("country") country: String = "us"
+    ): ItunesSearchResponse
 }

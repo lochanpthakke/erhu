@@ -1,13 +1,17 @@
 package com.lochanpthakke.empee3.core.network.apple
 
-import com.lochanpthakke.empee3.core.common.result.AppError
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import retrofit2.HttpException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-class RateLimitException(val untilMs: Long) : Exception("Rate limited until $untilMs")
+/** Apple is limiting requests (HTTP 429); none are sent before [untilMs]. */
+class RateLimitException(val untilMs: Long) : Exception("Rate limited until $untilMs") {
+    /** Whole minutes until requests resume, rounded up (at least 1). */
+    fun minutesLeft(nowMs: Long = System.currentTimeMillis()): Int = ((untilMs - nowMs + 59_999L) / 60_000L).toInt().coerceAtLeast(1)
+}
 
 @Singleton
 class AppleRequestGate @Inject constructor() {
@@ -56,7 +60,20 @@ class AppleRequestGate @Inject constructor() {
         circuitBreakerUntilMs = System.currentTimeMillis() + AnimatedArtworkConfig.BREAKER_COOLDOWN_MS
     }
 
+    /**
+     * HTTP 429: pause every Apple request for Retry-After (or RATE_LIMIT_PAUSE_MS), capped at
+     * BREAKER_COOLDOWN_MS, and report it as a [RateLimitException]. Retrying straight away only
+     * extends Apple's block.
+     */
     private fun handleError(e: Exception) {
-        // Interceptors or callers should call tripBreaker explicitly if 429
+        if ((e as? HttpException)?.code() != HTTP_TOO_MANY_REQUESTS) return
+        val retryAfterMs = e.response()?.headers()?.get("Retry-After")?.trim()?.toLongOrNull()?.times(1000L)
+        val pause = (retryAfterMs ?: AnimatedArtworkConfig.RATE_LIMIT_PAUSE_MS).coerceIn(0L, AnimatedArtworkConfig.BREAKER_COOLDOWN_MS)
+        circuitBreakerUntilMs = maxOf(circuitBreakerUntilMs, System.currentTimeMillis() + pause)
+        throw RateLimitException(circuitBreakerUntilMs)
+    }
+
+    private companion object {
+        const val HTTP_TOO_MANY_REQUESTS = 429
     }
 }

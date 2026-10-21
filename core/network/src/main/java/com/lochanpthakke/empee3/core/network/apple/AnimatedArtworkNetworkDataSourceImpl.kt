@@ -55,22 +55,56 @@ class AnimatedArtworkNetworkDataSourceImpl @Inject constructor(
                 return@appResultOf ResolveOutcome.NoMatch
             }
 
-            val catalogAlbumId = bestCandidate.collectionId.toString()
-            val urlsResult = fetchMasterUrls(catalogAlbumId, bestStorefront)
-
-            when (urlsResult) {
-                is AppResult.Success -> {
-                    ResolveOutcome.Matched(
-                        catalogAlbumId = catalogAlbumId,
-                        storefront = bestStorefront,
-                        squareMasterUrl = urlsResult.data.squareMasterUrl,
-                        tallMasterUrl = urlsResult.data.tallMasterUrl
-                    )
-                }
-                is AppResult.Error -> {
-                    throw Exception(urlsResult.error.message, urlsResult.error.cause)
+            // Search can return just one edition (often the clean one, which has no motion cover):
+            // try the album's other editions too, explicit first. Motion covers are also per
+            // storefront: every edition in the first storefront, then the preferred edition in the others.
+            val editions = scorer.editionOrder(bestCandidate, editionSiblings(bestCandidate, bestStorefront))
+            val motionStorefronts = AnimatedArtworkConfig.motionStorefronts(defaultLocaleCountry, bestStorefront)
+            val attempts =
+                editions.map { it to motionStorefronts.first() } +
+                    motionStorefronts.drop(1).map { editions.first() to it }
+            var fallback: ResolveOutcome.Matched? = null
+            var firstError: AppResult.Error? = null
+            for ((edition, storefront) in attempts) {
+                val catalogAlbumId = edition.collectionId?.toString() ?: continue
+                when (val urlsResult = fetchMasterUrls(catalogAlbumId, storefront)) {
+                    is AppResult.Success -> {
+                        val matched = ResolveOutcome.Matched(
+                            catalogAlbumId = catalogAlbumId,
+                            storefront = storefront,
+                            squareMasterUrl = urlsResult.data.squareMasterUrl,
+                            tallMasterUrl = urlsResult.data.tallMasterUrl
+                        )
+                        if (matched.squareMasterUrl != null || matched.tallMasterUrl != null) return@appResultOf matched
+                        if (fallback == null) fallback = matched
+                    }
+                    is AppResult.Error -> {
+                        // Apple is limiting requests: every further attempt would be refused too.
+                        (urlsResult.error.cause as? RateLimitException)?.let { throw it }
+                        if (firstError == null) firstError = urlsResult
+                    }
                 }
             }
+            fallback ?: firstError!!.let { throw Exception(it.error.message, it.error.cause) }
+        }
+    }
+
+    /**
+     * The artist's albums, to find [match]'s other editions. Only needed for a clean match; a
+     * failed lookup just leaves the match on its own.
+     */
+    private suspend fun editionSiblings(
+        match: com.lochanpthakke.empee3.core.network.apple.model.ItunesAlbumDto,
+        storefront: String,
+    ): List<com.lochanpthakke.empee3.core.network.apple.model.ItunesAlbumDto> {
+        val artistId = match.artistId ?: return emptyList()
+        if (match.collectionExplicitness != "cleaned") return emptyList()
+        return try {
+            gate.runItunes { itunesApi.lookupArtistAlbums(artistId = artistId, country = storefront) }.results
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
@@ -83,6 +117,8 @@ class AnimatedArtworkNetworkDataSourceImpl @Inject constructor(
                 response = gate.runAppleMusic {
                     catalogApi.getAlbum(storefront = storefront, id = catalogAlbumId, auth = "Bearer $token")
                 }
+            } catch (e: RateLimitException) {
+                throw e
             } catch (e: Exception) {
                 val statusCode = (e as? HttpException)?.code() ?: -1
                 if (statusCode == 401 || statusCode == 403 || e.message?.contains("401") == true || e.message?.contains("403") == true) {
@@ -93,6 +129,8 @@ class AnimatedArtworkNetworkDataSourceImpl @Inject constructor(
                         response = gate.runAppleMusic {
                             catalogApi.getAlbum(storefront = storefront, id = catalogAlbumId, auth = "Bearer $token")
                         }
+                    } catch (e2: RateLimitException) {
+                        throw e2
                     } catch (e2: Exception) {
                         val statusCode2 = (e2 as? HttpException)?.code() ?: -1
                         if (statusCode2 == 429 || statusCode2 == 403 || e2.message?.contains("429") == true) {
