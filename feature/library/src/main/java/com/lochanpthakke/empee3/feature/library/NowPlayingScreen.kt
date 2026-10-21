@@ -33,6 +33,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +57,6 @@ import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
 import com.lochanpthakke.empee3.core.model.AbLoopState
@@ -116,6 +116,9 @@ fun NowPlayingScreen(
     isHiddenFromMixes: Boolean = false,
     /** Hides the song from (or returns it to) Smart Playlists; null leaves the action out. */
     onSetHiddenFromMixes: ((Song, Boolean) -> Unit)? = null,
+    /** The outcome of an Add to playlist started here ("Added to …", "Already in …"), shown once. */
+    playlistMessage: String? = null,
+    onPlaylistMessageShown: () -> Unit = {},
 ) {
     // Stable state only; the position is read by PlaybackProgress and the lyrics alone, so the
     // rest of this screen does not recompose four times per second.
@@ -161,6 +164,12 @@ fun NowPlayingScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(playlistMessage) {
+        val text = playlistMessage ?: return@LaunchedEffect
+        onPlaylistMessageShown()
+        snackbarHostState.currentSnackbarData?.dismiss()
+        snackbarHostState.showSnackbar(text)
+    }
 
     fun playPause() = if (isPlaying) playbackRepository.pause() else playbackRepository.play()
 
@@ -256,7 +265,8 @@ fun NowPlayingScreen(
                         )
                     },
                     glass = false,
-                    containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surface),
+                    // No band of its own: the page's background runs up behind the title and status bar.
+                    containerColor = Color.Transparent,
                     modifier = Modifier.revealWithPlayer(transition, start = 0.45f, end = 0.9f, rise = -REVEAL_RISE),
                 )
             },
@@ -337,9 +347,12 @@ fun NowPlayingScreen(
                                         playbackState = playbackState,
                                         isPlaying = isPlaying,
                                         onShuffle = { playbackRepository.setShuffleModeEnabled(!playbackState.shuffleModeEnabled) },
+                                        // The playing song, the same as the menu's Add to playlist.
+                                        onAddToPlaylist = menuActions.onAddToPlaylist,
                                         onPrevious = ::previous,
                                         onPlayPause = ::playPause,
                                         onNext = ::next,
+                                        onQueue = menuActions.onQueue,
                                         onRepeat = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
                                         modifier = Modifier.revealWithPlayer(transition, start = 0.48f, end = 0.92f),
                                     )

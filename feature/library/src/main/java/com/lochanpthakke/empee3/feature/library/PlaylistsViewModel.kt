@@ -70,21 +70,24 @@ class PlaylistsViewModel
             openPlaylistId.value = playlistId
         }
 
+        /** [onResult], when given, receives the outcome message instead of [userMessage]. */
         fun createPlaylist(
             name: String,
             thenAddSongs: List<Song> = emptyList(),
+            onResult: ((String) -> Unit)? = null,
         ) {
             viewModelScope.launch {
-                when (val result = playlistRepository.createPlaylist(name)) {
-                    is AppResult.Success -> {
-                        if (thenAddSongs.isNotEmpty()) {
-                            addSongsToPlaylist(result.data, name.trim(), thenAddSongs)
-                        } else {
-                            _userMessage.value = "Created \"${name.trim()}\""
-                        }
+                val message =
+                    when (val result = playlistRepository.createPlaylist(name)) {
+                        is AppResult.Success ->
+                            if (thenAddSongs.isNotEmpty()) {
+                                addSongsToPlaylist(result.data, name.trim(), thenAddSongs)
+                            } else {
+                                "Created \"${name.trim()}\""
+                            }
+                        is AppResult.Error -> result.error.message
                     }
-                    is AppResult.Error -> _userMessage.value = result.error.message
-                }
+                report(message, onResult)
             }
         }
 
@@ -116,35 +119,43 @@ class PlaylistsViewModel
             }
         }
 
+        /** [onResult], when given, receives the outcome message instead of [userMessage]. */
         fun addSongsToPlaylist(
             playlist: Playlist,
             songs: List<Song>,
+            onResult: ((String) -> Unit)? = null,
         ) {
-            viewModelScope.launch { addSongsToPlaylist(playlist.id, playlist.name, songs) }
+            viewModelScope.launch { report(addSongsToPlaylist(playlist.id, playlist.name, songs), onResult) }
         }
 
-        /** Appends [songs] in order; songs already in the playlist are skipped by the repository. */
+        private fun report(
+            message: String,
+            onResult: ((String) -> Unit)?,
+        ) {
+            if (onResult != null) onResult(message) else _userMessage.value = message
+        }
+
+        /**
+         * Appends [songs] in order; songs already in the playlist are skipped by the repository.
+         * Returns the message to show.
+         */
         private suspend fun addSongsToPlaylist(
             playlistId: Long,
             playlistName: String,
             songs: List<Song>,
-        ) {
+        ): String {
             var added = 0
             for (song in songs) {
                 when (val result = playlistRepository.addSong(playlistId, song.id)) {
                     is AppResult.Success -> if (result.data) added++
-                    is AppResult.Error -> {
-                        _userMessage.value = result.error.message
-                        return
-                    }
+                    is AppResult.Error -> return result.error.message
                 }
             }
-            _userMessage.value =
-                when {
-                    added == 0 -> "Already in \"$playlistName\""
-                    songs.size == 1 -> "Added to \"$playlistName\""
-                    else -> "Added ${countLabel(added, "song")} to \"$playlistName\""
-                }
+            return when {
+                added == 0 -> "Already in \"$playlistName\""
+                songs.size == 1 -> "Added to \"$playlistName\""
+                else -> "Added ${countLabel(added, "song")} to \"$playlistName\""
+            }
         }
 
         fun renameOpenPlaylist(name: String) {

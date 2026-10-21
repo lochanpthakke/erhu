@@ -30,16 +30,21 @@ fun AddToPlaylistDialog(
     song: Song,
     viewModel: PlaylistsViewModel,
     onDismiss: () -> Unit,
+    onResult: ((String) -> Unit)? = null,
 ) {
-    AddToPlaylistDialog(songs = listOf(song), viewModel = viewModel, onDismiss = onDismiss)
+    AddToPlaylistDialog(songs = listOf(song), viewModel = viewModel, onDismiss = onDismiss, onResult = onResult)
 }
 
-/** Adds all of [songs] (e.g. a whole album) to an existing or a new playlist. */
+/**
+ * Adds all of [songs] (e.g. a whole album) to an existing or a new playlist. [onResult], when given,
+ * receives the outcome message ("Added to …", "Already in …") instead of the view model's user message.
+ */
 @Composable
 fun AddToPlaylistDialog(
     songs: List<Song>,
     viewModel: PlaylistsViewModel,
     onDismiss: () -> Unit,
+    onResult: ((String) -> Unit)? = null,
 ) {
     val playlists by viewModel.playlists.collectAsState()
     var creating by remember { mutableStateOf(false) }
@@ -49,7 +54,7 @@ fun AddToPlaylistDialog(
             title = "New playlist",
             onDismiss = onDismiss,
             onConfirm = { name ->
-                viewModel.createPlaylist(name, thenAddSongs = songs)
+                viewModel.createPlaylist(name, thenAddSongs = songs, onResult = onResult)
                 onDismiss()
             },
         )
@@ -88,7 +93,7 @@ fun AddToPlaylistDialog(
                                     Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            viewModel.addSongsToPlaylist(playlist, songs)
+                                            viewModel.addSongsToPlaylist(playlist, songs, onResult)
                                             onDismiss()
                                         }.padding(vertical = Spacing.md),
                             )

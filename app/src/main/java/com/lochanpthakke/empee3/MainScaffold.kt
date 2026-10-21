@@ -333,6 +333,8 @@ fun MainScaffold() {
             val minimizePlayer: () -> Unit = { scope.launch { player.collapse() } }
 
             var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+            // Its outcome, shown by Now Playing (the library's own messages would be hidden under the player).
+            var playerPlaylistMessage by remember { mutableStateOf<String?>(null) }
 
             // Now Playing's "Music information": the track's tags, in the app's metadata viewer.
             var songForMusicInfo by remember { mutableStateOf<Song?>(null) }
@@ -701,6 +703,8 @@ fun MainScaffold() {
                                             onShowMusicInfo = { songForMusicInfo = it },
                                             isHiddenFromMixes = currentSongId in hiddenFromMixes,
                                             onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
+                                            playlistMessage = playerPlaylistMessage,
+                                            onPlaylistMessageShown = { playerPlaylistMessage = null },
                                         )
                                     }
                                 }
@@ -715,6 +719,7 @@ fun MainScaffold() {
                     song = song,
                     viewModel = playlistsViewModel,
                     onDismiss = { songForPlaylist = null },
+                    onResult = { playerPlaylistMessage = it },
                 )
             }
             songForMusicInfo?.let { song ->

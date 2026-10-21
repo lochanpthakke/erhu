@@ -3,20 +3,21 @@ package com.lochanpthakke.empee3.feature.library
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Pause
@@ -227,80 +228,118 @@ internal fun FavoriteButton(
     }
 }
 
-/** Shuffle, previous, play / pause (the centrepiece), next, repeat: the player's real state and commands. */
+/**
+ * Shuffle, previous, play / pause (the centrepiece), next, repeat: the player's real state and
+ * commands. Below them, under shuffle and repeat, the secondary actions: add the playing song to a
+ * playlist and the queue. Both rows share one grid of five equal columns, so every control is
+ * evenly spaced and the layout is symmetrical around play / pause.
+ */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun TransportControls(
     playbackState: PlaybackState,
     isPlaying: Boolean,
     onShuffle: () -> Unit,
+    onAddToPlaylist: () -> Unit,
     onPrevious: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
+    onQueue: () -> Unit,
     onRepeat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ToggleIconButton(
-            active = playbackState.shuffleModeEnabled,
-            onClick = onShuffle,
-            modifier = Modifier.offset(x = (-12).dp),
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = Icons.Default.Shuffle,
-                contentDescription = if (playbackState.shuffleModeEnabled) "Shuffle on" else "Shuffle off",
-            )
-        }
-
-        PressIconButton(onClick = onPrevious, nudge = -1) {
-            Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(IconSize.large))
-        }
-
-        val playInteraction = rememberInteraction()
-        FilledIconButton(
-            onClick = onPlayPause,
-            modifier = Modifier.size(ComponentSize.primaryButton),
-            shape = CircleShape,
-            interactionSource = playInteraction,
-        ) {
-            Box(Modifier.pressScale(playInteraction)) {
-                SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+            Slot {
+                ToggleIconButton(active = playbackState.shuffleModeEnabled, onClick = onShuffle) {
                     Icon(
-                        imageVector = icon,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(IconSize.hero),
+                        imageVector = Icons.Default.Shuffle,
+                        contentDescription = if (playbackState.shuffleModeEnabled) "Shuffle on" else "Shuffle off",
                     )
                 }
             }
+            Slot {
+                PressIconButton(onClick = onPrevious, nudge = -1) {
+                    Icon(
+                        imageVector = Icons.Default.SkipPrevious,
+                        contentDescription = "Previous",
+                        modifier = Modifier.size(IconSize.large),
+                    )
+                }
+            }
+            Slot {
+                val playInteraction = rememberInteraction()
+                FilledIconButton(
+                    onClick = onPlayPause,
+                    modifier = Modifier.size(ComponentSize.primaryButton),
+                    shape = CircleShape,
+                    interactionSource = playInteraction,
+                ) {
+                    Box(Modifier.pressScale(playInteraction)) {
+                        SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                modifier = Modifier.size(IconSize.hero),
+                            )
+                        }
+                    }
+                }
+            }
+            Slot {
+                PressIconButton(onClick = onNext, enabled = hasNext(playbackState), nudge = 1) {
+                    Icon(imageVector = Icons.Default.SkipNext, contentDescription = "Next", modifier = Modifier.size(IconSize.large))
+                }
+            }
+            Slot {
+                ToggleIconButton(
+                    active = playbackState.repeatMode != RepeatMode.OFF,
+                    feedbackValue = playbackState.repeatMode,
+                    onClick = onRepeat,
+                ) {
+                    SwapIcon(if (playbackState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat) {
+                        Icon(
+                            imageVector = it,
+                            contentDescription =
+                                when (playbackState.repeatMode) {
+                                    RepeatMode.OFF -> "Repeat off"
+                                    RepeatMode.ALL -> "Repeat all"
+                                    RepeatMode.ONE -> "Repeat one"
+                                },
+                        )
+                    }
+                }
+            }
         }
-
-        PressIconButton(onClick = onNext, enabled = hasNext(playbackState), nudge = 1) {
-            Icon(imageVector = Icons.Default.SkipNext, contentDescription = "Next", modifier = Modifier.size(IconSize.large))
-        }
-
-        ToggleIconButton(
-            active = playbackState.repeatMode != RepeatMode.OFF,
-            feedbackValue = playbackState.repeatMode,
-            onClick = onRepeat,
-            modifier = Modifier.offset(x = 12.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SwapIcon(if (playbackState.repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat) {
-                Icon(
-                    imageVector = it,
-                    contentDescription =
-                        when (playbackState.repeatMode) {
-                            RepeatMode.OFF -> "Repeat off"
-                            RepeatMode.ALL -> "Repeat all"
-                            RepeatMode.ONE -> "Repeat one"
-                        },
-                )
+            Slot {
+                PressIconButton(onClick = onAddToPlaylist) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add to playlist")
+                }
+            }
+            // The middle three columns stay empty: the actions sit under shuffle and repeat.
+            Slot {}
+            Slot {}
+            Slot {}
+            Slot {
+                PressIconButton(onClick = onQueue) {
+                    Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue")
+                }
             }
         }
     }
+}
+
+/** One column of the controls grid: an equal share of the row, its control centred. */
+@Composable
+private fun RowScope.Slot(content: @Composable () -> Unit) {
+    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) { content() }
 }
 
 /** The system's "remove animations" (animator duration scale 0): the carousel then slides without turning. */
