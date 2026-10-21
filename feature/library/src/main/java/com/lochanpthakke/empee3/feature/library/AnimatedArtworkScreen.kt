@@ -430,7 +430,7 @@ private fun AnimatedQueueItemCard(
 
                 StatusBadge(status = status)
 
-                if (status == AnimatedArtStatus.FAILED) {
+                if (status == AnimatedArtStatus.FAILED || status == AnimatedArtStatus.NO_MATCH || status == AnimatedArtStatus.NO_ANIMATION) {
                     IconButton(onClick = onRetry) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry")
                     }

@@ -89,7 +89,7 @@ class AnimatedArtworkViewModel @Inject constructor(
         if (_selectedDiagnosticAlbumId.value == null) {
             _selectedDiagnosticAlbumId.value = album.id
         }
-        processItem(album)
+        processItem(album, forceRefresh = true)
     }
 
     fun removeFromQueue(albumId: Long) {
