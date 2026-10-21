@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
@@ -276,8 +277,12 @@ private class LastNeighbours {
  *
  * [content] gets each page's song, whether it is the current one, and its live distance from the
  * centre (see [TrackCarouselState.distance]) for effects drawn inside the page.
+ *
+ * [stack] (0..1, read in the draw phase only) gathers the neighbours into one card behind the
+ * current one: 0 = the three-card carousel, 1 = stacked (see [depthCard]).
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun TrackCarousel(
     state: TrackCarouselState,
     previous: Song?,
@@ -285,8 +290,12 @@ internal fun TrackCarousel(
     next: Song?,
     modifier: Modifier = Modifier,
     reduceMotion: Boolean = false,
+    stack: () -> Float = { 0f },
     content: @Composable (song: Song, isCurrent: Boolean, distance: () -> Float) -> Unit,
 ) {
+    // Stacked, the card behind is the next song's; the previous one fades out (at the end of the
+    // queue, with no next song, the previous one stays as the card behind instead).
+    val hideLeft = next != null
     val transition = LocalPlayerTransition.current
     Box(
         modifier =
@@ -319,7 +328,7 @@ internal fun TrackCarousel(
                                 .zIndex(if (inFront) 1f else 0f)
                                 .graphicsLayer {
                                     val reveal = transition?.let { playerNeighbourReveal(it.fraction) } ?: 1f
-                                    depthCard(distance() * reveal, reduceMotion)
+                                    depthCard(distance() * reveal, reduceMotion, stack(), hideLeft)
                                     if (slot != 0) alpha *= reveal
                                 }
                                 // One page is the distance between two cards: the cards follow the finger one to one.
@@ -343,6 +352,12 @@ private const val SIDE_SCALE = 0.78f
 private const val SIDE_TURN_DEGREES = 32f
 private const val REDUCED_SIDE_SCALE = 0.86f
 
+/** Stacked: the card behind is a little larger than the current one, peeking out around it. */
+private const val STACKED_BEHIND_SCALE = 1.06f
+
+/** Stacked: the left card is gone by the time it has covered this share of the way in. */
+private const val STACKED_HIDE_RATE = 1.5f
+
 /** Beyond one place over, cards shrink and fade out by this distance. */
 private const val VANISH_DISTANCE = 1.6f
 private const val CAMERA_DISTANCE = 14f
@@ -351,21 +366,33 @@ private const val CAMERA_DISTANCE = 14f
  * One card of the depth carousel at [distance] places from the centre: moved sideways by a share of
  * its width, scaled down and turned towards the centre as it leaves, fading only past one place.
  * With [reduceMotion] the cards slide and scale but never turn.
+ *
+ * [stack] blends towards the stacked layout: one place over, a card sits centred behind the
+ * current one, unturned and a little larger; on the way there (a swipe) it slides out to the side
+ * and back, so the motion stays continuous in [distance]. With [hideLeft] the cards on the left
+ * fade out as they gather, so the two neighbours merge into one card instead of piling up.
  */
 private fun GraphicsLayerScope.depthCard(
     distance: Float,
     reduceMotion: Boolean,
+    stack: Float,
+    hideLeft: Boolean,
 ) {
     val away = abs(distance)
     val near = away.coerceAtMost(1f)
     val sideScale = if (reduceMotion) REDUCED_SIDE_SCALE else SIDE_SCALE
-    val scale = 1f - (1f - sideScale) * near
+    val spread = sign(distance) * size.width * SIDE_SPACING
+    // Out to the side half way, back behind the centre at one place over.
+    val stackedOut = 2f * minOf(near, 1f - near)
+    val scale = lerp(1f - (1f - sideScale) * near, 1f + (STACKED_BEHIND_SCALE - 1f) * near, stack)
     scaleX = scale
     scaleY = scale
-    translationX = distance * size.width * SIDE_SPACING
-    rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * near
+    translationX = lerp(distance * size.width * SIDE_SPACING, spread * stackedOut, stack)
+    rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * near * (1f - stack)
     cameraDistance = CAMERA_DISTANCE * density
-    alpha = (1f - (away - 1f).coerceAtLeast(0f) / (VANISH_DISTANCE - 1f)).coerceIn(0f, 1f)
+    val vanish = (1f - (away - 1f).coerceAtLeast(0f) / (VANISH_DISTANCE - 1f)).coerceIn(0f, 1f)
+    val gathered = if (hideLeft) (stack * (-distance).coerceIn(0f, 1f) * STACKED_HIDE_RATE).coerceAtMost(1f) else 0f
+    alpha = vanish * (1f - gathered)
 }
 
 /**

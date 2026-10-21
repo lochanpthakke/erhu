@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -113,6 +115,8 @@ internal fun CarouselCard(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onSelect: () -> Unit,
+    /** False while the neighbours are stacked behind the current card: a tap there must not reach them. */
+    selectable: Boolean = true,
 ) {
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val showAlbum = maxHeight >= ALBUM_LINE_MIN_HEIGHT
@@ -120,7 +124,7 @@ internal fun CarouselCard(
         val artSide =
             minOf(maxWidth * CARD_WIDTH_FRACTION - CARD_PADDING * 2, maxHeight - metadataHeight - CARD_PADDING * 2)
                 .coerceAtLeast(MIN_ART_SIDE)
-        val select = if (isCurrent) Modifier else Modifier.clickable(onClickLabel = "Play this track", onClick = onSelect)
+        val select = if (isCurrent || !selectable) Modifier else Modifier.clickable(onClickLabel = "Play this track", onClick = onSelect)
         // Each card in its own artwork's colours (cached per artwork, cross-faded on change).
         val colors = rememberLyricsColors(track)
         val inset = with(LocalDensity.current) { CARD_PADDING.toPx() }
@@ -230,9 +234,9 @@ internal fun FavoriteButton(
 
 /**
  * Shuffle, previous, play / pause (the centrepiece), next, repeat: the player's real state and
- * commands. Below them, under shuffle and repeat, the secondary actions: add the playing song to a
- * playlist and the queue. Both rows share one grid of five equal columns, so every control is
- * evenly spaced and the layout is symmetrical around play / pause.
+ * commands. Below them, under shuffle, play / pause and repeat, the secondary actions: add the
+ * playing song to a playlist, the album stack toggle and the queue. Both rows share one grid of
+ * five equal columns, so every control is evenly spaced and the layout is symmetrical around play / pause.
  */
 @Composable
 @Suppress("LongParameterList", "LongMethod")
@@ -246,6 +250,9 @@ internal fun TransportControls(
     onNext: () -> Unit,
     onQueue: () -> Unit,
     onRepeat: () -> Unit,
+    /** Whether the neighbour cards are stacked into one behind the current card. */
+    stacked: Boolean,
+    onToggleStack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -323,9 +330,18 @@ internal fun TransportControls(
                     Icon(imageVector = Icons.Default.Add, contentDescription = "Add to playlist")
                 }
             }
-            // The middle three columns stay empty: the actions sit under shuffle and repeat.
+            // The actions sit under shuffle, play / pause and repeat; the columns between stay empty.
             Slot {}
-            Slot {}
+            Slot {
+                PressIconButton(onClick = onToggleStack) {
+                    SwapIcon(if (stacked) Icons.Default.ViewCarousel else Icons.Default.Layers) { icon ->
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = if (stacked) "Show albums side by side" else "Stack background albums",
+                        )
+                    }
+                }
+            }
             Slot {}
             Slot {
                 PressIconButton(onClick = onQueue) {
