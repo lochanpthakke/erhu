@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
@@ -81,6 +82,8 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TrackOccurrence
+import com.lochanpthakke.empee3.feature.library.components.AnimatedAlbumCoverPlayer
+import com.lochanpthakke.empee3.feature.library.components.rememberAnimatedArtworkPath
 import com.lochanpthakke.empee3.feature.library.transition.StudioInput
 import com.lochanpthakke.empee3.feature.library.transition.StudioTrack
 import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioHost
@@ -305,7 +308,13 @@ fun AlbumDetailScreen(
                     contentPadding = PaddingValues(bottom = Spacing.lg + scroll.contentBottom),
                 ) {
                     item(key = HERO_KEY) {
-                        AlbumHero(album = album, songs = songs.takeIf { data.loaded }, listState = listState, header = header)
+                        AlbumHero(
+                            album = album,
+                            songs = songs.takeIf { data.loaded },
+                            listState = listState,
+                            header = header,
+                            animatedArtworkRepository = viewModel.animatedArtworkRepository,
+                        )
                     }
                     item(key = "actions") {
                         AlbumActions(
@@ -405,6 +414,8 @@ private fun AlbumHero(
     songs: List<Song>?,
     listState: LazyListState,
     header: CollapsingHeaderState,
+    /** The album's animated cover, looping muted over the still one, when one has been fetched. */
+    animatedArtworkRepository: AnimatedArtworkRepository? = null,
 ) {
     // The opaque colour the track list sits on (the theme background is translucent under glass).
     val page = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
@@ -422,20 +433,26 @@ private fun AlbumHero(
                 .aspectRatio(1f)
                 .clipToBounds(),
     ) {
-        AlbumArtwork(
-            artworkUri = album.artworkUri,
-            contentDescription = "Album artwork",
-            modifier =
-                Modifier
-                    // Keep the cover with its scrim and title during navigation.
-                    // A separate shared overlay can outlive the page on Back.
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        val scrolled = heroScroll(listState, size.height)
-                        translationY = scrolled * HERO_PARALLAX
-                        alpha = 1f - HERO_FADE * (scrolled / size.height).coerceIn(0f, 1f)
-                    },
-        )
+        val coverModifier =
+            Modifier
+                // Keep the cover with its scrim and title during navigation.
+                // A separate shared overlay can outlive the page on Back.
+                .fillMaxSize()
+                .graphicsLayer {
+                    val scrolled = heroScroll(listState, size.height)
+                    translationY = scrolled * HERO_PARALLAX
+                    alpha = 1f - HERO_FADE * (scrolled / size.height).coerceIn(0f, 1f)
+                }
+        val video = animatedArtworkRepository?.let { rememberAnimatedArtworkPath(album.id, it) }
+        // Let go of the video while Now Playing covers the page: only one cover player at a time.
+        val covered = LocalPlayerTransition.current?.isOpen == true
+        AnimatedAlbumCoverPlayer(
+            filePath = video.takeUnless { covered },
+            isPlaying = true,
+            modifier = coverModifier,
+        ) {
+            AlbumArtwork(artworkUri = album.artworkUri, contentDescription = "Album artwork", modifier = Modifier.fillMaxSize())
+        }
         Box(
             modifier =
                 Modifier

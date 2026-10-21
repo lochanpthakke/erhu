@@ -64,13 +64,13 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
-import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.PlayerTransitionState
 import com.lochanpthakke.empee3.feature.library.components.AnimatedAlbumCoverPlayer
+import com.lochanpthakke.empee3.feature.library.components.CoverVideoHost
+import com.lochanpthakke.empee3.feature.library.components.rememberAnimatedArtworkPath
 import kotlin.math.abs
 
 /*
@@ -127,6 +127,8 @@ internal fun CarouselCard(
     isPlaying: Boolean = false,
     libraryRepository: LibraryRepository? = null,
     animatedArtworkRepository: AnimatedArtworkRepository? = null,
+    /** Now Playing's one cover video, handed from card to card (see CoverVideoHost). */
+    coverVideo: CoverVideoHost? = null,
     /** False while the neighbours are stacked behind the current card: a tap there must not reach them. */
     selectable: Boolean = true,
 ) {
@@ -164,6 +166,7 @@ internal fun CarouselCard(
                 isPlaying = isPlaying,
                 libraryRepository = libraryRepository,
                 animatedArtworkRepository = animatedArtworkRepository,
+                coverVideo = coverVideo,
                 modifier =
                     Modifier
                         .size(artSide)
@@ -421,8 +424,9 @@ private fun hasNext(state: PlaybackState): Boolean =
     state.queue.size > 1 && (state.shuffleModeEnabled || state.repeatMode == RepeatMode.ALL || state.currentIndex < state.queue.lastIndex)
 
 /**
- * The card's artwork: the album's animated cover when one has been fetched (playing only on the
- * current card while music plays), otherwise the still artwork.
+ * The card's artwork: on the current card, the album's animated cover when one has been fetched
+ * (moving while [isPlaying]); neighbours and albums without one show the still artwork. Only the
+ * current card ever has a video player.
  */
 @Composable
 internal fun HeroAnimatedArtwork(
@@ -432,43 +436,22 @@ internal fun HeroAnimatedArtwork(
     libraryRepository: LibraryRepository?,
     animatedArtworkRepository: AnimatedArtworkRepository?,
     modifier: Modifier = Modifier,
+    coverVideo: CoverVideoHost? = null,
 ) {
-    if (animatedArtworkRepository == null || libraryRepository == null) {
-        SongArtwork(
-            song = song,
-            contentDescription = if (isCurrent) "Album artwork" else "${song.title} by ${song.artist}",
-            modifier = modifier,
-        )
+    val description = if (isCurrent) "Album artwork" else "${song.title} by ${song.artist}"
+    if (!isCurrent || animatedArtworkRepository == null || libraryRepository == null) {
+        SongArtwork(song = song, contentDescription = description, modifier = modifier)
         return
     }
-
     // Remembered: the card recomposes during the player's motion; a new flow each time would resubscribe.
     val albumId by remember(libraryRepository, song.id) { libraryRepository.getAlbumIdForSong(song.id) }
         .collectAsState(initial = null)
-    val artworkState by remember(animatedArtworkRepository, albumId) { animatedArtworkRepository.observeAnimatedArtwork(albumId ?: -1L) }
-        .collectAsState(initial = null)
-    val orientationState by remember(animatedArtworkRepository) { animatedArtworkRepository.observePreferredOrientation() }
-        .collectAsState(initial = AnimatedArtOrientation.SQUARE_1_1)
-
-    val activePath =
-        if (artworkState?.status == AnimatedArtStatus.AVAILABLE) {
-            when (orientationState) {
-                AnimatedArtOrientation.SQUARE_1_1 -> artworkState?.squareFilePath ?: artworkState?.tallFilePath
-                AnimatedArtOrientation.TALL_3_4 -> artworkState?.tallFilePath ?: artworkState?.squareFilePath
-            }
-        } else {
-            null
-        }
-
     AnimatedAlbumCoverPlayer(
-        filePath = activePath,
-        isPlaying = isPlaying && isCurrent,
+        filePath = rememberAnimatedArtworkPath(albumId, animatedArtworkRepository),
+        isPlaying = isPlaying,
         modifier = modifier,
+        host = coverVideo,
     ) {
-        SongArtwork(
-            song = song,
-            contentDescription = if (isCurrent) "Album artwork" else "${song.title} by ${song.artist}",
-            modifier = Modifier.fillMaxSize(),
-        )
+        SongArtwork(song = song, contentDescription = description, modifier = Modifier.fillMaxSize())
     }
 }

@@ -67,6 +67,7 @@ import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
+import com.lochanpthakke.empee3.feature.library.components.rememberCoverVideoHost
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -172,6 +173,8 @@ fun NowPlayingScreen(
     // a tap mid-way simply retargets the running spring.
     var stacked by remember { mutableStateOf(false) }
     val stack = remember { Animatable(0f) }
+    // One cover video for the current card: a track change within the album keeps it running.
+    val coverVideo = rememberCoverVideoHost()
     LaunchedEffect(stacked) { stack.animateTo(if (stacked) 1f else 0f, Motion.settle()) }
     var showAudioDetails by remember { mutableStateOf(false) }
     var lyricsExpanded by remember { mutableStateOf(false) }
@@ -340,9 +343,11 @@ fun NowPlayingScreen(
                                         // A neighbour card is a shortcut to its track: the same motion as a swipe.
                                         onSelect = { if (distance() < 0f) previous() else next() },
                                         selectable = !stacked,
-                                        isPlaying = isPlaying,
+                                        // The cover moves only while the player is open (it stays composed when collapsed).
+                                        isPlaying = isPlaying && transition?.isOpen != false,
                                         libraryRepository = libraryRepository,
                                         animatedArtworkRepository = animatedArtworkRepository,
+                                        coverVideo = coverVideo,
                                     )
                                 }
 
