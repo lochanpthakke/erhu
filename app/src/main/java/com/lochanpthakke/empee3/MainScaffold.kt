@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ImageSearch
+import androidx.compose.material.icons.filled.MovieFilter
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -107,6 +108,7 @@ import com.lochanpthakke.empee3.core.model.SmartPlaylist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.AddToPlaylistDialog
 import com.lochanpthakke.empee3.feature.library.AlbumDetailScreen
+import com.lochanpthakke.empee3.feature.library.AnimatedArtworkScreen
 import com.lochanpthakke.empee3.feature.library.ArtistDetailScreen
 import com.lochanpthakke.empee3.feature.library.ArtworkManagerScreen
 import com.lochanpthakke.empee3.feature.library.AudioDetailsViewModel
@@ -137,6 +139,7 @@ import com.lochanpthakke.empee3.feature.settings.theme.ThemeRollbackDialog
 import com.lochanpthakke.empee3.feature.settings.theme.ThemeViewModel
 import com.lochanpthakke.empee3.feature.transfer.WifiTransferScreen
 import com.lochanpthakke.empee3.navigation.AlbumDetail
+import com.lochanpthakke.empee3.navigation.AnimatedArtworkFetcher
 import com.lochanpthakke.empee3.navigation.ArtistDetail
 import com.lochanpthakke.empee3.navigation.ArtworkManager
 import com.lochanpthakke.empee3.navigation.Equalizer
@@ -175,6 +178,7 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Auto Fix Tags", Icons.Default.EditNote, MetadataEditor),
         DrawerDestination("Library Builder", Icons.Default.Folder, LibraryBuilder),
         DrawerDestination("Artwork Fetcher", Icons.Default.ImageSearch, ArtworkManager),
+        DrawerDestination("Animated Artwork", Icons.Default.MovieFilter, AnimatedArtworkFetcher),
         DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
     )
@@ -590,6 +594,14 @@ fun MainScaffold() {
                                                         onNavigateToLibrary = {
                                                             navController.navigate(Library)
                                                         },
+                                                    )
+                                                }
+                                            }
+                                            composable<AnimatedArtworkFetcher> {
+                                                ProvideMotionScope(this) {
+                                                    AnimatedArtworkScreen(
+                                                        viewModel = hiltViewModel(),
+                                                        onOpenDrawer = openDrawer,
                                                     )
                                                 }
                                             }

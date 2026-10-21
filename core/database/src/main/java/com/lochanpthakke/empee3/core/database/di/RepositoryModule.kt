@@ -5,6 +5,8 @@ package com.lochanpthakke.empee3.core.database.di
 import android.content.Context
 import androidx.work.WorkManager
 import com.lochanpthakke.empee3.core.database.lookup.RoomSongLookup
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepositoryImpl
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepositoryImpl
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkStore
@@ -33,6 +35,10 @@ interface RepositoryModule {
     @Binds
     @Singleton
     fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
+
+    @Binds
+    @Singleton
+    fun bindAnimatedArtworkRepository(impl: AnimatedArtworkRepositoryImpl): AnimatedArtworkRepository
 
     @Binds
     @Singleton

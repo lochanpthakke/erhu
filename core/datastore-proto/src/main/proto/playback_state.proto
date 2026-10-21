@@ -25,7 +25,6 @@ message PlaybackStateProto {
   SoundSettingsProto sound_settings = 13;
   // 14 was used by an unreleased development build.
   reserved 14;
-  AnimatedArtOrientationProto animated_art_orientation = 15;
   // Glass material on floating surfaces, independent of the theme. Unset = off.
   optional bool glass_effect_enabled = 15;
   string custom_scan_location_uri = 16;
@@ -59,6 +58,8 @@ message PlaybackStateProto {
   // Glassyness / frostiness level sliders (0.0 = clear glass, 1.0 = full frosted glass).
   float sidebar_glassyness = 31;
   float ui_glassyness = 32;
+  // User preference for animated artwork
+  AnimatedArtOrientationProto animated_art_orientation = 33;
 }
 
 message RepairBatchProto {
