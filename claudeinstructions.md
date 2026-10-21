@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-20. Branch `kshitij`; complete-card player transition work and validation are documented in 3.11._
+_Last updated: 2026-10-21. Branch `kshitij`; Now Playing controls, album stack, Lochan merges and live album covers are in 3.12._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -55,6 +55,13 @@ is still open. Verify anything specific (file names, functions) against the code
 
 | Commit | What |
 |---|---|
+| `29ef0c1` | **Live album covers** in Now Playing and the album header (OOM fix, one shared cover player, buffering deadlock fix, TextureView); see 3.12 |
+| `891b754` | **Animated artwork fetcher** fixes: explicit edition, other storefronts, phone-sized download, HTTP 429 pause; see 3.12 |
+| `b84d0ac` | Merge `origin/lochan`: animated album artwork (Apple motion covers), Library Builder, matching fixes. Now Playing conflicts: kept ours, ported his artwork; see 3.12 |
+| `9d3c3e8` / `41b88af` / `86f62a0` | Now Playing: **album stack toggle**; Queue button shows only Queue + History tabs; **control rows** (+ and Queue) and transparent top bar; see 3.12 |
+| `d022cd4` | Merge `origin/lochan`: Library Organiser, colour mapping fix, frostiness sliders (proto: `ui_glassyness = 32`, `sidebar_glassyness = 33`) |
+| `0189dc5` | Expanded Now Playing drawn **without Liquid Glass** (lagged, looked the same); everything else keeps glass |
+| `d83dbf6` | Complete-card player expansion/collapse; see 3.11 |
 | `7ff9564` | **Glass Now Playing cards**, **liquid seek bar**, **Home redesign** (Smart Playlist hero banner, new library concepts, five Featured Albums, page titled Home) and the **player-motion performance pass**; see 3.8–3.10 |
 | `17ddedd` | **Smart Playlists 2.0** (real local recommendations, generative cover art) and **Now Playing redesign** (3D card carousel, scrolling page, artwork-palette lyrics panel, glass/gradient surfaces, linear seek bar, overflow menu); see 3.7 |
 | `f76ec0d` | Theme unification: shared group components (`Groups.kt`, `GroupRows.kt`), Artwork Fetcher and Auto Fix Tags restyle, clearer drawer, collapsing titles on Settings / Wi-Fi Transfer / Sound Capsule |
@@ -327,6 +334,36 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   cold/missing artwork, both themes and reduced-motion device settings are not exhaustively
   verified. This is transition work, not the full Smoothness Engine. Do not commit/push unless asked.
 
+### 3.12 Now Playing controls, album stack, Lochan merges, live covers (2026-10-21)
+- **Controls** (`NowPlayingParts.TransportControls`): two rows on one five-column grid: shuffle,
+  previous, play/pause, next, repeat; below: Add to playlist (under shuffle), album stack toggle
+  (under play), Queue (under repeat). Add to playlist uses the existing `AddToPlaylistDialog` for the
+  playing song; its message shows in Now Playing's snackbar (`PlaylistsViewModel` / dialog
+  `onResult`). Queue opens `QueueSheet` with only Queue + History (`QUEUE_SHEET_QUEUE_PAGES`); the
+  overflow menu keeps all four tabs. Top bar is transparent (the old band was the "legacy notch").
+- **Album stack toggle** (`TrackCarousel.depthCard(stack)`): one 0..1 value (Motion.settle, read in
+  draw only) gathers the neighbours behind the current card (next album at 106%, previous fades out;
+  previous at the end of the queue). Neighbour taps are disabled while stacked. Default: three cards.
+- **Merges with `origin/lochan`**: `d022cd4` (proto field 31 clash: our `hidden_from_recommendations`
+  kept 31) and `b84d0ac` (his "kshitij UI sync" rewrote Now Playing from an old copy; we kept ours and
+  ported his animated artwork). `b84d0ac` brought **`jwt.txt`** (likely a token) into the branch:
+  ask the user / Lochan before anything else touches it; the auto-mode classifier blocks reading it.
+- **Animated artwork fetcher** (Lochan's feature, `core/network/apple`): iTunes search may return only
+  the clean edition, so the artist lookup supplies the explicit one; other storefronts are tried;
+  manual fetch re-resolves; the Fetch screen and background path download the largest variant with
+  short edge <= 1080 px (`HlsPlaylistParser.displayVariant`); HTTP 429 pauses Apple requests
+  (`AppleRequestGate`, `RateLimitException`). "$ome $exy $ongs 4 U" has NO motion cover on Apple in
+  any storefront checked (public pages confirm); SOS does.
+- **Embedded artwork**: the user's library (`Music/MUSICtest`) has only JPEG covers (scanned every ID3
+  frame / FLAC block on the S23). Live covers come only from the fetcher (`no_backup/artwork/animated`).
+- **Live covers** (`components/AnimatedAlbumCoverPlayer.kt`): one `CoverVideoHost` per Now Playing (only
+  the current card shows video; carries on across tracks of an album); the album header releases its
+  player while Now Playing covers it. Lessons from device logs: default ExoPlayer buffer = ~130 MB per
+  player (OOM with 2-3); fragmented-MP4 covers overstate the buffered position, so ANY read-ahead time
+  limit shorter than the file deadlocks (keep ExoPlayer's 50 s, cap 64 MB bytes); TextureView must not be
+  drawn at alpha 0 (no surface). Verified on the S23: album header + Now Playing animate, loop at 33 s,
+  skips keep the same player, no dropped frames, no crashes.
+
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
   manual "Time words" tool, local enhanced-LRC copies) — built 2026-10-11, the user scrapped it and
@@ -355,6 +392,11 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   every concept, banner swipe vs page scroll, banner Play starts the shown mix, Featured Albums shows
   five and opens the right album, last row clears the mini player, Glass on/off, and whether opening /
   closing the player now feels smooth (with music playing and paused).
+
+- **Live covers (`29ef0c1`)**: other albums' covers (only SOS tested), Now Playing open/close while a
+  cover plays, rapid skips across different albums, memory over a long session, battery use.
+- **Album stack toggle (`9d3c3e8`)**: merge/split look, rapid taps, swiping while stacked (not yet
+  looked at by the user on the phone).
 
 ### 5.2 Known limitations / deferred features
 - Not implemented (shown as unavailable, not faked): transition **effects** (reverb/echo),
@@ -433,6 +475,20 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-10-21 22:52:** the main app is the **release** build of `29ef0c1` (SHA-256 `bbb76a9b…a73a9fd`),
+  launched once without crashes. Backup: `dbbackup\pre-live-artwork-release-20261021-225221\appdata.tar`
+  (includes both SOS cover videos). APKs: `D:\android-toolchain\build-live-artwork-final\`. The library
+  database is now version 14 (Lochan's `animated_artwork` table); it is wiped on a DOWNGRADE, so restore a
+  backup if an older build is ever installed. `kshitij` is ahead of `origin/kshitij` from `891b754` on
+  (not pushed); `origin/master` was not pushed (the push was blocked by the permission classifier).
+  Final unit-test re-run after removing diagnostics was killed for low PC memory; the run just before
+  passed (network 268, library 150); both APKs built from the final code.
+- **2026-10-21 15:27:** `0189dc5` (expanded player drawn without Liquid Glass; everything else keeps
+  glass) installed as **release** on the main app after the user confirmed it runs smooth on `.bench`.
+  `.bench` code was verified identical to `build-0189dc5\real-release.apk` (all DEX/assets; only manifest
+  and resources.arsc differ by package). Installed SHA-256 `f9f3beed…3166b` matches. `.bench` uninstalled;
+  only `com.lochanpthakke.empee3` remains. Backup: `dbbackup\pre-0189dc5-install-20261021-152727\appdata.tar`.
+  `kshitij` is 2 commits ahead of `origin/kshitij` (not pushed).
 - **2026-10-20:** the current transition build contains the complete-card changes
   described in 3.11; the user requested committing these changes to `kshitij` (no push requested).
   Latest paired APKs: `D:\android-toolchain\build-card-transition\real-release.apk`
