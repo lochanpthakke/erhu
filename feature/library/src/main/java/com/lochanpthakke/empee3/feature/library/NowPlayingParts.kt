@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,6 +37,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +54,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
+import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
 import com.lochanpthakke.empee3.core.designsystem.component.pressScale
@@ -59,10 +64,13 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.ComponentSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
+import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
 import com.lochanpthakke.empee3.core.model.PlaybackState
 import com.lochanpthakke.empee3.core.model.RepeatMode
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.PlayerTransitionState
+import com.lochanpthakke.empee3.feature.library.components.AnimatedAlbumCoverPlayer
 import kotlin.math.abs
 
 /*
@@ -115,6 +123,10 @@ internal fun CarouselCard(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onSelect: () -> Unit,
+    /** Plays the current card's animated cover (when the album has one). */
+    isPlaying: Boolean = false,
+    libraryRepository: LibraryRepository? = null,
+    animatedArtworkRepository: AnimatedArtworkRepository? = null,
     /** False while the neighbours are stacked behind the current card: a tap there must not reach them. */
     selectable: Boolean = true,
 ) {
@@ -146,9 +158,12 @@ internal fun CarouselCard(
                         if (dim > 0f) drawRect(Color.Black.copy(alpha = dim))
                     }.padding(CARD_PADDING),
         ) {
-            SongArtwork(
+            HeroAnimatedArtwork(
                 song = track,
-                contentDescription = if (isCurrent) "Album artwork" else "${track.title} by ${track.artist}",
+                isCurrent = isCurrent,
+                isPlaying = isPlaying,
+                libraryRepository = libraryRepository,
+                animatedArtworkRepository = animatedArtworkRepository,
                 modifier =
                     Modifier
                         .size(artSide)
@@ -404,3 +419,56 @@ private fun ToggleIconButton(
 
 private fun hasNext(state: PlaybackState): Boolean =
     state.queue.size > 1 && (state.shuffleModeEnabled || state.repeatMode == RepeatMode.ALL || state.currentIndex < state.queue.lastIndex)
+
+/**
+ * The card's artwork: the album's animated cover when one has been fetched (playing only on the
+ * current card while music plays), otherwise the still artwork.
+ */
+@Composable
+internal fun HeroAnimatedArtwork(
+    song: Song,
+    isCurrent: Boolean,
+    isPlaying: Boolean,
+    libraryRepository: LibraryRepository?,
+    animatedArtworkRepository: AnimatedArtworkRepository?,
+    modifier: Modifier = Modifier,
+) {
+    if (animatedArtworkRepository == null || libraryRepository == null) {
+        SongArtwork(
+            song = song,
+            contentDescription = if (isCurrent) "Album artwork" else "${song.title} by ${song.artist}",
+            modifier = modifier,
+        )
+        return
+    }
+
+    // Remembered: the card recomposes during the player's motion; a new flow each time would resubscribe.
+    val albumId by remember(libraryRepository, song.id) { libraryRepository.getAlbumIdForSong(song.id) }
+        .collectAsState(initial = null)
+    val artworkState by remember(animatedArtworkRepository, albumId) { animatedArtworkRepository.observeAnimatedArtwork(albumId ?: -1L) }
+        .collectAsState(initial = null)
+    val orientationState by remember(animatedArtworkRepository) { animatedArtworkRepository.observePreferredOrientation() }
+        .collectAsState(initial = AnimatedArtOrientation.SQUARE_1_1)
+
+    val activePath =
+        if (artworkState?.status == AnimatedArtStatus.AVAILABLE) {
+            when (orientationState) {
+                AnimatedArtOrientation.SQUARE_1_1 -> artworkState?.squareFilePath ?: artworkState?.tallFilePath
+                AnimatedArtOrientation.TALL_3_4 -> artworkState?.tallFilePath ?: artworkState?.squareFilePath
+            }
+        } else {
+            null
+        }
+
+    AnimatedAlbumCoverPlayer(
+        filePath = activePath,
+        isPlaying = isPlaying && isCurrent,
+        modifier = modifier,
+    ) {
+        SongArtwork(
+            song = song,
+            contentDescription = if (isCurrent) "Album artwork" else "${song.title} by ${song.artist}",
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}

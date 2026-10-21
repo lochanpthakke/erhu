@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
+import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.GlassArtworkBackdrop
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
@@ -93,6 +95,9 @@ private val LYRICS_PANEL_MAX_HEIGHT = 560.dp
 @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList")
 fun NowPlayingScreen(
     playbackRepository: PlaybackRepository,
+    /** With [animatedArtworkRepository]: the current card plays the album's animated cover when it has one. */
+    libraryRepository: LibraryRepository? = null,
+    animatedArtworkRepository: AnimatedArtworkRepository? = null,
     isFavorite: Boolean,
     lyrics: State<SongLyrics?>,
     /** Online lyrics lookup and choice for the lyrics page; null keeps it to the file's lyrics. */
@@ -335,6 +340,9 @@ fun NowPlayingScreen(
                                         // A neighbour card is a shortcut to its track: the same motion as a swipe.
                                         onSelect = { if (distance() < 0f) previous() else next() },
                                         selectable = !stacked,
+                                        isPlaying = isPlaying,
+                                        libraryRepository = libraryRepository,
+                                        animatedArtworkRepository = animatedArtworkRepository,
                                     )
                                 }
 

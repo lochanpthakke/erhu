@@ -119,7 +119,7 @@ class MetadataScorer
                 jaroWinklerDistance(foldForMatch(a), foldForMatch(b)),
             )
 
-        private fun jaroWinklerDistance(
+        internal fun jaroWinklerDistance(
             s1: String,
             s2: String,
         ): Float {

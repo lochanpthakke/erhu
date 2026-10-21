@@ -47,6 +47,10 @@ dependencies {
 
     implementation(libs.coil.compose)
 
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.common)
+    implementation("androidx.media3:media3-ui:1.5.1")
+
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 

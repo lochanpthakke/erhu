@@ -1,0 +1,1353 @@
+﻿{
+    "data":  [
+                 {
+                     "id":  "1658650093",
+                     "type":  "albums",
+                     "href":  "/v1/catalog/us/albums/1658650093",
+                     "attributes":  {
+                                        "artistName":  "SZA",
+                                        "artwork":  {
+                                                        "bgColor":  "315d7e",
+                                                        "hasP3":  false,
+                                                        "height":  3000,
+                                                        "textColor1":  "f4f6f8",
+                                                        "textColor2":  "eaeef2",
+                                                        "textColor3":  "cdd8e0",
+                                                        "textColor4":  "c5d1da",
+                                                        "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                        "width":  3000
+                                                    },
+                                        "audioTraits":  [
+                                                            "lossless",
+                                                            "lossy-stereo"
+                                                        ],
+                                        "contentRating":  "clean",
+                                        "copyright":  "℗ 2022 Top Dawg Entertainment, under exclusive license to RCA Records",
+                                        "editorialNotes":  {
+                                                               "short":  "SZA’s sophomore outing shows a new side to her music. Hear it in Spatial.",
+                                                               "standard":  "In 2017, \u003ci\u003eCtrl\u003c/i\u003e—a 14-track project rife with songs about love, sex, self-doubt, and heartbreak—became one of the most influential albums in R\u0026B. \u003ci\u003eCtrl\u003c/i\u003e was the soundtrack for many people in their twenties, highlighting the growing pains of young adulthood. SZA’s vulnerability and raw honesty, coupled with ultra-relatable lyrics full of diary-like ruminations and conversations from friend group chats, are what made her debut so impactful. \n\nWhere \u003ci\u003eCtrl\u003c/i\u003e reflected SZA’s journey towards finding self-love and acceptance, her long-awaited sophomore LP \u003ci\u003eSOS\u003c/i\u003e finds the St. Louis-born singer-songwriter dealing with some of the same topics of love and relationships from a more self-assured place. She ditches the uncertainties of her romantic entanglements to save herself—most of the time. On the soulful and gritty album opener “SOS,” SZA reintroduces herself and says precisely what’s on her mind after a night of crying over a lost relationship: “I talk bullshit a lot/No more fuck shit, I’m done,” she swaggers. \n\nThis isn’t the only song that shows her weariness towards relationships that no longer serve her; see also “Smoking on My Ex Pack” and “Far.” She finds the confidence to know that she doesn’t need to depend on a man to find happiness on “Conceited” and “Forgiveless.” However, not every song on the project is about moving on and leaving her past relationships behind her; SZA still has a penchant for making wrong decisions that may not end well for her (“Too Late,” “F2F”) and questions her worth in some instances (“Special”). The album sketches the ebbs and flows of emotions, with strength in one moment but deep regret and sadness the next. \n\nThere’s growth between her debut and sophomore album, not just lyrically but sonically as well, blending a mix of her beloved lo-fi beats and sharing space with grunge- and punk-inspired songs without any of it sounding out of place. On the Phoebe Bridgers collaboration “Ghost in the Machine,” the duo take a deeper look at the realities of stardom, looking for a bit of humanity within their day-to-day interactions. The track is not only progressive in its use of strings and acoustic guitars but haunting in its vocal performance.\n\nThroughout the journey of \u003ci\u003eSOS\u003c/i\u003e, there are moments of clarity and tenderness where SZA goes through the discomfort of healing while trying to find the deeper meaning within the trials and tribulations she endures. She embraces this new level of confidence in her life, where she isn’t looking for anyone to save her from the depth of her emotions but instead is at peace with where she’s at in life.",
+                                                               "tagline":  "New Album in Spatial Audio"
+                                                           },
+                                        "editorialVideo":  {
+                                                               "motionDetailSquare":  {
+                                                                                          "previewFrame":  {
+                                                                                                               "bgColor":  "0e2235",
+                                                                                                               "hasP3":  false,
+                                                                                                               "height":  3840,
+                                                                                                               "textColor1":  "96c1db",
+                                                                                                               "textColor2":  "83b1d2",
+                                                                                                               "textColor3":  "7ba1ba",
+                                                                                                               "textColor4":  "6c94b2",
+                                                                                                               "url":  "https://is1-ssl.mzstatic.com/image/thumb/Video112/v4/f8/e3/33/f8e33321-91db-e287-b83c-33c63e4fa99e/Job162fbdc0-7fd1-4184-a1d4-36247862e615-140524274-PreviewImage_preview_image_nonvideo_sdr-Time1670620140337.png/{w}x{h}bb.jpg",
+                                                                                                               "width":  3840
+                                                                                                           },
+                                                                                          "video":  "https://mvod.itunes.apple.com/itunes-assets/HLSMusic112/v4/17/dd/67/17dd6742-3912-6571-7b4a-0547d375f39f/P525453029_default.m3u8"
+                                                                                      },
+                                                               "motionDetailTall":  {
+                                                                                        "previewFrame":  {
+                                                                                                             "bgColor":  "0c1a2d",
+                                                                                                             "hasP3":  false,
+                                                                                                             "height":  2732,
+                                                                                                             "textColor1":  "97c1dc",
+                                                                                                             "textColor2":  "86b2d2",
+                                                                                                             "textColor3":  "7b9fb9",
+                                                                                                             "textColor4":  "6d94b1",
+                                                                                                             "url":  "https://is1-ssl.mzstatic.com/image/thumb/Video112/v4/69/08/47/6908472c-1002-9d1a-4dbd-e7a45c1c9303/Jobb390d4ec-633f-4b67-ae27-cf79d9cd6c39-140521630-PreviewImage_preview_image_nonvideo_sdr-Time1670616627981.png/{w}x{h}bb.jpg",
+                                                                                                             "width":  2048
+                                                                                                         },
+                                                                                        "video":  "https://mvod.itunes.apple.com/itunes-assets/HLSMusic122/v4/43/cb/5a/43cb5ab0-b15e-c33f-5787-216453dbb6ab/P525436235_default.m3u8"
+                                                                                    },
+                                                               "motionSquareVideo1x1":  {
+                                                                                            "previewFrame":  {
+                                                                                                                 "bgColor":  "0e2235",
+                                                                                                                 "hasP3":  false,
+                                                                                                                 "height":  3840,
+                                                                                                                 "textColor1":  "96c1db",
+                                                                                                                 "textColor2":  "83b1d2",
+                                                                                                                 "textColor3":  "7ba1ba",
+                                                                                                                 "textColor4":  "6c94b2",
+                                                                                                                 "url":  "https://is1-ssl.mzstatic.com/image/thumb/Video112/v4/f8/e3/33/f8e33321-91db-e287-b83c-33c63e4fa99e/Job162fbdc0-7fd1-4184-a1d4-36247862e615-140524274-PreviewImage_preview_image_nonvideo_sdr-Time1670620140337.png/{w}x{h}bb.jpg",
+                                                                                                                 "width":  3840
+                                                                                                             },
+                                                                                            "video":  "https://mvod.itunes.apple.com/itunes-assets/HLSMusic112/v4/17/dd/67/17dd6742-3912-6571-7b4a-0547d375f39f/P525453029_default.m3u8"
+                                                                                        },
+                                                               "motionTallVideo3x4":  {
+                                                                                          "previewFrame":  {
+                                                                                                               "bgColor":  "0c1a2d",
+                                                                                                               "hasP3":  false,
+                                                                                                               "height":  2732,
+                                                                                                               "textColor1":  "97c1dc",
+                                                                                                               "textColor2":  "86b2d2",
+                                                                                                               "textColor3":  "7b9fb9",
+                                                                                                               "textColor4":  "6d94b1",
+                                                                                                               "url":  "https://is1-ssl.mzstatic.com/image/thumb/Video112/v4/69/08/47/6908472c-1002-9d1a-4dbd-e7a45c1c9303/Jobb390d4ec-633f-4b67-ae27-cf79d9cd6c39-140521630-PreviewImage_preview_image_nonvideo_sdr-Time1670616627981.png/{w}x{h}bb.jpg",
+                                                                                                               "width":  2048
+                                                                                                           },
+                                                                                          "video":  "https://mvod.itunes.apple.com/itunes-assets/HLSMusic122/v4/43/cb/5a/43cb5ab0-b15e-c33f-5787-216453dbb6ab/P525436235_default.m3u8"
+                                                                                      }
+                                                           },
+                                        "genreNames":  [
+                                                           "R\u0026B/Soul",
+                                                           "Music"
+                                                       ],
+                                        "isCompilation":  false,
+                                        "isComplete":  true,
+                                        "isMasteredForItunes":  true,
+                                        "isPrerelease":  false,
+                                        "isSingle":  false,
+                                        "name":  "SOS",
+                                        "playParams":  {
+                                                           "id":  "1658650093",
+                                                           "kind":  "album"
+                                                       },
+                                        "recordLabel":  "Top Dawg Entertainment/RCA Records",
+                                        "releaseDate":  "2022-12-09",
+                                        "trackCount":  23,
+                                        "upc":  "196589564955",
+                                        "url":  "https://music.apple.com/us/album/sos/1658650093"
+                                    },
+                     "relationships":  {
+                                           "artists":  {
+                                                           "href":  "/v1/catalog/us/albums/1658650093/artists",
+                                                           "data":  [
+                                                                        {
+                                                                            "id":  "605800394",
+                                                                            "type":  "artists",
+                                                                            "href":  "/v1/catalog/us/artists/605800394"
+                                                                        }
+                                                                    ]
+                                                       },
+                                           "tracks":  {
+                                                          "href":  "/v1/catalog/us/albums/1658650093/tracks",
+                                                          "data":  [
+                                                                       {
+                                                                           "id":  "1658650487",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650487",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Jahlil Gunter, Rob Bisel \u0026 Gabriel Samuel Hardeman",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  117773,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204650",
+                                                                                              "name":  "SOS",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650487",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/d2/2a/d1/d22ad10e-a23c-b892-1770-714a3cccc0b1/mzaf_5465975764905979881.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  1,
+                                                                                              "url":  "https://music.apple.com/us/album/sos/1658650093?i=1658650487"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650488",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650488",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "atmos",
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo",
+                                                                                                                  "spatial"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Rob Bisel \u0026 Carter Lang",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  153947,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204584",
+                                                                                              "name":  "Kill Bill",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650488",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/b7/53/eb/b753ebcf-0425-c27e-f008-69ad8708fd1a/mzaf_10371086311900500569.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  2,
+                                                                                              "url":  "https://music.apple.com/us/album/kill-bill/1658650093?i=1658650488"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650490",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650490",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Rob Bisel, Carter Lang, Cody Fayne \u0026 Tyran Donaldson",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  203733,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204651",
+                                                                                              "name":  "Seek \u0026 Destroy",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650490",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/f1/57/86/f157869b-f495-dd79-d9e9-a35fd56c48a7/mzaf_2547480784506501913.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  3,
+                                                                                              "url":  "https://music.apple.com/us/album/seek-destroy/1658650093?i=1658650490"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650491",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650491",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Alessandro Buccellati, Rob Bisel, Joseph Pincus, Jocelyn A. Donald, Fabian Rashad Johnson \u0026 Rashad Johnson",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  181080,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204652",
+                                                                                              "name":  "Low",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650491",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/14/09/69/14096983-ec61-1893-5644-080036ed6815/mzaf_4702159967107938058.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  4,
+                                                                                              "url":  "https://music.apple.com/us/album/low/1658650093?i=1658650491"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650495",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650495",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Carter Lang, Cody Fayne, Jakob Rabitsch, Pharrell Williams, Rob Bisel, Chad Hugo, Tyrone Griffin Jr, Anthony Clemons, Jr. \u0026 Jazzaé De Waal",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  183893,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204653",
+                                                                                              "name":  "Love Language",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650495",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/7a/de/89/7ade8953-57a0-0807-c3e5-06d75316f7bd/mzaf_16477744481622672763.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  5,
+                                                                                              "url":  "https://music.apple.com/us/album/love-language/1658650093?i=1658650495"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650496",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650496",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Rob Bisel, Carter Lang, Margaux Alexis Rosalena Whitney \u0026 Will Miller",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  150720,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12204654",
+                                                                                              "name":  "Blind",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650496",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/3b/7c/6f/3b7c6f4a-bfa1-a931-6b56-1b5f6f297eee/mzaf_15963998911566181591.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  6,
+                                                                                              "url":  "https://music.apple.com/us/album/blind/1658650093?i=1658650496"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650497",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650497",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "atmos",
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo",
+                                                                                                                  "spatial"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Dacoury Natche, Caleb Toliver \u0026 John Hill",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  146947,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204590",
+                                                                                              "name":  "Used (feat. Don Toliver)",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650497",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/91/20/d9/9120d9b6-f2b9-da7f-e976-56eb9ae39549/mzaf_8673586636528404362.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  7,
+                                                                                              "url":  "https://music.apple.com/us/album/used-feat-don-toliver/1658650093?i=1658650497"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650499",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650499",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Kenny B. Edmonds, Khris Riddick-Tynes, Leon Thomas \u0026 Blair Ferguson",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  201800,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12204655",
+                                                                                              "name":  "Snooze",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650499",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/b3/9b/ca/b39bca57-2627-1aec-77af-cbf551205394/mzaf_11805331153914256539.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  8,
+                                                                                              "url":  "https://music.apple.com/us/album/snooze/1658650093?i=1658650499"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650501",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650501",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Michael Uzowuru, Teo Halm, Carter Lang \u0026 Cody Fayne",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  160920,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204656",
+                                                                                              "name":  "Notice Me",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650501",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/4e/0a/40/4e0a402d-6d41-e53f-ac98-b0f462612980/mzaf_17678721697549171322.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  9,
+                                                                                              "url":  "https://music.apple.com/us/album/notice-me/1658650093?i=1658650501"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650502",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650502",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Cody Fayne, Carter Lang, Rob Bisel, Jeff Bhasker, Emile Haynie \u0026 Gregory Landfair, Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  244027,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204657",
+                                                                                              "name":  "Gone Girl",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650502",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/f4/83/db/f483db76-af2a-ba41-21d1-ad3fc3ca291d/mzaf_4703481221512872245.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  10,
+                                                                                              "url":  "https://music.apple.com/us/album/gone-girl/1658650093?i=1658650502"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650503",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650503",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Jahlil Gunter, Skip Scarborough \u0026 Raina Taylor",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  83827,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204658",
+                                                                                              "name":  "Smoking on my Ex Pack",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650503",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/b9/98/f0/b998f0e9-80e1-cbbe-0082-8d9a42441f90/mzaf_2232831799027234032.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  11,
+                                                                                              "url":  "https://music.apple.com/us/album/smoking-on-my-ex-pack/1658650093?i=1658650503"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650510",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650510",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Phoebe Bridgers, SZA, Carter Lang, Rob Bisel, Matt Cohn \u0026 Marshall Vore",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  218587,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204659",
+                                                                                              "name":  "Ghost in the Machine (feat. Phoebe Bridgers)",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650510",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/09/04/f1/0904f1a1-d161-a125-2478-0d311e1e9481/mzaf_13947541400610568391.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  12,
+                                                                                              "url":  "https://music.apple.com/us/album/ghost-in-the-machine-feat-phoebe-bridgers/1658650093?i=1658650510"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650511",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650511",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Rob Bisel \u0026 Carter Lang",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  185040,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204660",
+                                                                                              "name":  "F2F",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650511",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/ef/27/ec/ef27ec8e-4536-0f5b-823e-79ab8902237b/mzaf_6215319727942661050.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  13,
+                                                                                              "url":  "https://music.apple.com/us/album/f2f/1658650093?i=1658650511"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650791",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650791",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Benjamin Levin, Rob Bisel \u0026 Carter Lang",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  180853,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12204661",
+                                                                                              "name":  "Nobody Gets Me",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650791",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/97/6a/42/976a424b-72c9-cc0c-200f-8604c996b25b/mzaf_5872304535585224424.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  14,
+                                                                                              "url":  "https://music.apple.com/us/album/nobody-gets-me/1658650093?i=1658650791"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650793",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650793",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Cody Fayne \u0026 Rob Bisel",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  151413,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204662",
+                                                                                              "name":  "Conceited",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650793",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/99/0f/ce/990fce03-8eb1-e8a6-ca60-552333dd9e6b/mzaf_14719758604026638951.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  15,
+                                                                                              "url":  "https://music.apple.com/us/album/conceited/1658650093?i=1658650793"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650795",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650795",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Benjamin Levin, Rob Bisel, Shellback, Blake Slatkin \u0026 Omer Fedi",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  158840,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12204663",
+                                                                                              "name":  "Special",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650795",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/fe/bd/23/febd2311-4be3-8d20-4d4f-227fe7f68c02/mzaf_13033674242144388230.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  16,
+                                                                                              "url":  "https://music.apple.com/us/album/special/1658650093?i=1658650795"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650796",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650796",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "atmos",
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo",
+                                                                                                                  "spatial"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Sammy Witte, Rob Bisel, Carter Lang, Cody Fayne \u0026 Sven Gamsky",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  164427,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204600",
+                                                                                              "name":  "Too Late",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650796",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/93/44/65/93446561-f26b-5c58-c389-bae927265eff/mzaf_4135843504436850309.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  17,
+                                                                                              "url":  "https://music.apple.com/us/album/too-late/1658650093?i=1658650796"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650797",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650797",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Carter Lang, Rob Bisel, Tyran Donaldson, Carlos \"Loshendrix\" Munoz \u0026 Eliot Dubock",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  180680,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12204664",
+                                                                                              "name":  "Far",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650797",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/19/47/5e/19475e87-13af-c37a-a469-b6f3b753be76/mzaf_7628868587387110033.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  18,
+                                                                                              "url":  "https://music.apple.com/us/album/far/1658650093?i=1658650797"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650799",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650799",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "atmos",
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo",
+                                                                                                                  "spatial"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Rodney Jerkins \u0026 Rob Gueringer",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  181840,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12203683",
+                                                                                              "name":  "Shirt",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650799",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/ae/0b/85/ae0b8569-b253-6e24-1199-99d10861a70e/mzaf_13028894473964689148.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-10-28",
+                                                                                              "trackNumber":  19,
+                                                                                              "url":  "https://music.apple.com/us/album/shirt/1658650093?i=1658650799"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650800",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650800",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "atmos",
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo",
+                                                                                                                  "spatial"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Jacques Webster II, Teo Halm, Douglas Ford, Michael Uzowuru \u0026 Rob Bisel",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  239613,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12204602",
+                                                                                              "name":  "Open Arms (feat. Travis Scott)",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650800",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/4f/4f/8b/4f4f8bba-284d-fcc5-bc0a-0cf873f83904/mzaf_11890218134153457667.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  20,
+                                                                                              "url":  "https://music.apple.com/us/album/open-arms-feat-travis-scott/1658650093?i=1658650800"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650801",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650801",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Carter Lang, Rob Bisel, Cody Fayne \u0026 Dylan Patrice",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  173907,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12103630",
+                                                                                              "name":  "I Hate U",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650801",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/ff/84/4b/ff844bd0-5060-5f4e-0dc5-b36973fe1d63/mzaf_4161445999043120288.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2021-12-03",
+                                                                                              "trackNumber":  21,
+                                                                                              "url":  "https://music.apple.com/us/album/i-hate-u/1658650093?i=1658650801"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650802",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650802",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Carter Lang, Christopher Ruelas, Carlos Munoz \u0026 Jacob Collier",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  278480,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "USRC12004190",
+                                                                                              "name":  "Good Days",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650802",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/9b/32/fe/9b32fec3-fbfb-db0f-3dcf-bb089d412f23/mzaf_8889552709197507956.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2020-12-25",
+                                                                                              "trackNumber":  22,
+                                                                                              "url":  "https://music.apple.com/us/album/good-days/1658650093?i=1658650802"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1658650804",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1658650804",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "SZA",
+                                                                                              "albumName":  "SOS",
+                                                                                              "artistName":  "SZA",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "315d7e",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "f4f6f8",
+                                                                                                              "textColor2":  "eaeef2",
+                                                                                                              "textColor3":  "cdd8e0",
+                                                                                                              "textColor4":  "c5d1da",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "SZA, Rodney Jerkins, Russell Tyrone Jones, Mark Bell, Guy Sigsworth \u0026 Björk Guðmundsdóttir",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  141960,
+                                                                                              "genreNames":  [
+                                                                                                                 "R\u0026B/Soul",
+                                                                                                                 "Music"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  true,
+                                                                                              "isMasteredForItunes":  true,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "USRC12204666",
+                                                                                              "name":  "Forgiveless (feat. Ol\u0027 Dirty Bastard)",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1658650804",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d7/fd/54/d7fd54b0-c827-7fde-c7f5-a59660e6e374/mzaf_3846016506070351305.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2022-12-09",
+                                                                                              "trackNumber":  23,
+                                                                                              "url":  "https://music.apple.com/us/album/forgiveless-feat-ol-dirty-bastard/1658650093?i=1658650804"
+                                                                                          }
+                                                                       }
+                                                                   ]
+                                                      }
+                                       }
+                 }
+             ]
+}

@@ -178,3 +178,34 @@ private val STATEMENTS_8_9 =
         "CREATE INDEX IF NOT EXISTS `index_listening_stats_song_id` ON `listening_stats` (`song_id`)",
         "CREATE TABLE IF NOT EXISTS `listening_days` (`day` TEXT NOT NULL, `play_count` INTEGER NOT NULL, PRIMARY KEY(`day`))",
     )
+
+/**
+ * v13 -> v14 adds the animated_artwork table.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_13_14 =
+    object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `animated_artwork` (
+                    `album_id` INTEGER NOT NULL, 
+                    `normalized_artist` TEXT NOT NULL, 
+                    `normalized_album` TEXT NOT NULL, 
+                    `catalog_album_id` TEXT, 
+                    `storefront` TEXT, 
+                    `square_file_name` TEXT, 
+                    `tall_file_name` TEXT, 
+                    `has_square` INTEGER, 
+                    `has_tall` INTEGER, 
+                    `status` TEXT NOT NULL, 
+                    `updated_at_epoch_ms` INTEGER NOT NULL, 
+                    PRIMARY KEY(`album_id`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_animated_artwork_normalized_artist_normalized_album` ON `animated_artwork` (`normalized_artist`, `normalized_album`)"
+            )
+        }
+    }

@@ -1,0 +1,768 @@
+﻿{
+    "data":  [
+                 {
+                     "id":  "1750755782",
+                     "type":  "albums",
+                     "href":  "/v1/catalog/us/albums/1750755782",
+                     "attributes":  {
+                                        "artistName":  "$uicideboy$",
+                                        "artwork":  {
+                                                        "bgColor":  "9c9093",
+                                                        "hasP3":  false,
+                                                        "height":  3000,
+                                                        "textColor1":  "080707",
+                                                        "textColor2":  "151413",
+                                                        "textColor3":  "262223",
+                                                        "textColor4":  "302d2d",
+                                                        "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                        "width":  3000
+                                                    },
+                                        "audioTraits":  [
+                                                            "lossless",
+                                                            "lossy-stereo"
+                                                        ],
+                                        "contentRating":  "clean",
+                                        "copyright":  "℗ 2024 G59 Records",
+                                        "genreNames":  [
+                                                           "Hip-Hop",
+                                                           "Music",
+                                                           "Hip-Hop/Rap"
+                                                       ],
+                                        "isCompilation":  false,
+                                        "isComplete":  true,
+                                        "isMasteredForItunes":  false,
+                                        "isPrerelease":  false,
+                                        "isSingle":  false,
+                                        "name":  "New World Depression",
+                                        "playParams":  {
+                                                           "id":  "1750755782",
+                                                           "kind":  "album"
+                                                       },
+                                        "recordLabel":  "G59 Records",
+                                        "releaseDate":  "2024-06-13",
+                                        "trackCount":  13,
+                                        "upc":  "198588143940",
+                                        "url":  "https://music.apple.com/us/album/new-world-depression/1750755782"
+                                    },
+                     "relationships":  {
+                                           "artists":  {
+                                                           "href":  "/v1/catalog/us/albums/1750755782/artists",
+                                                           "data":  [
+                                                                        {
+                                                                            "id":  "1081606072",
+                                                                            "type":  "artists",
+                                                                            "href":  "/v1/catalog/us/artists/1081606072"
+                                                                        }
+                                                                    ]
+                                                       },
+                                           "tracks":  {
+                                                          "href":  "/v1/catalog/us/albums/1750755782/tracks",
+                                                          "data":  [
+                                                                       {
+                                                                           "id":  "1750755790",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755790",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  107117,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "QZAPK2000529",
+                                                                                              "name":  "Lone Wolf Hysteria",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755790",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/03/f1/ce/03f1ce63-fa5c-833e-eb09-24fccbb0de82/mzaf_17340633014526751535.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  1,
+                                                                                              "url":  "https://music.apple.com/us/album/lone-wolf-hysteria/1750755782?i=1750755790"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750755795",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755795",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  144761,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000530",
+                                                                                              "name":  "Mental Clarity Is a Luxury I Can\u0027t Afford",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755795",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/5e/2c/d7/5e2cd7fa-3429-3512-95c7-82089ca58619/mzaf_10370309303614326594.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  2,
+                                                                                              "url":  "https://music.apple.com/us/album/mental-clarity-is-a-luxury-i-cant-afford/1750755782?i=1750755795"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750755951",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755951",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  105724,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000531",
+                                                                                              "name":  "The Thin Grey Line",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755951",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/3b/d1/79/3bd179be-dd9d-fbf9-6527-6c1d2f454e83/mzaf_14472205718425867616.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  3,
+                                                                                              "url":  "https://music.apple.com/us/album/the-thin-grey-line/1750755782?i=1750755951"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750755955",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755955",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  129866,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000532",
+                                                                                              "name":  "Thorns",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755955",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/9d/ac/e4/9dace4ec-845c-b861-e485-a2de9d59d794/mzaf_12870222782240303856.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  4,
+                                                                                              "url":  "https://music.apple.com/us/album/thorns/1750755782?i=1750755955"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750755958",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755958",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  219535,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "QZAPK2000533",
+                                                                                              "name":  "Misery in Waking Hours",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755958",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/e6/a5/60/e6a560fd-22f2-36cb-feb7-22828120ea55/mzaf_2248915958904629321.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  5,
+                                                                                              "url":  "https://music.apple.com/us/album/misery-in-waking-hours/1750755782?i=1750755958"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750755964",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755964",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  268475,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000534",
+                                                                                              "name":  "Burgundy",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755964",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/44/0c/ff/440cff18-e18a-4d9b-fb2b-4b4521b2e13c/mzaf_183007580749211138.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  6,
+                                                                                              "url":  "https://music.apple.com/us/album/burgundy/1750755782?i=1750755964"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750755974",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750755974",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  137329,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "QZAPK2000535",
+                                                                                              "name":  "Transgressions",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750755974",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/71/6c/ca/716cca5f-e93f-6b10-00aa-31bd2e9f6eb9/mzaf_9729196649541580249.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  7,
+                                                                                              "url":  "https://music.apple.com/us/album/transgressions/1750755782?i=1750755974"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750756283",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750756283",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  150943,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000536",
+                                                                                              "name":  "Are You Going to See the Rose in the Vase, or the Dust on the Table",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750756283",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/10/f0/90/10f09069-8377-25c5-bd87-3839f39b0ce5/mzaf_9549574096855915023.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-04-19",
+                                                                                              "trackNumber":  8,
+                                                                                              "url":  "https://music.apple.com/us/album/are-you-going-to-see-the-rose-in-the-vase-or-the/1750755782?i=1750756283"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750756291",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750756291",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  121598,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000537",
+                                                                                              "name":  "All of My Problems Always Involve Me",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750756291",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/38/28/ba/3828ba4e-5378-baec-d6ae-9c1679ae50b5/mzaf_10516879384539388167.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  9,
+                                                                                              "url":  "https://music.apple.com/us/album/all-of-my-problems-always-involve-me/1750755782?i=1750756291"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750756294",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750756294",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  139996,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  true,
+                                                                                              "hasTimeSyncedLyrics":  true,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  true,
+                                                                                              "isrc":  "QZAPK2000538",
+                                                                                              "name":  "The Light at the End of the Tunnel for $9.99 a Month",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750756294",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/68/09/4f/68094f0a-f0ff-0dc1-5c52-60bfce8ab8df/mzaf_4895736396308773468.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  10,
+                                                                                              "url":  "https://music.apple.com/us/album/the-light-at-the-end-of-the-tunnel-for-%249-99-a-month/1750755782?i=1750756294"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750756302",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750756302",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  227264,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000539",
+                                                                                              "name":  "Drag \u0027Em to the River (Totalitarian Remix)",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750756302",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/8c/ff/a4/8cffa437-4daa-135f-9c2c-8c3274f8578f/mzaf_14864628003343461496.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  11,
+                                                                                              "url":  "https://music.apple.com/us/album/drag-em-to-the-river-totalitarian-remix/1750755782?i=1750756302"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750756307",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750756307",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  184633,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000540",
+                                                                                              "name":  "Us Vs. Them",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750756307",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/ec/74/50/ec745013-e3bd-2d32-f91e-8bfa28af07f0/mzaf_5195557063268410305.plus.aac.ep.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  12,
+                                                                                              "url":  "https://music.apple.com/us/album/us-vs-them/1750755782?i=1750756307"
+                                                                                          }
+                                                                       },
+                                                                       {
+                                                                           "id":  "1750756580",
+                                                                           "type":  "songs",
+                                                                           "href":  "/v1/catalog/us/songs/1750756580",
+                                                                           "attributes":  {
+                                                                                              "albumArtistName":  "$uicideboy$",
+                                                                                              "albumName":  "New World Depression",
+                                                                                              "artistName":  "$uicideboy$",
+                                                                                              "artwork":  {
+                                                                                                              "bgColor":  "9c9093",
+                                                                                                              "hasP3":  false,
+                                                                                                              "height":  3000,
+                                                                                                              "textColor1":  "080707",
+                                                                                                              "textColor2":  "151413",
+                                                                                                              "textColor3":  "262223",
+                                                                                                              "textColor4":  "302d2d",
+                                                                                                              "url":  "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/db/e6/9c/dbe69c63-56b5-daab-8bf6-f517573a3c48/198588143940.jpg/{w}x{h}bb.jpg",
+                                                                                                              "width":  3000
+                                                                                                          },
+                                                                                              "audioLocale":  "en-US",
+                                                                                              "audioTraits":  [
+                                                                                                                  "lossless",
+                                                                                                                  "lossy-stereo"
+                                                                                                              ],
+                                                                                              "composerName":  "Aristos Petrou \u0026 Scott Arceneaux Jr.",
+                                                                                              "contentRating":  "clean",
+                                                                                              "discNumber":  1,
+                                                                                              "durationInMillis":  116250,
+                                                                                              "genreNames":  [
+                                                                                                                 "Hip-Hop",
+                                                                                                                 "Music",
+                                                                                                                 "Hip-Hop/Rap"
+                                                                                                             ],
+                                                                                              "hasLyrics":  false,
+                                                                                              "hasTimeSyncedLyrics":  false,
+                                                                                              "isAppleDigitalMaster":  false,
+                                                                                              "isMasteredForItunes":  false,
+                                                                                              "isVocalAttenuationAllowed":  false,
+                                                                                              "isrc":  "QZAPK2000541",
+                                                                                              "name":  "Kill Yourself V",
+                                                                                              "playParams":  {
+                                                                                                                 "id":  "1750756580",
+                                                                                                                 "kind":  "song"
+                                                                                                             },
+                                                                                              "previews":  [
+                                                                                                               {
+                                                                                                                   "url":  "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/41/ea/26/41ea26e3-617c-c076-fffb-8b153a38d98f/mzaf_17472771156518893960.plus.aac.p.m4a"
+                                                                                                               }
+                                                                                                           ],
+                                                                                              "releaseDate":  "2024-06-13",
+                                                                                              "trackNumber":  13,
+                                                                                              "url":  "https://music.apple.com/us/album/kill-yourself-v/1750755782?i=1750756580"
+                                                                                          }
+                                                                       }
+                                                                   ]
+                                                      }
+                                       }
+                 }
+             ]
+}

@@ -7,6 +7,9 @@ import com.lochanpthakke.empee3.core.network.api.DeezerApi
 import com.lochanpthakke.empee3.core.network.api.LastFmApi
 import com.lochanpthakke.empee3.core.network.api.LrclibApi
 import com.lochanpthakke.empee3.core.network.api.MusicBrainzApi
+import com.lochanpthakke.empee3.core.network.apple.AppleMusicCatalogApi
+import com.lochanpthakke.empee3.core.network.apple.ItunesSearchApi
+import com.lochanpthakke.empee3.core.network.apple.AppleWebClient
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -46,6 +49,53 @@ object NetworkModule {
             .readTimeout(15, TimeUnit.SECONDS)
             .addInterceptor(logging)
             .build()
+    }
+
+    @Provides
+    @Singleton
+    @AppleWebClient
+    fun provideAppleWebClient(baseClient: OkHttpClient): OkHttpClient {
+        return baseClient.newBuilder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .header("Origin", "https://music.apple.com")
+                    .build()
+                chain.proceed(request)
+            }
+            .build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideItunesSearchApi(
+        @AppleWebClient okHttpClient: OkHttpClient,
+        json: Json,
+    ): ItunesSearchApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://itunes.apple.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(ItunesSearchApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAppleMusicCatalogApi(
+        @AppleWebClient okHttpClient: OkHttpClient,
+        json: Json,
+    ): AppleMusicCatalogApi {
+        val contentType = "application/json".toMediaType()
+        return Retrofit
+            .Builder()
+            .baseUrl("https://amp-api.music.apple.com/")
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(AppleMusicCatalogApi::class.java)
     }
 
     @Provides

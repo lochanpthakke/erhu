@@ -3,6 +3,11 @@ syntax = "proto3";
 option java_package = "com.lochanpthakke.empee3.core.datastore.proto";
 option java_multiple_files = true;
 
+enum AnimatedArtOrientationProto {
+  SQUARE_1_1 = 0;
+  TALL_3_4 = 1;
+}
+
 message PlaybackStateProto {
   repeated int64 queue_song_ids = 1;
   int32 current_index = 2;
@@ -58,6 +63,8 @@ message PlaybackStateProto {
   // ui_glassyness keeps 32 and sidebar_glassyness moved to 33.
   float ui_glassyness = 32;
   float sidebar_glassyness = 33;
+  // User preference for animated artwork
+  AnimatedArtOrientationProto animated_art_orientation = 34;
 }
 
 message RepairBatchProto {

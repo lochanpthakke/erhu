@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.lochanpthakke.empee3.core.database.dao.AlbumDao
+import com.lochanpthakke.empee3.core.database.dao.AnimatedArtworkDao
 import com.lochanpthakke.empee3.core.database.dao.ArtistDao
 import com.lochanpthakke.empee3.core.database.dao.LearnedWatermarkDao
 import com.lochanpthakke.empee3.core.database.dao.LibraryModelDao
@@ -16,6 +17,7 @@ import com.lochanpthakke.empee3.core.database.dao.TrackBookmarkDao
 import com.lochanpthakke.empee3.core.database.dao.WaveformCacheDao
 import com.lochanpthakke.empee3.core.database.entity.AlbumArtistCrossRefEntity
 import com.lochanpthakke.empee3.core.database.entity.AlbumEntity
+import com.lochanpthakke.empee3.core.database.entity.AnimatedArtworkEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistAliasEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistArtworkEntity
 import com.lochanpthakke.empee3.core.database.entity.ArtistEntity
@@ -51,8 +53,9 @@ import com.lochanpthakke.empee3.core.database.entity.WaveformCacheEntity
         TrackBookmarkEntity::class,
         WaveformCacheEntity::class,
         LearnedWatermarkEntity::class,
+        AnimatedArtworkEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class EmPee3Database : RoomDatabase() {
@@ -79,4 +82,6 @@ abstract class EmPee3Database : RoomDatabase() {
     abstract fun recentlyPlayedDao(): RecentlyPlayedDao
 
     abstract fun listeningStatsDao(): ListeningStatsDao
+
+    abstract fun animatedArtworkDao(): AnimatedArtworkDao
 }

@@ -21,6 +21,8 @@ interface LibraryRepository {
 
     fun getSongById(id: Long): Flow<Song?>
 
+    fun getAlbumIdForSong(songId: Long): Flow<Long?>
+
     fun getSongsByAlbumId(albumId: Long): Flow<List<Song>>
 
     fun getSongsByArtistId(artistId: Long): Flow<List<Song>>
