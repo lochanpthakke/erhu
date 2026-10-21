@@ -8,6 +8,7 @@ import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.getOrDefault
 import com.lochanpthakke.empee3.core.database.library.ArtistArtworkCache
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.ArtistArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
@@ -161,8 +162,9 @@ sealed interface RecentSearchItem {
 class LibraryViewModel
     @Inject
     constructor(
-        private val libraryRepository: LibraryRepository,
+        val libraryRepository: LibraryRepository,
         val playbackRepository: PlaybackRepository,
+        val animatedArtworkRepository: AnimatedArtworkRepository,
         private val metadataRepository: MetadataRepository,
         private val themeRepository: com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository,
         private val artistArtworkRepository: ArtistArtworkRepository,

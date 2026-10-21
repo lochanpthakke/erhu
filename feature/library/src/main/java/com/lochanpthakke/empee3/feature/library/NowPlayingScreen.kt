@@ -62,8 +62,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
+import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
 import com.lochanpthakke.empee3.core.designsystem.artwork.GlassArtworkBackdrop
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
+import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
+import com.lochanpthakke.empee3.feature.library.components.AnimatedAlbumCoverPlayer
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.AppTopBar
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
@@ -107,6 +112,8 @@ private val REVEAL_RISE = 24.dp
 @Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList")
 fun NowPlayingScreen(
     playbackRepository: PlaybackRepository,
+    libraryRepository: LibraryRepository? = null,
+    animatedArtworkRepository: AnimatedArtworkRepository? = null,
     isFavorite: Boolean,
     lyrics: State<SongLyrics?>,
     /** Online lyrics lookup and choice for the lyrics page; null keeps it to the file's lyrics. */
@@ -234,15 +241,17 @@ fun NowPlayingScreen(
                                 } else {
                                     Modifier
                                 }
-                            SongArtwork(
+                            HeroAnimatedArtwork(
                                 song = track,
-                                contentDescription = if (isCurrent) "Album artwork" else null,
-                                modifier =
-                                    hero
-                                        .playerArtworkLayout { bounds ->
-                                            if (isCurrent) transition?.heroArtworkBounds = bounds
-                                        }.glassPanel(Radius.largeShape, backdrop = null)
-                                        .clip(Radius.largeShape),
+                                isCurrent = isCurrent,
+                                isPlaying = playbackState.status == PlaybackStatus.PLAYING,
+                                libraryRepository = libraryRepository,
+                                animatedArtworkRepository = animatedArtworkRepository,
+                                modifier = hero
+                                    .playerArtworkLayout { bounds ->
+                                        if (isCurrent) transition?.heroArtworkBounds = bounds
+                                    }.glassPanel(Radius.largeShape, backdrop = null)
+                                    .clip(Radius.largeShape),
                             )
                         }
 
@@ -640,4 +649,54 @@ private fun formatMs(ms: Long): String {
     val minutes = totalSeconds / SECONDS_PER_MINUTE
     val seconds = totalSeconds % SECONDS_PER_MINUTE
     return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
+}
+
+@Composable
+private fun HeroAnimatedArtwork(
+    song: Song,
+    isCurrent: Boolean,
+    isPlaying: Boolean,
+    libraryRepository: LibraryRepository?,
+    animatedArtworkRepository: AnimatedArtworkRepository?,
+    modifier: Modifier = Modifier,
+) {
+    if (animatedArtworkRepository == null || libraryRepository == null) {
+        SongArtwork(
+            song = song,
+            contentDescription = if (isCurrent) "Album artwork" else null,
+            modifier = modifier,
+        )
+        return
+    }
+
+    val albumId by libraryRepository
+        .getAlbumIdForSong(song.id)
+        .collectAsState(initial = null)
+
+    val artworkState by animatedArtworkRepository
+        .observeAnimatedArtwork(albumId ?: -1L)
+        .collectAsState(initial = null)
+
+    val orientationState by animatedArtworkRepository
+        .observePreferredOrientation()
+        .collectAsState(initial = AnimatedArtOrientation.SQUARE_1_1)
+
+    val activePath = if (artworkState?.status == AnimatedArtStatus.AVAILABLE) {
+        when (orientationState) {
+            AnimatedArtOrientation.SQUARE_1_1 -> artworkState?.squareFilePath ?: artworkState?.tallFilePath
+            AnimatedArtOrientation.TALL_3_4 -> artworkState?.tallFilePath ?: artworkState?.squareFilePath
+        }
+    } else null
+
+    AnimatedAlbumCoverPlayer(
+        filePath = activePath,
+        isPlaying = isPlaying && isCurrent,
+        modifier = modifier,
+    ) {
+        SongArtwork(
+            song = song,
+            contentDescription = if (isCurrent) "Album artwork" else null,
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }

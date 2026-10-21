@@ -646,6 +646,8 @@ fun MainScaffold() {
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
                                     NowPlayingScreen(
                                         playbackRepository = playbackRepository,
+                                        libraryRepository = libraryViewModel.libraryRepository,
+                                        animatedArtworkRepository = libraryViewModel.animatedArtworkRepository,
                                         isFavorite = isFavorite,
                                         lyrics = lyrics,
                                         lyricsActions = libraryViewModel.lyricsActions,

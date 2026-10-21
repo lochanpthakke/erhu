@@ -20,7 +20,9 @@ data class AppleCatalogAttributes(
 @Serializable
 data class AppleEditorialVideo(
     val motionDetailSquare: AppleMotionDetail? = null,
-    val motionDetailTall: AppleMotionDetail? = null
+    val motionDetailTall: AppleMotionDetail? = null,
+    val motionSquareVideo1x1: AppleMotionDetail? = null,
+    val motionTallVideo3x4: AppleMotionDetail? = null
 )
 
 @Serializable

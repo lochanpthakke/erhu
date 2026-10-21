@@ -23,13 +23,20 @@ class LibraryBuilderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<LibraryBuilderState>(LibraryBuilderState.Idle)
     val uiState: StateFlow<LibraryBuilderState> = _uiState.asStateFlow()
 
+    private val _forceReorganize = MutableStateFlow(false)
+    val forceReorganize: StateFlow<Boolean> = _forceReorganize.asStateFlow()
+
+    fun setForceReorganize(enabled: Boolean) {
+        _forceReorganize.value = enabled
+    }
+
     fun startScanning(customUriString: String = "") {
         _uiState.value = LibraryBuilderState.Scanning
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val analysisResult = analyzer.analyze(customUriString)
+                val analysisResult = analyzer.analyze(customUriString, _forceReorganize.value)
                 _uiState.update { LibraryBuilderState.Review(analysisResult.moves, analysisResult.rootUriString) }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.update { LibraryBuilderState.Idle }
             }
         }
@@ -74,7 +81,7 @@ class LibraryBuilderViewModel @Inject constructor(
                 state
             }
         }
-        
+
         val currentState = _uiState.value
         if (currentState is LibraryBuilderState.Executing) {
             viewModelScope.launch(Dispatchers.IO) {
@@ -90,10 +97,9 @@ class LibraryBuilderViewModel @Inject constructor(
                         }
                     }
                 }
-                
-                // Phase 4: Integration - Cleanup empty folders and trigger media scan
+
                 integrator.integrate(currentState.rootUri)
-                
+
                 _uiState.update { LibraryBuilderState.Complete(result) }
             }
         }

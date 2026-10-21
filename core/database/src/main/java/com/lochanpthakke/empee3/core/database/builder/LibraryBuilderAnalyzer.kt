@@ -29,7 +29,7 @@ class LibraryBuilderAnalyzer
     ) {
         private val supportedExtensions = setOf("mp3", "flac", "m4a", "ogg", "wav", "aac")
 
-        suspend fun analyze(customUriString: String = ""): AnalysisResult {
+        suspend fun analyze(customUriString: String = "", forceReorganize: Boolean = false): AnalysisResult {
             val targetUri =
                 if (customUriString.isNotBlank()) {
                     customUriString
@@ -57,11 +57,21 @@ class LibraryBuilderAnalyzer
             val results = mutableListOf<ProposedMove>()
             scanDirectory(rootDocument, results)
 
-            // Second pass: Identify collisions (multiple files mapping to exact same destination)
             val destCount = results.groupingBy { it.destinationPath.lowercase() }.eachCount()
             val finalResults =
-                results.map { move ->
-                    if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1 && move.state != ProposedMove.State.MISSING_METADATA) {
+                results.mapNotNull { move ->
+                    if (move.state == ProposedMove.State.ALREADY_ORGANIZED) {
+                        if (forceReorganize) {
+                            val nextState = if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1) {
+                                ProposedMove.State.COLLISION
+                            } else {
+                                ProposedMove.State.VALID
+                            }
+                            move.copy(state = nextState)
+                        } else {
+                            null
+                        }
+                    } else if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1 && move.state != ProposedMove.State.MISSING_METADATA) {
                         move.copy(state = ProposedMove.State.COLLISION)
                     } else {
                         move
@@ -107,14 +117,12 @@ class LibraryBuilderAnalyzer
                     ?: PrimaryArtistExtractor.extractPrimaryArtist(artist)
                     ?: "Unknown Artist"
 
-            // Build expected destination path (e.g. "Primary Artist/Album/Title.ext")
             val cleanArtist = sanitizeFileName(primaryArtist)
             val cleanAlbum = sanitizeFileName(album)
             val cleanTitle = sanitizeFileName(title)
 
             val relativeDest = "$cleanArtist/$cleanAlbum/$cleanTitle.$ext"
 
-            // Determine state
             val hasMissingMetadata = (title == "Unknown Title") || (primaryArtist == "Unknown Artist") || (album == "Unknown Album")
             val isAlreadyOrganized = sourcePath.endsWith(relativeDest, ignoreCase = true)
 

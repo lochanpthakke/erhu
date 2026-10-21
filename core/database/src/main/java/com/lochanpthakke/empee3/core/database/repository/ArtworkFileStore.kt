@@ -13,12 +13,30 @@ class ArtworkFileStore @Inject constructor(
     val baseDir: File
         get() = File(context.noBackupFilesDir, "artwork/animated")
 
-    fun getSquareFile(albumId: Long): File {
-        return File(baseDir, "${albumId}_square.mp4")
+    fun getSquareFile(albumId: Long, albumTitle: String? = null, artist: String? = null): File {
+        val fileName = buildFileName(albumId, albumTitle, artist, "square")
+        return File(baseDir, fileName)
     }
 
-    fun getTallFile(albumId: Long): File {
-        return File(baseDir, "${albumId}_tall.mp4")
+    fun getTallFile(albumId: Long, albumTitle: String? = null, artist: String? = null): File {
+        val fileName = buildFileName(albumId, albumTitle, artist, "tall")
+        return File(baseDir, fileName)
+    }
+
+    private fun buildFileName(albumId: Long, albumTitle: String?, artist: String?, orientation: String): String {
+        return if (!albumTitle.isNullOrBlank() && !artist.isNullOrBlank()) {
+            val cleanTitle = sanitize(albumTitle)
+            val cleanArtist = sanitize(artist)
+            "${cleanTitle}_${cleanArtist}_AnimatedArtwork_${orientation}.mp4"
+        } else {
+            "${albumId}_${orientation}.mp4"
+        }
+    }
+
+    private fun sanitize(input: String): String {
+        return input.replace("[^a-zA-Z0-9]".toRegex(), "_")
+            .replace("_+".toRegex(), "_")
+            .trim('_')
     }
 
     fun totalBytes(): Long {

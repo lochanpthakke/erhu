@@ -16,26 +16,32 @@ data class HlsMediaPlaylist(
     val isTransportStream: Boolean
 )
 
+data class HlsVariantStream(
+    val resolutionText: String,
+    val width: Int,
+    val height: Int,
+    val bandwidth: Int,
+    val variantUrl: String,
+    val estimatedSizeMb: Float
+)
+
 object HlsPlaylistParser {
-    fun selectBestVariantUrl(masterUrl: String, masterContent: String, maxShortEdgePx: Int): String? {
+    fun parseMasterPlaylistVariants(masterUrl: String, masterContent: String): List<HlsVariantStream> {
         val lines = masterContent.split("\n").map { it.trim() }
-        var bestUrl: String? = null
-        var bestBandwidth = -1
-        var minAboveCapResolution = Int.MAX_VALUE
-        var minAboveCapUrl: String? = null
-        
+        val variants = mutableListOf<HlsVariantStream>()
+
         var i = 0
         while (i < lines.size) {
             val line = lines[i]
             if (line.startsWith("#EXT-X-STREAM-INF:")) {
                 val attrs = parseAttributes(line.substringAfter(":"))
                 val urlLine = lines.getOrNull(i + 1)?.trim() ?: ""
-                
+
                 val codecs = attrs["CODECS"]?.replace("\"", "") ?: ""
                 val resolution = attrs["RESOLUTION"]
                 val bandwidth = attrs["BANDWIDTH"]?.toIntOrNull() ?: -1
                 val videoRange = attrs["VIDEO-RANGE"]
-                
+
                 if (videoRange != null && videoRange != "SDR") {
                     i++
                     continue
@@ -44,7 +50,7 @@ object HlsPlaylistParser {
                     i++
                     continue
                 }
-                
+
                 if (urlLine.isNotEmpty()) {
                     var w = 0
                     var h = 0
@@ -53,40 +59,48 @@ object HlsPlaylistParser {
                         w = parts[0].toIntOrNull() ?: 0
                         h = parts[1].toIntOrNull() ?: 0
                     }
-                    val shortEdge = if (w > 0 && h > 0) min(w, h) else 0
-                    
+
                     val absoluteUrl = URI.create(masterUrl).resolve(urlLine).toString()
+                    val resText = if (w > 0 && h > 0) "${w}x${h}" else "Default"
                     
-                    if (shortEdge <= maxShortEdgePx) {
-                        if (bandwidth > bestBandwidth) {
-                            bestBandwidth = bandwidth
-                            bestUrl = absoluteUrl
-                        }
-                    } else {
-                        if (shortEdge < minAboveCapResolution && codecs.startsWith("avc1")) {
-                            minAboveCapResolution = shortEdge
-                            minAboveCapUrl = absoluteUrl
-                        }
-                    }
+                    // Estimate size for ~5 sec video clip at given bandwidth
+                    val estimatedMb = if (bandwidth > 0) (bandwidth * 5f) / (8 * 1024 * 1024) else 1.0f
+
+                    variants.add(
+                        HlsVariantStream(
+                            resolutionText = resText,
+                            width = w,
+                            height = h,
+                            bandwidth = bandwidth,
+                            variantUrl = absoluteUrl,
+                            estimatedSizeMb = estimatedMb
+                        )
+                    )
                 }
             }
             i++
         }
-        
-        return bestUrl ?: minAboveCapUrl
+
+        return variants.sortedByDescending { it.bandwidth }
     }
-    
+
+    fun selectBestVariantUrl(masterUrl: String, masterContent: String, maxShortEdgePx: Int): String? {
+        val variants = parseMasterPlaylistVariants(masterUrl, masterContent)
+        val candidate = variants.find { min(it.width, it.height) <= maxShortEdgePx } ?: variants.lastOrNull()
+        return candidate?.variantUrl
+    }
+
     fun parseMediaPlaylist(mediaUrl: String, mediaContent: String): HlsMediaPlaylist {
         val lines = mediaContent.split("\n").map { it.trim() }
         var initSegment: HlsSegmentRef? = null
         val segments = mutableListOf<HlsSegmentRef>()
         var isEncrypted = false
         var isTransportStream = false
-        
+
         var currentLength: Long? = null
         var currentOffset: Long? = null
         var lastOffset: Long = 0
-        
+
         for (line in lines) {
             if (line.startsWith("#EXT-X-KEY:")) {
                 val attrs = parseAttributes(line.substringAfter(":"))
@@ -131,23 +145,23 @@ object HlsPlaylistParser {
                 if (absoluteUrl.endsWith(".ts")) {
                     isTransportStream = true
                 }
-                
+
                 segments.add(HlsSegmentRef(absoluteUrl, currentLength, currentOffset))
-                
+
                 if (currentOffset != null && currentLength != null) {
                     lastOffset = currentOffset + currentLength
                 } else if (currentLength != null) {
                     lastOffset += currentLength
                 }
-                
+
                 currentLength = null
                 currentOffset = null
             }
         }
-        
+
         return HlsMediaPlaylist(initSegment, segments, isEncrypted, isTransportStream)
     }
-    
+
     private fun parseAttributes(attrString: String): Map<String, String> {
         val map = mutableMapOf<String, String>()
         val regex = Regex("([A-Z0-9\\-]+)=(\"[^\"]*\"|[^,]*)")
