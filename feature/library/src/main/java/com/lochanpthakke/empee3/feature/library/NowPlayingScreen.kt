@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.feature.library
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -158,7 +159,15 @@ fun NowPlayingScreen(
     val reduceMotion = rememberReduceMotion()
     // Which tab of the queue sheet is open, or null when it is closed.
     var queueSheetPage by remember { mutableStateOf<Int?>(null) }
+    // The tabs it shows: all from the menu, only the queue and history from the Queue button.
+    var queueSheetPages by remember { mutableStateOf(QUEUE_SHEET_ALL_PAGES) }
     var showVisualizer by remember { mutableStateOf(false) }
+    // The neighbour cards: side by side (the default on every entry) or stacked behind the current
+    // one. The animated value is read only while drawing, so the page does not recompose per frame;
+    // a tap mid-way simply retargets the running spring.
+    var stacked by remember { mutableStateOf(false) }
+    val stack = remember { Animatable(0f) }
+    LaunchedEffect(stacked) { stack.animateTo(if (stacked) 1f else 0f, Motion.settle()) }
     var showAudioDetails by remember { mutableStateOf(false) }
     var lyricsExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -198,7 +207,10 @@ fun NowPlayingScreen(
                     Toast.makeText(context, error ?: "Bookmark added", Toast.LENGTH_SHORT).show()
                 }
             },
-            onBookmarks = { queueSheetPage = QUEUE_SHEET_PAGE_MARKS },
+            onBookmarks = {
+                queueSheetPages = QUEUE_SHEET_ALL_PAGES
+                queueSheetPage = QUEUE_SHEET_PAGE_MARKS
+            },
             onAddToPlaylist = { song?.let(onAddToPlaylist) },
             onToggleHidden =
                 onSetHiddenFromMixes?.let { setHidden ->
@@ -225,7 +237,10 @@ fun NowPlayingScreen(
                         }
                     }
                 },
-            onQueue = { queueSheetPage = QUEUE_SHEET_PAGE_QUEUE },
+            onQueue = {
+                queueSheetPages = QUEUE_SHEET_ALL_PAGES
+                queueSheetPage = QUEUE_SHEET_PAGE_QUEUE
+            },
             onVisualizer = { showVisualizer = true },
             onEqualizer = onOpenEqualizer,
         )
@@ -303,6 +318,7 @@ fun NowPlayingScreen(
                                     current = song,
                                     next = playbackState.nextSong,
                                     reduceMotion = reduceMotion,
+                                    stack = { stack.value },
                                     modifier =
                                         Modifier
                                             .fillMaxWidth()
@@ -318,6 +334,7 @@ fun NowPlayingScreen(
                                         onToggleFavorite = { onToggleFavorite(track) },
                                         // A neighbour card is a shortcut to its track: the same motion as a swipe.
                                         onSelect = { if (distance() < 0f) previous() else next() },
+                                        selectable = !stacked,
                                     )
                                 }
 
@@ -352,8 +369,13 @@ fun NowPlayingScreen(
                                         onPrevious = ::previous,
                                         onPlayPause = ::playPause,
                                         onNext = ::next,
-                                        onQueue = menuActions.onQueue,
+                                        onQueue = {
+                                            queueSheetPages = QUEUE_SHEET_QUEUE_PAGES
+                                            queueSheetPage = QUEUE_SHEET_PAGE_QUEUE
+                                        },
                                         onRepeat = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
+                                        stacked = stacked,
+                                        onToggleStack = { stacked = !stacked },
                                         modifier = Modifier.revealWithPlayer(transition, start = 0.48f, end = 0.92f),
                                     )
                                 }
@@ -437,6 +459,7 @@ fun NowPlayingScreen(
             onSaveQueueAsPlaylist = onSaveQueueAsPlaylist,
             extras = extras,
             initialPage = page,
+            pages = queueSheetPages,
             onDismiss = { queueSheetPage = null },
             lyricsActions = lyricsActions,
         )

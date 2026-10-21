@@ -83,11 +83,27 @@ private const val PAGE_QUEUE = 0
 private const val PAGE_LYRICS = 1
 private const val PAGE_HISTORY = 2
 private const val PAGE_MARKS = 3
-private const val PAGE_COUNT = 4
 
 /** Pages the queue sheet can be opened on. */
 internal const val QUEUE_SHEET_PAGE_QUEUE = PAGE_QUEUE
 internal const val QUEUE_SHEET_PAGE_MARKS = PAGE_MARKS
+
+/** Every tab, in order. */
+internal val QUEUE_SHEET_ALL_PAGES = listOf(PAGE_QUEUE, PAGE_LYRICS, PAGE_HISTORY, PAGE_MARKS)
+
+/** Just the queue and what has played: the player's Queue button. */
+internal val QUEUE_SHEET_QUEUE_PAGES = listOf(PAGE_QUEUE, PAGE_HISTORY)
+
+private fun pageLabel(
+    page: Int,
+    queueSize: Int,
+): String =
+    when (page) {
+        PAGE_QUEUE -> "Queue ($queueSize)"
+        PAGE_LYRICS -> "Lyrics"
+        PAGE_HISTORY -> "History"
+        else -> "Marks"
+    }
 
 /** Entries already played (before the current one) are dimmed so they read as history, not as upcoming. */
 private const val PLAYED_ENTRY_ALPHA = 0.55f
@@ -106,10 +122,12 @@ internal fun QueueSheet(
     initialPage: Int,
     onDismiss: () -> Unit,
     lyricsActions: LyricsActions? = null,
+    /** The tabs shown, in order (QUEUE_SHEET_* pages). */
+    pages: List<Int> = QUEUE_SHEET_ALL_PAGES,
 ) {
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val pagerState = rememberPagerState(initialPage = initialPage.coerceIn(0, PAGE_COUNT - 1), pageCount = { PAGE_COUNT })
+    val pagerState = rememberPagerState(initialPage = pages.indexOf(initialPage).coerceAtLeast(0), pageCount = { pages.size })
     // The sheet is its own window: its feedback is shown inside it, above the app's own snackbar.
     val snackbarHostState = remember { SnackbarHostState() }
     val removalUndo = rememberQueueRemovalUndo(playbackRepository, snackbarHostState)
@@ -136,19 +154,15 @@ internal fun QueueSheet(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xl),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    listOf(
-                        PAGE_QUEUE to "Queue (${playbackState.queue.size})",
-                        PAGE_LYRICS to "Lyrics",
-                        PAGE_HISTORY to "History",
-                        PAGE_MARKS to "Marks",
-                    ).forEach { (page, label) ->
-                        val selected = pagerState.currentPage == page
+                    pages.forEachIndexed { index, page ->
+                        val label = pageLabel(page, playbackState.queue.size)
+                        val selected = pagerState.currentPage == index
                         Text(
                             text = label,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                             color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.clickable { scope.launch { pagerState.animateScrollToPage(page) } },
+                            modifier = Modifier.clickable { scope.launch { pagerState.animateScrollToPage(index) } },
                         )
                     }
                 }
@@ -156,8 +170,8 @@ internal fun QueueSheet(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.weight(1f),
-                ) { page ->
-                    when (page) {
+                ) { index ->
+                    when (pages[index]) {
                         PAGE_QUEUE ->
                             QueuePage(
                                 playbackState = playbackState,
