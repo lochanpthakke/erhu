@@ -53,6 +53,11 @@ message PlaybackStateProto {
   // Songs the user hid from Smart Playlists (recommendations only: the files, the library and
   // the user's own playlists are untouched). Empty = none hidden.
   repeated int64 hidden_from_recommendations = 31;
+  // Glassyness / frostiness level sliders (0.0 = clear glass, 1.0 = full frosted glass).
+  // Lochan's branch numbered these 31/32; 31 was already hidden_from_recommendations, so
+  // ui_glassyness keeps 32 and sidebar_glassyness moved to 33.
+  float ui_glassyness = 32;
+  float sidebar_glassyness = 33;
 }
 
 message RepairBatchProto {

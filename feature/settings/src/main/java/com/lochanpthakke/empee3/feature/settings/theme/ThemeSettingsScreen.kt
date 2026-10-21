@@ -4,6 +4,9 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -12,8 +15,12 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import kotlin.math.roundToInt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -123,6 +130,9 @@ fun ThemeSettingsScreen(
             }
         }
 
+        val sidebarGlassyness by viewModel.sidebarGlassyness.collectAsState()
+        val uiGlassyness by viewModel.uiGlassyness.collectAsState()
+
         SettingsSection(title = "Material") {
             SettingsGroup {
                 row {
@@ -133,6 +143,62 @@ fun ThemeSettingsScreen(
                         checked = glassEffectEnabled,
                         onCheckedChange = viewModel::setGlassEffectEnabled,
                     )
+                }
+            }
+        }
+
+        if (glassEffectEnabled) {
+            SettingsSection(
+                title = "Glass Frostiness",
+                footer = "Adjust the balance between clear translucent glass and frosted glass.",
+            ) {
+                SettingsGroup {
+                    row {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.md),
+                        ) {
+                            Text(
+                                text = "Main Sidebar Frostiness: ${(sidebarGlassyness * 100).roundToInt()}%",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = "0% = Clear Glass · 100% = Full Frosted Glass",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Slider(
+                                value = sidebarGlassyness,
+                                onValueChange = viewModel::setSidebarGlassyness,
+                                valueRange = 0f..1f,
+                            )
+                        }
+                    }
+                    row {
+                        Column(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(Spacing.md),
+                        ) {
+                            Text(
+                                text = "UI Elements Frostiness: ${(uiGlassyness * 100).roundToInt()}%",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                text = "0% = Clear Glass · 100% = Full Frosted Glass",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Slider(
+                                value = uiGlassyness,
+                                onValueChange = viewModel::setUiGlassyness,
+                                valueRange = 0f..1f,
+                            )
+                        }
+                    }
                 }
             }
         }

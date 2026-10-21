@@ -29,9 +29,11 @@ dependencies {
     implementation(project(":core:database"))
     implementation(project(":core:network"))
     implementation(project(":core:datastore"))
+    implementation(project(":core:datastore-proto"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:playback"))
     implementation(project(":core:sound"))
+    implementation("androidx.documentfile:documentfile:1.0.1")
     // VYBE: on-device discovery (EmbeddingGemma through MediaPipe; the model file is supplied by the user).
     implementation(project(":core:vybe"))
     implementation(project(":core:vybe-mediapipe"))

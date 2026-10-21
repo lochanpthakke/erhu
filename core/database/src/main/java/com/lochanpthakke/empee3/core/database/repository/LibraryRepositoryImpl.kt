@@ -130,9 +130,12 @@ class LibraryRepositoryImpl
                     emptyList()
                 } else {
                     list.map { it.toDomainModel() }.filter { song ->
-                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(song.title, trimmed) ||
-                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(song.artist, trimmed) ||
-                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer.matches(song.album, trimmed)
+                        com.lochanpthakke.empee3.core.common.util.SearchNormalizer
+                            .matches(song.title, trimmed) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer
+                                .matches(song.artist, trimmed) ||
+                            com.lochanpthakke.empee3.core.common.util.SearchNormalizer
+                                .matches(song.album, trimmed)
                     }
                 }
             }
@@ -184,7 +187,12 @@ class LibraryRepositoryImpl
 
         override suspend fun getSongsByIds(ids: List<Long>): List<Song> {
             // Chunked: SQLite limits bound variables (999 before API 30).
-            val byId = ids.distinct().chunked(SQL_CHUNK).flatMap { songDao.getSongsByIds(it) }.associateBy { it.id }
+            val byId =
+                ids
+                    .distinct()
+                    .chunked(SQL_CHUNK)
+                    .flatMap { songDao.getSongsByIds(it) }
+                    .associateBy { it.id }
             return ids.mapNotNull { byId[it]?.toDomainModel() }
         }
 

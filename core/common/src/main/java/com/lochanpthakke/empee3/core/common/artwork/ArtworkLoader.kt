@@ -141,7 +141,15 @@ object ArtworkLoader {
         sizePx: Int,
     ): Bitmap? =
         try {
-            val bytes = context.contentResolver.openInputStream(Uri.parse(uri))?.use { it.readBytes() }
+            val parsedUri = Uri.parse(uri)
+            val bytes = if (parsedUri.scheme == "http" || parsedUri.scheme == "https") {
+                java.net.URL(uri).openConnection().apply {
+                    connectTimeout = 3000
+                    readTimeout = 3000
+                }.getInputStream().use { it.readBytes() }
+            } else {
+                context.contentResolver.openInputStream(parsedUri)?.use { it.readBytes() }
+            }
             bytes?.let { decodeSampled(it, sizePx) }
         } catch (e: Exception) {
             null

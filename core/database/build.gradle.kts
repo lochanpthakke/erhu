@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":core:datastore-proto"))
 
     implementation(libs.androidx.core.ktx)
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.androidx.datastore)
     implementation(libs.protobuf.javalite)

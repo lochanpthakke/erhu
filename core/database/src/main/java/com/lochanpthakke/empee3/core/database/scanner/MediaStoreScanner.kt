@@ -297,7 +297,7 @@ class MediaStoreScanner
         }
 
         @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth")
-        private fun triggerMediaScannerForStorage() {
+        fun triggerMediaScannerForStorage() {
             try {
                 val pathsToScan = mutableListOf<String>()
                 val storageRoots = mutableSetOf<File>()

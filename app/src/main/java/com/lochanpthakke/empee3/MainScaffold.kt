@@ -130,6 +130,8 @@ import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
 import com.lochanpthakke.empee3.feature.library.rememberPlayerTransitionState
+import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderScreen
+import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderViewModel
 import com.lochanpthakke.empee3.feature.settings.SettingsCategoryScreen
 import com.lochanpthakke.empee3.feature.settings.SettingsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
@@ -143,6 +145,7 @@ import com.lochanpthakke.empee3.navigation.ArtistDetail
 import com.lochanpthakke.empee3.navigation.ArtworkManager
 import com.lochanpthakke.empee3.navigation.Equalizer
 import com.lochanpthakke.empee3.navigation.Library
+import com.lochanpthakke.empee3.navigation.LibraryBuilder
 import com.lochanpthakke.empee3.navigation.MetadataEditor
 import com.lochanpthakke.empee3.navigation.PlaylistDetail
 import com.lochanpthakke.empee3.navigation.Settings
@@ -174,6 +177,7 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Sound Capsule", Icons.Default.Insights, SoundCapsule),
         DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
         DrawerDestination("Auto Fix Tags", Icons.Default.EditNote, MetadataEditor),
+        DrawerDestination("Library Builder", Icons.Default.Folder, LibraryBuilder),
         DrawerDestination("Artwork Fetcher", Icons.Default.ImageSearch, ArtworkManager),
         DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
@@ -195,6 +199,7 @@ fun MainScaffold() {
     val selectedTheme by themeViewModel.appTheme.collectAsState()
     val selectedThemeId by themeViewModel.appThemeId.collectAsState()
     val glassEffectEnabled by themeViewModel.glassEffectEnabled.collectAsState()
+    val sidebarGlassyness by themeViewModel.sidebarGlassyness.collectAsState()
     // System Default follows the device's light/dark setting (re-read on configuration changes).
     val isSystemDark = isSystemInDarkTheme()
 
@@ -220,11 +225,14 @@ fun MainScaffold() {
                 focusedArtworkUri.value ?: song?.artworkUri ?: song?.uri
             }.distinctUntilChanged()
                 .collectLatest { uri ->
-                    val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 48) }
+                    val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 64) }
                     val isGradient = selectedThemeId == BuiltInThemes.GRADIENT_UI_ID
                     val colors = DominantColorExtractor.extractColors(bitmap)
-                    val accentColor = if (isGradient) colors.topColor else colors.primary
-                    value = DominantColorExtractor.createThemeFromAccent(accentColor, isGradient = isGradient)
+                    value = DominantColorExtractor.createThemeFromColors(
+                        mainColor = colors.primary,
+                        accentColor = colors.accentColor,
+                        isGradient = isGradient,
+                    )
                 }
         }
     }
@@ -386,6 +394,7 @@ fun MainScaffold() {
                                     // No environment lens here: its bend zone scales with the surface, and on
                                     // a panel this large it smeared everything behind the drawer.
                                     environmentLens = false,
+                                    frostFactor = sidebarGlassyness,
                                 ),
                         ) {
                             Column(
@@ -601,6 +610,15 @@ fun MainScaffold() {
                                                         onNavigateToLibrary = {
                                                             navController.navigateTopLevel(Library)
                                                         },
+                                                    )
+                                                }
+                                            }
+                                            composable<LibraryBuilder> {
+                                                ProvideMotionScope(this) {
+                                                    val builderViewModel = hiltViewModel<LibraryBuilderViewModel>()
+                                                    LibraryBuilderScreen(
+                                                        viewModel = builderViewModel,
+                                                        onNavigateBack = { navController.popBackStack() },
                                                     )
                                                 }
                                             }
