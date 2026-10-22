@@ -4,12 +4,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Album
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
-import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -17,21 +17,21 @@ import com.lochanpthakke.empee3.core.designsystem.R
 
 /**
  * The primary destinations, switched by [LibraryNavigationBar] (Search is the
- * separate button beside it): Tracks (the Home page: the home feed and every track), Albums, Library, VYBE (on-device discovery).
+ * separate button beside it): Home (the home feed and every track; still TRACKS in code), Albums, Library, VYBE (on-device discovery).
  */
 enum class LibrarySection(
     val label: String,
     /** The page's own title in its header; the navigation keeps [label]. */
     val pageTitle: String = label,
 ) {
-    TRACKS("Tracks", pageTitle = "Home"),
+    TRACKS("Home"),
     ALBUMS("Albums"),
     LIBRARY("Library"),
     VYBE("VYBE");
 
     val icon: ImageVector
         @Composable get() = when (this) {
-            TRACKS -> Icons.Outlined.MusicNote
+            TRACKS -> Icons.Outlined.Home
             ALBUMS -> Icons.Outlined.Album
             LIBRARY -> Icons.Outlined.LibraryMusic
             VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
@@ -39,7 +39,7 @@ enum class LibrarySection(
 
     val selectedIcon: ImageVector
         @Composable get() = when (this) {
-            TRACKS -> Icons.Filled.MusicNote
+            TRACKS -> Icons.Filled.Home
             ALBUMS -> Icons.Filled.Album
             LIBRARY -> Icons.Filled.LibraryMusic
             VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)

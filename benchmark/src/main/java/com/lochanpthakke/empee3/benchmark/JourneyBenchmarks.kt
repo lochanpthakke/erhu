@@ -34,7 +34,7 @@ class JourneyBenchmarks {
         }
 
     @Test
-    fun tracksScroll() = frames(setup = { openSection("Tracks") }) { flingDownAndUp() }
+    fun tracksScroll() = frames(setup = { openSection("Home") }) { flingDownAndUp() }
 
     @Test
     fun albumsScroll() = frames(setup = { openSection("Albums") }) { flingDownAndUp() }
@@ -50,7 +50,7 @@ class JourneyBenchmarks {
 
     @Test
     fun playerExpandCollapse() =
-        frames(setup = { openSection("Tracks") }) {
+        frames(setup = { openSection("Home") }) {
             repeat(REPEATS) {
                 expandPlayer()
                 back()
@@ -60,7 +60,7 @@ class JourneyBenchmarks {
     @Test
     fun trackSwipe() =
         frames(setup = {
-            openSection("Tracks")
+            openSection("Home")
             expandPlayer()
         }) {
             repeat(REPEATS) {
@@ -72,7 +72,7 @@ class JourneyBenchmarks {
     @Test
     fun lyricsOpenClose() =
         frames(setup = {
-            openSection("Tracks")
+            openSection("Home")
             expandPlayer()
         }) {
             repeat(REPEATS) {
@@ -84,10 +84,10 @@ class JourneyBenchmarks {
 
     @Test
     fun libraryVybeSwitch() =
-        frames(setup = { openSection("Tracks") }) {
+        frames(setup = { openSection("Home") }) {
             repeat(REPEATS) {
                 openSection("VYBE")
-                openSection("Tracks")
+                openSection("Home")
             }
         }
 
