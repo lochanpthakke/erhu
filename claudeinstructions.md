@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-21. Branch `kshitij`; Now Playing controls, album stack, Lochan merges and live album covers are in 3.12._
+_Last updated: 2026-10-22. Branch `kshitij`; live covers (start delay fix, album-page download) and the Home tab are in 3.12._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -55,6 +55,9 @@ is still open. Verify anything specific (file names, functions) against the code
 
 | Commit | What |
 |---|---|
+| `99b203a` | **Album page: download the album's live cover** (check on open, glass button + popup, cancel/remove, duplicate-download and delete fixes); see 3.12 |
+| `69fcd96` | Navigation: first tab reads **Home** with a house icon (enum still `TRACKS`) |
+| `7954fbd` | **Live covers start at once** (Apple's 10 s timestamp offset rebased to 0); see 3.12 |
 | `29ef0c1` | **Live album covers** in Now Playing and the album header (OOM fix, one shared cover player, buffering deadlock fix, TextureView); see 3.12 |
 | `891b754` | **Animated artwork fetcher** fixes: explicit edition, other storefronts, phone-sized download, HTTP 429 pause; see 3.12 |
 | `b84d0ac` | Merge `origin/lochan`: animated album artwork (Apple motion covers), Library Builder, matching fixes. Now Playing conflicts: kept ours, ported his artwork; see 3.12 |
@@ -363,13 +366,26 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   limit shorter than the file deadlocks (keep ExoPlayer's 50 s, cap 64 MB bytes); TextureView must not be
   drawn at alpha 0 (no surface). Verified on the S23: album header + Now Playing animate, loop at 33 s,
   skips keep the same player, no dropped frames, no crashes.
-- **10 s start delay (2026-10-22, uncommitted):** Apple's cover fragments start at `tfdt` 240 / timescale 24
+- **10 s start delay (`7954fbd`, 2026-10-22):** Apple's cover fragments start at `tfdt` 240 / timescale 24
   = 10.0 s (Apple's segmenter offset; fragments 1-8 all present, nothing missing). Joined into one MP4,
   ExoPlayer's clock starts at 0, so the first frame was due at 10 s. `FragmentedMp4Timeline.startAtZero`
   (core:network) rewrites only the `tfdt` values in place (15 bytes per SOS file); called by
   `HlsMp4Assembler` and once before playback for covers downloaded earlier. APKs: `build-cover-start\`.
   The user confirmed on `.bench` that it works; installed as release on the main app 2026-10-22 20:33
   (SHA-256 `d91e831e…918b4`). Backup: `dbbackup\pre-cover-start-install-20261022-203252`. `.bench` removed.
+- **Live cover download on the album page (`99b203a`, 2026-10-22; the user checked it on `.bench`;
+  installed as release on the main app 23:04, SHA-256 `47c6ce8e…`, backup
+  `dbbackup\pre-live-download-install-20261022-230347`; `.bench` removed):** source = the
+  same Apple fetcher (nothing is embedded in the user's files). Opening an album runs
+  `AnimatedArtworkRepository.checkLiveCover` (user chose "check on open, cached"): saved file → Saved;
+  NO_MATCH (14 d) / NO_ANIMATION (60 d) → hidden; else Apple lookup without downloading → new status
+  `FOUND` + session cache; network errors are not remembered. Size = the variant playlist's byte ranges
+  (`HlsMediaPlaylist.statedBytes`), else none: `estimatedSizeMb` assumes 5 s and is wrong (SOS ≈ 28 MB).
+  UI: `LiveCoverViewModel`, `components/LiveCoverControl.kt` (glass button under the header's end button,
+  anchored popup). Download = `fetchAndStoreArtwork` (now one job per album+orientation via LAZY job +
+  `putIfAbsent`; `cancelDownload` restores FOUND and deletes the .tmp; the assembler checks cancellation).
+  `deleteArtwork` now also deletes the stored file names (the normalized names miss capitals on Android).
+  Caveat: for albums with no motion cover, `resolveAlbum` tries ~10 storefronts (one Apple Music request each).
 - Backups: `adb exec-out run-as … tar` TRUNCATED at 89 MB on 2026-10-22 (tar "Unexpected EOF"). Use
   `adb shell "run-as <pkg> tar -cf - . > /data/local/tmp/x.tar"`, `adb pull`, `tar -tf` check, then rm.
 
@@ -406,6 +422,8 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   cover plays, rapid skips across different albums, memory over a long session, battery use.
 - **Album stack toggle (`9d3c3e8`)**: merge/split look, rapid taps, swiping while stacked (not yet
   looked at by the user on the phone).
+- **Live cover download (`99b203a`)**: an album that has a cover but none saved yet (real Apple answers, whether
+  playlists state byte ranges so a size shows), Cancel mid-download, Remove, Glass off, small screens.
 
 ### 5.2 Known limitations / deferred features
 - Not implemented (shown as unavailable, not faked): transition **effects** (reverb/echo),
@@ -419,8 +437,9 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   longer draws it (`PlayerExtrasViewModel.waveform`); the queue sheet's lyrics tab still exists.
 - The old `SmartPlaylist` enum and `SmartPlaylistRepository` are no longer used by the UI (kept, tested).
   `SmartMixTile` / `MoreListeningNote` are no longer used by Home (kept).
-- Bottom-navigation tab still reads "Tracks" while its page is titled "Home" (user's instruction;
-  offer to rename if they want them to match).
+- Bottom-navigation tab renamed to **Home** with a house icon at the user's request (`69fcd96`, 2026-10-22;
+  enum is still `LibrarySection.TRACKS`; benchmark journeys use `openSection("Home")`). Installed as
+  release 2026-10-22 21:01 (SHA-256 `7f11c2ee…0c3c8`), backup `dbbackup\pre-home-tab-20261022-210043`.
 - Playlist occurrence identity relies on positions never being renumbered — if a playlist
   **reorder** feature is ever added, give entries a durable id (Room migration) first.
 
@@ -484,6 +503,12 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-10-22 23:04:** the main app is the **release** build of the live cover download work (SHA-256
+  `47c6ce8e…`; same code as `99b203a`). Backup: `dbbackup\pre-live-download-install-20261022-230347`.
+  APKs: `D:\android-toolchain\build-live-download\` (`real-release.apk`, `real-debug.apk` for backups).
+  Only `com.lochanpthakke.empee3` is installed. `kshitij` is pushed to `origin/kshitij` through the notes commit.
+  Lesson: a gradle run cut off by `timeout` left a STALE release APK that was then copied; always compare
+  the new APK's hash with the installed one before installing.
 - **2026-10-21 22:52:** the main app is the **release** build of `29ef0c1` (SHA-256 `bbb76a9b…a73a9fd`),
   launched once without crashes. Backup: `dbbackup\pre-live-artwork-release-20261021-225221\appdata.tar`
   (includes both SOS cover videos). APKs: `D:\android-toolchain\build-live-artwork-final\`. The library
