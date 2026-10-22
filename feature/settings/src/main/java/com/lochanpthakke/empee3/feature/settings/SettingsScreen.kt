@@ -326,6 +326,30 @@ private fun LibrarySettingsSubPage(
                 }
             }
         }
+
+        val preferredResolution by viewModel.preferredLiveCoverResolution.collectAsState()
+
+        SettingsSection(
+            title = "Live Artwork Quality",
+            footer = "Preferred default video stream resolution for live animated cover downloads.",
+        ) {
+            SettingsGroup(selectable = true) {
+                listOf(
+                    "1080p" to "1080p (Full HD — Recommended)",
+                    "720p" to "720p (HD)",
+                    "480p" to "480p (SD — Data Saver)",
+                    "Maximum" to "Maximum Available (Highest Quality)",
+                ).forEach { (resolutionKey, label) ->
+                    row {
+                        SettingsChoiceRow(
+                            title = label,
+                            selected = preferredResolution == resolutionKey,
+                            onClick = { viewModel.setPreferredLiveCoverResolution(resolutionKey) },
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

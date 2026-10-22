@@ -2,12 +2,13 @@ package com.lochanpthakke.empee3.feature.library.components
 
 import android.text.format.Formatter
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,23 +19,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,10 +44,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -59,22 +67,62 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverCheck
+import com.lochanpthakke.empee3.core.database.repository.LiveCoverVariant
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPressEffect
-import com.lochanpthakke.empee3.core.designsystem.theme.glassRippleConfiguration
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
 import com.lochanpthakke.empee3.feature.library.LiveCoverUi
 
-private val BUTTON_SIZE = 40.dp
 private val POPUP_MAX_WIDTH = 300.dp
 private val POPUP_MARGIN = 16.dp
 private val POPUP_GAP = 8.dp
 private val THUMBNAIL_SIZE = 64.dp
 private val POPUP_SHAPE = RoundedCornerShape(24.dp)
+
+private enum class BitrateTier { LOW, MEDIUM, HIGH }
+
+private val DownloadArrowBarIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "DownloadArrowBar",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+    ).apply {
+        path(
+            fill = SolidColor(Color.Unspecified),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 2.5f,
+            strokeLineCap = StrokeCap.Round,
+        ) {
+            moveTo(12f, 3f)
+            lineTo(12f, 14.5f)
+        }
+        path(
+            fill = SolidColor(Color.Unspecified),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 2.5f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round,
+        ) {
+            moveTo(6.5f, 9.5f)
+            lineTo(12f, 15f)
+            lineTo(17.5f, 9.5f)
+        }
+        path(
+            fill = SolidColor(Color.Unspecified),
+            stroke = SolidColor(Color.Black),
+            strokeLineWidth = 2.5f,
+            strokeLineCap = StrokeCap.Round,
+        ) {
+            moveTo(5f, 20f)
+            lineTo(19f, 20f)
+        }
+    }.build()
+}
 
 /**
  * The album page's live cover control: a small glass button (download arrow; a tick once saved)
@@ -88,6 +136,7 @@ fun LiveCoverControl(
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onRemove: () -> Unit,
+    onSelectVariant: ((LiveCoverVariant) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
@@ -109,7 +158,7 @@ fun LiveCoverControl(
                     onDismissRequest = { open = false },
                     properties = PopupProperties(focusable = true),
                 ) {
-                    LiveCoverCard(state, artworkUri, onDownload, onCancel, onRemove)
+                    LiveCoverCard(state, artworkUri, onDownload, onCancel, onRemove, onSelectVariant)
                 }
             }
         }
@@ -121,29 +170,31 @@ private fun LiveCoverButton(
     state: LiveCoverUi,
     onClick: () -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val colors =
-        IconButtonDefaults.iconButtonColors(
-            containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
+    IconButton(
+        onClick = onClick,
+        colors = IconButtonDefaults.iconButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurface,
-        )
-    Box(contentAlignment = Alignment.Center) {
-        Box(
-            modifier =
-                Modifier
-                    .size(BUTTON_SIZE)
-                    .glassPressEffect(interactionSource, CircleShape)
-                    .glassPanel(CircleShape, level = GlassLevel.Strong, elevated = false),
-        )
-        CompositionLocalProvider(LocalRippleConfiguration provides glassRippleConfiguration()) {
-            IconButton(onClick = onClick, colors = colors, interactionSource = interactionSource) {
-                when (state) {
-                    is LiveCoverUi.Downloading ->
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    is LiveCoverUi.Saved -> Icon(Icons.Filled.DownloadDone, contentDescription = "Live cover saved")
-                    else -> Icon(Icons.Filled.Download, contentDescription = "Download live cover")
+        ),
+    ) {
+        when (state) {
+            is LiveCoverUi.Downloading ->
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            is LiveCoverUi.Saved -> Icon(Icons.Filled.DownloadDone, contentDescription = "Live cover saved")
+            is LiveCoverUi.RateLimited ->
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = DownloadArrowBarIcon,
+                        contentDescription = "Rate limited",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    )
+                    Icon(
+                        imageVector = Icons.Filled.Block,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp).align(Alignment.BottomEnd),
+                    )
                 }
-            }
+            else -> Icon(DownloadArrowBarIcon, contentDescription = "Download live cover")
         }
     }
 }
@@ -155,8 +206,20 @@ private fun LiveCoverCard(
     onDownload: () -> Unit,
     onCancel: () -> Unit,
     onRemove: () -> Unit,
+    onSelectVariant: ((LiveCoverVariant) -> Unit)? = null,
 ) {
     val width = min(POPUP_MAX_WIDTH, LocalConfiguration.current.screenWidthDp.dp - POPUP_MARGIN * 2)
+    val context = LocalContext.current
+    val offer = extractOffer(state)
+    val variants = offer?.variants.orEmpty()
+
+    var expanded by remember { mutableStateOf(false) }
+    var selectedBitrate by remember { mutableStateOf(BitrateTier.HIGH) }
+
+    val filteredVariants = remember(variants, selectedBitrate) {
+        filterVariantsByBitrate(variants, selectedBitrate)
+    }
+
     Column(
         modifier =
             Modifier
@@ -197,10 +260,154 @@ private fun LiveCoverCard(
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(Spacing.md))
         LiveCoverActions(state, onDownload, onCancel, onRemove)
+
+        if (variants.isNotEmpty() && state !is LiveCoverUi.Saved) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                IconButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.size(28.dp),
+                ) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (expanded) "Collapse options" else "Expand resolution options",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)) {
+                    Text(
+                        text = "Bitrate",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xs),
+                    )
+                    // Bitrate Selector: Low | Medium | High
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                .padding(2.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        BitrateTier.entries.forEach { tier ->
+                            val isSelected = selectedBitrate == tier
+                            val label =
+                                when (tier) {
+                                    BitrateTier.LOW -> "Low"
+                                    BitrateTier.MEDIUM -> "Medium"
+                                    BitrateTier.HIGH -> "High"
+                                }
+                            Surface(
+                                onClick = { selectedBitrate = tier },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.padding(vertical = 6.dp),
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.sm))
+
+                    // 2-Column Resolution Grid
+                    val chunked = filteredVariants.chunked(2)
+                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                        chunked.forEach { rowVariants ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            ) {
+                                rowVariants.forEach { v ->
+                                    val isSelected = offer?.selectedVariant?.variantUrl == v.variantUrl
+                                    val sizeStr =
+                                        v.bytes?.let { Formatter.formatShortFileSize(context, it) }
+                                            ?: String.format(java.util.Locale.US, "%.1f MB", v.estimatedSizeMb)
+                                    Surface(
+                                        onClick = { onSelectVariant?.invoke(v) },
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+                                        ) {
+                                            Text(
+                                                text = v.resolutionText,
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                            Text(
+                                                text = sizeStr,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+                                if (rowVariants.size == 1) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
+
+private fun filterVariantsByBitrate(
+    allVariants: List<LiveCoverVariant>,
+    tier: BitrateTier,
+): List<LiveCoverVariant> {
+    if (allVariants.isEmpty()) return emptyList()
+    val grouped = allVariants.groupBy { it.resolutionText }
+    return grouped.values.mapNotNull { group ->
+        val sorted = group.sortedByDescending { it.bandwidth }
+        when (tier) {
+            BitrateTier.HIGH -> sorted.firstOrNull()
+            BitrateTier.MEDIUM -> sorted[sorted.size / 2]
+            BitrateTier.LOW -> sorted.lastOrNull()
+        }
+    }.sortedByDescending { (it.width ?: 0) * (it.height ?: 0) }
+}
+
+private fun extractOffer(state: LiveCoverUi): LiveCoverCheck.Downloadable? =
+    when (state) {
+        is LiveCoverUi.Offer -> state.offer
+        is LiveCoverUi.Downloading -> state.offer
+        is LiveCoverUi.Failed -> state.offer
+        LiveCoverUi.Hidden, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
+    }
 
 @Composable
 private fun LiveCoverActions(
@@ -212,7 +419,7 @@ private fun LiveCoverActions(
     when (state) {
         is LiveCoverUi.Offer ->
             FilledTonalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(DownloadArrowBarIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(Spacing.sm))
                 Text("Download")
             }
@@ -240,6 +447,10 @@ private fun LiveCoverActions(
                 )
                 TextButton(onClick = onRemove) { Text("Remove") }
             }
+        is LiveCoverUi.RateLimited ->
+            Column {
+                Text(state.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
         LiveCoverUi.Hidden -> Unit
     }
 }
@@ -256,6 +467,7 @@ private fun details(state: LiveCoverUi): String {
             is LiveCoverUi.Offer -> offerParts(state.offer, size)
             is LiveCoverUi.Downloading -> offerParts(state.offer, size)
             is LiveCoverUi.Failed -> offerParts(state.offer, size)
+            is LiveCoverUi.RateLimited -> listOf("Rate Limited")
             LiveCoverUi.Hidden -> emptyList()
         }
     return (listOf("Apple Music") + parts).joinToString(" · ")

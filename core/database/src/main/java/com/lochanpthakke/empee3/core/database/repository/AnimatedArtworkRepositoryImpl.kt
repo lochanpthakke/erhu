@@ -310,13 +310,58 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
         orientation: AnimatedArtOrientation,
         masterUrl: String,
     ): LiveCoverCheck.Downloadable {
-        val variant =
+        val hlsVariants =
             networkDataSource
                 .fetchVariantStreamsForMasterUrl(masterUrl)
                 .getOrNull()
-                ?.let { HlsPlaylistParser.displayVariant(it) }
-        val bytes = variant?.let { networkDataSource.fetchVariantByteSize(it.variantUrl).getOrNull() }
-        return LiveCoverCheck.Downloadable(orientation, variant?.width, variant?.height, bytes)
+                .orEmpty()
+
+        val prefResolution = observePreferredResolution().first()
+        val targetShortEdge = when (prefResolution) {
+            "Maximum" -> Int.MAX_VALUE
+            "720p" -> 720
+            "480p" -> 480
+            "360p" -> 360
+            else -> 1080
+        }
+
+        val chosenHlsVariant = HlsPlaylistParser.displayVariant(hlsVariants, targetShortEdge)
+            ?: hlsVariants.firstOrNull()
+
+        val coverVariants = hlsVariants.map { hls ->
+            val bytes = networkDataSource.fetchVariantByteSize(hls.variantUrl).getOrNull()
+            LiveCoverVariant(
+                resolutionText = hls.resolutionText,
+                width = hls.width,
+                height = hls.height,
+                bytes = bytes,
+                estimatedSizeMb = hls.estimatedSizeMb,
+                variantUrl = hls.variantUrl,
+                bandwidth = hls.bandwidth,
+            )
+        }
+
+        val chosenBytes = chosenHlsVariant?.let { networkDataSource.fetchVariantByteSize(it.variantUrl).getOrNull() }
+        val selectedCoverVariant = chosenHlsVariant?.let { hls ->
+            coverVariants.find { it.variantUrl == hls.variantUrl } ?: LiveCoverVariant(
+                resolutionText = hls.resolutionText,
+                width = hls.width,
+                height = hls.height,
+                bytes = chosenBytes,
+                estimatedSizeMb = hls.estimatedSizeMb,
+                variantUrl = hls.variantUrl,
+                bandwidth = hls.bandwidth,
+            )
+        }
+
+        return LiveCoverCheck.Downloadable(
+            orientation = orientation,
+            width = selectedCoverVariant?.width ?: chosenHlsVariant?.width,
+            height = selectedCoverVariant?.height ?: chosenHlsVariant?.height,
+            bytes = selectedCoverVariant?.bytes ?: chosenBytes,
+            variants = coverVariants,
+            selectedVariant = selectedCoverVariant,
+        )
     }
 
     /** Stores what a check found, unless a download for the album is running (it owns the row then). */
@@ -555,6 +600,20 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
                         AnimatedArtOrientation.TALL_3_4 -> AnimatedArtOrientationProto.TALL_3_4
                     }
                 )
+                .build()
+        }
+    }
+
+    override fun observePreferredResolution(): Flow<String> {
+        return dataStore.data.map { proto ->
+            proto.preferredLiveCoverResolution.ifBlank { "1080p" }
+        }
+    }
+
+    override suspend fun setPreferredResolution(resolution: String) {
+        dataStore.updateData { proto ->
+            proto.toBuilder()
+                .setPreferredLiveCoverResolution(resolution)
                 .build()
         }
     }

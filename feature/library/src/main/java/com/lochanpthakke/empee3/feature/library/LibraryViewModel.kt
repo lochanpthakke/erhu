@@ -203,6 +203,16 @@ class LibraryViewModel
         val hiddenFromMixes: StateFlow<Set<Long>> =
             smartMixRepository.hidden.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
 
+        val preferredLiveCoverResolution: StateFlow<String> =
+            animatedArtworkRepository.observePreferredResolution()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), "1080p")
+
+        fun setPreferredLiveCoverResolution(resolution: String) {
+            viewModelScope.launch {
+                animatedArtworkRepository.setPreferredResolution(resolution)
+            }
+        }
+
         /** Hides [songId] from (or returns it to) Smart Playlists; the song itself is untouched. */
         fun setHiddenFromMixes(
             songId: Long,

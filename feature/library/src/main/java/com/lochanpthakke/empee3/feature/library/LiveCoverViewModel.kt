@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverCheck
+import com.lochanpthakke.empee3.core.database.repository.LiveCoverVariant
 import com.lochanpthakke.empee3.core.model.Album
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -36,6 +37,10 @@ sealed interface LiveCoverUi {
         val offer: LiveCoverCheck.Downloadable,
         val message: String,
     ) : LiveCoverUi
+
+    data class RateLimited(
+        val message: String,
+    ) : LiveCoverUi
 }
 
 /**
@@ -62,6 +67,23 @@ class LiveCoverViewModel
             viewModelScope.launch { _state.value = check(album) }
         }
 
+        fun selectVariant(variant: LiveCoverVariant) {
+            val current = _state.value
+            val offer = offerOf(current) ?: return
+            val updatedOffer = offer.copy(
+                selectedVariant = variant,
+                width = variant.width,
+                height = variant.height,
+                bytes = variant.bytes,
+            )
+            _state.value = when (current) {
+                is LiveCoverUi.Offer -> LiveCoverUi.Offer(updatedOffer)
+                is LiveCoverUi.Downloading -> LiveCoverUi.Downloading(updatedOffer)
+                is LiveCoverUi.Failed -> LiveCoverUi.Failed(updatedOffer, current.message)
+                else -> current
+            }
+        }
+
         fun download() {
             val album = album
             val offer = offerOf(_state.value)
@@ -69,9 +91,22 @@ class LiveCoverViewModel
             _state.value = LiveCoverUi.Downloading(offer)
             download =
                 viewModelScope.launch {
+                    val variantUrl = offer.selectedVariant?.variantUrl
                     val result =
                         try {
-                            repository.fetchAndStoreArtwork(album.id, album.artist, album.title, album.songCount, offer.orientation)
+                            if (!variantUrl.isNullOrBlank()) {
+                                repository.downloadAndSaveVariant(
+                                    albumId = album.id,
+                                    albumArtist = album.artist,
+                                    album = album.title,
+                                    catalogAlbumId = "",
+                                    storefront = "",
+                                    orientation = offer.orientation,
+                                    variantUrl = variantUrl,
+                                )
+                            } else {
+                                repository.fetchAndStoreArtwork(album.id, album.artist, album.title, album.songCount, offer.orientation)
+                            }
                         } catch (e: CancellationException) {
                             // Cancelled (here or in the repository): the cover is offered again.
                             _state.value = LiveCoverUi.Offer(offer)
@@ -107,7 +142,14 @@ class LiveCoverViewModel
 
         private suspend fun check(album: Album): LiveCoverUi =
             when (val result = repository.checkLiveCover(album.id, album.artist, album.title, album.songCount)) {
-                is AppResult.Error -> LiveCoverUi.Hidden
+                is AppResult.Error -> {
+                    val limitMessage = rateLimitMessage(result.error.cause)
+                    if (limitMessage != null) {
+                        LiveCoverUi.RateLimited(limitMessage)
+                    } else {
+                        LiveCoverUi.Hidden
+                    }
+                }
                 is AppResult.Success ->
                     when (val check = result.data) {
                         LiveCoverCheck.None -> LiveCoverUi.Hidden
@@ -121,7 +163,7 @@ class LiveCoverViewModel
                 is LiveCoverUi.Offer -> state.offer
                 is LiveCoverUi.Downloading -> state.offer
                 is LiveCoverUi.Failed -> state.offer
-                LiveCoverUi.Hidden, is LiveCoverUi.Saved -> null
+                LiveCoverUi.Hidden, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
             }
     }
 
