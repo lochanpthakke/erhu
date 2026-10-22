@@ -85,6 +85,8 @@ class HlsMp4Assembler @Inject constructor(
             tmpFile.inputStream().use { it.read(header) }
             val ftyp = String(header, 4, 4)
             if (ftyp != "ftyp") throw Exception("Invalid fMP4 header: $ftyp")
+            // Apple's timestamps start at 10 s; the joined file must start at 0 or the cover waits 10 s.
+            FragmentedMp4Timeline.startAtZero(tmpFile)
 
             if (destFile.exists()) destFile.delete()
             if (!tmpFile.renameTo(destFile)) {

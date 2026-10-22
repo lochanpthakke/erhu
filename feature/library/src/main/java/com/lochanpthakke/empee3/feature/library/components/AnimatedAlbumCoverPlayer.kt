@@ -37,6 +37,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
 import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
+import com.lochanpthakke.empee3.core.network.apple.FragmentedMp4Timeline
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /*
@@ -189,6 +192,8 @@ private fun LoopingCoverVideo(
     }
 
     LaunchedEffect(filePath) {
+        // Covers downloaded before the fetcher did this still start at 10 s: fixed once, in place.
+        withContext(Dispatchers.IO) { runCatching { FragmentedMp4Timeline.startAtZero(File(filePath)) } }
         host.show(filePath)
         if (playing) exoPlayer.play()
     }

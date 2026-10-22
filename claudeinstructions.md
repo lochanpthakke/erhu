@@ -363,6 +363,15 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   limit shorter than the file deadlocks (keep ExoPlayer's 50 s, cap 64 MB bytes); TextureView must not be
   drawn at alpha 0 (no surface). Verified on the S23: album header + Now Playing animate, loop at 33 s,
   skips keep the same player, no dropped frames, no crashes.
+- **10 s start delay (2026-10-22, uncommitted):** Apple's cover fragments start at `tfdt` 240 / timescale 24
+  = 10.0 s (Apple's segmenter offset; fragments 1-8 all present, nothing missing). Joined into one MP4,
+  ExoPlayer's clock starts at 0, so the first frame was due at 10 s. `FragmentedMp4Timeline.startAtZero`
+  (core:network) rewrites only the `tfdt` values in place (15 bytes per SOS file); called by
+  `HlsMp4Assembler` and once before playback for covers downloaded earlier. APKs: `build-cover-start\`.
+  The user confirmed on `.bench` that it works; installed as release on the main app 2026-10-22 20:33
+  (SHA-256 `d91e831e…918b4`). Backup: `dbbackup\pre-cover-start-install-20261022-203252`. `.bench` removed.
+- Backups: `adb exec-out run-as … tar` TRUNCATED at 89 MB on 2026-10-22 (tar "Unexpected EOF"). Use
+  `adb shell "run-as <pkg> tar -cf - . > /data/local/tmp/x.tar"`, `adb pull`, `tar -tf` check, then rm.
 
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
