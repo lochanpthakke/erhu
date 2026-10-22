@@ -314,7 +314,7 @@ class AnimatedArtworkViewModel @Inject constructor(
 }
 
 /** When [cause] (or what caused it) is Apple's rate limit (HTTP 429): what to tell the user. */
-private fun rateLimitMessage(cause: Throwable?): String? {
+internal fun rateLimitMessage(cause: Throwable?): String? {
     val limit = generateSequence(cause) { it.cause }.filterIsInstance<RateLimitException>().firstOrNull() ?: return null
     val minutes = limit.minutesLeft()
     return "Apple Music is limiting requests right now. Try again in $minutes ${if (minutes == 1) "minute" else "minutes"}."

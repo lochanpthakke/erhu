@@ -23,6 +23,9 @@ interface AnimatedArtworkNetworkDataSource {
     suspend fun resolveAlbum(artist: String, album: String, trackCount: Int? = null): AppResult<ResolveOutcome>
     suspend fun fetchMasterUrls(catalogAlbumId: String, storefront: String): AppResult<EditorialVideoUrls>
     suspend fun fetchVariantStreamsForMasterUrl(masterUrl: String): AppResult<List<HlsVariantStream>>
+
+    /** The variant's size as its media playlist states it (byte ranges), or null when it does not. */
+    suspend fun fetchVariantByteSize(variantUrl: String): AppResult<Long?>
     suspend fun downloadToFile(masterUrl: String, destination: File, tmp: File): AppResult<Unit>
     suspend fun downloadVariantToFile(variantUrl: String, destination: File, tmp: File): AppResult<Unit>
 }
@@ -35,6 +38,9 @@ class NoOpAnimatedArtworkNetworkDataSource : AnimatedArtworkNetworkDataSource {
         AppResult.Error(AppError.IoError("Animated artwork fetch is disabled by BuildConfig"))
 
     override suspend fun fetchVariantStreamsForMasterUrl(masterUrl: String): AppResult<List<HlsVariantStream>> =
+        AppResult.Error(AppError.IoError("Animated artwork fetch is disabled by BuildConfig"))
+
+    override suspend fun fetchVariantByteSize(variantUrl: String): AppResult<Long?> =
         AppResult.Error(AppError.IoError("Animated artwork fetch is disabled by BuildConfig"))
 
     override suspend fun downloadToFile(masterUrl: String, destination: File, tmp: File): AppResult<Unit> =

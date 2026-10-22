@@ -16,11 +16,18 @@ import com.lochanpthakke.empee3.core.network.apple.AnimatedArtworkNetworkDataSou
 import com.lochanpthakke.empee3.core.network.apple.EditorialVideoUrls
 import com.lochanpthakke.empee3.core.network.apple.HlsVariantStream
 import com.lochanpthakke.empee3.core.network.apple.ResolveOutcome
+import com.lochanpthakke.empee3.core.common.result.appResultOf
+import com.lochanpthakke.empee3.core.common.result.getOrNull
+import com.lochanpthakke.empee3.core.network.apple.HlsPlaylistParser
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -39,6 +46,9 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.io)
     private val activeJobs = ConcurrentHashMap<Pair<Long, AnimatedArtOrientation>, Deferred<AppResult<LocalAnimatedArtwork>>>()
+
+    /** Downloadable covers found this session, so reopening an album asks Apple nothing. */
+    private val offers = ConcurrentHashMap<Long, LiveCoverCheck.Downloadable>()
 
     override fun observeAnimatedArtwork(albumId: Long): Flow<LocalAnimatedArtwork?> {
         return dao.observeByAlbumId(albumId).map { entity ->
@@ -122,25 +132,10 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
         trackCount: Int?,
         orientation: AnimatedArtOrientation,
         forceRefresh: Boolean
-    ): AppResult<LocalAnimatedArtwork> {
-        val key = Pair(albumId, orientation)
-
-        val existingJob = activeJobs[key]
-        if (existingJob != null) {
-            return existingJob.await()
+    ): AppResult<LocalAnimatedArtwork> =
+        singleDownload(albumId, orientation) {
+            performFetchAndStore(albumId, albumArtist, album, trackCount, orientation, forceRefresh)
         }
-
-        val deferred = scope.async {
-            try {
-                performFetchAndStore(albumId, albumArtist, album, trackCount, orientation, forceRefresh)
-            } finally {
-                activeJobs.remove(key)
-            }
-        }
-
-        activeJobs[key] = deferred
-        return deferred.await()
-    }
 
     override suspend fun fetchAndStoreArtworkByUrl(
         albumId: Long,
@@ -150,25 +145,194 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
         storefront: String,
         orientation: AnimatedArtOrientation,
         forceRefresh: Boolean
-    ): AppResult<LocalAnimatedArtwork> {
-        val key = Pair(albumId, orientation)
-
-        val existingJob = activeJobs[key]
-        if (existingJob != null) {
-            return existingJob.await()
+    ): AppResult<LocalAnimatedArtwork> =
+        singleDownload(albumId, orientation) {
+            performFetchAndStoreDirect(albumId, albumArtist, album, catalogAlbumId, storefront, orientation, forceRefresh)
         }
 
-        val deferred = scope.async {
-            try {
-                performFetchAndStoreDirect(albumId, albumArtist, album, catalogAlbumId, storefront, orientation, forceRefresh)
-            } finally {
-                activeJobs.remove(key)
+    /**
+     * Runs [download] once per album and orientation: callers arriving while it runs (repeated
+     * taps) wait for the same result. It runs in the repository's scope, so leaving a screen does
+     * not stop it; [cancelDownload] does, and then nothing partial is kept.
+     */
+    private suspend fun singleDownload(
+        albumId: Long,
+        orientation: AnimatedArtOrientation,
+        download: suspend () -> AppResult<LocalAnimatedArtwork>,
+    ): AppResult<LocalAnimatedArtwork> {
+        val key = Pair(albumId, orientation)
+        val job =
+            scope.async(start = CoroutineStart.LAZY) {
+                try {
+                    download()
+                } catch (e: CancellationException) {
+                    withContext(NonCancellable) { forgetCancelledDownload(albumId) }
+                    throw e
+                }
+            }
+        val running = activeJobs.putIfAbsent(key, job)
+        if (running != null) {
+            job.cancel()
+            return running.await()
+        }
+        job.invokeOnCompletion { activeJobs.remove(key, job) }
+        job.start()
+        return job.await()
+    }
+
+    override fun cancelDownload(albumId: Long) {
+        activeJobs.filterKeys { it.first == albumId }.values.forEach { it.cancel() }
+    }
+
+    /** After a cancelled download: its temporary file goes, and the album's cover is offered again. */
+    private suspend fun forgetCancelledDownload(albumId: Long) {
+        fileStore.baseDir
+            .listFiles { file -> file.name.startsWith("${albumId}_") && file.name.endsWith(".tmp") }
+            ?.forEach { it.delete() }
+        val entity = dao.getByAlbumId(albumId) ?: return
+        if (parseStatus(entity.status) != AnimatedArtStatus.DOWNLOADING) return
+        val status = if (entity.catalogAlbumId != null) AnimatedArtStatus.FOUND else AnimatedArtStatus.UNCHECKED
+        dao.upsert(entity.copy(status = status.name, updatedAtEpochMs = System.currentTimeMillis()))
+    }
+
+    override suspend fun checkLiveCover(
+        albumId: Long,
+        albumArtist: String,
+        album: String,
+        trackCount: Int?,
+    ): AppResult<LiveCoverCheck> =
+        withContext(dispatchers.io) {
+            appResultOf {
+                val preferred = observePreferredOrientation().first()
+                val entity = dao.getByAlbumId(albumId)
+                savedCover(entity, preferred)
+                    ?: LiveCoverCheck.None.takeIf { entity != null && isRememberedAsNone(entity) }
+                    ?: offers[albumId]
+                    ?: lookUpLiveCover(albumId, albumArtist, album, trackCount, entity, preferred)
             }
         }
 
-        activeJobs[key] = deferred
-        return deferred.await()
+    /** The saved file of [entity], in [preferred] orientation if there is one, else the other. */
+    private fun savedCover(
+        entity: AnimatedArtworkEntity?,
+        preferred: AnimatedArtOrientation,
+    ): LiveCoverCheck.Downloaded? {
+        entity ?: return null
+        val saved =
+            listOf(
+                AnimatedArtOrientation.SQUARE_1_1 to entity.squareFileName,
+                AnimatedArtOrientation.TALL_3_4 to entity.tallFileName,
+            ).sortedByDescending { it.first == preferred }
+                .mapNotNull { (orientation, name) -> name?.let { orientation to File(fileStore.baseDir, it) } }
+                .firstOrNull { (_, file) -> file.isFile }
+        return saved?.let { (orientation, file) -> LiveCoverCheck.Downloaded(orientation, file.absolutePath, file.length()) }
     }
+
+    /** No match or no motion cover, checked recently enough to trust (the fetcher's own limits). */
+    private fun isRememberedAsNone(entity: AnimatedArtworkEntity): Boolean {
+        val age = System.currentTimeMillis() - entity.updatedAtEpochMs
+        return when (parseStatus(entity.status)) {
+            AnimatedArtStatus.NO_MATCH -> age < AnimatedArtworkConfig.TTL_NO_MATCH_MS
+            AnimatedArtStatus.NO_ANIMATION -> age < AnimatedArtworkConfig.TTL_NO_ANIMATION_MS
+            else -> false
+        }
+    }
+
+    /**
+     * Asks Apple whether the album has a motion cover (the album it was matched to before, else a
+     * new match), then the phone-sized variant's resolution and size. Downloads nothing. Throws
+     * on network failure, so nothing is remembered then.
+     */
+    private suspend fun lookUpLiveCover(
+        albumId: Long,
+        albumArtist: String,
+        album: String,
+        trackCount: Int?,
+        entity: AnimatedArtworkEntity?,
+        preferred: AnimatedArtOrientation,
+    ): LiveCoverCheck {
+        val match = (matchFor(entity, albumArtist, album, trackCount) as? ResolveOutcome.Matched)
+        val base =
+            entity ?: AnimatedArtworkEntity(
+                albumId = albumId,
+                normalizedArtist = AlbumTagNormalizer.fold(albumArtist),
+                normalizedAlbum = AlbumTagNormalizer.fold(AlbumTagNormalizer.cleanAlbumTitle(album)),
+                status = AnimatedArtStatus.UNCHECKED.name,
+                updatedAtEpochMs = 0L,
+            )
+        val matched =
+            match?.let {
+                base.copy(
+                    catalogAlbumId = it.catalogAlbumId,
+                    storefront = it.storefront,
+                    hasSquare = it.squareMasterUrl != null,
+                    hasTall = it.tallMasterUrl != null,
+                )
+            }
+        val found =
+            match?.let {
+                listOf(
+                    AnimatedArtOrientation.SQUARE_1_1 to it.squareMasterUrl,
+                    AnimatedArtOrientation.TALL_3_4 to it.tallMasterUrl,
+                ).sortedByDescending { (orientation, _) -> orientation == preferred }
+                    .firstNotNullOfOrNull { (orientation, url) -> url?.let { orientation to it } }
+            }
+        return when {
+            matched == null -> LiveCoverCheck.None.also { remember(base, AnimatedArtStatus.NO_MATCH) }
+            found == null -> LiveCoverCheck.None.also { remember(matched, AnimatedArtStatus.NO_ANIMATION) }
+            else ->
+                describe(found.first, found.second).also {
+                    remember(matched, AnimatedArtStatus.FOUND)
+                    offers[albumId] = it
+                }
+        }
+    }
+
+    /** Apple's answer for the album: the edition it was matched to before, else a new match. */
+    private suspend fun matchFor(
+        entity: AnimatedArtworkEntity?,
+        albumArtist: String,
+        album: String,
+        trackCount: Int?,
+    ): ResolveOutcome {
+        val catalogAlbumId = entity?.catalogAlbumId
+        val storefront = entity?.storefront
+        return if (catalogAlbumId != null && storefront != null) {
+            val urls = networkDataSource.fetchMasterUrls(catalogAlbumId, storefront).orThrow()
+            ResolveOutcome.Matched(catalogAlbumId, storefront, urls.squareMasterUrl, urls.tallMasterUrl)
+        } else {
+            networkDataSource.resolveAlbum(albumArtist, album, trackCount).orThrow()
+        }
+    }
+
+    /** The variant a download would fetch (see AnimatedArtworkNetworkDataSourceImpl.downloadToFile): its resolution and size. */
+    private suspend fun describe(
+        orientation: AnimatedArtOrientation,
+        masterUrl: String,
+    ): LiveCoverCheck.Downloadable {
+        val variant =
+            networkDataSource
+                .fetchVariantStreamsForMasterUrl(masterUrl)
+                .getOrNull()
+                ?.let { HlsPlaylistParser.displayVariant(it) }
+        val bytes = variant?.let { networkDataSource.fetchVariantByteSize(it.variantUrl).getOrNull() }
+        return LiveCoverCheck.Downloadable(orientation, variant?.width, variant?.height, bytes)
+    }
+
+    /** Stores what a check found, unless a download for the album is running (it owns the row then). */
+    private suspend fun remember(
+        entity: AnimatedArtworkEntity,
+        status: AnimatedArtStatus,
+    ) {
+        if (dao.getByAlbumId(entity.albumId)?.status == AnimatedArtStatus.DOWNLOADING.name) return
+        dao.upsert(entity.copy(status = status.name, updatedAtEpochMs = System.currentTimeMillis()))
+    }
+
+    private fun <T> AppResult<T>.orThrow(): T =
+        when (this) {
+            is AppResult.Success -> data
+            is AppResult.Error -> throw Exception(error.message, error.cause)
+        }
 
     private suspend fun performFetchAndStore(
         albumId: Long,
@@ -358,6 +522,8 @@ class AnimatedArtworkRepositoryImpl @Inject constructor(
         val tallFile = fileStore.getTallFile(albumId, albumTitle, artist)
         if (squareFile.exists()) squareFile.delete()
         if (tallFile.exists()) tallFile.delete()
+        // The files as saved: their names keep the album's capitals, which the normalized names above lose.
+        listOfNotNull(entity?.squareFileName, entity?.tallFileName).forEach { File(fileStore.baseDir, it).delete() }
         dao.deleteByAlbumId(albumId)
     }
 

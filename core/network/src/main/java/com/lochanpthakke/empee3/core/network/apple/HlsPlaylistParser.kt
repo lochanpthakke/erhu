@@ -15,7 +15,15 @@ data class HlsMediaPlaylist(
     val segments: List<HlsSegmentRef>,
     val isEncrypted: Boolean,
     val isTransportStream: Boolean
-)
+) {
+    /** The bytes the playlist's parts add up to, or null unless every part states its length. */
+    val statedBytes: Long?
+        get() {
+            val parts = listOfNotNull(init) + segments
+            if (segments.isEmpty() || parts.any { it.byteLength == null }) return null
+            return parts.sumOf { it.byteLength!! }
+        }
+}
 
 data class HlsVariantStream(
     val resolutionText: String,

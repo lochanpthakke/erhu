@@ -47,6 +47,20 @@ interface AnimatedArtworkRepository {
         forceRefresh: Boolean = false
     ): AppResult<LocalAnimatedArtwork>
     suspend fun deleteArtwork(albumId: Long)
+    /**
+     * Whether album [albumId] has a live cover to offer: saved already, downloadable, or none.
+     * Answers from what is stored when it can; otherwise asks Apple (without downloading) and
+     * remembers the answer. Network failures are returned, not remembered.
+     */
+    suspend fun checkLiveCover(
+        albumId: Long,
+        albumArtist: String,
+        album: String,
+        trackCount: Int?
+    ): AppResult<LiveCoverCheck>
+
+    /** Stops album [albumId]'s download, if one is running; nothing partial is kept. */
+    fun cancelDownload(albumId: Long)
     suspend fun deleteAllArtwork()
     suspend fun totalStorageBytes(): Long
     fun observePreferredOrientation(): Flow<AnimatedArtOrientation>

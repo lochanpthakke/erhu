@@ -171,6 +171,17 @@ class AnimatedArtworkNetworkDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun fetchVariantByteSize(variantUrl: String): AppResult<Long?> = withContext(dispatchers.io) {
+        appResultOf {
+            val res = client.newCall(Request.Builder().url(variantUrl).build()).execute()
+            res.use {
+                if (!it.isSuccessful) throw Exception("Failed to fetch media m3u8: ${it.code}")
+                val content = it.body?.string() ?: throw Exception("Empty media")
+                HlsPlaylistParser.parseMediaPlaylist(variantUrl, content).statedBytes
+            }
+        }
+    }
+
     override suspend fun downloadToFile(masterUrl: String, destination: File, tmp: File): AppResult<Unit> = withContext(dispatchers.io) {
         appResultOf {
             val req = Request.Builder().url(masterUrl).build()

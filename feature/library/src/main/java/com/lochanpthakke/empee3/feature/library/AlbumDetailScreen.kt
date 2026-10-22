@@ -10,13 +10,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -83,6 +86,7 @@ import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TrackOccurrence
 import com.lochanpthakke.empee3.feature.library.components.AnimatedAlbumCoverPlayer
+import com.lochanpthakke.empee3.feature.library.components.LiveCoverControl
 import com.lochanpthakke.empee3.feature.library.components.rememberAnimatedArtworkPath
 import com.lochanpthakke.empee3.feature.library.transition.StudioInput
 import com.lochanpthakke.empee3.feature.library.transition.StudioTrack
@@ -93,6 +97,10 @@ import kotlinx.coroutines.flow.combine
 
 /** The hero artwork moves at this share of the scroll speed (parallax) as the page scrolls. */
 private const val HERO_PARALLAX = 0.5f
+
+/** The live cover button sits below the floating header's row (48 dp buttons plus padding) and fades over this much scroll. */
+private val LIVE_COVER_TOP = 72.dp
+private val LIVE_COVER_FADE = 72.dp
 
 /** How much the hero artwork fades by the time it has scrolled away. */
 private const val HERO_FADE = 0.6f
@@ -471,7 +479,41 @@ private fun AlbumHero(
                     .align(Alignment.BottomCenter)
                     .collapsingHeroBlock(header),
         )
+        if (animatedArtworkRepository != null) {
+            AlbumLiveCover(album, listState, Modifier.align(Alignment.TopEnd))
+        }
     }
+}
+
+/**
+ * The album's live cover download control (see [LiveCoverViewModel]), under the floating header's
+ * end button on the plain upper part of the cover; nothing without a live cover.
+ */
+@Composable
+private fun AlbumLiveCover(
+    album: Album,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+) {
+    val placed =
+        modifier
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(top = LIVE_COVER_TOP, end = Spacing.sm)
+            .graphicsLayer {
+                // Gone before it would scroll under the header (read in draw only).
+                alpha = 1f - (heroScroll(listState, Float.MAX_VALUE) / LIVE_COVER_FADE.toPx()).coerceIn(0f, 1f)
+            }
+    val liveCover: LiveCoverViewModel = hiltViewModel(key = "live-cover-${album.id}")
+    LaunchedEffect(album.id) { liveCover.bind(album) }
+    val state by liveCover.state.collectAsState()
+    LiveCoverControl(
+        state = state,
+        artworkUri = album.artworkUri,
+        onDownload = liveCover::download,
+        onCancel = liveCover::cancel,
+        onRemove = liveCover::remove,
+        modifier = placed,
+    )
 }
 
 /** Title, artist and facts, centered over the lower part of the cover. */

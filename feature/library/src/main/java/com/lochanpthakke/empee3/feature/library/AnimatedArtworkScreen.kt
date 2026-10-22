@@ -635,6 +635,7 @@ private fun StatusBadge(status: AnimatedArtStatus) {
             AnimatedArtStatus.UNCHECKED -> Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.outline, "Pending")
             AnimatedArtStatus.DOWNLOADING -> Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.primary, "Downloading...")
             AnimatedArtStatus.AVAILABLE -> Triple(Icons.Default.CheckCircle, MaterialTheme.colorScheme.primary, "Available")
+            AnimatedArtStatus.FOUND -> Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.primary, "Found")
             AnimatedArtStatus.NO_MATCH -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.outline, "No Match")
             AnimatedArtStatus.NO_ANIMATION -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.outline, "No Video")
             AnimatedArtStatus.FAILED -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.error, "Failed")
