@@ -63,6 +63,8 @@ data class GlassTokens(
     val edgeShade: Long = 0x1A000000L,
     /** Soft shadow under floating (Strong) glass, drawn only outside the surface. */
     val floatShadow: Long = 0x40000000L,
+    /** Wash of the background colour over glass fills (artwork themes); transparent = clear glass. */
+    val tint: Long = 0x00000000L,
 ) {
     fun backgroundColors(): List<Color> = backgroundGradient.map(::Color)
 
@@ -72,6 +74,10 @@ data class GlassTokens(
         private const val OPAQUE = 0xFF000000L
         private const val RGB = 0x00FFFFFFL
         private const val NO_GLOW = 0x00000000L
+        private const val NO_TINT = 0x00000000L
+
+        /** Tint strength: enough to colour the glass, light enough to keep it see-through. */
+        private const val TINT_ALPHA = 0x52000000L
 
         /**
          * Glass for a theme's environment. The background stays the theme's own
@@ -81,11 +87,14 @@ data class GlassTokens(
          * - light themes: bright translucent panels, a white rim and a faint dark
          *   edge so they stay defined on light backgrounds.
          * Accent colours are untouched, so e.g. Cyberpunk keeps its palette.
+         * [tinted] (artwork-coloured themes) washes the glass with the background colour.
          */
         fun derivedFrom(
             colors: EmPee3Colors,
             isDark: Boolean,
+            tinted: Boolean = false,
         ): GlassTokens {
+            val tint = if (tinted) TINT_ALPHA or (colors.background and RGB) else NO_TINT
             val background = colors.background or OPAQUE
             val surfaceRgb = colors.surface and RGB
             val backgroundRgb = colors.background and RGB
@@ -104,6 +113,7 @@ data class GlassTokens(
                     floatShadow = 0x59000000L,
                     // Bright artwork is toned down so white text stays readable; colours stay.
                     frostDim = 0.35f,
+                    tint = tint,
                 )
             } else {
                 GlassTokens(
@@ -122,6 +132,7 @@ data class GlassTokens(
                     frostLift = 0.3f,
                     edgeLight = 0.2f,
                     edgeShadeOptics = 0.06f,
+                    tint = tint,
                 )
             }
         }

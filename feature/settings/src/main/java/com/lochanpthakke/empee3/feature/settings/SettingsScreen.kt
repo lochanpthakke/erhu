@@ -266,12 +266,17 @@ private fun LibrarySettingsSubPage(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri: Uri? ->
             if (uri != null) {
+                // Write access is needed by Library Builder to move files inside this folder.
                 try {
                     context.contentResolver.takePersistableUriPermission(
                         uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                     )
                 } catch (_: Exception) {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    } catch (_: Exception) {
+                    }
                 }
                 val displayPath = parseFolderDisplayName(uri)
                 viewModel.setCustomScanLocation(uri.toString(), displayPath)

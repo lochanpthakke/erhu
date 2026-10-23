@@ -42,3 +42,14 @@
 # JAudioTagger
 -keep class org.jaudiotagger.** { *; }
 -dontwarn org.jaudiotagger.**
+
+# Navigation routes are @Serializable objects looked up by type. The library's own rules keep an
+# object's serializer only while its INSTANCE is used somewhere, so a route that is registered but
+# no longer navigated to directly (e.g. removed from the drawer) lost it and crashed at startup.
+-keepclassmembers @kotlinx.serialization.Serializable class com.lochanpthakke.empee3.navigation.** {
+    public static ** INSTANCE;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclassmembers class com.lochanpthakke.empee3.navigation.**$Companion {
+    kotlinx.serialization.KSerializer serializer(...);
+}

@@ -3,6 +3,7 @@ package com.lochanpthakke.empee3.core.database.builder
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.documentfile.provider.DocumentFile
 import com.lochanpthakke.empee3.core.database.library.PrimaryArtistExtractor
@@ -67,6 +68,7 @@ class LibraryBuilderAnalyzer
                             } else {
                                 ProposedMove.State.VALID
                             }
+                            Log.i(TAG, "force re-organize: ALREADY_ORGANIZED -> $nextState '${move.sourcePath}'")
                             move.copy(state = nextState)
                         } else {
                             null
@@ -78,6 +80,7 @@ class LibraryBuilderAnalyzer
                     }
                 }
 
+            Log.i(TAG, "analyze root='$targetUri' force=$forceReorganize scanned=${results.size} proposed=${finalResults.groupingBy { it.state }.eachCount()}")
             return AnalysisResult(targetUri, finalResults)
         }
 
@@ -104,7 +107,11 @@ class LibraryBuilderAnalyzer
             results: MutableList<ProposedMove>,
         ) {
             val uri = file.uri
-            val sourcePath = resolveFilePath(uri) ?: return
+            val sourcePath =
+                resolveFilePath(uri) ?: run {
+                    Log.w(TAG, "no file path for ${file.name}, not offered")
+                    return
+                }
             val ext = file.name?.substringAfterLast('.', "")?.lowercase() ?: ""
 
             val title = jaudioTaggerEnricher.readTextTag(sourcePath, FieldKey.TITLE) ?: "Unknown Title"
@@ -124,7 +131,7 @@ class LibraryBuilderAnalyzer
             val relativeDest = "$cleanArtist/$cleanAlbum/$cleanTitle.$ext"
 
             val hasMissingMetadata = (title == "Unknown Title") || (primaryArtist == "Unknown Artist") || (album == "Unknown Album")
-            val isAlreadyOrganized = sourcePath.endsWith(relativeDest, ignoreCase = true)
+            val isAlreadyOrganized = sourcePath.endsWith("/$relativeDest", ignoreCase = true)
 
             val state =
                 when {
@@ -167,6 +174,10 @@ class LibraryBuilderAnalyzer
             }
 
             return null
+        }
+
+        private companion object {
+            const val TAG = "LibraryBuilderMover"
         }
 
         private fun sanitizeFileName(name: String): String = name.replace(Regex("[\\\\/:*?\"<>|]"), "_").trim()

@@ -1,5 +1,9 @@
 package com.lochanpthakke.empee3.feature.library.builder
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.database.builder.ProposedMove
@@ -128,9 +133,29 @@ fun LibraryBuilderScreen(
 
             when (val state = uiState) {
                 is LibraryBuilderState.Idle -> {
+                    val context = LocalContext.current
+                    // Scans another folder once, without changing the library's scan location.
+                    val otherFolderPicker =
+                        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+                            if (uri != null) {
+                                try {
+                                    context.contentResolver.takePersistableUriPermission(
+                                        uri,
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                                    )
+                                } catch (_: Exception) {
+                                }
+                                viewModel.startScanning(uri.toString())
+                            }
+                        }
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Button(onClick = { viewModel.startScanning() }) {
-                            Text("Start Scanning Files")
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Button(onClick = { viewModel.startScanning() }) {
+                                Text("Start Scanning Files")
+                            }
+                            TextButton(onClick = { otherFolderPicker.launch(null) }) {
+                                Text("Scan another folder…")
+                            }
                         }
                     }
                 }
@@ -168,6 +193,12 @@ fun LibraryBuilderScreen(
                             Text("Successfully Moved: ${state.result.successCount}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                             Text("Failed: ${state.result.failedCount}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                             Text("Skipped: ${state.result.skippedCount}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            if (state.result.alreadyOrganizedCount > 0) {
+                                Text("Already in place: ${state.result.alreadyOrganizedCount}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            }
+                            state.result.failureReasons.forEach { (reason, count) ->
+                                Text("$count × ${reason.label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
                             Spacer(modifier = Modifier.height(24.dp))
                             Button(onClick = onNavigateBack) {
                                 Text("Return to Library")

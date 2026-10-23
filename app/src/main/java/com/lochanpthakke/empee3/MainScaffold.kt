@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ImageSearch
-import androidx.compose.material.icons.filled.MovieFilter
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -182,7 +181,6 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination("Auto Fix Tags", Icons.Default.EditNote, MetadataEditor),
         DrawerDestination("Library Builder", Icons.Default.Folder, LibraryBuilder),
         DrawerDestination("Artwork Fetcher", Icons.Default.ImageSearch, ArtworkManager),
-        DrawerDestination("Animated Artwork", Icons.Default.MovieFilter, AnimatedArtworkFetcher),
         DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
         DrawerDestination("Settings", Icons.Default.Settings, Settings),
     )
@@ -401,6 +399,8 @@ fun MainScaffold() {
                                     // a panel this large it smeared everything behind the drawer.
                                     environmentLens = false,
                                     frostFactor = sidebarGlassyness,
+                                    // Frost the shell once per opening, not on every frame of the slide.
+                                    stillBackdrop = true,
                                 ),
                         ) {
                             Column(
@@ -879,12 +879,17 @@ private fun LibraryRoute(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri: Uri? ->
             if (uri != null) {
+                // Write access is needed by Library Builder to move files inside this folder.
                 try {
                     context.contentResolver.takePersistableUriPermission(
                         uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                     )
                 } catch (_: Exception) {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    } catch (_: Exception) {
+                    }
                 }
                 val displayPath = parseFolderDisplayName(uri)
                 libraryViewModel.setCustomScanLocation(uri.toString(), displayPath)

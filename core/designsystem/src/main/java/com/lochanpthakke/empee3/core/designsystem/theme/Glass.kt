@@ -4,12 +4,15 @@ import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.CacheDrawScope
@@ -20,9 +23,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -31,10 +36,14 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalGraphicsContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.common.perf.traced
+import kotlinx.coroutines.flow.first
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -174,6 +183,14 @@ fun Modifier.glassPanel(
     optics: Float = SECONDARY_OPTICS,
     environmentLens: Boolean = false,
     frostFactor: Float = 1f,
+    /**
+     * For a large surface that slides over the backdrop (the drawer): when the backdrop is given,
+     * one blurred picture of it is rendered and the surface shows its own region of that picture.
+     * A frame then costs one bitmap draw, whatever redraws in the source meanwhile (a live frost
+     * re-blurred the whole drawer area, or the whole screen, on every frame of the slide). The
+     * picture is kept until the backdrop is taken away (drawer closed). No edge lens.
+     */
+    stillBackdrop: Boolean = false,
 ): Modifier {
     val glass = LocalGlassTokens.current ?: return this
     val frost = backdrop?.takeIf { isBackdropBlurSupported && !windowFrosted }
@@ -182,15 +199,12 @@ fun Modifier.glassPanel(
     // The clipped frost, when the environment lens does not draw the backdrop itself.
     val clippedFrost = frost?.takeIf { environment == null }
     val position = remember { GlassPosition() }
-    val baseFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted)
+    // The material's own fill, washed with the theme tint (artwork themes only). Still one
+    // colour, so the tint costs nothing extra to draw.
+    val surfaceFill = fill ?: glass.surfaceFill(level, frosted = frost != null || windowFrosted).tinted(glass)
+    // frostFactor 1 = the standard frost; lower values soften less (drawer slider).
     val factor = frostFactor.coerceIn(0f, 1f)
-    val surfaceFill = if (frost != null || windowFrosted) {
-        val panel = glass.panelFillColor(level == GlassLevel.Strong)
-        val targetAlpha = panel.alpha * (0.15f + 0.85f * factor)
-        panel.copy(alpha = targetAlpha)
-    } else {
-        baseFill
-    }
+    val stillPicture = if (stillBackdrop) rememberStillFrost(clippedFrost, glass, factor) else null
     val shadowModifier = Modifier.glassElevation(elevated && !level.floats, shape, glass)
     val floatShadow = Modifier.glassFloatShadow(enabled = level.floats && !bar, shape = shape, color = Color(glass.floatShadow))
     val tracked = if (frost != null) Modifier.onGloballyPositioned { position.offset = it.positionInRoot() } else Modifier
@@ -204,11 +218,11 @@ fun Modifier.glassPanel(
             val outline = shape.createOutline(size, layoutDirection, this)
             val layers = glassLayers(glass, level, surfaceFill, outlined, bar)
             val environmentColor = Color(glass.backgroundGradient.first())
-            val frostRadius = (glass.frostRadiusDp.dp.toPx() * (0.3f + 1.2f * factor)).coerceAtLeast(1f)
+            val frostRadius = (glass.frostRadiusDp.dp.toPx() * (0.3f + 0.7f * factor)).coerceAtLeast(1f)
             // Record a margin around the surface so the blur has real content at its edges.
             val margin = ceil(frostRadius * 2).toInt()
             val frostLayer =
-                if (clippedFrost != null && !clippedFrost.preBlurred && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (!stillBackdrop && clippedFrost != null && !clippedFrost.preBlurred && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                     // Full-width bars get no edge optics: they have no curved edge to bend light.
                     val lens = if (bar) null else edgeLens(glass, outline, margin, optics)
                     obtainGraphicsLayer().apply {
@@ -218,12 +232,70 @@ fun Modifier.glassPanel(
                     null
                 }
 
-            val backing = FrostBacking(clippedFrost, frostLayer, margin, environmentColor, glass)
+            val backing = FrostBacking(clippedFrost.takeUnless { stillBackdrop }, frostLayer, margin, environmentColor, glass)
             onDrawBehind {
-                drawBacking(backing, position)
+                if (stillPicture != null && clippedFrost != null) {
+                    drawStillFrost(stillPicture.value, clippedFrost, position.offset, environmentColor)
+                } else {
+                    drawBacking(backing, position)
+                }
                 drawGlassLayers(layers, outline, bar)
             }
         }
+}
+
+/**
+ * One blurred picture of [backdrop] (null until it is ready, or without a backdrop): the source is
+ * drawn through the frost effect into a layer and that layer is turned into a bitmap, once each
+ * time the backdrop is given.
+ */
+@Composable
+private fun rememberStillFrost(
+    backdrop: GlassBackdrop?,
+    glass: GlassTokens,
+    factor: Float,
+): State<ImageBitmap?> {
+    val picture = remember { mutableStateOf<ImageBitmap?>(null) }
+    val graphics = LocalGraphicsContext.current
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    LaunchedEffect(backdrop, glass, factor) {
+        picture.value = null
+        if (backdrop == null || backdrop.preBlurred || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return@LaunchedEffect
+        // The source records while it draws; wait for a recording.
+        snapshotFlow { backdrop.contentVersion }.first { backdrop.hasContent }
+        val size = backdrop.layer.size
+        if (size.width <= 0 || size.height <= 0) return@LaunchedEffect
+        val radius = (with(density) { glass.frostRadiusDp.dp.toPx() } * (0.3f + 0.7f * factor)).coerceAtLeast(1f)
+        val blurred = graphics.createGraphicsLayer()
+        val frame = graphics.createGraphicsLayer()
+        try {
+            blurred.renderEffect = glassOptics(radius, glass.frostSaturation, glass.frostDim, glass.frostLift, lens = null)
+            traced(backdrop.frostSection) {
+                blurred.record(density, layoutDirection, size) { drawLayer(backdrop.layer) }
+                // Drawn inside a plain layer so the snapshot includes the blur.
+                frame.record(density, layoutDirection, size) { drawLayer(blurred) }
+            }
+            picture.value = frame.toImageBitmap()
+        } finally {
+            graphics.releaseGraphicsLayer(blurred)
+            graphics.releaseGraphicsLayer(frame)
+        }
+    }
+    return picture
+}
+
+/** The surface's region of the still frost picture, over the environment colour. */
+private fun DrawScope.drawStillFrost(
+    picture: ImageBitmap?,
+    backdrop: GlassBackdrop,
+    surfaceOffset: Offset,
+    environment: Color,
+) {
+    drawRect(environment)
+    if (picture == null) return
+    val offset = surfaceOffset - backdrop.sourceOffset
+    translate(-offset.x, -offset.y) { drawImage(picture) }
 }
 
 /** Edge optics of a surface of this size drawn through a backdrop layer with [margin] around it. */
@@ -252,6 +324,12 @@ private fun GlassTokens.surfaceFill(
 ): Color {
     val panel = panelFillColor(level == GlassLevel.Strong)
     return if (frosted) panel.copy(alpha = panel.alpha * level.frostedFillScale) else panel
+}
+
+/** A light wash of [GlassTokens.tint] over the fill; unchanged when the theme has no tint. */
+private fun Color.tinted(glass: GlassTokens): Color {
+    val tint = Color(glass.tint)
+    return if (tint.alpha == 0f) this else tint.compositeOver(this)
 }
 
 /** The non-backdrop layers of one glass surface, resolved for its size. */

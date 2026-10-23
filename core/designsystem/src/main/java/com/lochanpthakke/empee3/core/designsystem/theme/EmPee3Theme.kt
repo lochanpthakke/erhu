@@ -98,7 +98,12 @@ fun EmPee3Theme(
     val glass =
         remember(themeManifest, skinManifest, glassEffectEnabled) {
             if (glassEffectEnabled && skinManifest == null) {
-                themeManifest.glass ?: GlassTokens.derivedFrom(colors, themeManifest.isDark)
+                themeManifest.glass ?: GlassTokens.derivedFrom(
+                    colors,
+                    themeManifest.isDark,
+                    // Artwork-coloured themes get tinted glass; every other theme keeps clear glass.
+                    tinted = themeManifest.id == BuiltInThemes.DOMINANT_COLOR_ID || themeManifest.id == BuiltInThemes.GRADIENT_UI_ID,
+                )
             } else {
                 null
             }
