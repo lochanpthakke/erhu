@@ -65,5 +65,7 @@ interface AnimatedArtworkRepository {
     suspend fun totalStorageBytes(): Long
     fun observePreferredOrientation(): Flow<AnimatedArtOrientation>
     suspend fun setPreferredOrientation(orientation: AnimatedArtOrientation)
+    fun observePreferredResolution(): Flow<String>
+    suspend fun setPreferredResolution(resolution: String)
     suspend fun cleanupOnStartup()
 }

@@ -65,6 +65,8 @@ message PlaybackStateProto {
   float sidebar_glassyness = 33;
   // User preference for animated artwork
   AnimatedArtOrientationProto animated_art_orientation = 34;
+  // Preferred resolution for live covers ("1080p", "720p", "480p", "Maximum")
+  string preferred_live_cover_resolution = 35;
 }
 
 message RepairBatchProto {
