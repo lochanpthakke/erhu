@@ -59,6 +59,7 @@ import com.lochanpthakke.empee3.core.model.CollectionRef
 import com.lochanpthakke.empee3.core.model.Playlist
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.core.model.TrackOccurrence
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 import com.lochanpthakke.empee3.feature.library.transition.StudioInput
 import com.lochanpthakke.empee3.feature.library.transition.StudioTrack
 import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioHost
@@ -108,6 +109,7 @@ fun PlaylistDetailScreen(
             onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
             onPlayNext = { libraryViewModel.playNext(it) },
             onAddToQueue = { libraryViewModel.addToQueue(it) },
+            onStartRadio = { libraryViewModel.startRadio(RadioSeed.Song(it.id)) },
             onAddToPlaylist = { songsForPlaylist = listOf(it) },
             onFixTags = { song ->
                 songForFixTags = song

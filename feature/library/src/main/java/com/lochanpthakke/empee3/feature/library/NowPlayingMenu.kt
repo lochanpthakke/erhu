@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Info
@@ -75,6 +77,8 @@ internal fun NowPlayingMenu(
             }
             HorizontalDivider()
             Group("Playback & display")
+            actions.onStartRadio?.let { MenuItem("Start radio", Icons.Default.Radio, close(it)) }
+            actions.onRefreshRadio?.let { MenuItem("New radio picks", Icons.Default.Refresh, close(it)) }
             MenuItem("Queue", Icons.AutoMirrored.Filled.QueueMusic, close(actions.onQueue))
             MenuItem("Visualizer", Icons.Default.GraphicEq, close(actions.onVisualizer))
             MenuItem("Equalizer", Icons.Default.Equalizer, close(actions.onEqualizer))

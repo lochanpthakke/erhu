@@ -71,6 +71,20 @@ internal class PlaybackQueue(
     }
 
     /**
+     * Replaces everything after the current item with [items] (Smart Radio's picks). The current
+     * item and the played part keep their places, so playback is not interrupted. On an empty
+     * queue [items] become the queue.
+     */
+    fun replaceUpcoming(items: List<MediaItem>) {
+        val count = player.mediaItemCount
+        if (count == 0) {
+            player.setMediaItems(items)
+            return
+        }
+        player.replaceMediaItems(upcomingStart(count, player.currentMediaItemIndex), count, items)
+    }
+
+    /**
      * Physically shuffles all other items in the queue around the currently playing item.
      * The current song becomes Index 0, and all other songs in the queue are randomized
      * sequentially after it ([0, U_1, U_2, U_3, ...]). This ensures linear playback (1 -> 2 -> 3)

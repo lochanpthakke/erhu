@@ -81,6 +81,8 @@ class PlaybackRepositoryImpl
 
         override fun shuffleUpcoming(): Boolean = playbackController.shuffleUpcoming()
 
+        override fun replaceUpcoming(songs: List<Song>) = playbackController.replaceUpcoming(songs)
+
         override fun playFromHistory(entryId: Long) = playbackController.playFromHistory(entryId)
 
         override fun setLoopStart(): AbLoopEdit = playbackController.setLoopStart()

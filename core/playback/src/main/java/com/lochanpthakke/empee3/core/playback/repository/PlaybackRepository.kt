@@ -73,6 +73,9 @@ interface PlaybackRepository {
     /** Shuffles only the upcoming entries (after the current one); false when fewer than two are upcoming. */
     fun shuffleUpcoming(): Boolean
 
+    /** Replaces the entries after the current one with [songs] (Smart Radio); the current song keeps playing. */
+    fun replaceUpcoming(songs: List<Song>)
+
     /** Plays a session-history entry again, right after the current entry. */
     fun playFromHistory(entryId: Long)
 

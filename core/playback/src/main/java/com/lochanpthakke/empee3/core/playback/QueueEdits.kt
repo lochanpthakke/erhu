@@ -18,6 +18,15 @@ internal fun <T> shuffledUpcoming(
     return queue.subList(start, queue.size).shuffled(random)
 }
 
+/**
+ * Where the upcoming part of a queue of [queueSize] entries starts: right after the current
+ * entry (an out-of-range current index is clamped). The current and played entries stay put.
+ */
+internal fun upcomingStart(
+    queueSize: Int,
+    currentIndex: Int,
+): Int = if (queueSize == 0) 0 else currentIndex.coerceIn(0, queueSize - 1) + 1
+
 /** A queue entry taken out of the queue, kept so it can be put back exactly where it was. */
 internal data class QueueRemoval<T>(
     val index: Int,

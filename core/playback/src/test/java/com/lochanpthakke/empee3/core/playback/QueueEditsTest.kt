@@ -35,6 +35,16 @@ class QueueEditsTest {
     }
 
     @Test
+    fun `the upcoming part starts right after the current entry`() {
+        assertEquals(3, upcomingStart(queueSize = 5, currentIndex = 2))
+        assertEquals(5, upcomingStart(queueSize = 5, currentIndex = 4))
+        // No current item yet (-1) or a stale index: clamped into the queue.
+        assertEquals(1, upcomingStart(queueSize = 5, currentIndex = -1))
+        assertEquals(5, upcomingStart(queueSize = 5, currentIndex = 9))
+        assertEquals(0, upcomingStart(queueSize = 0, currentIndex = -1))
+    }
+
+    @Test
     fun `undoing rapid removals in reverse restores the exact queue`() {
         val original = listOf("a", "b#1", "c", "b#2", "d")
         val queue = original.toMutableList()

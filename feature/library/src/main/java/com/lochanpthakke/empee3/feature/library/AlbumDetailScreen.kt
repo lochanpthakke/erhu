@@ -86,6 +86,7 @@ import com.lochanpthakke.empee3.core.model.TrackOccurrence
 import com.lochanpthakke.empee3.feature.library.components.AnimatedAlbumCoverPlayer
 import com.lochanpthakke.empee3.feature.library.components.LiveCoverControl
 import com.lochanpthakke.empee3.feature.library.components.rememberAnimatedArtworkPath
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 import com.lochanpthakke.empee3.feature.library.transition.StudioInput
 import com.lochanpthakke.empee3.feature.library.transition.StudioTrack
 import com.lochanpthakke.empee3.feature.library.transition.TransitionStudioHost
@@ -159,6 +160,7 @@ fun AlbumDetailScreen(
             onToggleFavorite = { viewModel.toggleFavorite(it) },
             onPlayNext = { viewModel.playNext(it) },
             onAddToQueue = { viewModel.addToQueue(it) },
+            onStartRadio = { viewModel.startRadio(RadioSeed.Song(it.id)) },
             onAddToPlaylist = { songsForPlaylist = listOf(it) },
             onFixTags = { song ->
                 songForFixTags = song
@@ -231,6 +233,13 @@ fun AlbumDetailScreen(
                                         onClick = {
                                             menuExpanded = false
                                             songs.forEach { song -> viewModel.addToQueue(song) }
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Start Radio") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            viewModel.startRadio(RadioSeed.Album(album.id))
                                         },
                                     )
                                     DropdownMenuItem(

@@ -68,12 +68,15 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 
 /** Actions offered for a single song wherever it is listed. */
 internal class SongActions(
     val onToggleFavorite: (Song) -> Unit,
     val onPlayNext: (Song) -> Unit,
     val onAddToQueue: (Song) -> Unit,
+    /** Smart Radio from this song: a new queue of songs like it from the library. */
+    val onStartRadio: (Song) -> Unit,
     val onAddToPlaylist: (Song) -> Unit,
     val onFixTags: (Song) -> Unit,
     val onViewMetadata: (Song) -> Unit,
@@ -136,6 +139,7 @@ fun LibraryScreen(
             onToggleFavorite = { viewModel.toggleFavorite(it) },
             onPlayNext = { viewModel.playNext(it) },
             onAddToQueue = { viewModel.addToQueue(it) },
+            onStartRadio = { viewModel.startRadio(RadioSeed.Song(it.id)) },
             onAddToPlaylist = { songForPlaylist = it },
             onFixTags = { song ->
                 songForFixTags = song
@@ -480,6 +484,13 @@ internal fun LibrarySongRow(
                     onClick = {
                         menuExpanded = false
                         actions.onAddToQueue(song)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Start radio") },
+                    onClick = {
+                        menuExpanded = false
+                        actions.onStartRadio(song)
                     },
                 )
                 DropdownMenuItem(

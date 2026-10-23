@@ -123,6 +123,10 @@ fun NowPlayingScreen(
     isHiddenFromMixes: Boolean = false,
     /** Hides the song from (or returns it to) Smart Playlists; null leaves the action out. */
     onSetHiddenFromMixes: ((Song, Boolean) -> Unit)? = null,
+    onStartRadio: (() -> Unit)? = null,
+    /** Songs of the Smart Radio in the queue (empty when none): "New radio picks" shows for these. */
+    radioSongIds: Set<Long> = emptySet(),
+    onRefreshRadio: (() -> Unit)? = null,
     /** The outcome of an Add to playlist started here ("Added to …", "Already in …"), shown once. */
     playlistMessage: String? = null,
     onPlaylistMessageShown: () -> Unit = {},
@@ -245,6 +249,8 @@ fun NowPlayingScreen(
                         }
                     }
                 },
+            onStartRadio = onStartRadio,
+            onRefreshRadio = onRefreshRadio?.takeIf { song?.id in radioSongIds },
             onQueue = {
                 queueSheetPages = QUEUE_SHEET_ALL_PAGES
                 queueSheetPage = QUEUE_SHEET_PAGE_QUEUE

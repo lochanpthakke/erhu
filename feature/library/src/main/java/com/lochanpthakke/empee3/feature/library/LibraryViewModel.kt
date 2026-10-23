@@ -62,6 +62,9 @@ import com.lochanpthakke.empee3.core.network.tagger.planFieldFix
 import com.lochanpthakke.empee3.core.network.tagger.releaseDateFor
 import com.lochanpthakke.empee3.core.network.tagger.usableBpm
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
+import com.lochanpthakke.empee3.feature.library.mix.RadioPlan
+import com.lochanpthakke.empee3.feature.library.mix.RadioRepository
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 import com.lochanpthakke.empee3.feature.library.mix.SmartMixRepository
 import com.lochanpthakke.empee3.feature.library.mix.SmartMixes
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -72,9 +75,12 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -192,6 +198,7 @@ class LibraryViewModel
         private val lastFmCredentials: LastFmCredentials,
         private val bpmFinder: BpmFinder,
         private val fanartTvCredentials: com.lochanpthakke.empee3.core.network.provider.FanartTvCredentials,
+        private val radioRepository: RadioRepository,
     ) : ViewModel() {
         /**
          * The smart mixes on the Tracks page: built from local listening history and tags, cached
@@ -2163,6 +2170,84 @@ class LibraryViewModel
         fun playSmartMix(mixKey: String) {
             val mix = smartMixes.value?.mixes?.firstOrNull { it.kind.key == mixKey } ?: return
             viewModelScope.launch { playInOrder(libraryRepository.getSongsByIds(mix.songIds)) }
+        }
+
+        /**
+         * The Smart Radio in the queue: its seed, the song it started from and every song it has
+         * suggested so far (so "New radio picks" brings different ones). Null when none was started.
+         */
+        data class RadioSession(
+            val seed: RadioSeed,
+            val startSongId: Long,
+            val suggested: Set<Long>,
+        )
+
+        private val _radio = MutableStateFlow<RadioSession?>(null)
+        val radio: StateFlow<RadioSession?> = _radio.asStateFlow()
+
+        private val _radioMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+        /** One-line reports of what a radio was built from (or why it could not be). */
+        val radioMessages: SharedFlow<String> = _radioMessages.asSharedFlow()
+
+        /** Starts a new queue: the seed's start song, then the radio's picks, in radio order. */
+        fun startRadio(seed: RadioSeed) {
+            viewModelScope.launch {
+                val plan = radioRepository.build(seed) ?: return@launch report(null)
+                val songs = libraryRepository.getSongsByIds(listOf(plan.startSongId) + plan.songIds)
+                if (plan.songIds.isEmpty() || songs.isEmpty()) return@launch report(plan)
+                playbackRepository.setShuffleModeEnabled(false)
+                playbackRepository.playCollection(songs, 0, origin = null)
+                _radio.value = RadioSession(seed, plan.startSongId, plan.songIds.toSet())
+                report(plan)
+            }
+        }
+
+        /** A radio from the song playing now: it keeps playing and the radio replaces what comes next. */
+        fun startRadioFromCurrent() {
+            val current = playbackRepository.playbackState.value.currentSong ?: return
+            replaceUpcomingWithRadio(RadioSeed.Song(current.id), current.id, exclude = emptySet())
+        }
+
+        /** Fresh picks for the radio in the queue, avoiding the songs it already suggested. */
+        fun refreshRadio() {
+            val session = _radio.value ?: return
+            replaceUpcomingWithRadio(session.seed, session.startSongId, exclude = session.suggested)
+        }
+
+        private fun replaceUpcomingWithRadio(
+            seed: RadioSeed,
+            startSongId: Long,
+            exclude: Set<Long>,
+        ) {
+            viewModelScope.launch {
+                val plan = radioRepository.build(seed, exclude, startSongId) ?: return@launch report(null)
+                val songs = libraryRepository.getSongsByIds(plan.songIds)
+                if (songs.isEmpty()) return@launch report(plan)
+                playbackRepository.setShuffleModeEnabled(false)
+                playbackRepository.replaceUpcoming(songs)
+                _radio.value = RadioSession(seed, startSongId, exclude + plan.songIds)
+                report(plan)
+            }
+        }
+
+        private fun report(plan: RadioPlan?) {
+            val message =
+                when {
+                    plan == null -> "No songs to start a radio from"
+                    plan.songIds.isEmpty() -> "Not enough other songs for a radio from “${plan.name}”"
+                    else -> {
+                        val basis = plan.basedOn.map { it.label }
+                        val reasons =
+                            when (basis.size) {
+                                0 -> ""
+                                1 -> " · by ${basis[0]}"
+                                else -> " · by ${basis.dropLast(1).joinToString(", ")} and ${basis.last()}"
+                            }
+                        "Radio from “${plan.name}”: ${plan.songIds.size} songs$reasons"
+                    }
+                }
+            _radioMessages.tryEmit(message)
         }
 
         fun shufflePlayLibrary() {

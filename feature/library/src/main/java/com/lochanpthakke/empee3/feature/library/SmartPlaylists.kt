@@ -58,6 +58,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.model.Song
 import com.lochanpthakke.empee3.feature.library.mix.MixArtwork
 import com.lochanpthakke.empee3.feature.library.mix.MixKind
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 import com.lochanpthakke.empee3.feature.library.mix.SmartMix
 import com.lochanpthakke.empee3.feature.library.mix.SmartMixRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -207,6 +208,7 @@ fun SmartPlaylistDetailScreen(
             onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
             onPlayNext = { libraryViewModel.playNext(it) },
             onAddToQueue = { libraryViewModel.addToQueue(it) },
+            onStartRadio = { libraryViewModel.startRadio(RadioSeed.Song(it.id)) },
             onAddToPlaylist = { songsForPlaylist = listOf(it) },
             onFixTags = { song ->
                 songForFixTags = song

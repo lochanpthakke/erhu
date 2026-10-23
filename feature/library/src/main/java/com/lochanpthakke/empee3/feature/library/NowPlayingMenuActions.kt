@@ -9,6 +9,10 @@ internal class NowPlayingMenuActions(
     val onAddToPlaylist: () -> Unit,
     /** Null when hiding isn't available (no mixes source); otherwise toggles the song's hidden state. */
     val onToggleHidden: (() -> Unit)?,
+    /** Smart Radio from the current song (it keeps playing; the radio replaces what comes next). */
+    val onStartRadio: (() -> Unit)?,
+    /** Fresh picks for the radio playing now; null when the current song isn't part of one. */
+    val onRefreshRadio: (() -> Unit)?,
     val onQueue: () -> Unit,
     val onVisualizer: () -> Unit,
     val onEqualizer: () -> Unit,

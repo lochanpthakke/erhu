@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -192,6 +193,12 @@ fun MainScaffold() {
     val soundViewModel: SoundViewModel = hiltViewModel()
     val diagnosticsViewModel: DiagnosticsViewModel = hiltViewModel()
     val libraryViewModel: LibraryViewModel = hiltViewModel()
+    // Smart Radio: the radio in the queue (for "New radio picks") and what each radio was built from.
+    val radio by libraryViewModel.radio.collectAsState()
+    val radioContext = LocalContext.current
+    LaunchedEffect(libraryViewModel) {
+        libraryViewModel.radioMessages.collect { Toast.makeText(radioContext, it, Toast.LENGTH_LONG).show() }
+    }
     val playlistsViewModel: PlaylistsViewModel = hiltViewModel()
     val playerExtrasViewModel: PlayerExtrasViewModel = hiltViewModel()
     val visualizerViewModel: VisualizerViewModel = hiltViewModel()
@@ -717,6 +724,9 @@ fun MainScaffold() {
                                             onShowMusicInfo = { songForMusicInfo = it },
                                             isHiddenFromMixes = currentSongId in hiddenFromMixes,
                                             onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
+                                            onStartRadio = libraryViewModel::startRadioFromCurrent,
+                                            radioSongIds = radio?.let { it.suggested + it.startSongId }.orEmpty(),
+                                            onRefreshRadio = libraryViewModel::refreshRadio,
                                             playlistMessage = playerPlaylistMessage,
                                             onPlaylistMessageShown = { playerPlaylistMessage = null },
                                         )

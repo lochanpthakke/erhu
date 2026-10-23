@@ -79,6 +79,7 @@ import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUr
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 import kotlinx.coroutines.flow.combine
 
 private const val HERO_KEY = "artist_hero"
@@ -139,6 +140,7 @@ fun ArtistDetailScreen(
             onToggleFavorite = { viewModel.toggleFavorite(it) },
             onPlayNext = { viewModel.playNext(it) },
             onAddToQueue = { viewModel.addToQueue(it) },
+            onStartRadio = { viewModel.startRadio(RadioSeed.Song(it.id)) },
             onAddToPlaylist = { songsForPlaylist = listOf(it) },
             onFixTags = { song ->
                 songForFixTags = song
@@ -191,6 +193,13 @@ fun ArtistDetailScreen(
                                     onClick = {
                                         menuExpanded = false
                                         allSongs.forEach { song -> viewModel.addToQueue(song) }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Start Radio") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        viewModel.startRadio(RadioSeed.Artist(artist.id))
                                     },
                                 )
                                 DropdownMenuItem(

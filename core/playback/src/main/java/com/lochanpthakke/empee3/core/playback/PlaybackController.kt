@@ -68,6 +68,9 @@ interface PlaybackController {
     /** Shuffles only the entries after the current one. Returns false when fewer than two are upcoming. */
     fun shuffleUpcoming(): Boolean
 
+    /** Replaces the entries after the current one with [songs]; the current song keeps playing. */
+    fun replaceUpcoming(songs: List<Song>)
+
     /**
      * Plays the song of session-history entry [entryId] again, inserted right after the current
      * entry, so the upcoming queue is kept. No-op when the entry is unknown.

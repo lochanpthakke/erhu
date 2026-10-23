@@ -581,6 +581,15 @@ class PlaybackControllerImpl
 
         override fun shuffleUpcoming(): Boolean = queue.shuffleUpcoming()
 
+        override fun replaceUpcoming(songs: List<Song>) {
+            val playable = songs.filter { it.uri.isNotBlank() }
+            val wasEmpty = player.mediaItemCount == 0
+            // Undo positions would point into the entries being replaced.
+            removals.clear()
+            queue.replaceUpcoming(playable.map { it.toMediaItem() })
+            if (wasEmpty && playable.isNotEmpty()) player.prepare()
+        }
+
         override fun setLoopStart(): AbLoopEdit = abLoop.setStart()
 
         override fun setLoopEnd(): AbLoopEdit = abLoop.setEnd()

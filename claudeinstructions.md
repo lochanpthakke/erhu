@@ -427,6 +427,24 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
 - Lochan's `527adbb` (merged): each album check now sizes every HLS variant (+ the chosen one again) — ~4 Apple
   requests per album instead of 1; his `AnimatedArtworkRepository.kt` fails ktlint. Left as his.
 
+### 3.14 Smart Radio (2026-10-24)
+- `mix/RadioEngine.kt` (pure, 17 tests in `RadioEngineTest`): seed = song / album / artist (`RadioSeed`); start song =
+  the seed song or the album's / artist's most-played track. Score = VYBE similarity to the seed songs (stored vectors
+  via `VybeEngine.tasteNeighbours`, never the model; skipped without an index) + genre overlap + trusted-tempo
+  closeness (`Moods.tempo`, 70-175 only) + same artist (0.8 for an artist radio, else 0.35) / same album (0.15) +
+  familiarity (lasting plays, favourites, liked artist) + 0.1 for never-played songs. Spread: ≤3 per artist, ≤2 per
+  album, no artist twice in a row; caps relax in steps when the library is too small to fill 30, except the seed
+  artist (artist radio ≤ a third) and the seed album (≤2 more). Hidden-from-Smart-Playlists songs excluded.
+  `RadioPlan.basedOn` lists only signals that shaped a pick; the toast names them.
+- `mix/RadioRepository.kt`: on demand only (one Room read, VYBE failure → metadata only), no background work.
+- `replaceUpcoming(songs)` in `PlaybackQueue` / Controller / Repository (`player.replaceMediaItems(current + 1, …)`,
+  like `shuffleUpcoming`): radio from Now Playing keeps the current song playing.
+- UI: "Start radio" in every song menu (`SongActions.onStartRadio`), album and artist ⋮ menus, Now Playing ⋮
+  ("Start radio", and "New radio picks" while the playing song is part of the radio: refresh avoids earlier picks
+  while ≥10 remain). Saving = the Queue sheet's existing "Save as playlist". No Familiar/Discover toggle (follow-up).
+- Installed as release 2026-10-24 00:39 (`build-smart-radio\`, SHA-256 `80dae802…`), backup
+  `dbbackup\pre-smart-radio-20261024-003821`. Not yet tried by the user on the phone.
+
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
   manual "Time words" tool, local enhanced-LRC copies) — built 2026-10-11, the user scrapped it and
