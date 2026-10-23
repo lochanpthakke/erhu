@@ -1,6 +1,7 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-22. Branch `kshitij`; live covers (start delay fix, album-page download) and the Home tab are in 3.12._
+_Last updated: 2026-10-23. Branch `kshitij`; Library Builder fix, glass rollback + tint, drawer smoothness and the
+Lochan merge are in 3.13._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -55,6 +56,9 @@ is still open. Verify anything specific (file names, functions) against the code
 
 | Commit | What |
 |---|---|
+| `7ca30e7` | Tests follow Lochan's live cover resolution choices |
+| `36da3e5` | Merge `origin/lochan` `527adbb`: live cover resolution choices on the album page (proto `preferred_live_cover_resolution = 35`) |
+| `3f2ec02` | **Library Builder moves files**, **glass rollback with artwork tint**, **smoother drawer**, Animated Artwork out of the drawer, R8 route keep rule; see 3.13 |
 | `99b203a` | **Album page: download the album's live cover** (check on open, glass button + popup, cancel/remove, duplicate-download and delete fixes); see 3.12 |
 | `69fcd96` | Navigation: first tab reads **Home** with a house icon (enum still `TRACKS`) |
 | `7954fbd` | **Live covers start at once** (Apple's 10 s timestamp offset rebased to 0); see 3.12 |
@@ -389,6 +393,40 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
 - Backups: `adb exec-out run-as … tar` TRUNCATED at 89 MB on 2026-10-22 (tar "Unexpected EOF"). Use
   `adb shell "run-as <pkg> tar -cf - . > /data/local/tmp/x.tar"`, `adb pull`, `tar -tf` check, then rm.
 
+### 3.13 Library Builder, glass, drawer, Lochan merge (2026-10-23)
+- **Library Builder (Lochan's organiser) did not move files.** Cause, proven on the S23 with logs: both folder pickers
+  (`SettingsScreen`, `MainScaffold`) persisted READ-only tree access, so every SAF write failed silently after a
+  restart/reinstall; without All Files Access (not granted on the S23) `File.renameTo` fails too. Pickers now persist
+  read+write. **The user must re-pick the scan folder once** (Settings → Scan location) before organising MUSICtest.
+  Verified with copies in `Music/LBTest`: 3/3 moved via `moveDocument` (+ rename to the title), checksums identical;
+  Force Re-organize → "Already in place: 3".
+- `SafFileMover`: one `OUTCOME=` per file in logcat tag `LibraryBuilderMover` (all-files flag, persisted grants,
+  every physical/SAF step). Never deletes/overwrites an existing destination (even 0 bytes), deletes the source only
+  after a size-verified copy, undoes its own copy if the source cannot be removed, renames in place when only the name
+  differs. `ExecutionResult.failureReasons` shown on the finished screen. "Scan another folder…" scans a folder
+  WITHOUT changing the scan location (changing it rescans the library: never test on the real scan folder).
+- Empty-folder cleanup (`LibraryBuilderIntegrator`) confirms emptiness with a direct child query before deleting:
+  `DocumentFile.delete()` is recursive and `listFiles()` returns empty on query errors.
+- Tags are read by file path: without All Files Access that only works for files MediaStore has indexed (a
+  `.nomedia` folder gives "Unknown" tags / MISSING_METADATA).
+- **Glass rollback:** Lochan's frostiness merge made frosted fills use the full panel alpha (old: ×0.3) and 1.5× blur,
+  ignoring explicit fills ("just blurring"). Reverted in `Glass.kt`; `frostFactor` now only softens the blur
+  (1 = original; drawer slider default 0.85). The "UI Elements Frostiness" slider is not read anywhere.
+- **Tint:** `GlassTokens.tint` = background colour at `TINT_ALPHA` 0x52 for `dominant_color` / `gradient_ui` only
+  (`EmPee3Theme`), composited into the fill colour (no extra draw). Explicit fills (Now Playing cards, drawer) untouched.
+- **Drawer:** Animated Artwork entry removed (route + screen kept). Trace showed the shell re-records on every frame of
+  the drawer slide (`GlassSource:shell` ×49/51; the menu button's press animation is one cause), so the drawer
+  re-blurred every frame. Now `glassPanel(stillBackdrop = true)` renders ONE blurred bitmap of the shell per opening
+  (`rememberStillFrost`, `GraphicsLayer.toImageBitmap`) and draws its region; no edge lens on the drawer.
+  Baseline before: 41% janky, p50 28 ms, p99 65 ms (5 open/close, `drawer-loop.sh` in the session scratchpad).
+  The final build was NOT cleanly measured (the user was using the phone during the run).
+- **R8:** a `@Serializable` route object whose INSTANCE is no longer used (drawer entry removed) lost its serializer
+  and crashed the release at startup ("Serializer for class 'wi'"). Keep rule for `com.lochanpthakke.empee3.navigation.**`.
+- **Lesson:** debug builds feel laggy (gfxinfo 30% janky, p99 300 ms); after testing with a debug build, put the
+  release back. Smoke-test every release on `.bench` (install, launch, check FATAL, uninstall) before the main app.
+- Lochan's `527adbb` (merged): each album check now sizes every HLS variant (+ the chosen one again) — ~4 Apple
+  requests per album instead of 1; his `AnimatedArtworkRepository.kt` fails ktlint. Left as his.
+
 ## 4. Scrapped (do not reintroduce without asking)
 - **Word-by-word karaoke rework** (active-word-only highlight, LyricsClock smoothing with speed,
   manual "Time words" tool, local enhanced-LRC copies) — built 2026-10-11, the user scrapped it and
@@ -503,6 +541,16 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-10-23 23:29:** the main app is the **release** build of the merge (`7ca30e7` + these notes; SHA-256
+  `f02114f9…`), smoke-tested on `.bench` first (no FATAL; `.bench` removed). Backup:
+  `dbbackup\pre-merge-527adbb-20261023-232838` (taken via the same-key debug `build-glass-rollback\real-debug.apk`).
+  APKs: `D:\android-toolchain\build-merge-527adbb\`. Only `com.lochanpthakke.empee3` is installed.
+  At the user's explicit request (2026-10-23), `kshitij` was pushed to BOTH `origin/kshitij` and `origin/master`
+  (fast-forward). The "never push master" rule still stands otherwise: ask each time.
+  Still to verify on the phone: the drawer feel (one-picture frost), the tint strength on Dominant/Gradient,
+  re-picking MUSICtest before the first real Library Builder run.
+- The PC ran critically low on memory during builds (1.8 GB free of 13.9): use
+  `-Pkotlin.compiler.execution.strategy=in-process`, build release and benchmark separately, `./gradlew --stop` first.
 - **2026-10-22 23:04:** the main app is the **release** build of the live cover download work (SHA-256
   `47c6ce8e…`; same code as `99b203a`). Backup: `dbbackup\pre-live-download-install-20261022-230347`.
   APKs: `D:\android-toolchain\build-live-download\` (`real-release.apk`, `real-debug.apk` for backups).
