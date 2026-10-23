@@ -165,6 +165,13 @@ class LiveCoverViewModelTest {
         val fetches = mutableListOf<AnimatedArtOrientation>()
         val cancelled = mutableListOf<Long>()
         val deleted = mutableListOf<Long>()
+        var preferredResolution = "1080p"
+
+        override fun observePreferredResolution(): Flow<String> = flowOf(preferredResolution)
+
+        override suspend fun setPreferredResolution(resolution: String) {
+            preferredResolution = resolution
+        }
 
         override suspend fun checkLiveCover(
             albumId: Long,

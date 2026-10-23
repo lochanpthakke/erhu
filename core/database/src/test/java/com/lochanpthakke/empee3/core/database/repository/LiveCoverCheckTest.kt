@@ -86,16 +86,20 @@ class LiveCoverCheckTest {
     fun `a motion cover is offered with its phone-sized resolution and exact size, without downloading it`() {
         network.resolve = AppResult.Success(ResolveOutcome.Matched("123", "us", SQUARE_MASTER, TALL_MASTER))
 
-        val result = check()
+        val result = (check() as AppResult.Success).data as LiveCoverCheck.Downloadable
 
-        assertEquals(
-            AppResult.Success(LiveCoverCheck.Downloadable(AnimatedArtOrientation.SQUARE_1_1, 1080, 1080, EXACT_BYTES)),
-            result,
-        )
+        // The default preference (1080p) picks the phone-sized variant; every variant is offered.
+        assertEquals(AnimatedArtOrientation.SQUARE_1_1, result.orientation)
+        assertEquals(1080, result.width)
+        assertEquals(1080, result.height)
+        assertEquals(EXACT_BYTES, result.bytes)
+        assertEquals(SQUARE_1080, result.selectedVariant?.variantUrl)
+        assertEquals(listOf(2048, 1080, 720), result.variants.map { it.width })
         assertEquals(AnimatedArtStatus.FOUND.name, status())
         assertEquals("123", runBlocking { dao.getByAlbumId(ALBUM_ID)?.catalogAlbumId })
         assertEquals(0, network.downloads)
-        assertEquals(listOf(SQUARE_1080), network.sizedVariants)
+        // Sizes are read from the playlists' byte ranges, never by downloading.
+        assertTrue(SQUARE_1080 in network.sizedVariants)
     }
 
     @Test
