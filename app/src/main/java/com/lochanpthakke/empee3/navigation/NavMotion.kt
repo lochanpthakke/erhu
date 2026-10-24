@@ -19,7 +19,8 @@ private fun NavDestination.isDetail(): Boolean =
         hasRoute(ArtistDetail::class) ||
         hasRoute(PlaylistDetail::class) ||
         hasRoute(SmartPlaylistDetail::class) ||
-        hasRoute(SettingsCategory::class)
+        hasRoute(SettingsCategory::class) ||
+        hasRoute(LibraryBuilder::class)
 
 internal fun navEnter(target: NavDestination): EnterTransition = if (target.isDetail()) Motion.detailEnter else Motion.fadeThroughEnter
 
