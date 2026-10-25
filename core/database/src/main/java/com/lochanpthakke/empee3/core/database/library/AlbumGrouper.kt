@@ -25,7 +25,10 @@ object AlbumGrouper {
         identity: ArtistIdentityResolver,
     ): List<AlbumGroup> =
         inputs
-            .groupBy { titleKey(it) to it.folder }
+            .groupBy {
+                val t = titleKey(it)
+                if (t == UNKNOWN_ALBUM_KEY) t to it.folder else t to ""
+            }
             .toSortedMap(compareBy<Pair<String, String>>({ it.first }, { it.second }))
             .values
             .flatMap { reconcile(it, identity) }
@@ -71,7 +74,14 @@ object AlbumGrouper {
         return buckets.map { (key, bucket) ->
             val title = titleKey(bucket.first())
             // An untitled album is a folder of loose tracks: never merge it across folders, even by Album Artist.
-            val anchor = if (key == null || title == UNKNOWN_ALBUM_KEY) "dir:$folder" else "aa:$key"
+            val anchor =
+                if (title == UNKNOWN_ALBUM_KEY) {
+                    "dir:$folder"
+                } else if (key != null) {
+                    "aa:$key"
+                } else {
+                    "title:$title"
+                }
             Partial(title, anchor, key, bucket, !collides && counts.size > 1)
         }
     }
