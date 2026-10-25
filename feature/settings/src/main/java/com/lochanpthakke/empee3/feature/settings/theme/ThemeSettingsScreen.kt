@@ -131,7 +131,6 @@ fun ThemeSettingsScreen(
         }
 
         val sidebarGlassyness by viewModel.sidebarGlassyness.collectAsState()
-        val uiGlassyness by viewModel.uiGlassyness.collectAsState()
 
         SettingsSection(title = "Material") {
             SettingsGroup {
@@ -172,29 +171,6 @@ fun ThemeSettingsScreen(
                             Slider(
                                 value = sidebarGlassyness,
                                 onValueChange = viewModel::setSidebarGlassyness,
-                                valueRange = 0f..1f,
-                            )
-                        }
-                    }
-                    row {
-                        Column(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(Spacing.md),
-                        ) {
-                            Text(
-                                text = "UI Elements Frostiness: ${(uiGlassyness * 100).roundToInt()}%",
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Text(
-                                text = "0% = Clear Glass · 100% = Full Frosted Glass",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Slider(
-                                value = uiGlassyness,
-                                onValueChange = viewModel::setUiGlassyness,
                                 valueRange = 0f..1f,
                             )
                         }

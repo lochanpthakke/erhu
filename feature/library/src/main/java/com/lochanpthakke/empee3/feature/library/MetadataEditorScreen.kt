@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
@@ -419,35 +420,51 @@ fun MetadataEditorScreen(
                         }
 
                         if (isQueueComplete) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                            ) {
-                                ActionButton(
-                                    text =
-                                        if (isReverting) {
-                                            "Reverting..."
-                                        } else if (selectedRevertIds.isEmpty()) {
-                                            "Revert Changes"
-                                        } else {
-                                            "Revert (${selectedRevertIds.size})"
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                ) {
+                                    ActionButton(
+                                        text =
+                                            if (isReverting) {
+                                                "Reverting..."
+                                            } else if (selectedRevertIds.isEmpty()) {
+                                                "Revert Changes"
+                                            } else {
+                                                "Revert (${selectedRevertIds.size})"
+                                            },
+                                        onClick = {
+                                            viewModel.revertSelectedChanges(selectedRevertIds)
+                                            selectedRevertIds = emptySet()
                                         },
-                                    onClick = {
-                                        viewModel.revertSelectedChanges(selectedRevertIds)
-                                        selectedRevertIds = emptySet()
-                                    },
-                                    icon = Icons.Default.Refresh,
-                                    enabled = selectedRevertIds.isNotEmpty() && !isReverting && !isFixingQueue,
-                                    modifier = Modifier.weight(1f),
-                                )
+                                        icon = Icons.Default.Refresh,
+                                        enabled = selectedRevertIds.isNotEmpty() && !isReverting && !isFixingQueue,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    ActionButton(
+                                        text = "Return to Library",
+                                        onClick = {
+                                            viewModel.clearRepairQueue()
+                                            onNavigateToLibrary()
+                                        },
+                                        primary = true,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                val isAllSelected = repairQueue.isNotEmpty() && selectedRevertIds.size == repairQueue.size
                                 ActionButton(
-                                    text = "Return to Library",
+                                    text = if (isAllSelected) "Deselect All Tracks" else "Select All Tracks",
                                     onClick = {
-                                        viewModel.clearRepairQueue()
-                                        onNavigateToLibrary()
+                                        selectedRevertIds =
+                                            if (isAllSelected) {
+                                                emptySet()
+                                            } else {
+                                                repairQueue.map { it.song.id }.toSet()
+                                            }
                                     },
-                                    primary = true,
-                                    modifier = Modifier.weight(1f),
+                                    icon = Icons.Default.DoneAll,
+                                    enabled = !isReverting && !isFixingQueue && repairQueue.isNotEmpty(),
                                 )
                             }
                         } else if (isFixingQueue) {
@@ -457,18 +474,27 @@ fun MetadataEditorScreen(
                                 icon = Icons.Default.Pause,
                             )
                         } else {
-                            ActionButton(
-                                text =
-                                    if (processedCount > 0 && toProcessCount > 0) {
-                                        "Resume ($toProcessCount left)"
-                                    } else {
-                                        "Start Fixing Queue / Fix Tags"
-                                    },
-                                onClick = { viewModel.startFixingQueue() },
-                                icon = Icons.Default.AutoFixHigh,
-                                primary = true,
-                                enabled = toProcessCount > 0,
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                ActionButton(
+                                    text =
+                                        if (processedCount > 0 && toProcessCount > 0) {
+                                            "Resume ($toProcessCount left)"
+                                        } else {
+                                            "Start Fixing Queue / Fix Tags"
+                                        },
+                                    onClick = { viewModel.startFixingQueue() },
+                                    icon = Icons.Default.AutoFixHigh,
+                                    primary = true,
+                                    enabled = toProcessCount > 0,
+                                )
+                                if (repairQueue.isNotEmpty()) {
+                                    ActionButton(
+                                        text = "Clear Queue",
+                                        onClick = { viewModel.clearRepairQueue() },
+                                        icon = Icons.Default.DeleteOutline,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
