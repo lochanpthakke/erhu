@@ -45,7 +45,7 @@ class WidgetUpdater
         fun start() {
             val displayedPlayback =
                 playbackController.playbackState
-                    .map { it.currentSong?.id to it.status }
+                    .map { Triple(it.currentSong?.id, it.status, it.shuffleModeEnabled) }
                     .distinctUntilChanged()
 
             displayedPlayback
@@ -69,6 +69,7 @@ class WidgetUpdater
             val manager = GlanceAppWidgetManager(context)
             val glanceIds = manager.getGlanceIds(MusicWidget::class.java)
             if (glanceIds.isEmpty()) return
+            // Re-instantiating the widget clears the composition cache, fetching fresh values
             val widget = MusicWidget()
             glanceIds.forEach { glanceId ->
                 widget.update(context, glanceId)
