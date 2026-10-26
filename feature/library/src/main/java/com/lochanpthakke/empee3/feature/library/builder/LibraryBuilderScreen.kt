@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,14 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,12 +37,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import com.lochanpthakke.empee3.core.database.builder.ProposedMove
 import com.lochanpthakke.empee3.core.designsystem.component.ActionButton
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.GroupToggleRow
-import com.lochanpthakke.empee3.core.designsystem.component.IconBadge
 import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.ProgressBar
@@ -105,15 +105,14 @@ fun LibraryBuilderScreen(
                 ),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            item(key = "intro") { IntroGroup() }
             item(key = "options") { OptionsGroup(forceReorganize, onForceReorganizeChange = viewModel::setForceReorganize) }
-            item(key = "gap") { Spacer(modifier = Modifier.height(Spacing.sm)) }
             stateItems(
                 state = uiState,
                 viewModel = viewModel,
                 onResolveClick = { showResolveDialogFor = it },
                 onDone = onNavigateBack,
             )
+            item(key = "intro") { IntroGroup(modifier = Modifier.fillParentMaxHeight(0.45f)) }
         }
     }
 }
@@ -150,25 +149,18 @@ private fun LazyListScope.stateItems(
 }
 
 @Composable
-private fun IntroGroup() {
-    Row(
-        modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
-        verticalAlignment = Alignment.CenterVertically,
+private fun IntroGroup(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
     ) {
-        IconBadge(icon = Icons.Default.FolderZip)
-        Spacer(modifier = Modifier.width(Spacing.md))
-        Column {
-            Text(
-                text = "Library Builder",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = "Organises your audio files into hierarchical folders automatically",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            text = "Organises your audio files into hierarchical folders automatically",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = Spacing.lg),
+        )
     }
 }
 
@@ -177,10 +169,9 @@ private fun OptionsGroup(
     forceReorganize: Boolean,
     onForceReorganizeChange: (Boolean) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
+    Column(modifier = Modifier.fillMaxWidth().groupSurface(CircleShape)) {
         GroupToggleRow(
             title = "Force Re-organize",
-            summary = "Include files that were previously organized or skipped",
             checked = forceReorganize,
             onCheckedChange = onForceReorganizeChange,
         )

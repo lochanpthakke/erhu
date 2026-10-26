@@ -1,7 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-23. Branch `kshitij`; Library Builder fix, glass rollback + tint, drawer smoothness and the
-Lochan merge are in 3.13._
+_Last updated: 2026-10-26. Branch `kshitij`; latest Lochan merge and signing verification are in 3.14._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -53,6 +52,23 @@ is still open. Verify anything specific (file names, functions) against the code
   each feature isolated and easy to revert.
 
 ## 3. Completed and committed work (newest first)
+
+### 3.14 Lochan merge and update signing (2026-10-26)
+- At the user's request, merged `origin/lochan` (`bd8c11f`) into `kshitij` with `--no-ff`.
+  Retains current work through `0e81e71`; adds `310353a` (Library Builder UI, drawer tint control,
+  metadata repair queue clear/select-all controls) and `bd8c11f` (named albums merge across folders).
+  Merge was conflict-free; the existing local 2026-10-24 installed-build note below is preserved.
+- Debug and optimized release builds pass; 347 tests pass (database 165, library 181, app 1;
+  settings has no unit tests). Initial incremental compilation failed to resolve the unchanged
+  `chooseDisplayName` helper; retry with `-Pkotlin.incremental=false` passed without source changes.
+- Signing configuration, application ID and database schemas were unchanged. Both new APKs were
+  verified with `apksigner` against `build-library-builder-theme/real-release.apk` (the documented
+  last installed APK). All use certificate SHA-256
+  `5bb0fc457b96d9fb6cbc606009de44d633bee95b58fec2dc633a7a4eb54a9ce5` and package
+  `com.lochanpthakke.empee3`. Keep this local key; do not regenerate it or uninstall to update.
+- Paired APKs saved outside Git: `D:\android-toolchain\build-merge-lochan-20261026\`.
+  Phone was disconnected; no installation, data clearing or on-device validation was performed.
+  The user requested merge + commit only; no push requested.
 
 | Commit | What |
 |---|---|
@@ -559,6 +575,10 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-10-24 22:34:** the main app is the **release** build of `0e81e71` (Library Builder follows the app theme +
+  detail-page nav motion; SHA-256 `f30614ab…`), smoke-tested on `.bench` first (no FATAL; `.bench` removed). Backup:
+  `dbbackup\pre-library-builder-theme-20261024-223325`. APKs: `D:\android-toolchain\build-library-builder-theme\`.
+  At the user's explicit request, `kshitij` was pushed to BOTH `origin/kshitij` and `origin/master` (fast-forward).
 - **2026-10-23 23:29:** the main app is the **release** build of the merge (`7ca30e7` + these notes; SHA-256
   `f02114f9…`), smoke-tested on `.bench` first (no FATAL; `.bench` removed). Backup:
   `dbbackup\pre-merge-527adbb-20261023-232838` (taken via the same-key debug `build-glass-rollback\real-debug.apk`).

@@ -25,7 +25,7 @@ class AlbumGrouperTest {
     }
 
     @Test
-    fun `same title without album artist in two folders stays two albums`() {
+    fun `same title without album artist in two folders merges into one album`() {
         val groups =
             AlbumGrouper.group(
                 listOf(
@@ -34,7 +34,7 @@ class AlbumGrouperTest {
                 ),
                 identity,
             )
-        assertEquals(2, groups.size)
+        assertEquals(1, groups.size)
     }
 
     @Test

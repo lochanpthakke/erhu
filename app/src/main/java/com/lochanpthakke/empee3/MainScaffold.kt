@@ -401,7 +401,7 @@ fun MainScaffold() {
                                     optics = DRAWER_OPTICS,
                                     // A deeper tint of the theme's own background than other glass, so the
                                     // labels read crisply while the backdrop still shows faintly through.
-                                    fill = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = DRAWER_FILL_ALPHA),
+                                    fill = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = (DRAWER_FILL_ALPHA * sidebarGlassyness).coerceIn(0f, 1f)),
                                     // No environment lens here: its bend zone scales with the surface, and on
                                     // a panel this large it smeared everything behind the drawer.
                                     environmentLens = false,
