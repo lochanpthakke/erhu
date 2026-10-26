@@ -109,7 +109,8 @@ class LibraryRepositoryImpl
 
         override fun getAlbumById(id: Long): Flow<Album?> = albumDao.observeAlbumById(id).map { it?.toDomainModel() }
 
-        override fun getAlbumIdForSong(songId: Long): Flow<Long?> = songDao.observeSongById(songId).map { it?.albumId }.distinctUntilChanged()
+        override fun getAlbumIdForSong(songId: Long): Flow<Long?> =
+            songDao.observeSongById(songId).map { it?.albumId }.distinctUntilChanged()
 
         override fun getAllArtists(): Flow<List<Artist>> =
             artistDao.getAllArtists().map { list ->

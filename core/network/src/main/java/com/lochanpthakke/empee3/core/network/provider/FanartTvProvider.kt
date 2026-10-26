@@ -50,12 +50,16 @@ class FanartTvProvider
                 for (mbid in distinctMbids) {
                     try {
                         val response = fanartTvApi.getArtistImages(musicBrainzId = mbid, apiKey = apiKey)
-                        val thumbs = response.artistthumb.orEmpty()
-                            .sortedByDescending { it.likes?.toIntOrNull() ?: 0 }
-                            .mapNotNull { it.url }
-                        val backgrounds = response.artistbackground.orEmpty()
-                            .sortedByDescending { it.likes?.toIntOrNull() ?: 0 }
-                            .mapNotNull { it.url }
+                        val thumbs =
+                            response.artistthumb
+                                .orEmpty()
+                                .sortedByDescending { it.likes?.toIntOrNull() ?: 0 }
+                                .mapNotNull { it.url }
+                        val backgrounds =
+                            response.artistbackground
+                                .orEmpty()
+                                .sortedByDescending { it.likes?.toIntOrNull() ?: 0 }
+                                .mapNotNull { it.url }
 
                         (thumbs + backgrounds).forEach { rawUrl ->
                             if (rawUrl.isNotBlank()) {

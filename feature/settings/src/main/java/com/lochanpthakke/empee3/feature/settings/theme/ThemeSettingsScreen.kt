@@ -19,8 +19,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import kotlin.math.roundToInt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
+import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.BuiltInThemes
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
 import com.lochanpthakke.empee3.feature.settings.component.SettingsChoiceRow
@@ -43,6 +42,7 @@ import com.lochanpthakke.empee3.feature.settings.component.SettingsNavigationRow
 import com.lochanpthakke.empee3.feature.settings.component.SettingsPage
 import com.lochanpthakke.empee3.feature.settings.component.SettingsSection
 import com.lochanpthakke.empee3.feature.settings.component.SettingsSwitchRow
+import kotlin.math.roundToInt
 
 /** Theme preview swatch: the theme's background with its accent in the middle. */
 private val SWATCH_SIZE = 36.dp

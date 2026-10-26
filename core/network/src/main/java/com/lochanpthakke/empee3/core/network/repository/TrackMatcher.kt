@@ -212,8 +212,10 @@ private fun sameSongIdentity(
 ): Boolean {
     val sameTitle = foldForMatch(c1.title) == foldForMatch(c2.title)
     val sameAlbum = foldForMatch(c1.album) == foldForMatch(c2.album) || c1.album.isBlank() || c2.album.isBlank()
-    val sameArtist = foldForMatch(primaryArtist(c1.artist)) == foldForMatch(primaryArtist(c2.artist)) ||
-        com.lochanpthakke.empee3.core.network.scorer.creditSimilarity(c1.artist, c2.artist) >= 0.80f
+    val sameArtist =
+        foldForMatch(primaryArtist(c1.artist)) == foldForMatch(primaryArtist(c2.artist)) ||
+            com.lochanpthakke.empee3.core.network.scorer
+                .creditSimilarity(c1.artist, c2.artist) >= 0.80f
     return sameTitle && sameAlbum && sameArtist
 }
 

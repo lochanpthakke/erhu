@@ -4,57 +4,54 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.compose.ui.graphics.toArgb
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import com.lochanpthakke.empee3.MainActivity
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.state.GlanceStateDefinition
-import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.glance.text.Text
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.sp
-import androidx.glance.action.actionParametersOf
-import androidx.glance.appwidget.LinearProgressIndicator
-import androidx.glance.color.ColorProvider
 import androidx.glance.layout.ContentScale
+import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxHeight
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
+import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
+import androidx.glance.state.GlanceStateDefinition
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import java.util.Locale
-
+import com.lochanpthakke.empee3.MainActivity
 import com.lochanpthakke.empee3.R
 import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 private const val ALBUM_ART_SIZE_PX = 400
 private const val CONTROL_ICON_SIZE_DP = 24
@@ -69,14 +66,16 @@ class MusicWidget : GlanceAppWidget() {
     ) {
         provideContent {
             // Throttle position updates to 3-second buckets to eliminate high-frequency SystemUI re-inflation (flickering)
-            val throttledPlaybackFlow = remember(context) {
-                context.playbackController().playbackState
-                    .map { state ->
-                        val bucketedPosition = (state.positionMs / 3000) * 3000
-                        state.copy(positionMs = bucketedPosition)
-                    }
-                    .distinctUntilChanged()
-            }
+            val throttledPlaybackFlow =
+                remember(context) {
+                    context
+                        .playbackController()
+                        .playbackState
+                        .map { state ->
+                            val bucketedPosition = (state.positionMs / 3000) * 3000
+                            state.copy(positionMs = bucketedPosition)
+                        }.distinctUntilChanged()
+                }
             val initialState = remember(context) { context.playbackController().playbackState.value }
             val playbackState by throttledPlaybackFlow.collectAsState(initial = initialState)
             val song = playbackState.currentSong
@@ -121,16 +120,21 @@ class MusicWidget : GlanceAppWidget() {
         positionMs: Long,
         durationMs: Long,
     ) {
-        val extractedColors = artwork?.let { com.lochanpthakke.empee3.core.designsystem.theme.DominantColorExtractor.extractColors(it) }
+        val extractedColors =
+            artwork?.let {
+                com.lochanpthakke.empee3.core.designsystem.theme.DominantColorExtractor
+                    .extractColors(it)
+            }
         val rawAccent = extractedColors?.accentColor ?: Color(0xFFD2B48C)
         val accentProvider = ColorProvider(day = rawAccent, night = rawAccent)
         val mutedAccentProvider = ColorProvider(day = rawAccent.copy(alpha = 0.7f), night = rawAccent.copy(alpha = 0.7f))
 
         Box(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .background(Color(0xFF0B0B0B))
-                .clickable(actionStartActivity<MainActivity>())
+            modifier =
+                GlanceModifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF0B0B0B))
+                    .clickable(actionStartActivity<MainActivity>()),
         ) {
             Row(
                 modifier = GlanceModifier.fillMaxWidth(),
@@ -259,24 +263,25 @@ class MusicWidget : GlanceAppWidget() {
                             backgroundColor = ColorProvider(day = rawAccent.copy(alpha = 0.2f), night = rawAccent.copy(alpha = 0.2f)),
                         )
 
-                        // 10 invisible touch targets across the progress bar track for tap-to-seek
+                        // 10 invisible touch targets tightly aligned over the 8dp progress bar track
                         Row(
-                            modifier = GlanceModifier.fillMaxWidth().fillMaxHeight(),
+                            modifier = GlanceModifier.fillMaxWidth().height(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             for (i in 0 until 10) {
                                 val targetPercent = (i + 0.5f) / 10f
                                 Box(
-                                    modifier = GlanceModifier
-                                        .defaultWeight()
-                                        .fillMaxHeight()
-                                        .clickable(
-                                            actionRunCallback<SeekToPercentAction>(
-                                                actionParametersOf(
-                                                    SeekToPercentAction.KEY_PERCENT to targetPercent
-                                                )
-                                            )
-                                        ),
+                                    modifier =
+                                        GlanceModifier
+                                            .defaultWeight()
+                                            .height(8.dp)
+                                            .clickable(
+                                                actionRunCallback<SeekToPercentAction>(
+                                                    actionParametersOf(
+                                                        SeekToPercentAction.KEY_PERCENT to targetPercent,
+                                                    ),
+                                                ),
+                                            ),
                                 ) {}
                             }
                         }

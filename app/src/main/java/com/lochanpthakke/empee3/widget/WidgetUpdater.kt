@@ -19,16 +19,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Keeps the home-screen widget's playback display live.
+ * Keeps home-screen widgets (MusicWidget & GlassMusicWidget) live.
  *
- * MusicWidget.provideGlance() only reads playbackState once, at render time.
- * This class re-renders the widget when something it displays changes: the
- * song, play/pause status, the song's favorite flag, or the widget theme.
- * Position ticks are deliberately ignored — redrawing a RemoteViews widget
- * several times per second wastes battery for nothing the widget shows.
- *
- * Lives in :app (not :core:playback) — :core:playback must stay unaware
- * Glance/widgets exist.
+ * provideGlance() only reads playbackState once at render time.
+ * This class re-renders all instances of both widgets when state changes:
+ * song, play/pause status, favorite flag, or theme.
  */
 @Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -67,12 +62,21 @@ class WidgetUpdater
 
         private suspend fun updateAllWidgetInstances() {
             val manager = GlanceAppWidgetManager(context)
+
             val glanceIds = manager.getGlanceIds(MusicWidget::class.java)
-            if (glanceIds.isEmpty()) return
-            // Re-instantiating the widget clears the composition cache, fetching fresh values
-            val widget = MusicWidget()
-            glanceIds.forEach { glanceId ->
-                widget.update(context, glanceId)
+            if (glanceIds.isNotEmpty()) {
+                val widget = MusicWidget()
+                glanceIds.forEach { glanceId ->
+                    widget.update(context, glanceId)
+                }
+            }
+
+            val glassGlanceIds = manager.getGlanceIds(GlassMusicWidget::class.java)
+            if (glassGlanceIds.isNotEmpty()) {
+                val glassWidget = GlassMusicWidget()
+                glassGlanceIds.forEach { glanceId ->
+                    glassWidget.update(context, glanceId)
+                }
             }
         }
     }

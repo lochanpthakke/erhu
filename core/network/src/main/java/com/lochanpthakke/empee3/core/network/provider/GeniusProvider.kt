@@ -40,14 +40,24 @@ class GeniusProvider
                     try {
                         val searchRes = geniusApi.search(trimmed)
                         allHits.addAll(searchRes.response?.hits.orEmpty())
-                        allHits.addAll(searchRes.response?.sections.orEmpty().flatMap { it.hits.orEmpty() })
+                        allHits.addAll(
+                            searchRes.response
+                                ?.sections
+                                .orEmpty()
+                                .flatMap { it.hits.orEmpty() },
+                        )
                     } catch (e: Exception) {
                         logger.w(TAG, "Genius /api/search failed for $trimmed: ${e.message}")
                     }
 
                     try {
                         val artistRes = geniusApi.searchArtist(trimmed)
-                        allHits.addAll(artistRes.response?.sections.orEmpty().flatMap { it.hits.orEmpty() })
+                        allHits.addAll(
+                            artistRes.response
+                                ?.sections
+                                .orEmpty()
+                                .flatMap { it.hits.orEmpty() },
+                        )
                         allHits.addAll(artistRes.response?.hits.orEmpty())
                     } catch (e: Exception) {
                         logger.w(TAG, "Genius /api/search/artist failed for $trimmed: ${e.message}")
@@ -56,7 +66,12 @@ class GeniusProvider
                     if (allHits.isEmpty()) {
                         try {
                             val multiRes = geniusApi.searchMulti(trimmed)
-                            allHits.addAll(multiRes.response?.sections.orEmpty().flatMap { it.hits.orEmpty() })
+                            allHits.addAll(
+                                multiRes.response
+                                    ?.sections
+                                    .orEmpty()
+                                    .flatMap { it.hits.orEmpty() },
+                            )
                             allHits.addAll(multiRes.response?.hits.orEmpty())
                         } catch (e: Exception) {
                             logger.w(TAG, "Genius /api/search/multi failed for $trimmed: ${e.message}")
@@ -118,16 +133,20 @@ class GeniusProvider
 
                 // Tier 2: Direct Genius Artist Page HTML / Meta Tag Extraction
                 if (urls.isEmpty()) {
-                    val candidateSlugs = validNames.map { name ->
-                        name.replace(Regex("""[^a-zA-Z0-9]+"""), "-").trim('-')
-                    }.filter { it.isNotBlank() }.distinct()
+                    val candidateSlugs =
+                        validNames
+                            .map { name ->
+                                name.replace(Regex("""[^a-zA-Z0-9]+"""), "-").trim('-')
+                            }.filter { it.isNotBlank() }
+                            .distinct()
 
                     for (slug in candidateSlugs) {
                         try {
                             val pageUrl = "https://genius.com/artists/$slug"
                             val html = geniusApi.fetchRawPage(pageUrl).use { it.string() }
 
-                            val ogImageRegex = Regex("""<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                            val ogImageRegex =
+                                Regex("""<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
                             val imgMatch = ogImageRegex.find(html)?.groupValues?.get(1)
                             if (!imgMatch.isNullOrBlank()) {
                                 urls.add(imgMatch)
@@ -135,9 +154,10 @@ class GeniusProvider
 
                             val jsonImageRegex = Regex(""""(?:image_url|header_image_url)"\s*:\s*"([^"]+)"""", RegexOption.IGNORE_CASE)
                             jsonImageRegex.findAll(html).forEach { match ->
-                                val rawUrl = match.groupValues[1]
-                                    .replace("\\u0026", "&")
-                                    .replace("\\/", "/")
+                                val rawUrl =
+                                    match.groupValues[1]
+                                        .replace("\\u0026", "&")
+                                        .replace("\\/", "/")
                                 if (rawUrl.isNotBlank() && rawUrl.contains("images.genius.com")) {
                                     urls.add(rawUrl)
                                 }
@@ -157,12 +177,15 @@ class GeniusProvider
                         val encodedQuery = URLEncoder.encode("$trimmed genius artist portrait", StandardCharsets.UTF_8.name())
                         val bingUrl = "https://www.bing.com/images/async?q=$encodedQuery&first=1&count=20&mmasync=1"
                         val html = geniusApi.fetchRawPage(bingUrl).use { it.string() }
-                        val murlRegex = Regex("""murl(?:&quot;|"):(?:&quot;|")(https?://[^"&]+?\.(?:jpg|jpeg|png))""", RegexOption.IGNORE_CASE)
-                        val webUrls = murlRegex.findAll(html)
-                            .map { it.groupValues[1].replace("&amp;", "&") }
-                            .filter { it.isNotBlank() }
-                            .distinct()
-                            .toList()
+                        val murlRegex =
+                            Regex("""murl(?:&quot;|"):(?:&quot;|")(https?://[^"&]+?\.(?:jpg|jpeg|png))""", RegexOption.IGNORE_CASE)
+                        val webUrls =
+                            murlRegex
+                                .findAll(html)
+                                .map { it.groupValues[1].replace("&amp;", "&") }
+                                .filter { it.isNotBlank() }
+                                .distinct()
+                                .toList()
 
                         val geniusHostUrls = webUrls.filter { it.contains("genius.com") || it.contains("rapgenius") }
                         if (geniusHostUrls.isNotEmpty()) {
@@ -176,14 +199,14 @@ class GeniusProvider
                     }
                 }
 
-                urls.map { it.trim() }
+                urls
+                    .map { it.trim() }
                     .filter { url ->
                         url.isNotBlank() &&
                             !url.contains("default_avatar", ignoreCase = true) &&
                             !url.contains("default_cover", ignoreCase = true) &&
                             !url.contains("assets.genius.com/images/default", ignoreCase = true)
-                    }
-                    .distinct()
+                    }.distinct()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

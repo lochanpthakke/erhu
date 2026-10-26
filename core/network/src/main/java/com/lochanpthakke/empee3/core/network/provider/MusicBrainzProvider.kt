@@ -71,13 +71,19 @@ class MusicBrainzProvider
                     return score
                 }
 
-                val sorted = candidates.sortedWith(
-                    compareBy<com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto> { matchesNameOrAlias(it) }
-                        .thenByDescending { richnessScore(it) }
-                        .thenBy { if (it.name.trim().equals(trimmed, ignoreCase = true)) 0 else 1 }
-                        .thenByDescending { it.score },
-                )
-                val mbids = sorted.map { it.id }.filter { it.isNotBlank() }.distinct().take(8)
+                val sorted =
+                    candidates.sortedWith(
+                        compareBy<com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto> { matchesNameOrAlias(it) }
+                            .thenByDescending { richnessScore(it) }
+                            .thenBy { if (it.name.trim().equals(trimmed, ignoreCase = true)) 0 else 1 }
+                            .thenByDescending { it.score },
+                    )
+                val mbids =
+                    sorted
+                        .map { it.id }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .take(8)
                 mbidCache[cacheKey] = mbids.joinToString(",")
                 mbids
             } catch (e: Exception) {
@@ -86,8 +92,7 @@ class MusicBrainzProvider
             }
         }
 
-        suspend fun resolveArtistMbid(artistName: String): String? =
-            resolveArtistMbids(artistName).firstOrNull()
+        suspend fun resolveArtistMbid(artistName: String): String? = resolveArtistMbids(artistName).firstOrNull()
 
         private val urlRelsCache = ConcurrentHashMap<String, com.lochanpthakke.empee3.core.network.model.MusicBrainzArtistDto>()
 

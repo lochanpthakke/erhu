@@ -28,8 +28,7 @@ object AlbumGrouper {
             .groupBy {
                 val t = titleKey(it)
                 if (t == UNKNOWN_ALBUM_KEY) t to it.folder else t to ""
-            }
-            .toSortedMap(compareBy<Pair<String, String>>({ it.first }, { it.second }))
+            }.toSortedMap(compareBy<Pair<String, String>>({ it.first }, { it.second }))
             .values
             .flatMap { reconcile(it, identity) }
             .groupBy { it.titleKey to it.groupingKey }

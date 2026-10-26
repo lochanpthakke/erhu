@@ -25,18 +25,24 @@ class DiscogsProvider
 
             // 1. Try Discogs artist ID extracted from MusicBrainz relations
             try {
-                val mbids = if (!preResolvedMbid.isNullOrBlank()) {
-                    (listOf(preResolvedMbid) + musicBrainzProvider.resolveArtistMbids(trimmed)).distinct().take(3)
-                } else {
-                    musicBrainzProvider.resolveArtistMbids(trimmed).take(3)
-                }
+                val mbids =
+                    if (!preResolvedMbid.isNullOrBlank()) {
+                        (listOf(preResolvedMbid) + musicBrainzProvider.resolveArtistMbids(trimmed)).distinct().take(3)
+                    } else {
+                        musicBrainzProvider.resolveArtistMbids(trimmed).take(3)
+                    }
 
                 val discogsIdRegex = Regex("""/artist/(\d+)""")
                 for (mbid in mbids) {
                     val artistDetails = musicBrainzProvider.lookupArtistUrlRels(mbid) ?: continue
                     val discogsRel = artistDetails.relations.firstOrNull { it.type.equals("discogs", ignoreCase = true) }
                     val discogsUrl = discogsRel?.url?.resource.orEmpty()
-                    val discogsId = discogsIdRegex.find(discogsUrl)?.groupValues?.get(1)?.toLongOrNull()
+                    val discogsId =
+                        discogsIdRegex
+                            .find(discogsUrl)
+                            ?.groupValues
+                            ?.get(1)
+                            ?.toLongOrNull()
 
                     if (discogsId != null && discogsId > 0) {
                         val detail = discogsApi.getArtistDetail(discogsId)
@@ -57,9 +63,10 @@ class DiscogsProvider
                 try {
                     val response = discogsApi.searchArtist(query = trimmed)
                     val results = response.results.orEmpty()
-                    val found = results
-                        .mapNotNull { it.coverImage ?: it.thumb }
-                        .filter { it.isNotBlank() && !it.endsWith(".gif", ignoreCase = true) }
+                    val found =
+                        results
+                            .mapNotNull { it.coverImage ?: it.thumb }
+                            .filter { it.isNotBlank() && !it.endsWith(".gif", ignoreCase = true) }
                     urls.addAll(found)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e

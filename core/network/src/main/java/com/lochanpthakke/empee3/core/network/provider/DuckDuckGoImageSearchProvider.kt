@@ -28,11 +28,17 @@ class DuckDuckGoImageSearchProvider
                 val vqd = vqdRegex.find(htmlPage)?.groupValues?.get(1)
 
                 if (!vqd.isNullOrBlank()) {
-                    val res = duckDuckGoApi.searchImages(
-                        query = "$trimmed artist portrait",
-                        vqd = vqd,
-                    )
-                    val urls = res.results.orEmpty().mapNotNull { it.image }.filter { it.isNotBlank() }.distinct()
+                    val res =
+                        duckDuckGoApi.searchImages(
+                            query = "$trimmed artist portrait",
+                            vqd = vqd,
+                        )
+                    val urls =
+                        res.results
+                            .orEmpty()
+                            .mapNotNull { it.image }
+                            .filter { it.isNotBlank() }
+                            .distinct()
                     if (urls.isNotEmpty()) {
                         return urls.take(15)
                     }
@@ -48,7 +54,8 @@ class DuckDuckGoImageSearchProvider
                 val bingUrl = "https://www.bing.com/images/async?q=$encodedQuery&first=1&count=20&mmasync=1"
                 val html = duckDuckGoApi.fetchHtml(bingUrl).use { it.string() }
                 val murlRegex = Regex("""murl(?:&quot;|"):(?:&quot;|")(https?://[^"&]+?\.(?:jpg|jpeg|png))""", RegexOption.IGNORE_CASE)
-                murlRegex.findAll(html)
+                murlRegex
+                    .findAll(html)
                     .map { it.groupValues[1].replace("&amp;", "&") }
                     .filter { it.isNotBlank() }
                     .distinct()

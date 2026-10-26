@@ -11,6 +11,6 @@ interface AppleMusicCatalogApi {
         @Path("storefront") storefront: String,
         @Path("id") id: String,
         @Header("Authorization") auth: String,
-        @Header("Origin") origin: String = "https://music.apple.com"
+        @Header("Origin") origin: String = "https://music.apple.com",
     ): AppleCatalogResponse
 }

@@ -27,23 +27,26 @@ enum class LibrarySection(
     TRACKS("Home"),
     ALBUMS("Albums"),
     LIBRARY("Library"),
-    VYBE("VYBE");
+    VYBE("VYBE"),
+    ;
 
     val icon: ImageVector
-        @Composable get() = when (this) {
-            TRACKS -> Icons.Outlined.Home
-            ALBUMS -> Icons.Outlined.Album
-            LIBRARY -> Icons.Outlined.LibraryMusic
-            VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
-        }
+        @Composable get() =
+            when (this) {
+                TRACKS -> Icons.Outlined.Home
+                ALBUMS -> Icons.Outlined.Album
+                LIBRARY -> Icons.Outlined.LibraryMusic
+                VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
+            }
 
     val selectedIcon: ImageVector
-        @Composable get() = when (this) {
-            TRACKS -> Icons.Filled.Home
-            ALBUMS -> Icons.Filled.Album
-            LIBRARY -> Icons.Filled.LibraryMusic
-            VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
-        }
+        @Composable get() =
+            when (this) {
+                TRACKS -> Icons.Filled.Home
+                ALBUMS -> Icons.Filled.Album
+                LIBRARY -> Icons.Filled.LibraryMusic
+                VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
+            }
 }
 
 /** The full shelves the Library overview opens with "More". */
@@ -52,12 +55,14 @@ enum class LibraryShelf(
 ) {
     PLAYLISTS("Playlists"),
     FAVORITES("Favorites"),
-    ARTISTS("Artists");
+    ARTISTS("Artists"),
+    ;
 
     val icon: ImageVector
-        @Composable get() = when (this) {
-            PLAYLISTS -> Icons.AutoMirrored.Filled.QueueMusic
-            FAVORITES -> Icons.Filled.Favorite
-            ARTISTS -> Icons.Filled.Person
-        }
+        @Composable get() =
+            when (this) {
+                PLAYLISTS -> Icons.AutoMirrored.Filled.QueueMusic
+                FAVORITES -> Icons.Filled.Favorite
+                ARTISTS -> Icons.Filled.Person
+            }
 }

@@ -270,7 +270,14 @@ fun AnimatedArtworkScreen(
 
                                 Box {
                                     TextButton(onClick = { resolutionDropdownExpanded = true }) {
-                                        val label = selectedVariant?.let { "${it.resolutionText} (${String.format("%.1f MB", it.estimatedSizeMb)})" } ?: "Select Resolution"
+                                        val label =
+                                            selectedVariant?.let {
+                                                "${it.resolutionText} (${String.format(
+                                                    "%.1f MB",
+                                                    it.estimatedSizeMb,
+                                                )})"
+                                            }
+                                                ?: "Select Resolution"
                                         Text(label, fontWeight = FontWeight.Medium)
                                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
                                     }
@@ -280,7 +287,11 @@ fun AnimatedArtworkScreen(
                                     ) {
                                         availableVariants.forEach { variant ->
                                             DropdownMenuItem(
-                                                text = { Text("${variant.resolutionText} — ${String.format("%.1f MB", variant.estimatedSizeMb)}") },
+                                                text = {
+                                                    Text(
+                                                        "${variant.resolutionText} — ${String.format("%.1f MB", variant.estimatedSizeMb)}",
+                                                    )
+                                                },
                                                 onClick = {
                                                     viewModel.selectVariant(variant)
                                                     resolutionDropdownExpanded = false
@@ -411,8 +422,12 @@ fun AnimatedArtworkScreen(
 
                         val activeFilePath =
                             when (orientation) {
-                                AnimatedArtOrientation.SQUARE_1_1 -> selectedDiagnosticItem.artwork?.squareFilePath ?: selectedDiagnosticItem.artwork?.tallFilePath
-                                AnimatedArtOrientation.TALL_3_4 -> selectedDiagnosticItem.artwork?.tallFilePath ?: selectedDiagnosticItem.artwork?.squareFilePath
+                                AnimatedArtOrientation.SQUARE_1_1 ->
+                                    selectedDiagnosticItem.artwork?.squareFilePath
+                                        ?: selectedDiagnosticItem.artwork?.tallFilePath
+                                AnimatedArtOrientation.TALL_3_4 ->
+                                    selectedDiagnosticItem.artwork?.tallFilePath
+                                        ?: selectedDiagnosticItem.artwork?.squareFilePath
                             }
 
                         val aspectRatio = if (orientation == AnimatedArtOrientation.SQUARE_1_1) 1f else 3f / 4f
@@ -609,7 +624,10 @@ private fun AnimatedQueueItemCard(
 
                 StatusBadge(status = status)
 
-                if (status == AnimatedArtStatus.FAILED || status == AnimatedArtStatus.NO_MATCH || status == AnimatedArtStatus.NO_ANIMATION) {
+                if (status == AnimatedArtStatus.FAILED ||
+                    status == AnimatedArtStatus.NO_MATCH ||
+                    status == AnimatedArtStatus.NO_ANIMATION
+                ) {
                     IconButton(onClick = onRetry) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry")
                     }

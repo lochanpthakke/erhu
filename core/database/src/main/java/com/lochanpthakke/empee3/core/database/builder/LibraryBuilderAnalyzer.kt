@@ -17,7 +17,7 @@ import javax.inject.Singleton
 
 data class AnalysisResult(
     val rootUriString: String,
-    val moves: List<ProposedMove>
+    val moves: List<ProposedMove>,
 )
 
 @Singleton
@@ -30,7 +30,10 @@ class LibraryBuilderAnalyzer
     ) {
         private val supportedExtensions = setOf("mp3", "flac", "m4a", "ogg", "wav", "aac")
 
-        suspend fun analyze(customUriString: String = "", forceReorganize: Boolean = false): AnalysisResult {
+        suspend fun analyze(
+            customUriString: String = "",
+            forceReorganize: Boolean = false,
+        ): AnalysisResult {
             val targetUri =
                 if (customUriString.isNotBlank()) {
                     customUriString
@@ -63,24 +66,32 @@ class LibraryBuilderAnalyzer
                 results.mapNotNull { move ->
                     if (move.state == ProposedMove.State.ALREADY_ORGANIZED) {
                         if (forceReorganize) {
-                            val nextState = if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1) {
-                                ProposedMove.State.COLLISION
-                            } else {
-                                ProposedMove.State.VALID
-                            }
+                            val nextState =
+                                if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1) {
+                                    ProposedMove.State.COLLISION
+                                } else {
+                                    ProposedMove.State.VALID
+                                }
                             Log.i(TAG, "force re-organize: ALREADY_ORGANIZED -> $nextState '${move.sourcePath}'")
                             move.copy(state = nextState)
                         } else {
                             null
                         }
-                    } else if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1 && move.state != ProposedMove.State.MISSING_METADATA) {
+                    } else if (destCount.getOrDefault(move.destinationPath.lowercase(), 0) > 1 &&
+                        move.state != ProposedMove.State.MISSING_METADATA
+                    ) {
                         move.copy(state = ProposedMove.State.COLLISION)
                     } else {
                         move
                     }
                 }
 
-            Log.i(TAG, "analyze root='$targetUri' force=$forceReorganize scanned=${results.size} proposed=${finalResults.groupingBy { it.state }.eachCount()}")
+            Log.i(
+                TAG,
+                "analyze root='$targetUri' force=$forceReorganize scanned=${results.size} proposed=${finalResults.groupingBy {
+                    it.state
+                }.eachCount()}",
+            )
             return AnalysisResult(targetUri, finalResults)
         }
 

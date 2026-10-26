@@ -85,43 +85,44 @@ private val POPUP_SHAPE = RoundedCornerShape(24.dp)
 private enum class BitrateTier { LOW, MEDIUM, HIGH }
 
 private val DownloadArrowBarIcon: ImageVector by lazy {
-    ImageVector.Builder(
-        name = "DownloadArrowBar",
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 24f,
-        viewportHeight = 24f,
-    ).apply {
-        path(
-            fill = SolidColor(Color.Unspecified),
-            stroke = SolidColor(Color.Black),
-            strokeLineWidth = 2.5f,
-            strokeLineCap = StrokeCap.Round,
-        ) {
-            moveTo(12f, 3f)
-            lineTo(12f, 14.5f)
-        }
-        path(
-            fill = SolidColor(Color.Unspecified),
-            stroke = SolidColor(Color.Black),
-            strokeLineWidth = 2.5f,
-            strokeLineCap = StrokeCap.Round,
-            strokeLineJoin = StrokeJoin.Round,
-        ) {
-            moveTo(6.5f, 9.5f)
-            lineTo(12f, 15f)
-            lineTo(17.5f, 9.5f)
-        }
-        path(
-            fill = SolidColor(Color.Unspecified),
-            stroke = SolidColor(Color.Black),
-            strokeLineWidth = 2.5f,
-            strokeLineCap = StrokeCap.Round,
-        ) {
-            moveTo(5f, 20f)
-            lineTo(19f, 20f)
-        }
-    }.build()
+    ImageVector
+        .Builder(
+            name = "DownloadArrowBar",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                fill = SolidColor(Color.Unspecified),
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2.5f,
+                strokeLineCap = StrokeCap.Round,
+            ) {
+                moveTo(12f, 3f)
+                lineTo(12f, 14.5f)
+            }
+            path(
+                fill = SolidColor(Color.Unspecified),
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2.5f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(6.5f, 9.5f)
+                lineTo(12f, 15f)
+                lineTo(17.5f, 9.5f)
+            }
+            path(
+                fill = SolidColor(Color.Unspecified),
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2.5f,
+                strokeLineCap = StrokeCap.Round,
+            ) {
+                moveTo(5f, 20f)
+                lineTo(19f, 20f)
+            }
+        }.build()
 }
 
 /**
@@ -172,9 +173,10 @@ private fun LiveCoverButton(
 ) {
     IconButton(
         onClick = onClick,
-        colors = IconButtonDefaults.iconButtonColors(
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
+        colors =
+            IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
     ) {
         when (state) {
             is LiveCoverUi.Downloading ->
@@ -216,9 +218,10 @@ private fun LiveCoverCard(
     var expanded by remember { mutableStateOf(false) }
     var selectedBitrate by remember { mutableStateOf(BitrateTier.HIGH) }
 
-    val filteredVariants = remember(variants, selectedBitrate) {
-        filterVariantsByBitrate(variants, selectedBitrate)
-    }
+    val filteredVariants =
+        remember(variants, selectedBitrate) {
+            filterVariantsByBitrate(variants, selectedBitrate)
+        }
 
     Column(
         modifier =
@@ -304,8 +307,7 @@ private fun LiveCoverCard(
                                 .background(
                                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(12.dp),
-                                )
-                                .padding(2.dp),
+                                ).padding(2.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         BitrateTier.entries.forEach { tier ->
@@ -352,7 +354,15 @@ private fun LiveCoverCard(
                                     Surface(
                                         onClick = { onSelectVariant?.invoke(v) },
                                         shape = RoundedCornerShape(10.dp),
-                                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                        color =
+                                            if (isSelected) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceVariant
+                                                    .copy(
+                                                        alpha = 0.4f,
+                                                    )
+                                            },
                                         contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.weight(1f),
                                     ) {
@@ -368,7 +378,14 @@ private fun LiveCoverCard(
                                             Text(
                                                 text = sizeStr,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                color =
+                                                    if (isSelected) {
+                                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(
+                                                            alpha = 0.8f,
+                                                        )
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                    },
                                             )
                                         }
                                     }
@@ -391,14 +408,15 @@ private fun filterVariantsByBitrate(
 ): List<LiveCoverVariant> {
     if (allVariants.isEmpty()) return emptyList()
     val grouped = allVariants.groupBy { it.resolutionText }
-    return grouped.values.mapNotNull { group ->
-        val sorted = group.sortedByDescending { it.bandwidth }
-        when (tier) {
-            BitrateTier.HIGH -> sorted.firstOrNull()
-            BitrateTier.MEDIUM -> sorted[sorted.size / 2]
-            BitrateTier.LOW -> sorted.lastOrNull()
-        }
-    }.sortedByDescending { (it.width ?: 0) * (it.height ?: 0) }
+    return grouped.values
+        .mapNotNull { group ->
+            val sorted = group.sortedByDescending { it.bandwidth }
+            when (tier) {
+                BitrateTier.HIGH -> sorted.firstOrNull()
+                BitrateTier.MEDIUM -> sorted[sorted.size / 2]
+                BitrateTier.LOW -> sorted.lastOrNull()
+            }
+        }.sortedByDescending { (it.width ?: 0) * (it.height ?: 0) }
 }
 
 private fun extractOffer(state: LiveCoverUi): LiveCoverCheck.Downloadable? =

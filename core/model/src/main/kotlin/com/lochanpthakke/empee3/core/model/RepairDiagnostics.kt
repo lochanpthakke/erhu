@@ -126,7 +126,9 @@ data class SuccessDetails(
         if (originalArtworkBytes != null) {
             if (other.originalArtworkBytes == null) return false
             if (!originalArtworkBytes.contentEquals(other.originalArtworkBytes)) return false
-        } else if (other.originalArtworkBytes != null) return false
+        } else if (other.originalArtworkBytes != null) {
+            return false
+        }
         if (hadEmbeddedTitle != other.hadEmbeddedTitle) return false
         if (hadEmbeddedArtist != other.hadEmbeddedArtist) return false
         if (hadEmbeddedAlbum != other.hadEmbeddedAlbum) return false
