@@ -28,6 +28,9 @@ class PlayPauseAction : ActionCallback {
         val status = controller.playbackState.value.status
         val isPlaying = status == PlaybackStatus.PLAYING || status == PlaybackStatus.BUFFERING
         if (isPlaying) controller.pause() else controller.play()
+        val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)
+        val widget = MusicWidget()
+        manager.getGlanceIds(MusicWidget::class.java).forEach { widget.update(context, it) }
     }
 }
 
@@ -38,6 +41,9 @@ class SkipNextAction : ActionCallback {
         parameters: ActionParameters,
     ) = withContext(Dispatchers.Main) {
         context.playbackController().skipNext()
+        val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)
+        val widget = MusicWidget()
+        manager.getGlanceIds(MusicWidget::class.java).forEach { widget.update(context, it) }
     }
 }
 
@@ -48,6 +54,9 @@ class SkipPreviousAction : ActionCallback {
         parameters: ActionParameters,
     ) = withContext(Dispatchers.Main) {
         context.playbackController().skipPrevious()
+        val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)
+        val widget = MusicWidget()
+        manager.getGlanceIds(MusicWidget::class.java).forEach { widget.update(context, it) }
     }
 }
 
@@ -65,5 +74,37 @@ class ToggleFavoriteAction : ActionCallback {
                 ?.id ?: return
         context.libraryRepository().toggleFavorite(songId)
         MusicWidget().update(context, glanceId)
+    }
+}
+
+class SeekForwardAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) = withContext(Dispatchers.Main) {
+        val controller = context.playbackController()
+        val currentPos = controller.playbackState.value.positionMs
+        controller.seekTo(currentPos + 10_000)
+    }
+}
+
+class SeekToPercentAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) = withContext(Dispatchers.Main) {
+        val percent = parameters[KEY_PERCENT] ?: return@withContext
+        val controller = context.playbackController()
+        val durationMs = controller.playbackState.value.durationMs
+        if (durationMs > 0) {
+            val targetPos = (durationMs * percent).toLong()
+            controller.seekTo(targetPos)
+        }
+    }
+
+    companion object {
+        val KEY_PERCENT = ActionParameters.Key<Float>("percent")
     }
 }

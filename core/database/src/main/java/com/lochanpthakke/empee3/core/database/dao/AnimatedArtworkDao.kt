@@ -15,7 +15,10 @@ interface AnimatedArtworkDao {
     suspend fun getByAlbumId(albumId: Long): AnimatedArtworkEntity?
 
     @Query("SELECT * FROM animated_artwork WHERE normalized_artist = :normalizedArtist AND normalized_album = :normalizedAlbum LIMIT 1")
-    suspend fun getByNormalizedKey(normalizedArtist: String, normalizedAlbum: String): AnimatedArtworkEntity?
+    suspend fun getByNormalizedKey(
+        normalizedArtist: String,
+        normalizedAlbum: String,
+    ): AnimatedArtworkEntity?
 
     @Query("SELECT * FROM animated_artwork")
     suspend fun getAll(): List<AnimatedArtworkEntity>

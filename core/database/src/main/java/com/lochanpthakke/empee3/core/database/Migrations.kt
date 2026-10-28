@@ -202,10 +202,10 @@ val MIGRATION_13_14 =
                     `updated_at_epoch_ms` INTEGER NOT NULL, 
                     PRIMARY KEY(`album_id`)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             db.execSQL(
-                "CREATE UNIQUE INDEX IF NOT EXISTS `index_animated_artwork_normalized_artist_normalized_album` ON `animated_artwork` (`normalized_artist`, `normalized_album`)"
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_animated_artwork_normalized_artist_normalized_album` ON `animated_artwork` (`normalized_artist`, `normalized_album`)",
             )
         }
     }

@@ -8,8 +8,8 @@ import com.lochanpthakke.empee3.core.network.api.LastFmApi
 import com.lochanpthakke.empee3.core.network.api.LrclibApi
 import com.lochanpthakke.empee3.core.network.api.MusicBrainzApi
 import com.lochanpthakke.empee3.core.network.apple.AppleMusicCatalogApi
-import com.lochanpthakke.empee3.core.network.apple.ItunesSearchApi
 import com.lochanpthakke.empee3.core.network.apple.AppleWebClient
+import com.lochanpthakke.empee3.core.network.apple.ItunesSearchApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -54,17 +54,19 @@ object NetworkModule {
     @Provides
     @Singleton
     @AppleWebClient
-    fun provideAppleWebClient(baseClient: OkHttpClient): OkHttpClient {
-        return baseClient.newBuilder()
+    fun provideAppleWebClient(baseClient: OkHttpClient): OkHttpClient =
+        baseClient
+            .newBuilder()
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                    .header("Origin", "https://music.apple.com")
-                    .build()
+                val request =
+                    chain
+                        .request()
+                        .newBuilder()
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        .header("Origin", "https://music.apple.com")
+                        .build()
                 chain.proceed(request)
-            }
-            .build()
-    }
+            }.build()
 
     @Provides
     @Singleton

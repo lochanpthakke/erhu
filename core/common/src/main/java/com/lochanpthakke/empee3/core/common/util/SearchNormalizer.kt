@@ -10,13 +10,14 @@ object SearchNormalizer {
      */
     fun normalize(text: String): String {
         if (text.isBlank()) return ""
-        val leetspeak = text
-            .replace("$", "s")
-            .replace("@", "a")
-            .replace("!", "i")
-            .replace("3", "e")
-            .replace("0", "o")
-            .replace("&", "and")
+        val leetspeak =
+            text
+                .replace("$", "s")
+                .replace("@", "a")
+                .replace("!", "i")
+                .replace("3", "e")
+                .replace("0", "o")
+                .replace("&", "and")
         val decomposed = Normalizer.normalize(leetspeak.lowercase(Locale.ROOT), Normalizer.Form.NFD)
         val accentFree = decomposed.replace(Regex("\\p{M}"), "")
         return accentFree.replace(Regex("[^a-z0-9]"), "")
@@ -27,13 +28,14 @@ object SearchNormalizer {
      */
     fun normalizeWords(text: String): String {
         if (text.isBlank()) return ""
-        val leetspeak = text
-            .replace("$", "s")
-            .replace("@", "a")
-            .replace("!", "i")
-            .replace("3", "e")
-            .replace("0", "o")
-            .replace("&", "and")
+        val leetspeak =
+            text
+                .replace("$", "s")
+                .replace("@", "a")
+                .replace("!", "i")
+                .replace("3", "e")
+                .replace("0", "o")
+                .replace("&", "and")
         val decomposed = Normalizer.normalize(leetspeak.lowercase(Locale.ROOT), Normalizer.Form.NFD)
         val accentFree = decomposed.replace(Regex("\\p{M}"), "")
         return accentFree.replace(Regex("[^a-z0-9\\s]"), " ").replace(Regex("\\s+"), " ").trim()
@@ -43,7 +45,10 @@ object SearchNormalizer {
      * Returns true if [target] matches [query] via raw substring, normalized leetspeak/accent-free
      * substring, or all query token matches.
      */
-    fun matches(target: String, query: String): Boolean {
+    fun matches(
+        target: String,
+        query: String,
+    ): Boolean {
         if (query.isBlank() || target.isBlank()) return false
         if (target.contains(query, ignoreCase = true)) return true
 

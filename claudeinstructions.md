@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-26. Branch `kshitij`; latest Lochan merge and signing verification are in 3.14._
+_Last updated: 2026-10-28. Branch `kshitij`; latest Lochan pull and validation are in 3.15._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -52,6 +52,17 @@ is still open. Verify anything specific (file names, functions) against the code
   each feature isolated and easy to revert.
 
 ## 3. Completed and committed work (newest first)
+
+### 3.15 Lochan pull: widgets and artwork/builder fixes (2026-10-28)
+- Pulled `origin/lochan` through `332f44f` into `kshitij` using a non-fast-forward merge.
+  Includes `54d81a1` and `332f44f`: Android and glass/iOS-style home-screen widgets, artwork
+  handling and Library Builder fixes, plus upstream formatting. No merge conflicts or local
+  source workarounds. Existing current-version history through `f291c7d` is retained.
+- `:app:assembleDebug` and app/common/database/network/library `testDebugUnitTest` pass:
+  634 tests, zero failures/errors. `git diff --cached --check` passes. Release and on-device
+  widget behaviour were not tested in this pull. No app installation or phone-data changes.
+- Signing configuration/package identity are unchanged; the new debug APK verifies against
+  the existing certificate SHA-256 recorded in 3.14. No key regeneration. Nothing pushed.
 
 ### 3.14 Lochan merge and update signing (2026-10-26)
 - At the user's request, merged `origin/lochan` (`bd8c11f`) into `kshitij` with `--no-ff`.

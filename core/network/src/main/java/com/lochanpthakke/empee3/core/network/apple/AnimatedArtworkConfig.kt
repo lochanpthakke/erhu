@@ -24,7 +24,10 @@ object AnimatedArtworkConfig {
     private val MOTION_STOREFRONTS = listOf("us", "in", "ca", "gb", "au", "de", "fr", "jp", "br", "mx")
 
     /** Where to look for an album's motion cover, in order, without duplicates. */
-    fun motionStorefronts(deviceCountry: String, searchStorefront: String): List<String> =
+    fun motionStorefronts(
+        deviceCountry: String,
+        searchStorefront: String,
+    ): List<String> =
         (listOf(deviceCountry, searchStorefront) + MOTION_STOREFRONTS)
             .map { it.trim().lowercase() }
             .filter { it.length == 2 && it.all(Char::isLetter) }

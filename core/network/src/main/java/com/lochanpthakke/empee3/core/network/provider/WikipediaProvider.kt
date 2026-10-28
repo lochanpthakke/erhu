@@ -31,11 +31,12 @@ class WikipediaProvider
 
             return try {
                 // 1. Try MBID / Wikidata resolution in isolated try block
-                val mbids = if (!preResolvedMbid.isNullOrBlank()) {
-                    (listOf(preResolvedMbid) + musicBrainzProvider.resolveArtistMbids(trimmed)).distinct().take(3)
-                } else {
-                    musicBrainzProvider.resolveArtistMbids(trimmed).take(3)
-                }
+                val mbids =
+                    if (!preResolvedMbid.isNullOrBlank()) {
+                        (listOf(preResolvedMbid) + musicBrainzProvider.resolveArtistMbids(trimmed)).distinct().take(3)
+                    } else {
+                        musicBrainzProvider.resolveArtistMbids(trimmed).take(3)
+                    }
 
                 for (mbid in mbids) {
                     try {
@@ -43,11 +44,20 @@ class WikipediaProvider
 
                         // Check direct Wikipedia URL relation
                         val wpRel = artistDetails.relations.firstOrNull { it.type.equals("wikipedia", ignoreCase = true) }
-                        val wpArticle = wpRel?.url?.resource.orEmpty().substringAfterLast("/")
+                        val wpArticle =
+                            wpRel
+                                ?.url
+                                ?.resource
+                                .orEmpty()
+                                .substringAfterLast("/")
                         if (wpArticle.isNotBlank()) {
                             try {
                                 val wpPageResponse = wikipediaApi.getPageImage(titles = wpArticle)
-                                val page = wpPageResponse.query?.pages?.values?.firstOrNull()
+                                val page =
+                                    wpPageResponse.query
+                                        ?.pages
+                                        ?.values
+                                        ?.firstOrNull()
                                 val img = page?.thumbnail?.source
                                 if (!img.isNullOrBlank()) urls.add(normalizeImageUrl(img))
                             } catch (_: Exception) {
@@ -57,7 +67,14 @@ class WikipediaProvider
 
                         // Check Wikidata QID relation
                         val wikidataRel = artistDetails.relations.firstOrNull { it.type.equals("wikidata", ignoreCase = true) }
-                        val qid = wikidataRel?.url?.resource.orEmpty().substringAfterLast("/").takeIf { it.startsWith("Q", ignoreCase = true) }
+                        val qid =
+                            wikidataRel
+                                ?.url
+                                ?.resource
+                                .orEmpty()
+                                .substringAfterLast(
+                                    "/",
+                                ).takeIf { it.startsWith("Q", ignoreCase = true) }
 
                         if (!qid.isNullOrBlank()) {
                             val entityData = wikidataApi.getEntityData(qid = qid)
@@ -85,7 +102,12 @@ class WikipediaProvider
                                                 val mime = info?.mime?.lowercase().orEmpty()
                                                 val imgUrl = info?.url ?: info?.thumbUrl ?: page.thumbnail?.source
                                                 if (!imgUrl.isNullOrBlank() &&
-                                                    (mime == "image/jpeg" || mime == "image/png" || imgUrl.endsWith(".jpg", ignoreCase = true) || imgUrl.endsWith(".png", ignoreCase = true))
+                                                    (
+                                                        mime == "image/jpeg" ||
+                                                            mime == "image/png" ||
+                                                            imgUrl.endsWith(".jpg", ignoreCase = true) ||
+                                                            imgUrl.endsWith(".png", ignoreCase = true)
+                                                    )
                                                 ) {
                                                     urls.add(normalizeImageUrl(imgUrl))
                                                 }
@@ -105,21 +127,33 @@ class WikipediaProvider
                 // 2. Direct Wikipedia page & search fallbacks (always execute to supplement candidates)
                 try {
                     val pageResp = wikipediaApi.getPageImage(titles = trimmed)
-                    pageResp.query?.pages?.values?.mapNotNull { it.thumbnail?.source }?.forEach { urls.add(normalizeImageUrl(it)) }
+                    pageResp.query
+                        ?.pages
+                        ?.values
+                        ?.mapNotNull { it.thumbnail?.source }
+                        ?.forEach { urls.add(normalizeImageUrl(it)) }
                 } catch (_: Exception) {
                     // Direct page image failed
                 }
 
                 try {
                     val searchResponse = wikipediaApi.searchPageImages(query = "$trimmed musician")
-                    searchResponse.query?.pages?.values?.mapNotNull { it.thumbnail?.source }?.forEach { urls.add(normalizeImageUrl(it)) }
+                    searchResponse.query
+                        ?.pages
+                        ?.values
+                        ?.mapNotNull { it.thumbnail?.source }
+                        ?.forEach { urls.add(normalizeImageUrl(it)) }
                 } catch (_: Exception) {
                     // Search failed
                 }
 
                 try {
                     val searchResponse = wikipediaApi.searchPageImages(query = trimmed)
-                    searchResponse.query?.pages?.values?.mapNotNull { it.thumbnail?.source }?.forEach { urls.add(normalizeImageUrl(it)) }
+                    searchResponse.query
+                        ?.pages
+                        ?.values
+                        ?.mapNotNull { it.thumbnail?.source }
+                        ?.forEach { urls.add(normalizeImageUrl(it)) }
                 } catch (_: Exception) {
                     // Search failed
                 }

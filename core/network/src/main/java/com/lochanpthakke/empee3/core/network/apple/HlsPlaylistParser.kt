@@ -7,14 +7,14 @@ import kotlin.math.min
 data class HlsSegmentRef(
     val url: String,
     val byteLength: Long?,
-    val byteOffset: Long?
+    val byteOffset: Long?,
 )
 
 data class HlsMediaPlaylist(
     val init: HlsSegmentRef?,
     val segments: List<HlsSegmentRef>,
     val isEncrypted: Boolean,
-    val isTransportStream: Boolean
+    val isTransportStream: Boolean,
 ) {
     /** The bytes the playlist's parts add up to, or null unless every part states its length. */
     val statedBytes: Long?
@@ -31,11 +31,14 @@ data class HlsVariantStream(
     val height: Int,
     val bandwidth: Int,
     val variantUrl: String,
-    val estimatedSizeMb: Float
+    val estimatedSizeMb: Float,
 )
 
 object HlsPlaylistParser {
-    fun parseMasterPlaylistVariants(masterUrl: String, masterContent: String): List<HlsVariantStream> {
+    fun parseMasterPlaylistVariants(
+        masterUrl: String,
+        masterContent: String,
+    ): List<HlsVariantStream> {
         val lines = masterContent.split("\n").map { it.trim() }
         val variants = mutableListOf<HlsVariantStream>()
 
@@ -70,8 +73,8 @@ object HlsPlaylistParser {
                     }
 
                     val absoluteUrl = URI.create(masterUrl).resolve(urlLine).toString()
-                    val resText = if (w > 0 && h > 0) "${w}x${h}" else "Default"
-                    
+                    val resText = if (w > 0 && h > 0) "${w}x$h" else "Default"
+
                     // Estimate size for ~5 sec video clip at given bandwidth
                     val estimatedMb = if (bandwidth > 0) (bandwidth * 5f) / (8 * 1024 * 1024) else 1.0f
 
@@ -82,8 +85,8 @@ object HlsPlaylistParser {
                             height = h,
                             bandwidth = bandwidth,
                             variantUrl = absoluteUrl,
-                            estimatedSizeMb = estimatedMb
-                        )
+                            estimatedSizeMb = estimatedMb,
+                        ),
                     )
                 }
             }
@@ -107,13 +110,20 @@ object HlsPlaylistParser {
         return bySize.firstOrNull { min(it.width, it.height) in 1..maxShortEdgePx } ?: bySize.lastOrNull()
     }
 
-    fun selectBestVariantUrl(masterUrl: String, masterContent: String, maxShortEdgePx: Int): String? {
+    fun selectBestVariantUrl(
+        masterUrl: String,
+        masterContent: String,
+        maxShortEdgePx: Int,
+    ): String? {
         val variants = parseMasterPlaylistVariants(masterUrl, masterContent)
         val candidate = displayVariant(variants, maxShortEdgePx)
         return candidate?.variantUrl
     }
 
-    fun parseMediaPlaylist(mediaUrl: String, mediaContent: String): HlsMediaPlaylist {
+    fun parseMediaPlaylist(
+        mediaUrl: String,
+        mediaContent: String,
+    ): HlsMediaPlaylist {
         val lines = mediaContent.split("\n").map { it.trim() }
         var initSegment: HlsSegmentRef? = null
         val segments = mutableListOf<HlsSegmentRef>()

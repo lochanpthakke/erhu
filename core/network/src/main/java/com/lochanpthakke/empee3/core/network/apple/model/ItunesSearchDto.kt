@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ItunesSearchResponse(
-    val results: List<ItunesAlbumDto> = emptyList()
+    val results: List<ItunesAlbumDto> = emptyList(),
 )
 
 @Serializable
@@ -16,5 +16,5 @@ data class ItunesAlbumDto(
     val trackCount: Int? = null,
     val country: String? = null,
     /** "explicit", "cleaned" or "notExplicit". */
-    val collectionExplicitness: String? = null
+    val collectionExplicitness: String? = null,
 )

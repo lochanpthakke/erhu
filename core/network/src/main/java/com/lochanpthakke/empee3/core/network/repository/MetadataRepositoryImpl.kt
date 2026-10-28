@@ -230,7 +230,13 @@ class MetadataRepositoryImpl
 
                         val fanartDeferred =
                             if (MetadataSources.matches(MetadataSources.FANART_TV, sourceProvider) && fanartTvProvider.isConfigured) {
-                                async { fanartTvProvider.fetchArtistPortraits(artistName, preResolvedMbid = mbid).filter { isArtistPhotoUrl(it) } }
+                                async {
+                                    fanartTvProvider
+                                        .fetchArtistPortraits(
+                                            artistName,
+                                            preResolvedMbid = mbid,
+                                        ).filter { isArtistPhotoUrl(it) }
+                                }
                             } else {
                                 null
                             }

@@ -129,11 +129,11 @@ import com.lochanpthakke.empee3.feature.library.SmartPlaylistDetailScreen
 import com.lochanpthakke.empee3.feature.library.SoundCapsuleScreen
 import com.lochanpthakke.empee3.feature.library.ViewMetadataScreen
 import com.lochanpthakke.empee3.feature.library.VisualizerViewModel
+import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderScreen
+import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderViewModel
 import com.lochanpthakke.empee3.feature.library.collectStablePlaybackState
 import com.lochanpthakke.empee3.feature.library.rememberLibraryChromeState
 import com.lochanpthakke.empee3.feature.library.rememberPlayerTransitionState
-import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderScreen
-import com.lochanpthakke.empee3.feature.library.builder.LibraryBuilderViewModel
 import com.lochanpthakke.empee3.feature.settings.SettingsCategoryScreen
 import com.lochanpthakke.empee3.feature.settings.SettingsScreen
 import com.lochanpthakke.empee3.feature.settings.diagnostics.DiagnosticsViewModel
@@ -237,11 +237,12 @@ fun MainScaffold() {
                     val bitmap = uri?.let { ArtworkLoader.load(context, it, it, 64) }
                     val isGradient = selectedThemeId == BuiltInThemes.GRADIENT_UI_ID
                     val colors = DominantColorExtractor.extractColors(bitmap)
-                    value = DominantColorExtractor.createThemeFromColors(
-                        mainColor = colors.primary,
-                        accentColor = colors.accentColor,
-                        isGradient = isGradient,
-                    )
+                    value =
+                        DominantColorExtractor.createThemeFromColors(
+                            mainColor = colors.primary,
+                            accentColor = colors.accentColor,
+                            isGradient = isGradient,
+                        )
                 }
         }
     }
@@ -401,7 +402,14 @@ fun MainScaffold() {
                                     optics = DRAWER_OPTICS,
                                     // A deeper tint of the theme's own background than other glass, so the
                                     // labels read crisply while the backdrop still shows faintly through.
-                                    fill = EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = (DRAWER_FILL_ALPHA * sidebarGlassyness).coerceIn(0f, 1f)),
+                                    fill =
+                                        EmPee3Glass.backdropColor(MaterialTheme.colorScheme.background).copy(
+                                            alpha =
+                                                (
+                                                    DRAWER_FILL_ALPHA *
+                                                        sidebarGlassyness
+                                                ).coerceIn(0f, 1f),
+                                        ),
                                     // No environment lens here: its bend zone scales with the surface, and on
                                     // a panel this large it smeared everything behind the drawer.
                                     environmentLens = false,

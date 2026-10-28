@@ -70,18 +70,20 @@ class LiveCoverViewModel
         fun selectVariant(variant: LiveCoverVariant) {
             val current = _state.value
             val offer = offerOf(current) ?: return
-            val updatedOffer = offer.copy(
-                selectedVariant = variant,
-                width = variant.width,
-                height = variant.height,
-                bytes = variant.bytes,
-            )
-            _state.value = when (current) {
-                is LiveCoverUi.Offer -> LiveCoverUi.Offer(updatedOffer)
-                is LiveCoverUi.Downloading -> LiveCoverUi.Downloading(updatedOffer)
-                is LiveCoverUi.Failed -> LiveCoverUi.Failed(updatedOffer, current.message)
-                else -> current
-            }
+            val updatedOffer =
+                offer.copy(
+                    selectedVariant = variant,
+                    width = variant.width,
+                    height = variant.height,
+                    bytes = variant.bytes,
+                )
+            _state.value =
+                when (current) {
+                    is LiveCoverUi.Offer -> LiveCoverUi.Offer(updatedOffer)
+                    is LiveCoverUi.Downloading -> LiveCoverUi.Downloading(updatedOffer)
+                    is LiveCoverUi.Failed -> LiveCoverUi.Failed(updatedOffer, current.message)
+                    else -> current
+                }
         }
 
         fun download() {

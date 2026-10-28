@@ -211,7 +211,8 @@ class LibraryViewModel
             smartMixRepository.hidden.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
 
         val preferredLiveCoverResolution: StateFlow<String> =
-            animatedArtworkRepository.observePreferredResolution()
+            animatedArtworkRepository
+                .observePreferredResolution()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), "1080p")
 
         fun setPreferredLiveCoverResolution(resolution: String) {
