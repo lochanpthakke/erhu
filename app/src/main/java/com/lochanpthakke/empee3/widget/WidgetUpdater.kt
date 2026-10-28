@@ -19,10 +19,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Keeps home-screen widgets (MusicWidget & GlassMusicWidget) live.
+ * Keeps home-screen widgets (MusicWidget, GlassMusicWidget & VinylMusicWidget) live.
  *
  * provideGlance() only reads playbackState once at render time.
- * This class re-renders all instances of both widgets when state changes:
+ * This class re-renders all instances of widgets when state changes:
  * song, play/pause status, favorite flag, or theme.
  */
 @Singleton
@@ -76,6 +76,14 @@ class WidgetUpdater
                 val glassWidget = GlassMusicWidget()
                 glassGlanceIds.forEach { glanceId ->
                     glassWidget.update(context, glanceId)
+                }
+            }
+
+            val vinylGlanceIds = manager.getGlanceIds(VinylMusicWidget::class.java)
+            if (vinylGlanceIds.isNotEmpty()) {
+                val vinylWidget = VinylMusicWidget()
+                vinylGlanceIds.forEach { glanceId ->
+                    vinylWidget.update(context, glanceId)
                 }
             }
         }

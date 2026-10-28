@@ -20,3 +20,6 @@ keystore.properties
 log.txt
 log2.txt
 *.log
+
+# Design assets
+/Design assets/
