@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.paging.compose.LazyPagingItems
@@ -32,11 +33,12 @@ import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Playlist
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.feature.library.mix.RadioSeed
 import com.lochanpthakke.empee3.feature.library.mix.SmartMixes
 
 /**
  * The Tracks destination as the home feed, top to bottom: the Smart Playlists as a hero banner
- * (whenever the library has songs), Featured Albums (local picks, see [FeaturedAlbums]), Recently
+ * (whenever the library has songs), Featured Setlists (local album picks and radio seeds), Recently
  * Played albums and playlists (from real playback history), then the full track list. One lazy
  * list, so the shelves scroll away with the tracks; each shelf scrolls sideways on its own.
  */
@@ -46,12 +48,14 @@ internal fun HomeFeed(
     songs: LazyPagingItems<Song>,
     smartMixes: SmartMixes?,
     featuredAlbums: List<Album>,
+    artistArtwork: Map<Long, String>,
     recentAlbums: List<Album>,
     recentPlaylists: List<Playlist>,
     currentSongId: Long?,
     isScanning: Boolean,
     onSongClick: (Song) -> Unit,
     onAlbumClick: (Album) -> Unit,
+    onStartRadio: (RadioSeed) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
     onSmartPlaylistClick: (mixKey: String) -> Unit,
     onSmartPlaylistPlay: (mixKey: String) -> Unit,
@@ -84,7 +88,16 @@ internal fun HomeFeed(
                         modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.lg),
                     )
                 }
-                AlbumShelves(featuredAlbums, recentAlbums, recentPlaylists, showRecentNote = hasSongs, onAlbumClick, onPlaylistClick)
+                AlbumShelves(
+                    featuredAlbums,
+                    artistArtwork,
+                    recentAlbums,
+                    recentPlaylists,
+                    showRecentNote = hasSongs,
+                    onAlbumClick,
+                    onStartRadio,
+                    onPlaylistClick,
+                )
                 if (hasShelves) SectionHeading("Tracks")
             }
         }
@@ -106,23 +119,39 @@ internal fun HomeFeed(
 }
 
 /**
- * Featured Albums, then Recently Played albums (or, once the library has songs but nothing has
+ * Featured Setlists, then Recently Played albums (or, once the library has songs but nothing has
  * been played, a note saying they will appear) and playlists. A shelf with nothing in it is not shown.
  */
 @Composable
 @Suppress("LongParameterList")
 private fun AlbumShelves(
     featuredAlbums: List<Album>,
+    artistArtwork: Map<Long, String>,
     recentAlbums: List<Album>,
     recentPlaylists: List<Playlist>,
     showRecentNote: Boolean,
     onAlbumClick: (Album) -> Unit,
+    onStartRadio: (RadioSeed) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
 ) {
-    if (featuredAlbums.isNotEmpty()) {
-        Shelf(title = "Featured Albums") {
-            items(featuredAlbums, key = { it.id }) { album ->
-                AlbumTile(album = album, onClick = { onAlbumClick(album) }, modifier = Modifier.width(ArtworkSize.shelf))
+    val setlists = remember(featuredAlbums, artistArtwork) { FeaturedSetlists.select(featuredAlbums, artistArtwork) }
+    if (setlists.isNotEmpty()) {
+        Shelf(title = "Featured Setlists") {
+            items(setlists, key = { it.key }, contentType = { if (it is FeaturedSetlist.AlbumPick) "album" else "radio" }) { setlist ->
+                when (setlist) {
+                    is FeaturedSetlist.AlbumPick ->
+                        AlbumTile(
+                            album = setlist.album,
+                            onClick = { onAlbumClick(setlist.album) },
+                            modifier = Modifier.width(ArtworkSize.shelf),
+                        )
+                    is FeaturedSetlist.RadioPick ->
+                        RadioTile(
+                            radio = setlist,
+                            onClick = { onStartRadio(setlist.seed) },
+                            modifier = Modifier.width(ArtworkSize.shelf),
+                        )
+                }
             }
         }
     }

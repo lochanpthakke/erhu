@@ -3,9 +3,8 @@ package com.lochanpthakke.empee3.feature.library
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -22,6 +21,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,8 +39,6 @@ import com.lochanpthakke.empee3.core.playback.diagnostics.PlayerDiagnostics
 import com.lochanpthakke.empee3.core.playback.diagnostics.Provenance
 import com.lochanpthakke.empee3.core.sound.dsp.StageStatus
 import java.util.Locale
-
-private const val SCRIM_ALPHA = 0.97f
 
 /**
  * Audio details for the playing track: the file, what the player reports, the app's processing,
@@ -72,41 +70,39 @@ internal fun AudioDetailsScreen(
     }
     LaunchedEffect(Unit) { viewModel.refresh() }
 
-    Box(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = SCRIM_ALPHA))
-                .windowInsetsPadding(WindowInsets.safeDrawing),
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.lg),
-        ) {
-            item(key = "header") {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
-                    IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Close audio details") }
-                    Text("Audio details", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                    IconButton(onClick = {
-                        viewModel.copyReport()
-                        Toast.makeText(context, "Audio details copied", Toast.LENGTH_SHORT).show()
-                    }) { Icon(Icons.Default.ContentCopy, contentDescription = "Copy audio details") }
-                    IconButton(onClick = {
-                        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, viewModel.report())
-                        context.startActivity(Intent.createChooser(send, "Share audio details"))
-                    }) { Icon(Icons.Default.Share, contentDescription = "Share audio details") }
-                }
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
+                IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Close audio details") }
+                Text("Audio details", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = {
+                    viewModel.copyReport()
+                    Toast.makeText(context, "Audio details copied", Toast.LENGTH_SHORT).show()
+                }) { Icon(Icons.Default.ContentCopy, contentDescription = "Copy audio details") }
+                IconButton(onClick = {
+                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, viewModel.report())
+                    context.startActivity(Intent.createChooser(send, "Share audio details"))
+                }) { Icon(Icons.Default.Share, contentDescription = "Share audio details") }
             }
-            item(key = "source") { SourceSection(source) }
-            item(key = "playback") { PlaybackSection(player, decoder, source) }
-            item(key = "chain") {
-                ChainSection(player, decoder, eq, output, viewModel.audioTap.isCollecting, viewModel.transitionFading) {
-                    TextButton(onClick = onOpenEqualizer) { Text("Equalizer settings") }
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            ) {
+                item(key = "source") { SourceSection(source) }
+                item(key = "playback") { PlaybackSection(player, decoder, source) }
+                item(key = "chain") {
+                    ChainSection(player, decoder, eq, output, viewModel.audioTap.isCollecting, viewModel.transitionFading) {
+                        TextButton(onClick = onOpenEqualizer) { Text("Equalizer settings") }
+                    }
                 }
+                item(key = "output") { OutputSection(output) }
+                item(key = "analysis") { AnalysisSection(eq.status == StageStatus.ACTIVE, headroom, peak, viewModel::resetPeak) }
             }
-            item(key = "output") { OutputSection(output) }
-            item(key = "analysis") { AnalysisSection(eq.status == StageStatus.ACTIVE, headroom, peak, viewModel::resetPeak) }
         }
     }
 }

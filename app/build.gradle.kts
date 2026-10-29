@@ -22,6 +22,15 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // Optional device-specific sideload; omitted = the existing universal APK.
+        // Keep every library for the selected ABI, including VYBE's two MediaPipe runtimes.
+        providers.gradleProperty("targetAbi").orNull?.let { abi ->
+            require(abi in setOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")) {
+                "Unsupported targetAbi '$abi'; use arm64-v8a, armeabi-v7a, x86 or x86_64, or omit it for universal."
+            }
+            ndk.abiFilters.add(abi)
+        }
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

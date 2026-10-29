@@ -1,6 +1,6 @@
 # empee3 — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-28. Branch `kshitij`; latest Lochan pull and validation are in 3.15._
+_Last updated: 2026-10-29. Branch `kshitij`; latest Lochan pull is in 3.15; Home work is in 5.9, menu/Audio Details work in 5.10, size/storage forensics in 5.11, and the real ARM64 installation in 5.12._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -480,6 +480,147 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
 
 ## 5. Pending work and open items
 
+### 5.12 ARM64 release installed on the real S23 (2026-10-28; report 2026-10-29)
+
+Current daily installation: `com.lochanpthakke.empee3`, **ARM64 release**, versionCode `1`, versionName `1.0`.
+The previous universal debug installation is historical. Future S23 updates should use
+`:app:assembleRelease -PtargetAbi=arm64-v8a`, verify the installed/new signing certificate matches,
+and update with `adb install -r`; do not accidentally replace it with the default universal debug build.
+Existing certificate SHA-256:
+`5bb0fc457b96d9fb6cbc606009de44d633bee95b58fec2dc633a7a4eb54a9ce5`.
+
+| Android storage (decimal MB) | Before update | After verification |
+|---|---:|---:|
+| App | 163.22 | 50.05 |
+| Data, including cache | 293.56 | 293.81 |
+| Total | 456.78 | 343.86 |
+
+**Total saving: 112.91 MB; app saving: 113.16 MB.** The APK itself is 37.17 MB; Android's
+50.05 MB App figure also accounts for optimized code, filesystem allocation and installation overhead.
+No model or saved artwork was removed. Data variation reflects normal cache, journal and playback activity.
+
+- User explicitly authorized replacing the daily app with the optimized release; idle confirmation received.
+  Built `:app:assembleRelease -PtargetAbi=arm64-v8a` (6s PASS), verified installed/built signing certificates
+  match existing SHA256 `5bb0fc45...ce5`, then installed ONLY with `adb install -r`. No signing change/uninstall.
+- Current REAL app: release, ARM64 only, package/version unchanged; update time **2026-10-28 22:26:39 IST**.
+  APK SHA256 `398141e81d8735efc93dac881fe8dbdf2e2900d0c21460f5c66ff6c12d184f97`, reconfirmed October29.
+  Supersedes the historical debug installation status in 5.11 and below. No `.bench`/checker app remains.
+- Validated full pre-install backup + original APK: `D:\android-toolchain\dbbackup\pre-arm64-release-20261028\`.
+  Tar291,389,952 bytes,77 files, every member validated. No restore/data clear/user-content removal.
+- StorageStats before -> after tests: App163,215,872 ->50,054,656; Data INCLUDING cache293,560,320 ->293,810,176;
+  Cache1,908,736 ->2,805,760; total456,776,192 ->343,864,832. App saving113.16MB; total112.91MB.
+  Data has normal cache/WAL/playback/history variation; do not call it a model-data reduction.
+- Same-key read-only instrumentation verified private data after release without reinstalling debug:
+  immediately after update, model/index/3 videos/DB/preferences hashes and all DB logical digests identical;
+  quick_check ok, schema14,208 songs. After playback only listening_stats/recently_played logical tables changed;
+  songs/model/index/videos intact. Playback proto changed normally. No preference reset/migration.
+- Checker first suppressed Application.onCreate, causing an uninitialized WorkManager workerFactory error
+  on the original debug app. Corrected to normal startup; baseline still matched backup before release install.
+  This was a harness failure, not an ARM64 release startup failure. Do not skip Hilt startup in future probes.
+- Real-app Home->Albums->Home passed. VYBE208 songs/30 results659ms; full restart/query653ms.
+  Addiction playback advanced1921->14576ms then paused, active queue item6 (7/208), no player error.
+  No fatal/MediaPipe linker error in tested release processes; nonfatal device surface `libpenguin.so` warning
+  recorded (library absent from both APKs). No audio-quality/full regression claim.
+- Full report appended to `docs/app-size-and-storage.md`; evidence in task `outputs/arm64-install`.
+  Checker uninstalled, own phone tar/XML deleted, real app reopened paused. Prior Home/Audio Details/Gradle
+  source diffs unchanged. No application source edits, model/dependency/signing changes, commit or push.
+
+### 5.11 App size / storage forensics (2026-10-28, uncommitted)
+- Full measurements, commands, alternatives and limitations: `docs/app-size-and-storage.md`.
+  Raw evidence/APKs in task workspace `outputs/size-forensics`; branch remains `kshitij`, HEAD `84579ad`.
+  Prior Home/menu edits preserved. No commit/push, model migration, ranking/dependency change or data deletion.
+- `app/build.gradle.kts`: optional `-PtargetAbi=arm64-v8a` for compatible-device sideloads;
+  omitted keeps universal. All four existing ABI names accepted; invalid values fail configuration.
+  No signing/version/package changes; no `keystore.properties`, so existing release debug-key fallback remains.
+- Fresh universal release APK 136,723,989 bytes -> ARM64 37,165,991: saves 99,557,998 (72.82%).
+  Common non-signature ZIP entries byte-identical; only 12 other-ABI libraries removed. R8/shrinking already on.
+  Both MediaPipe libraries kept; no speculative JNI stripping. No bundled model. No large ELF debug sections.
+  Download gzip simulation is not Play size; no AAB download measurement.
+- Actual S23 isolated `.bench` StorageStats App: 149,710,336 -> 50,054,656, saving 99,655,680 bytes.
+  Universal/ARM64 benchmark release builds and same-package updates passed. Seed was a selected copy of
+  the latest backup; real package was never reinstalled/force-stopped/opened or restored during this task.
+- At the end of initial forensics (before the separate 5.12 update), the app was universal DEBUG from 21:05:57, SHA d296d194...3212, same signer 5bb0fc45...ce5.
+  Before/after StorageStats identical: App163,215,872; Data293,220,352 INCLUDING Cache1,900,544;
+  non-cache data291,319,808. Data saving applied ZERO. Model183,816,181 + saved artwork104,266,525 dominate.
+  Index642,355; databases/WAL1,804,640; lyrics316,336; prefs5,106. DE shader caches explain most cache residual.
+  Model/index/video hashes match pre-task backup; no duplicate model/large abandoned temporary files found.
+- Current delivery is SAF model import via .part/rename, NOT a network downloader. Already mixed int4/int8.
+  128d vectors would save only532,480 bytes here; output INT8 only479,232; neither shrinks model weights.
+- Research only: separate no-INTERNET helper executed Gemma, USE and MiniLM on S23. Four synthetic docs,
+  four queries: expected top matches4/4,3/4,4/4. Warm medians621.5/16/2ms; sampled PSS293069/71215/95108KiB,
+  NOT exact peak or representative search quality. MiniLM excludes PC-prepared tokenizer time; no thermal parity.
+  USE6,120,274 bytes; MiniLM ARM64 INT8 23,026,053 + tokenizer466,247; ORT1.31.1 natives34,331,256 ARM64,
+  actually larger than MediaPipe natives. No ORT app dependency added. All model migrations need quality/reindex work.
+  ML Kit now has real EmbeddingGemma2 sentence embeddings, but developer preview/AICore/account/device
+  prerequisites, quotas/versioning and no installed AICore on this S23 prevent assuming a reliable drop-in.
+- Functional release tests: universal208 songs/30 results; ARM64 same index/results622ms, full restart609ms.
+  `.bench` playback Addiction advanced1921->12340ms then paused; Media3 no error. Real user's playback untouched.
+  Core VYBE34 + app1 unit tests pass; MediaPipe unit task NO-SOURCE; actual native tests used isolated helper.
+  Normal universal debug rebuilt (real package, four ABIs) so standard debug path is NOT left pointing at `.bench`.
+  Invalid ABI rejection verified; diff check passes. No full-app/audio-quality/peak-memory/Play-download claim.
+- Cleanup done: `.bench` and `.storageprobe` uninstalled, own device tar/XML removed, phone Home;
+  package inventory only `com.lochanpthakke.empee3`. Real app/data remains as before. Optimized real APK is
+  task output `release-arm64-after.apk`, SHA398141e8...84f97, not yet installed at that stage; see 5.12 for the subsequent authorized update.
+
+### 5.10 Now Playing menu / Audio Details presentation (2026-10-28, uncommitted)
+- Only `NowPlayingMenu.kt`, `AudioDetailsScreen.kt`, `AudioDetailsParts.kt` changed for this task;
+  pre-existing Home/Featured Setlists work is preserved. No playback, DSP, queue, radio, navigation
+  destination, diagnostic ViewModel or data-source changes. Every field/action remains present.
+- Cause: Audio Details was a translucent Box with no content-colour provider; uncoloured values,
+  titles and icons inherited the default black LocalContentColor. Its translucent groups and
+  three-way label/value/provenance rows compounded poor contrast and wrapping. The dropdown used
+  default Material container/shape roles, rather than the player's custom theme surface.
+- Details now establishes an opaque themed Surface with explicit onSurface content colour,
+  opaque tonal section cards, a persistent close/copy/share header, wrapping label/value columns
+  with attribution below values, and stacked rows on narrow widths or larger font scales.
+  Unavailable is neutral; processing stages have text status badges and connectors that follow
+  row height. Help explanations, EQ link, reset measurement and lifecycle tap ownership unchanged.
+- Overflow remains an anchored Material dropdown with native scrolling/dismissal; rounded theme
+  surface, hairline edge, muted headings/dividers, 20dp icons and >=48dp rows. Dynamic actions and
+  the close-before-action callbacks are unchanged.
+- Debug APK assembles; 293 tests pass (library 189 + playback 104). Focused KtLint on these three
+  files passes. Module Detekt still fails on 87 findings, none in these files. `git diff --check`
+  passes. Build/check log: task outputs `audio-menu-checks.log`; certificate remains unchanged.
+- S23 installed/tested after the user's idle confirmation (2026-10-28). Verified all five
+  sections, scrolling/persistent header, help expansion and Reset measurement. Verified menu
+  bounds/grouping, Back dismissal (player stays open), Music information opens/closes without
+  saving tags, Audio Details, EQ link, and share chooser (cancelled; nothing sent). Screenshots
+  reviewed in Light and original Dominant Color; 150% font checked for menu and stacked detail
+  rows. Original theme and font_scale=1.0 restored. Queue remained Addiction, 7/208, paused at
+  1921 ms. No audio playback, EQ adjustments or queue-changing actions performed.
+- Device review found a decoder-name orphan character and faint inactive dots: final value
+  column is 65% (label 35%); inactive dots/connectors now use onSurfaceVariant. Rebuilt and
+  reinstalled; final playback/chain screenshots confirm both refinements. Library tests 189
+  and focused KtLint pass again; Detekt retains the same 87 unrelated findings. Latest build log:
+  task outputs `audio-menu-final-device-build.log`. Screenshots `audio-final-*`, `audio-light-*`
+  and `audio-large-*` are in task outputs. No AndroidRuntime errors for the final process.
+- Not exhaustively tested: other devices/rotation, every font size, active audio peak values,
+  clipboard Copy, conditional radio refresh and state-changing menu actions (callbacks unchanged).
+  Nothing committed or pushed.
+
+### 5.9 Home Featured Setlists (2026-10-28, uncommitted)
+- Replaced the Featured Albums heading/row with Featured Setlists. Keeps the existing five
+  ranked album picks (`FeaturedAlbums`), interleaves up to three album-seeded radio cards,
+  and deduplicates stations by known artist. No stations for a one-song library or compilation
+  albums; empty albums are omitted. Existing album cards/navigation and other Home shelves stay intact.
+- `FeaturedSetlists.kt` is presentation-only; `LibraryScreen` passes the existing artist-art map
+  and `LibraryViewModel.startRadio`. Taps call `RadioSeed.Album` for the displayed album, using
+  the same RadioRepository/RadioEngine/playback path as the album menu. No new radio engine.
+- `RadioArtwork.kt`: square editorial covers with RADIO, GraphicEq identity mark, circular
+  artwork and bold station identity. Saved local artist portrait first, else local album art;
+  supporting circles use distinct covers from the same known artist among the featured picks.
+  Remote URLs are excluded from these radio covers; no new artwork download, palette decode,
+  dependency, query, model load, background job or schema change. Theme container/on-container
+  pairs provide deterministic background/foreground colours. Missing art uses the existing loader's fallback.
+- Debug assemble passes; 189 library tests pass, including 8 new selection/artwork/seed tests.
+  Focused KtLint on the four changed production files passes. Full library Detekt still fails
+  on 87 findings outside changed files; initial new-file formatting/complexity findings were fixed.
+  Final log: task outputs `featured-setlists-final.log`. Signing certificate unchanged.
+- Installed on the S23 at the user's request at 20:39 on 2026-10-28 (debug, see section 6).
+  Not visually verified: the earlier local emulator attempt failed because the acceleration
+  driver is missing. Check actual cards, font scaling, scrolling, album navigation and station
+  playback on the S23. Nothing committed or pushed.
+
 ### 5.1 Needs testing on the S23 (not verifiable by unit tests)
 - Crossfade **hand-over** quality (click / doubled sound when the tail player takes over).
   Tunables in `TransitionCoordinator`: `START_LEAD_MS` (120), `HANDOVER_DELAY_MS` (20), `ENTRY_RAMP_MS` (40).
@@ -586,6 +727,31 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-10-29:** user authorized committing and pushing all pending Featured Setlists, Now Playing
+  menu/Audio Details, ARM64 packaging and storage documentation work together to `origin/kshitij` only.
+  Validation and physical-device results remain recorded in 5.9-5.12. APKs, backups and keys stay outside Git.
+- **2026-10-28 22:26:** optimized **ARM64 release** installed in place on the REAL S23, same key/package/version.
+  SHA256 `398141e81d8735efc93dac881fe8dbdf2e2900d0c21460f5c66ff6c12d184f97` (reconfirmed October29).
+  App storage now50,054,656 bytes; validated backup `dbbackup\pre-arm64-release-20261028`.
+  Private-data integrity and real Home/VYBE/restart/playback checks passed; see5.12/full storage report.
+  No extra app copy remains; left Addiction paused at14576ms, same queue7/208. No commit/push.
+- **2026-10-28 21:05:** final menu/Audio Details **debug** build installed on S23, same key and
+  package. Installed APK hash matches local/saved `D:\android-toolchain\build-audio-menu-20261028\real-debug.apk`:
+  `d296d1944da35b2e94222bd13de0d017cc0c9b08b7ab4fb1d15051891ae43212`.
+  Validated pre-final-install data backup:
+  `D:\android-toolchain\dbbackup\pre-audio-menu-final-20261028-210541\appdata.tar`.
+  Earlier backup before initial UI build: `dbbackup\pre-audio-menu-20261028-205742\appdata.tar`.
+  No uninstall/data clearing; only main package used. Tested after idle approval; see 5.10.
+  Left paused in Now Playing, Addiction 7/208 at 1921 ms; original theme/font scale restored.
+- **2026-10-28 20:39:** installed the tested Featured Setlists **debug** APK in place on the S23,
+  at the user's request. Installed APK SHA-256 matches the local build:
+  `39db848bcd2e589017bc9ce9fca06296f9eb034b3c69ecd367a4b851b3e44eb4`.
+  All signing certificates matched. The prior installed release exactly matched the saved
+  `build-library-builder-theme/real-release.apk`; switched briefly to its same-code debug APK
+  while playback was paused to back up data, then installed latest with `adb install -r`.
+  Validated backup (291,422,720 bytes) plus original APK:
+  `D:\android-toolchain\dbbackup\pre-featured-setlists-20261028-203751\`.
+  Only the real package is installed; no uninstall or data clear. App not opened for UI checks.
 - **2026-10-24 22:34:** the main app is the **release** build of `0e81e71` (Library Builder follows the app theme +
   detail-page nav motion; SHA-256 `f30614ab…`), smoke-tested on `.bench` first (no FATAL; `.bench` removed). Backup:
   `dbbackup\pre-library-builder-theme-20261024-223325`. APKs: `D:\android-toolchain\build-library-builder-theme\`.
