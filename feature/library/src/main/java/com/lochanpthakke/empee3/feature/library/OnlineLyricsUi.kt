@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,11 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,7 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.network.lyrics.CachedLyrics
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
 import kotlin.math.roundToLong
@@ -49,43 +56,45 @@ internal fun LyricsSourceBar(
     onSearch: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
+    var removal by remember(lyrics.songId) { mutableStateOf<CachedLyrics?>(null) }
     val online = lyrics.origin != LyricsOrigin.FILE
-    val label =
-        when {
-            lyrics.text == null -> null
-            online ->
-                "From ${lyrics.provider ?: "online"}${lyrics.timing?.let { " · ${it.label()}" }.orEmpty()}" +
-                    if (lyrics.origin == LyricsOrigin.ONLINE_SAVED) " · saved" else ""
-            else -> "From the file's tags"
-        }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(start = Spacing.xl, end = Spacing.xs),
     ) {
-        Text(
-            label.orEmpty(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        if (lyrics.lookup == LyricsLookup.Searching && lyrics.text != null) {
-            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-        }
+        LyricsSourceText(lyrics)
         Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Lyrics options") }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            IconButton(
+                enabled = !lyrics.saving,
+                onClick = { menu = true },
+            ) { Icon(Icons.Default.MoreVert, contentDescription = "Lyrics options") }
+            GlassMenu(label = "Lyrics options", expanded = menu, onDismissRequest = { menu = false }) {
+                if (online && lyrics.text != null && !lyrics.downloaded) {
+                    GlassMenuItem(icon = Icons.Default.Download, text = { Text("Download lyrics") }, onClick = {
+                        menu = false
+                        actions.download()
+                    })
+                }
+                if (lyrics.saved != null) {
+                    GlassMenuItem(icon = Icons.Default.DeleteOutline, destructive = true, text = {
+                        Text(if (lyrics.saved.explicitDownload) "Remove downloaded lyrics" else "Remove previously saved lyrics")
+                    }, onClick = {
+                        menu = false
+                        removal = lyrics.saved
+                    })
+                }
                 if (online) {
-                    DropdownMenuItem(text = { Text("Refresh online lyrics") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.Refresh, text = { Text("Refresh online lyrics") }, onClick = {
                         menu = false
                         actions.refresh()
                     })
                 }
-                DropdownMenuItem(text = { Text("Search online…") }, onClick = {
+                GlassMenuItem(icon = Icons.Default.Search, text = { Text("Search online…") }, onClick = {
                     menu = false
                     onSearch()
                 })
                 if (online && lyrics.hasFileLyrics) {
-                    DropdownMenuItem(text = { Text("Use the file's lyrics") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.Description, text = { Text("Use the file's lyrics") }, onClick = {
                         menu = false
                         actions.useFileLyrics()
                     })
@@ -93,6 +102,55 @@ internal fun LyricsSourceBar(
             }
         }
     }
+    removal?.let { selected ->
+        LyricsRemovalDialog(onDismiss = { removal = null }, onRemove = {
+            removal = null
+            actions.removeDownload(selected)
+        })
+    }
+}
+
+@Composable
+private fun RowScope.LyricsSourceText(lyrics: SongLyrics) {
+    Text(
+        listOfNotNull(lyricsSourceLabel(lyrics), if (lyrics.saving) "Saving…" else null, lyrics.saveError).joinToString("\n"),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.weight(1f),
+    )
+    if (lyrics.saving || (lyrics.lookup == LyricsLookup.Searching && lyrics.text != null)) {
+        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+    }
+}
+
+private fun lyricsSourceLabel(lyrics: SongLyrics): String? =
+    when {
+        lyrics.text == null -> null
+        lyrics.origin == LyricsOrigin.FILE -> "From the file's tags"
+        else -> {
+            val state =
+                when {
+                    lyrics.downloaded -> " · downloaded"
+                    lyrics.saved?.explicitDownload == true -> " · downloaded version available"
+                    lyrics.saved != null -> " · previously saved"
+                    else -> ""
+                }
+            "From ${lyrics.provider ?: "online"}${lyrics.timing?.let { " · ${it.label()}" }.orEmpty()}$state"
+        }
+    }
+
+@Composable
+private fun LyricsRemovalDialog(
+    onDismiss: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Remove saved lyrics?") },
+        text = { Text("Remove this song's saved online lyrics? Lyrics in the music file will be kept.") },
+        confirmButton = { TextButton(onClick = onRemove) { Text("Remove") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 /** What to show when there are no lyrics to display yet: the lookup's state and what can be done. */

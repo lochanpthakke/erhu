@@ -2,12 +2,18 @@ package com.lochanpthakke.empee3.core.network.lyrics
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.Locale
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,14 +35,20 @@ data class CachedLyrics(
     val candidate: LyricsCandidate? = null,
     val fetchedAtMs: Long,
     val userChosen: Boolean = false,
+    /** Absent in old files: those remain legacy saved content, not explicit downloads. */
+    val explicitDownload: Boolean = false,
+    /** New saves also bind the MediaStore URI. Legacy records have no URI and remain retained. */
+    val sourceUri: String? = null,
 ) {
     companion object {
         const val SCHEMA = 1
     }
 }
 
-/** Storage of fetched lyrics. */
+/** Durable storage of explicit downloads and retained legacy content. New responses live in memory. */
 interface OnlineLyricsCache {
+    suspend fun contains(songId: Long): Boolean = get(songId) != null
+
     suspend fun get(songId: Long): CachedLyrics?
 
     suspend fun put(entry: CachedLyrics)
@@ -54,20 +66,25 @@ private const val FINGERPRINT_DURATION_STEP_MS = 1_000L
 /** One small JSON file per song in the app's own storage (no database schema change). */
 @Singleton
 class FileOnlineLyricsCache
-    @Inject
-    constructor(
-        @param:ApplicationContext private val context: Context,
+    internal constructor(
+        private val directory: File,
     ) : OnlineLyricsCache {
+        @Inject
+        constructor(
+            @ApplicationContext context: Context,
+        ) : this(File(context.filesDir, "online-lyrics"))
+
         private val json = Json { ignoreUnknownKeys = true }
 
-        private fun file(songId: Long) = File(File(context.filesDir, DIRECTORY), "$songId.json")
+        private fun file(songId: Long) = File(directory, "$songId.json")
+
+        override suspend fun contains(songId: Long): Boolean = file(songId).exists()
 
         @Suppress("SwallowedException")
         override suspend fun get(songId: Long): CachedLyrics? =
             try {
                 file(songId).takeIf { it.isFile }?.readText()?.let { json.decodeFromString<CachedLyrics>(it) }?.takeIf {
-                    it.schema ==
-                        CachedLyrics.SCHEMA
+                    it.schema == CachedLyrics.SCHEMA && it.songId == songId
                 }
             } catch (e: IOException) {
                 null
@@ -77,27 +94,25 @@ class FileOnlineLyricsCache
                 null
             }
 
-        @Suppress("SwallowedException")
         override suspend fun put(entry: CachedLyrics) {
+            val target = file(entry.songId)
+            if (target.exists() && get(entry.songId) == null) throw IOException("The existing saved lyrics could not be read")
+            if (!directory.isDirectory && !directory.mkdirs()) throw IOException("Could not create lyrics directory")
+            val temp = File(directory, "${entry.songId}.${UUID.randomUUID()}.tmp")
             try {
-                val target = file(entry.songId)
-                target.parentFile?.mkdirs()
-                val temp = File(target.parentFile, "${target.name}.tmp")
-                temp.writeText(json.encodeToString(CachedLyrics.serializer(), entry))
-                if (!temp.renameTo(target)) {
-                    target.delete()
-                    temp.renameTo(target)
+                FileOutputStream(temp).use { stream ->
+                    stream.write(json.encodeToString(CachedLyrics.serializer(), entry).toByteArray(Charsets.UTF_8))
+                    stream.fd.sync()
                 }
-            } catch (e: IOException) {
-                // Not cached: the lookup simply runs again next time.
+                currentCoroutineContext().ensureActive()
+                Files.move(temp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } finally {
+                temp.delete()
             }
         }
 
         override suspend fun remove(songId: Long) {
-            file(songId).delete()
-        }
-
-        private companion object {
-            const val DIRECTORY = "online-lyrics"
+            val target = file(songId)
+            if (target.exists() && !target.delete()) throw IOException("Could not remove saved lyrics")
         }
     }

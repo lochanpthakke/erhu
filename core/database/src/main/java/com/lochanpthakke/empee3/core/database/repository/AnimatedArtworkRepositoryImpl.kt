@@ -2,6 +2,7 @@ package com.lochanpthakke.empee3.core.database.repository
 
 import androidx.datastore.core.DataStore
 import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
+import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.common.result.appResultOf
 import com.lochanpthakke.empee3.core.common.result.getOrNull
@@ -15,6 +16,7 @@ import com.lochanpthakke.empee3.core.model.LocalAnimatedArtwork
 import com.lochanpthakke.empee3.core.network.apple.AlbumTagNormalizer
 import com.lochanpthakke.empee3.core.network.apple.AnimatedArtworkConfig
 import com.lochanpthakke.empee3.core.network.apple.AnimatedArtworkNetworkDataSource
+import com.lochanpthakke.empee3.core.network.apple.ArtworkCompressor
 import com.lochanpthakke.empee3.core.network.apple.EditorialVideoUrls
 import com.lochanpthakke.empee3.core.network.apple.HlsPlaylistParser
 import com.lochanpthakke.empee3.core.network.apple.HlsVariantStream
@@ -26,9 +28,12 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -44,9 +49,35 @@ class AnimatedArtworkRepositoryImpl
         private val fileStore: ArtworkFileStore,
         private val dataStore: DataStore<PlaybackStateProto>,
         private val dispatchers: DispatcherProvider,
+        private val compressor: ArtworkCompressor = ArtworkCompressor(dispatchers),
     ) : AnimatedArtworkRepository {
         private val scope = CoroutineScope(SupervisorJob() + dispatchers.io)
+        private val lifecycle = Mutex()
         private val activeJobs = ConcurrentHashMap<Pair<Long, AnimatedArtOrientation>, Deferred<AppResult<LocalAnimatedArtwork>>>()
+        private val compressionController =
+            ArtworkCompressionController(
+                scope,
+                dispatchers,
+                lifecycle,
+                hasDownload = { albumId -> activeJobs.keys.any { it.first == albumId } },
+                source = { albumId ->
+                    dao.getByAlbumId(albumId)?.squareFileName?.let { name ->
+                        File(fileStore.baseDir, name).takeIf {
+                            it.isFile && it.canonicalFile.parentFile == fileStore.baseDir.canonicalFile
+                        }
+                    }
+                },
+                engine = compressor,
+                recoverStaging = {
+                    // These files can only be uncommitted compression outputs. The controller
+                    // holds lifecycle and skips recovery while any compression job is alive.
+                    fileStore.baseDir
+                        .listFiles { file ->
+                            file.isFile && file.name.startsWith(".artwork-compress-") && file.name.endsWith(".mp4.tmp")
+                        }?.forEach { it.delete() }
+                },
+            )
+        override val compression: ArtworkCompressionOperations = compressionController
 
         /** Downloadable covers found this session, so reopening an album asks Apple nothing. */
         private val offers = ConcurrentHashMap<Long, LiveCoverCheck.Downloadable>()
@@ -79,72 +110,74 @@ class AnimatedArtworkRepositoryImpl
             orientation: AnimatedArtOrientation,
             variantUrl: String,
         ): AppResult<LocalAnimatedArtwork> =
-            withContext(dispatchers.io) {
-                val normalizedArtist = AlbumTagNormalizer.fold(albumArtist)
-                val normalizedAlbum = AlbumTagNormalizer.fold(AlbumTagNormalizer.cleanAlbumTitle(album))
-                val now = System.currentTimeMillis()
+            singleDownload(albumId, orientation) {
+                withContext(dispatchers.io) {
+                    val normalizedArtist = AlbumTagNormalizer.fold(albumArtist)
+                    val normalizedAlbum = AlbumTagNormalizer.fold(AlbumTagNormalizer.cleanAlbumTitle(album))
+                    val now = System.currentTimeMillis()
 
-                val entity = dao.getByAlbumId(albumId)
-                val updatingEntity =
-                    (
-                        entity ?: AnimatedArtworkEntity(
+                    val entity = dao.getByAlbumId(albumId)
+                    val updatingEntity =
+                        (
+                            entity ?: AnimatedArtworkEntity(
+                                albumId = albumId,
+                                normalizedArtist = normalizedArtist,
+                                normalizedAlbum = normalizedAlbum,
+                                status = AnimatedArtStatus.DOWNLOADING.name,
+                                updatedAtEpochMs = now,
+                            )
+                        ).copy(
                             albumId = albumId,
-                            normalizedArtist = normalizedArtist,
-                            normalizedAlbum = normalizedAlbum,
+                            catalogAlbumId = catalogAlbumId,
+                            storefront = storefront,
                             status = AnimatedArtStatus.DOWNLOADING.name,
                             updatedAtEpochMs = now,
                         )
-                    ).copy(
-                        albumId = albumId,
-                        catalogAlbumId = catalogAlbumId,
-                        storefront = storefront,
-                        status = AnimatedArtStatus.DOWNLOADING.name,
-                        updatedAtEpochMs = now,
-                    )
-                dao.upsert(updatingEntity)
+                    dao.upsert(updatingEntity)
 
-                val destFile =
-                    when (orientation) {
-                        AnimatedArtOrientation.SQUARE_1_1 -> fileStore.getSquareFile(albumId, album, albumArtist)
-                        AnimatedArtOrientation.TALL_3_4 -> fileStore.getTallFile(albumId, album, albumArtist)
+                    val destFile =
+                        when (orientation) {
+                            AnimatedArtOrientation.SQUARE_1_1 -> fileStore.getSquareFile(albumId, album, albumArtist)
+                            AnimatedArtOrientation.TALL_3_4 -> fileStore.getTallFile(albumId, album, albumArtist)
+                        }
+                    val tmpFile = File(fileStore.baseDir, "${albumId}_${orientation.name.lowercase()}.mp4.tmp")
+
+                    val dlResult = networkDataSource.downloadVariantToFile(variantUrl, destFile, tmpFile)
+                    if (dlResult is AppResult.Success) {
+                        val finalEntity =
+                            updatingEntity.copy(
+                                hasSquare = if (orientation == AnimatedArtOrientation.SQUARE_1_1) true else updatingEntity.hasSquare,
+                                hasTall = if (orientation == AnimatedArtOrientation.TALL_3_4) true else updatingEntity.hasTall,
+                                squareFileName =
+                                    if (orientation ==
+                                        AnimatedArtOrientation.SQUARE_1_1
+                                    ) {
+                                        destFile.name
+                                    } else {
+                                        updatingEntity.squareFileName
+                                    },
+                                tallFileName =
+                                    if (orientation ==
+                                        AnimatedArtOrientation.TALL_3_4
+                                    ) {
+                                        destFile.name
+                                    } else {
+                                        updatingEntity.tallFileName
+                                    },
+                                status = AnimatedArtStatus.AVAILABLE.name,
+                                updatedAtEpochMs = System.currentTimeMillis(),
+                            )
+                        dao.upsert(finalEntity)
+                        AppResult.Success(finalEntity.toDomainModel(fileStore))
+                    } else {
+                        val finalEntity =
+                            updatingEntity.copy(
+                                status = updatingEntity.savedOrFailed(fileStore),
+                                updatedAtEpochMs = System.currentTimeMillis(),
+                            )
+                        dao.upsert(finalEntity)
+                        AppResult.Error((dlResult as AppResult.Error).error)
                     }
-                val tmpFile = File(fileStore.baseDir, "${albumId}_${orientation.name.lowercase()}.mp4.tmp")
-
-                val dlResult = networkDataSource.downloadVariantToFile(variantUrl, destFile, tmpFile)
-                if (dlResult is AppResult.Success) {
-                    val finalEntity =
-                        updatingEntity.copy(
-                            hasSquare = if (orientation == AnimatedArtOrientation.SQUARE_1_1) true else updatingEntity.hasSquare,
-                            hasTall = if (orientation == AnimatedArtOrientation.TALL_3_4) true else updatingEntity.hasTall,
-                            squareFileName =
-                                if (orientation ==
-                                    AnimatedArtOrientation.SQUARE_1_1
-                                ) {
-                                    destFile.name
-                                } else {
-                                    updatingEntity.squareFileName
-                                },
-                            tallFileName =
-                                if (orientation ==
-                                    AnimatedArtOrientation.TALL_3_4
-                                ) {
-                                    destFile.name
-                                } else {
-                                    updatingEntity.tallFileName
-                                },
-                            status = AnimatedArtStatus.AVAILABLE.name,
-                            updatedAtEpochMs = System.currentTimeMillis(),
-                        )
-                    dao.upsert(finalEntity)
-                    AppResult.Success(finalEntity.toDomainModel(fileStore))
-                } else {
-                    val finalEntity =
-                        updatingEntity.copy(
-                            status = AnimatedArtStatus.FAILED.name,
-                            updatedAtEpochMs = System.currentTimeMillis(),
-                        )
-                    dao.upsert(finalEntity)
-                    AppResult.Error((dlResult as AppResult.Error).error)
                 }
             }
 
@@ -189,32 +222,45 @@ class AnimatedArtworkRepositoryImpl
                     try {
                         download()
                     } catch (e: CancellationException) {
-                        withContext(NonCancellable) { forgetCancelledDownload(albumId) }
+                        withContext(NonCancellable) { forgetCancelledDownload(albumId, orientation) }
                         throw e
                     }
                 }
-            val running = activeJobs.putIfAbsent(key, job)
+            job.invokeOnCompletion { activeJobs.remove(key, job) }
+            val running =
+                lifecycle.withLock {
+                    if (compressionController.isRunning(albumId)) {
+                        job.cancel()
+                        return AppResult.Error(AppError.ValidationError("This cover is being compressed. Try again when it finishes."))
+                    }
+                    activeJobs.putIfAbsent(key, job).also { if (it == null) job.start() }
+                }
             if (running != null) {
                 job.cancel()
                 return running.await()
             }
-            job.invokeOnCompletion { activeJobs.remove(key, job) }
-            job.start()
             return job.await()
         }
 
         override fun cancelDownload(albumId: Long) {
+            compressionController.cancel(albumId)
             activeJobs.filterKeys { it.first == albumId }.values.forEach { it.cancel() }
         }
 
         /** After a cancelled download: its temporary file goes, and the album's cover is offered again. */
-        private suspend fun forgetCancelledDownload(albumId: Long) {
-            fileStore.baseDir
-                .listFiles { file -> file.name.startsWith("${albumId}_") && file.name.endsWith(".tmp") }
-                ?.forEach { it.delete() }
+        private suspend fun forgetCancelledDownload(
+            albumId: Long,
+            orientation: AnimatedArtOrientation,
+        ) {
+            File(fileStore.baseDir, "${albumId}_${orientation.name.lowercase()}.mp4.tmp").delete()
             val entity = dao.getByAlbumId(albumId) ?: return
             if (parseStatus(entity.status) != AnimatedArtStatus.DOWNLOADING) return
-            val status = if (entity.catalogAlbumId != null) AnimatedArtStatus.FOUND else AnimatedArtStatus.UNCHECKED
+            val status =
+                when {
+                    entity.savedOrFailed(fileStore) == AnimatedArtStatus.AVAILABLE.name -> AnimatedArtStatus.AVAILABLE
+                    entity.catalogAlbumId != null -> AnimatedArtStatus.FOUND
+                    else -> AnimatedArtStatus.UNCHECKED
+                }
             dao.upsert(entity.copy(status = status.name, updatedAtEpochMs = System.currentTimeMillis()))
         }
 
@@ -511,7 +557,7 @@ class AnimatedArtworkRepositoryImpl
                     is AppResult.Error -> {
                         val finalEntity =
                             updatingEntity.copy(
-                                status = AnimatedArtStatus.FAILED.name,
+                                status = updatingEntity.savedOrFailed(fileStore),
                                 updatedAtEpochMs = System.currentTimeMillis(),
                             )
                         dao.upsert(finalEntity)
@@ -612,7 +658,7 @@ class AnimatedArtworkRepositoryImpl
                         } else {
                             val finalEntity =
                                 updatingEntity.copy(
-                                    status = AnimatedArtStatus.FAILED.name,
+                                    status = updatingEntity.savedOrFailed(fileStore),
                                     updatedAtEpochMs = System.currentTimeMillis(),
                                 )
                             dao.upsert(finalEntity)
@@ -622,7 +668,7 @@ class AnimatedArtworkRepositoryImpl
                 } else {
                     val finalEntity =
                         updatingEntity.copy(
-                            status = AnimatedArtStatus.FAILED.name,
+                            status = updatingEntity.savedOrFailed(fileStore),
                             updatedAtEpochMs = System.currentTimeMillis(),
                         )
                     dao.upsert(finalEntity)
@@ -632,23 +678,35 @@ class AnimatedArtworkRepositoryImpl
 
         override suspend fun deleteArtwork(albumId: Long) =
             withContext(dispatchers.io) {
-                val entity = dao.getByAlbumId(albumId)
-                val albumTitle = entity?.normalizedAlbum
-                val artist = entity?.normalizedArtist
+                lifecycle.withLock {
+                    compressionController.cancelAndJoin(albumId)
+                    activeJobs
+                        .filterKeys { it.first == albumId }
+                        .values
+                        .toList()
+                        .forEach { it.cancelAndJoin() }
+                    val entity = dao.getByAlbumId(albumId)
+                    val albumTitle = entity?.normalizedAlbum
+                    val artist = entity?.normalizedArtist
 
-                val squareFile = fileStore.getSquareFile(albumId, albumTitle, artist)
-                val tallFile = fileStore.getTallFile(albumId, albumTitle, artist)
-                if (squareFile.exists()) squareFile.delete()
-                if (tallFile.exists()) tallFile.delete()
-                // The files as saved: their names keep the album's capitals, which the normalized names above lose.
-                listOfNotNull(entity?.squareFileName, entity?.tallFileName).forEach { File(fileStore.baseDir, it).delete() }
-                dao.deleteByAlbumId(albumId)
+                    val squareFile = fileStore.getSquareFile(albumId, albumTitle, artist)
+                    val tallFile = fileStore.getTallFile(albumId, albumTitle, artist)
+                    if (squareFile.exists()) squareFile.delete()
+                    if (tallFile.exists()) tallFile.delete()
+                    // The files as saved: their names keep the album's capitals, which the normalized names above lose.
+                    listOfNotNull(entity?.squareFileName, entity?.tallFileName).forEach { File(fileStore.baseDir, it).delete() }
+                    dao.deleteByAlbumId(albumId)
+                }
             }
 
         override suspend fun deleteAllArtwork() =
             withContext(dispatchers.io) {
-                fileStore.deleteAll()
-                dao.deleteAll()
+                lifecycle.withLock {
+                    compressionController.cancelAllAndJoin()
+                    activeJobs.values.toList().forEach { it.cancelAndJoin() }
+                    fileStore.deleteAll()
+                    dao.deleteAll()
+                }
             }
 
         override suspend fun totalStorageBytes(): Long =
@@ -694,8 +752,12 @@ class AnimatedArtworkRepositoryImpl
 
         override suspend fun cleanupOnStartup() =
             withContext(dispatchers.io) {
-                dao.resetDownloading()
-                fileStore.cleanTempFiles()
+                lifecycle.withLock {
+                    if (activeJobs.isEmpty() && !compressionController.isAnyRunning()) {
+                        dao.resetDownloading()
+                        fileStore.cleanTempFiles()
+                    }
+                }
             }
 
         private fun parseStatus(status: String): AnimatedArtStatus =
@@ -734,4 +796,11 @@ class AnimatedArtworkRepositoryImpl
                 updatedAtEpochMs = updatedAtEpochMs,
             )
         }
+    }
+
+private fun AnimatedArtworkEntity.savedOrFailed(fileStore: ArtworkFileStore): String =
+    if (listOfNotNull(squareFileName, tallFileName).any { File(fileStore.baseDir, it).isFile }) {
+        AnimatedArtStatus.AVAILABLE.name
+    } else {
+        AnimatedArtStatus.FAILED.name
     }

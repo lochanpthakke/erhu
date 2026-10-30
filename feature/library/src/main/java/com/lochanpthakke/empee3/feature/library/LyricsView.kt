@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
+import com.lochanpthakke.empee3.core.network.lyrics.CachedLyrics
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -201,6 +202,10 @@ data class SongLyrics(
     /** The file has readable lyrics of its own. */
     val hasFileLyrics: Boolean = false,
     val search: ManualLyricsSearch = ManualLyricsSearch.Idle,
+    val saved: CachedLyrics? = null,
+    val downloaded: Boolean = false,
+    val saving: Boolean = false,
+    val saveError: String? = null,
 )
 
 @Composable

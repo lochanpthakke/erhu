@@ -17,12 +17,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +47,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
@@ -318,15 +320,18 @@ private fun PlaylistMenu(
         IconButton(onClick = { expanded = true }) {
             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Playlist options")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
+        GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }) {
+            GlassMenuItem(
+                icon = Icons.Default.Edit,
                 text = { Text("Edit playlist") },
                 onClick = {
                     expanded = false
                     onEdit()
                 },
             )
-            DropdownMenuItem(
+            GlassMenuItem(
+                icon = Icons.Default.DeleteOutline,
+                destructive = true,
                 text = { Text("Delete playlist") },
                 onClick = {
                     expanded = false

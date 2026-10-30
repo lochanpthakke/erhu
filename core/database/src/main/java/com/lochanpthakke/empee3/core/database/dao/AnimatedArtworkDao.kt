@@ -32,6 +32,10 @@ interface AnimatedArtworkDao {
     @Query("DELETE FROM animated_artwork")
     suspend fun deleteAll()
 
-    @Query("UPDATE animated_artwork SET status = 'UNCHECKED' WHERE status = 'DOWNLOADING'")
+    @Query(
+        """UPDATE animated_artwork SET status = CASE
+        WHEN square_file_name IS NOT NULL OR tall_file_name IS NOT NULL THEN 'AVAILABLE'
+        ELSE 'UNCHECKED' END WHERE status = 'DOWNLOADING'""",
+    )
     suspend fun resetDownloading()
 }

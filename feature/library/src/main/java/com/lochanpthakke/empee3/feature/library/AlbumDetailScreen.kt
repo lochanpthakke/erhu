@@ -22,12 +22,17 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +69,10 @@ import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
 import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuSection
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
@@ -216,53 +225,64 @@ fun AlbumDetailScreen(
                                 ) {
                                     Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Album options")
                                 }
-                                DropdownMenu(
+                                GlassMenu(
+                                    label = "Album options",
                                     expanded = menuExpanded,
                                     onDismissRequest = { menuExpanded = false },
                                 ) {
-                                    DropdownMenuItem(
+                                    GlassMenuSection("Playback")
+                                    GlassMenuItem(
+                                        icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                                         text = { Text("Play Next") },
                                         onClick = {
                                             menuExpanded = false
                                             songs.asReversed().forEach { song -> viewModel.playNext(song) }
                                         },
                                     )
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
+                                        icon = Icons.AutoMirrored.Filled.QueueMusic,
                                         text = { Text("Add to Queue") },
                                         onClick = {
                                             menuExpanded = false
                                             songs.forEach { song -> viewModel.addToQueue(song) }
                                         },
                                     )
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
+                                        icon = Icons.Default.Radio,
                                         text = { Text("Start Radio") },
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.startRadio(RadioSeed.Album(album.id))
                                         },
                                     )
-                                    DropdownMenuItem(
+                                    GlassMenuDivider()
+                                    GlassMenuSection("Album")
+                                    GlassMenuItem(
+                                        icon = Icons.Default.AutoFixHigh,
                                         text = { Text("Auto Fix Tags") },
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.enqueueAlbumForRepair(album)
                                         },
                                     )
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
+                                        icon = Icons.Default.ImageSearch,
                                         text = { Text("Fetch Cover Online") },
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.enqueueAlbumForArtwork(album)
                                         },
                                     )
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
+                                        icon = Icons.Default.PhotoLibrary,
                                         text = { Text("Set Custom Cover (Local File)") },
                                         onClick = {
                                             menuExpanded = false
                                             imagePickerLauncher.launch("image/*")
                                         },
                                     )
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
+                                        icon = Icons.Default.Tune,
                                         text = { Text("Transition Studio") },
                                         onClick = {
                                             menuExpanded = false
@@ -500,6 +520,7 @@ private fun AlbumLiveCover(
     val liveCover: LiveCoverViewModel = hiltViewModel(key = "live-cover-${album.id}")
     LaunchedEffect(album.id) { liveCover.bind(album) }
     val state by liveCover.state.collectAsState()
+    val compression by liveCover.compression.collectAsState()
     LiveCoverControl(
         state = state,
         artworkUri = album.artworkUri,
@@ -507,6 +528,9 @@ private fun AlbumLiveCover(
         onCancel = liveCover::cancel,
         onRemove = liveCover::remove,
         onSelectVariant = liveCover::selectVariant,
+        compression = compression,
+        onCompress = liveCover::compress,
+        onCancelCompression = liveCover::cancelCompression,
         modifier = modifier,
     )
 }

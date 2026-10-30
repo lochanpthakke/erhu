@@ -22,12 +22,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,6 +66,10 @@ import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
 import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuSection
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
@@ -177,46 +185,56 @@ fun ArtistDetailScreen(
                             ) {
                                 Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Artist options")
                             }
-                            DropdownMenu(
+                            GlassMenu(
+                                label = "Artist options",
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
-                                DropdownMenuItem(
+                                GlassMenuSection("Playback")
+                                GlassMenuItem(
+                                    icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                                     text = { Text("Play Next") },
                                     onClick = {
                                         menuExpanded = false
                                         allSongs.asReversed().forEach { song -> viewModel.playNext(song) }
                                     },
                                 )
-                                DropdownMenuItem(
+                                GlassMenuItem(
+                                    icon = Icons.AutoMirrored.Filled.QueueMusic,
                                     text = { Text("Add to Queue") },
                                     onClick = {
                                         menuExpanded = false
                                         allSongs.forEach { song -> viewModel.addToQueue(song) }
                                     },
                                 )
-                                DropdownMenuItem(
+                                GlassMenuItem(
+                                    icon = Icons.Default.Radio,
                                     text = { Text("Start Radio") },
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.startRadio(RadioSeed.Artist(artist.id))
                                     },
                                 )
-                                DropdownMenuItem(
+                                GlassMenuDivider()
+                                GlassMenuSection("Artist")
+                                GlassMenuItem(
+                                    icon = Icons.Default.AutoFixHigh,
                                     text = { Text("Auto Fix Tags") },
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.enqueueArtistForRepair(artist)
                                     },
                                 )
-                                DropdownMenuItem(
+                                GlassMenuItem(
+                                    icon = Icons.Default.ImageSearch,
                                     text = { Text("Fetch Photo Online") },
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.enqueueArtistForArtwork(artist)
                                     },
                                 )
-                                DropdownMenuItem(
+                                GlassMenuItem(
+                                    icon = Icons.Default.PhotoLibrary,
                                     text = { Text("Set Custom Photo (Local File)") },
                                     onClick = {
                                         menuExpanded = false

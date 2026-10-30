@@ -3,10 +3,12 @@ package com.lochanpthakke.empee3.feature.library
 import com.lochanpthakke.empee3.core.common.result.AppError
 import com.lochanpthakke.empee3.core.common.result.AppResult
 import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkRepository
+import com.lochanpthakke.empee3.core.database.repository.ArtworkCompressionOperations
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverCheck
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
 import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
+import com.lochanpthakke.empee3.core.model.ArtworkCompressionState
 import com.lochanpthakke.empee3.core.model.LocalAnimatedArtwork
 import com.lochanpthakke.empee3.core.network.apple.EditorialVideoUrls
 import com.lochanpthakke.empee3.core.network.apple.HlsVariantStream
@@ -15,6 +17,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -40,6 +43,45 @@ class LiveCoverViewModelTest {
     fun reset() = Dispatchers.resetMain()
 
     private fun viewModel() = LiveCoverViewModel(repository).also { it.bind(album) }
+
+    @Test
+    fun `eligible saved artwork compresses only after explicit action and supports cancel`() =
+        runTest {
+            repository.check = AppResult.Success(saved)
+            repository.compressionState.value = ArtworkCompressionState(available = true, originalBytes = saved.bytes)
+            val viewModel = viewModel()
+            assertTrue(repository.compressionStarts.isEmpty())
+            viewModel.compress()
+            assertEquals(listOf(album.id), repository.compressionStarts)
+            viewModel.cancelCompression()
+            assertEquals(listOf(album.id), repository.compressionCancels)
+        }
+
+    @Test
+    fun `ineligible or unsaved artwork never starts compression`() =
+        runTest {
+            repository.check = AppResult.Success(saved)
+            val viewModel = viewModel()
+            viewModel.compress()
+            assertTrue(repository.compressionStarts.isEmpty())
+            repository.check = AppResult.Success(offer)
+            repository.compressionState.value = ArtworkCompressionState(available = true)
+            viewModel().compress()
+            assertTrue(repository.compressionStarts.isEmpty())
+        }
+
+    @Test
+    fun `completed compression refreshes actual saved bytes without starting another encoding`() =
+        runTest {
+            repository.check = AppResult.Success(saved)
+            val viewModel = viewModel()
+            val compressed = 11_188_275L
+            repository.check = AppResult.Success(saved.copy(bytes = compressed))
+            repository.compressionState.value =
+                ArtworkCompressionState(progress = 100, originalBytes = saved.bytes, compressedBytes = compressed)
+            assertEquals(compressed, (viewModel.state.value as LiveCoverUi.Saved).saved.bytes)
+            assertTrue(repository.compressionStarts.isEmpty())
+        }
 
     @Test
     fun `nothing is shown for an album without a live cover`() =
@@ -158,6 +200,24 @@ class LiveCoverViewModelTest {
         }
 
     private class FakeRepository : AnimatedArtworkRepository {
+        val compressionState = MutableStateFlow(ArtworkCompressionState())
+        val compressionStarts = mutableListOf<Long>()
+        val compressionCancels = mutableListOf<Long>()
+        override val compression =
+            object : ArtworkCompressionOperations {
+                override fun observe(albumId: Long) = compressionState
+
+                override suspend fun prepare(albumId: Long) = Unit
+
+                override suspend fun start(albumId: Long) {
+                    compressionStarts += albumId
+                }
+
+                override fun cancel(albumId: Long) {
+                    compressionCancels += albumId
+                }
+            }
+
         var check: AppResult<LiveCoverCheck> = AppResult.Success(LiveCoverCheck.None)
         var fetchResult: AppResult<LocalAnimatedArtwork>? = null
         var gate: CompletableDeferred<Unit>? = null

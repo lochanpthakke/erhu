@@ -1,6 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
 import com.lochanpthakke.empee3.core.model.Song
+import com.lochanpthakke.empee3.core.network.lyrics.CachedLyrics
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsQuery
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
@@ -69,6 +70,8 @@ class LyricsActions(
     val choose: (LyricsCandidate) -> Unit,
     val useFileLyrics: () -> Unit,
     val closeSearch: () -> Unit,
+    val download: () -> Unit = {},
+    val removeDownload: (CachedLyrics) -> Unit = {},
 )
 
 /** The online lookup state of one song. */
@@ -79,16 +82,19 @@ internal data class OnlineLyricsView(
     val candidate: LyricsCandidate? = null,
     val fromCache: Boolean = false,
     val userChosen: Boolean = false,
+    val saved: CachedLyrics? = null,
+    val saving: Boolean = false,
+    val saveError: String? = null,
 )
 
-internal fun Song.toLyricsTrack() = LyricsTrack(id, LyricsQuery(title, artist, album.takeIf { it.isNotBlank() }, durationMs))
+internal fun Song.toLyricsTrack() = LyricsTrack(id, LyricsQuery(title, artist, album.takeIf { it.isNotBlank() }, durationMs), uri)
 
 internal fun OnlineLyricsResult.toView(
     songId: Long,
     previous: LyricsCandidate?,
 ): OnlineLyricsView =
     when (this) {
-        is OnlineLyricsResult.Found -> OnlineLyricsView(songId, LyricsLookup.Idle, candidate, fromCache, userChosen)
+        is OnlineLyricsResult.Found -> OnlineLyricsView(songId, LyricsLookup.Idle, candidate, fromCache, userChosen, saved)
         OnlineLyricsResult.NotFound -> OnlineLyricsView(songId, LyricsLookup.NotFound, previous)
         OnlineLyricsResult.Instrumental -> OnlineLyricsView(songId, LyricsLookup.Instrumental)
         OnlineLyricsResult.Offline -> OnlineLyricsView(songId, LyricsLookup.Offline, previous)
@@ -110,29 +116,43 @@ internal fun chooseLyrics(
     val view = online?.takeIf { it.songId == songId }
     val fileUsable = LyricsParser.parse(embedded) != null
     val onlineText = view?.candidate?.bestText
-    return when {
-        onlineText != null && (view.userChosen || !fileUsable) ->
-            SongLyrics(
-                songId = songId,
-                text = onlineText,
-                origin = if (view.fromCache) LyricsOrigin.ONLINE_SAVED else LyricsOrigin.ONLINE,
-                provider = view.candidate.provider,
-                timing = view.candidate.timing,
-                lookup = view.lookup,
-                hasFileLyrics = fileUsable,
-                search = search,
-            )
-        fileUsable ->
-            SongLyrics(
-                songId,
-                embedded,
-                LyricsOrigin.FILE,
-                lookup = view?.lookup ?: LyricsLookup.Idle,
-                hasFileLyrics = true,
-                search = search,
-            )
-        else -> SongLyrics(songId, null, LyricsOrigin.FILE, lookup = view?.lookup ?: LyricsLookup.Idle, search = search)
-    }
+    val result =
+        when {
+            onlineText != null && (view.userChosen || !fileUsable) ->
+                SongLyrics(
+                    songId = songId,
+                    text = onlineText,
+                    origin =
+                        if (view.saved != null &&
+                            view.saved.candidate == view.candidate
+                        ) {
+                            LyricsOrigin.ONLINE_SAVED
+                        } else {
+                            LyricsOrigin.ONLINE
+                        },
+                    provider = view.candidate.provider,
+                    timing = view.candidate.timing,
+                    lookup = view.lookup,
+                    hasFileLyrics = fileUsable,
+                    search = search,
+                )
+            fileUsable ->
+                SongLyrics(
+                    songId,
+                    embedded,
+                    LyricsOrigin.FILE,
+                    lookup = view?.lookup ?: LyricsLookup.Idle,
+                    hasFileLyrics = true,
+                    search = search,
+                )
+            else -> SongLyrics(songId, null, LyricsOrigin.FILE, lookup = view?.lookup ?: LyricsLookup.Idle, search = search)
+        }
+    return result.copy(
+        saved = view?.saved,
+        downloaded = view?.saved?.explicitDownload == true && view.saved.candidate == view.candidate && result.origin != LyricsOrigin.FILE,
+        saving = view?.saving == true,
+        saveError = view?.saveError,
+    )
 }
 
 /** Short label of a result's timing. */

@@ -74,6 +74,7 @@ import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
+import com.lochanpthakke.empee3.core.model.ArtworkCompressionState
 import com.lochanpthakke.empee3.feature.library.LiveCoverUi
 
 private val POPUP_MAX_WIDTH = 300.dp
@@ -139,6 +140,9 @@ fun LiveCoverControl(
     onRemove: () -> Unit,
     onSelectVariant: ((LiveCoverVariant) -> Unit)? = null,
     modifier: Modifier = Modifier,
+    compression: ArtworkCompressionState = ArtworkCompressionState(),
+    onCompress: () -> Unit = {},
+    onCancelCompression: () -> Unit = {},
 ) {
     var open by rememberSaveable { mutableStateOf(false) }
     AnimatedVisibility(
@@ -159,7 +163,17 @@ fun LiveCoverControl(
                     onDismissRequest = { open = false },
                     properties = PopupProperties(focusable = true),
                 ) {
-                    LiveCoverCard(state, artworkUri, onDownload, onCancel, onRemove, onSelectVariant)
+                    LiveCoverCard(
+                        state,
+                        artworkUri,
+                        onDownload,
+                        onCancel,
+                        onRemove,
+                        onSelectVariant,
+                        compression,
+                        onCompress,
+                        onCancelCompression,
+                    )
                 }
             }
         }
@@ -209,6 +223,9 @@ private fun LiveCoverCard(
     onCancel: () -> Unit,
     onRemove: () -> Unit,
     onSelectVariant: ((LiveCoverVariant) -> Unit)? = null,
+    compression: ArtworkCompressionState,
+    onCompress: () -> Unit,
+    onCancelCompression: () -> Unit,
 ) {
     val width = min(POPUP_MAX_WIDTH, LocalConfiguration.current.screenWidthDp.dp - POPUP_MARGIN * 2)
     val context = LocalContext.current
@@ -265,7 +282,10 @@ private fun LiveCoverCard(
         }
 
         Spacer(modifier = Modifier.height(Spacing.md))
-        LiveCoverActions(state, onDownload, onCancel, onRemove)
+        if (!compression.running) LiveCoverActions(state, onDownload, onCancel, onRemove)
+        if (state is LiveCoverUi.Saved) {
+            ArtworkCompressionControl(compression, onCompress, onCancelCompression)
+        }
 
         if (variants.isNotEmpty() && state !is LiveCoverUi.Saved) {
             Box(
@@ -322,7 +342,12 @@ private fun LiveCoverCard(
                                 onClick = { selectedBitrate = tier },
                                 shape = RoundedCornerShape(10.dp),
                                 color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                contentColor =
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Text(
@@ -363,7 +388,12 @@ private fun LiveCoverCard(
                                                         alpha = 0.4f,
                                                     )
                                             },
-                                        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                                        contentColor =
+                                            if (isSelected) {
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
                                         modifier = Modifier.weight(1f),
                                     ) {
                                         Column(

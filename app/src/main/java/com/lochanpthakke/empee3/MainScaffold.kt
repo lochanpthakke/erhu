@@ -100,12 +100,14 @@ import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalPlaybackArtworkColors
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
 import com.lochanpthakke.empee3.core.designsystem.theme.WithoutGlass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
+import com.lochanpthakke.empee3.core.designsystem.theme.rememberPlaybackArtworkColors
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -219,6 +221,8 @@ fun MainScaffold() {
     val hasCurrentSong by remember(playbackState) { derivedStateOf { playbackState.value.currentSong != null } }
     val context = LocalContext.current
 
+    val playbackArtworkColors = rememberPlaybackArtworkColors(playbackState, enabled = glassEffectEnabled)
+
     // The artwork of the page in focus (album / artist) is not read here during composition:
     // only the artwork-colour themes watch it, so a page reporting its artwork does not
     // recompose the shell (and the screens under it) for any other theme.
@@ -268,7 +272,10 @@ fun MainScaffold() {
     // of this shell (a new lambda each time) recomposed every screen below it, e.g. on each
     // track change or when a detail page reported its artwork mid-transition.
     val setFocusedArtwork = remember { { uri: String? -> focusedArtworkUri.value = uri } }
-    CompositionLocalProvider(LocalSetFocusedArtworkUri provides setFocusedArtwork) {
+    CompositionLocalProvider(
+        LocalSetFocusedArtworkUri provides setFocusedArtwork,
+        LocalPlaybackArtworkColors provides playbackArtworkColors,
+    ) {
         EmPee3Theme(
             themeManifest = currentTheme,
             skinManifest = currentSkin,

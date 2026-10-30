@@ -123,6 +123,7 @@ fun EmPee3Theme(
         LocalEmPee3Skin provides skinManifest,
         LocalEmPee3WidgetConfig provides (skinManifest?.widgetConfig ?: themeManifest.widgetConfig),
         LocalGlassTokens provides glass,
+        LocalMenuGlassTokens provides glass,
         LocalPlainColorScheme provides baseColorScheme,
     ) {
         MaterialTheme(

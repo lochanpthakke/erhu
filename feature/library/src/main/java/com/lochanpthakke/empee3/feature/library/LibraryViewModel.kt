@@ -28,8 +28,11 @@ import com.lochanpthakke.empee3.core.network.bpm.BpmFinder
 import com.lochanpthakke.empee3.core.network.bpm.BpmLookup
 import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatus
 import com.lochanpthakke.empee3.core.network.connectivity.NetworkStatusSource
+import com.lochanpthakke.empee3.core.network.lyrics.CachedLyrics
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
+import com.lochanpthakke.empee3.core.network.lyrics.LyricsTrack
 import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsRepository
+import com.lochanpthakke.empee3.core.network.lyrics.OnlineLyricsResult
 import com.lochanpthakke.empee3.core.network.lyrics.ProviderResponse
 import com.lochanpthakke.empee3.core.network.provider.LastFmCredentials
 import com.lochanpthakke.empee3.core.network.repository.DetailedSearchResponse
@@ -541,6 +544,9 @@ class LibraryViewModel
         private val onlineLyricsView = MutableStateFlow<OnlineLyricsView?>(null)
         private val manualLyricsSearch = MutableStateFlow<ManualLyricsSearch>(ManualLyricsSearch.Idle)
         private var lyricsLookupJob: Job? = null
+        private var lyricsIdentity: LyricsTrack? = null
+        private var lyricsGeneration = 0L
+        private var lyricsPersistenceJob: Job? = null
 
         /**
          * Lyrics of the playing song, with the song they belong to (so a new song never shows the
@@ -556,7 +562,7 @@ class LibraryViewModel
                             onlineLyricsView,
                             manualLyricsSearch,
                         ) { embedded, online, search ->
-                            chooseLyrics(songId, embedded, online, search)
+                            chooseLyrics(songId, embedded, online.takeIf { lyricsIdentity == currentTrack(songId) }, search)
                         }
                     } ?: flowOf(null)
                 }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
@@ -564,12 +570,14 @@ class LibraryViewModel
         /** What the lyrics page can do: automatic lookup, refresh, manual search and choice, back to the file's lyrics. */
         val lyricsActions =
             LyricsActions(
-                onShown = { songId -> if (onlineLyricsView.value?.songId != songId) startLyricsLookup(songId, refresh = false) },
+                onShown = { songId -> if (lyricsIdentity != currentTrack(songId)) startLyricsLookup(songId, refresh = false) },
                 refresh = { currentSongId.value?.let { startLyricsLookup(it, refresh = true) } },
                 search = ::searchLyricsOnline,
                 choose = ::chooseOnlineLyrics,
                 useFileLyrics = ::useFileLyrics,
                 closeSearch = { manualLyricsSearch.value = ManualLyricsSearch.Idle },
+                download = { changeLyricsDownload(remove = false) },
+                removeDownload = { changeLyricsDownload(remove = true, expected = it) },
             )
 
         private fun currentTrack(songId: Long) =
@@ -587,6 +595,9 @@ class LibraryViewModel
             refresh: Boolean,
         ) {
             val track = currentTrack(songId) ?: return
+            if (lyricsPersistenceJob?.isActive == true && lyricsIdentity == track) return
+            lyricsIdentity = track
+            val generation = ++lyricsGeneration
             lyricsLookupJob?.cancel()
             manualLyricsSearch.value = ManualLyricsSearch.Idle
             lyricsLookupJob =
@@ -594,9 +605,10 @@ class LibraryViewModel
                     val previous = onlineLyricsView.value?.takeIf { it.songId == songId }
                     if (!refresh) {
                         val fileLyrics = libraryRepository.observeEmbeddedLyrics(songId).first()
-                        val chosen = onlineLyrics.cached(track)?.userChosen == true
+                        val saved = onlineLyrics.cached(track)
+                        val chosen = saved?.userChosen == true && !onlineLyrics.prefersEmbedded(track)
                         if (LyricsParser.parse(fileLyrics) != null && !chosen) {
-                            onlineLyricsView.value = OnlineLyricsView(songId, LyricsLookup.Idle)
+                            onlineLyricsView.value = OnlineLyricsView(songId, LyricsLookup.Idle, saved = saved)
                             return@launch
                         }
                     }
@@ -607,18 +619,34 @@ class LibraryViewModel
                             previous?.candidate,
                             previous?.fromCache == true,
                             previous?.userChosen == true,
+                            previous?.saved,
                         )
                     val result = onlineLyrics.lookup(track, refresh)
-                    if (currentSongId.value == songId) onlineLyricsView.value = result.toView(songId, previous?.candidate)
+                    if (currentTrack(songId) == track && lyricsGeneration == generation) {
+                        val view = result.toView(songId, previous?.candidate)
+                        onlineLyricsView.value =
+                            view.copy(
+                                saved = onlineLyrics.cached(track),
+                                userChosen =
+                                    if (result is OnlineLyricsResult.Found) {
+                                        view.userChosen
+                                    } else {
+                                        previous?.userChosen ==
+                                            true
+                                    },
+                            )
+                    }
                 }
         }
 
         private fun searchLyricsOnline(text: String) {
-            val songId = currentSongId.value ?: return
-            val track = currentTrack(songId) ?: return
+            val track = currentSongId.value?.let(::currentTrack) ?: return
+            val songId = track.songId
+            if (lyricsPersistenceJob?.isActive == true) return
+            val generation = ++lyricsGeneration
             manualLyricsSearch.value = ManualLyricsSearch.Searching
             viewModelScope.launch {
-                manualLyricsSearch.value =
+                val result =
                     when (val response = onlineLyrics.search(track, text)) {
                         is ProviderResponse.Success -> ManualLyricsSearch.Results(response.value)
                         ProviderResponse.NotFound -> ManualLyricsSearch.Results(emptyList())
@@ -626,30 +654,93 @@ class LibraryViewModel
                         is ProviderResponse.RateLimited -> ManualLyricsSearch.Error("LRCLIB asked to wait a moment. Try again shortly.")
                         is ProviderResponse.Failed -> ManualLyricsSearch.Error("The search failed (${response.reason}).")
                     }
+                if (currentTrack(songId) == track && generation == lyricsGeneration) manualLyricsSearch.value = result
             }
         }
 
-        /** The user picked a result: it is shown, kept, and preferred for this song (the file is never changed). */
+        /** The user picked a result: it is shown and preferred this session for this song (the file is never changed). */
         private fun chooseOnlineLyrics(candidate: LyricsCandidate) {
-            val songId = currentSongId.value ?: return
-            val track = currentTrack(songId) ?: return
+            val track = currentSongId.value?.let(::currentTrack) ?: return
+            val songId = track.songId
+            if (lyricsIdentity != track || lyricsPersistenceJob?.isActive == true) return
+            lyricsIdentity = track
+            val generation = ++lyricsGeneration
             lyricsLookupJob?.cancel()
             manualLyricsSearch.value = ManualLyricsSearch.Idle
             viewModelScope.launch {
                 val found = onlineLyrics.choose(track, candidate)
-                onlineLyricsView.value = found.toView(songId, null)
+                if (currentTrack(songId) == track && generation == lyricsGeneration) onlineLyricsView.value = found.toView(songId, null)
             }
         }
 
-        /** Back to the file's own lyrics: the online result for this song is forgotten. */
+        /** Back to the file's own lyrics without removing saved content. */
         private fun useFileLyrics() {
-            val songId = currentSongId.value ?: return
-            val track = currentTrack(songId) ?: return
+            val track = currentSongId.value?.let(::currentTrack) ?: return
+            val songId = track.songId
+            if (lyricsPersistenceJob?.isActive == true) return
+            lyricsIdentity = track
+            val generation = ++lyricsGeneration
             lyricsLookupJob?.cancel()
             viewModelScope.launch {
                 onlineLyrics.forget(track)
-                onlineLyricsView.value = OnlineLyricsView(songId, LyricsLookup.Idle)
+                if (currentTrack(songId) == track && generation == lyricsGeneration) {
+                    onlineLyricsView.value = OnlineLyricsView(songId, LyricsLookup.Idle, saved = onlineLyrics.cached(track))
+                }
             }
+        }
+
+        /** Explicit offline storage is independent of the network lookup and embedded Room lyrics. */
+        private fun changeLyricsDownload(
+            remove: Boolean,
+            expected: CachedLyrics? = null,
+        ) {
+            val track = currentSongId.value?.let(::currentTrack) ?: return
+            val songId = track.songId
+            val view =
+                onlineLyricsView.value?.takeIf {
+                    it.songId == songId && lyricsIdentity == track && lyricsPersistenceJob?.isActive != true
+                } ?: return
+            when {
+                remove && view.saved != expected -> {
+                    onlineLyricsView.value = view.copy(saveError = "Saved lyrics changed. Reopen lyrics before removing them.")
+                }
+                remove && view.saved == null -> Unit
+                !remove && view.candidate?.bestText.isNullOrBlank() -> Unit
+                else -> persistLyricsDownload(track, view, remove)
+            }
+        }
+
+        private fun persistLyricsDownload(
+            track: LyricsTrack,
+            view: OnlineLyricsView,
+            remove: Boolean,
+        ) {
+            val songId = track.songId
+            lyricsLookupJob?.cancel()
+            val generation = ++lyricsGeneration
+            onlineLyricsView.value = view.copy(saving = true, saveError = null)
+            lyricsPersistenceJob =
+                viewModelScope.launch {
+                    try {
+                        val saved =
+                            if (remove) {
+                                onlineLyrics.removeDownload(track, requireNotNull(view.saved))
+                                null
+                            } else {
+                                onlineLyrics.download(track, requireNotNull(view.candidate), view.userChosen, view.saved)
+                            }
+                        if (currentTrack(songId) == track && lyricsGeneration == generation) {
+                            onlineLyricsView.value = view.copy(saved = saved, saving = false, fromCache = saved != null)
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: java.io.IOException) {
+                        if (currentTrack(songId) == track && lyricsGeneration == generation) {
+                            onlineLyricsView.value =
+                                view.copy(saveError = "Could not ${if (remove) "remove" else "download"} lyrics. ${e.message.orEmpty()}")
+                        }
+                    }
+                }
         }
 
         private val _writeAccessRequest = MutableStateFlow<WriteAuthorization?>(null)

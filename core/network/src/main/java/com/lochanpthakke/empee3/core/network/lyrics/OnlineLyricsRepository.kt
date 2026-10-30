@@ -10,12 +10,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 /** A track to find lyrics for, by its library id. */
 data class LyricsTrack(
     val songId: Long,
     val query: LyricsQuery,
+    val sourceUri: String? = null,
 )
+
+private fun CachedLyrics.matches(track: LyricsTrack): Boolean =
+    songId == track.songId && fingerprint == fingerprint(track.query) && (sourceUri == null || sourceUri == track.sourceUri)
 
 /** The outcome of a lookup. */
 sealed interface OnlineLyricsResult {
@@ -24,6 +29,7 @@ sealed interface OnlineLyricsResult {
         val fromCache: Boolean,
         val userChosen: Boolean,
         val fetchedAtMs: Long,
+        val saved: CachedLyrics? = null,
     ) : OnlineLyricsResult
 
     data object NotFound : OnlineLyricsResult
@@ -47,7 +53,7 @@ sealed interface OnlineLyricsResult {
 }
 
 /**
- * Finds lyrics online for a track, with a local cache. Order: the cache (a match, an instrumental,
+ * Finds lyrics online without saving downloads. Order: existing saved content / session response (a match, an instrumental,
  * or a recent "not found"), then each provider: its exact-match lookup, and a search when that is
  * not already a confident word-timed match. Only a confident match is used automatically, word
  * timing first; otherwise plausible results are offered to choose from. Concurrent lookups of the
@@ -62,37 +68,112 @@ class OnlineLyricsRepository(
     private val io = dispatchers.io
     private val scope = CoroutineScope(SupervisorJob() + io)
     private val lock = Mutex()
-    private val inFlight = mutableMapOf<Long, Deferred<OnlineLyricsResult>>()
+    private val inFlight = mutableMapOf<LyricsTrack, Deferred<OnlineLyricsResult>>()
+    private val storageLock = Mutex()
 
-    /** The cached result for [track] if it still fits its metadata; never touches the network. */
+    // One most-recent response only, for this process. No transient response is written to disk.
+    private var response: Pair<LyricsTrack, CachedLyrics>? = null
+    private var preferFile: LyricsTrack? = null
+
+    /** Existing downloads and legacy saved content; metadata mismatches never authorize deletion. */
     suspend fun cached(track: LyricsTrack): CachedLyrics? =
-        withContext(io) { cache.get(track.songId)?.takeIf { it.fingerprint == fingerprint(track.query) } }
+        withContext(io) {
+            storageLock.withLock { savedEntry(track)?.takeIf { it.status != CachedStatus.NOT_FOUND } }
+        }
 
-    /**
-     * Lyrics for [track]: from the cache, or looked up online. [refresh] ignores the cache. Callers
-     * that stop waiting (the track changed) do not cancel the shared lookup; its result is cached.
-     */
+    suspend fun prefersEmbedded(track: LyricsTrack): Boolean = lock.withLock { preferFile == track }
+
+    private suspend fun savedEntry(track: LyricsTrack): CachedLyrics? {
+        val entry = cache.get(track.songId) ?: return null
+        return if (entry.status == CachedStatus.NOT_FOUND &&
+            !entry.explicitDownload &&
+            nowMs() - entry.fetchedAtMs >= NOT_FOUND_TTL_MS
+        ) {
+            // Only an accessed, positively identified negative entry is disposable. Never scan saved lyrics.
+            if (entry.songId == track.songId && entry.candidate == null) {
+                try {
+                    cache.remove(track.songId)
+                } catch (_: IOException) {
+                    // retry on the next access
+                }
+            }
+            null
+        } else {
+            entry.takeIf { it.matches(track) }
+        }
+    }
+
+    /** Only explicit user actions write positive results; the old JSON shape remains readable. */
+    suspend fun download(
+        track: LyricsTrack,
+        candidate: LyricsCandidate,
+        userChosen: Boolean,
+        expected: CachedLyrics?,
+    ): CachedLyrics =
+        withContext(io) {
+            storageLock.withLock {
+                require(!candidate.bestText.isNullOrBlank()) { "There are no lyrics to download" }
+                val existing =
+                    cache.get(track.songId)?.takeUnless {
+                        it.status == CachedStatus.NOT_FOUND && it.candidate == null && !it.explicitDownload
+                    }
+                val sameSelection = existing?.let { it.candidate == candidate && it.userChosen == userChosen } == true
+                if (existing?.explicitDownload == true && sameSelection && existing.matches(track)) {
+                    return@withLock existing
+                }
+                if (existing != expected || (existing != null && !existing.matches(track))) {
+                    throw IOException("Saved lyrics changed or belong to different song metadata. Reopen lyrics before saving.")
+                }
+                val entry =
+                    CachedLyrics(
+                        songId = track.songId,
+                        fingerprint = fingerprint(track.query),
+                        status = CachedStatus.FOUND,
+                        candidate = candidate,
+                        fetchedAtMs = nowMs(),
+                        userChosen = userChosen,
+                        explicitDownload = true,
+                        sourceUri = track.sourceUri,
+                    )
+                cache.put(entry)
+                entry
+            }
+        }
+
+    /** Compare the exact record shown to the user before removing it, including its identity. */
+    suspend fun removeDownload(
+        track: LyricsTrack,
+        expected: CachedLyrics,
+    ) = withContext(io) {
+        storageLock.withLock {
+            val existing = cache.get(track.songId)
+            if (existing == null && cache.contains(track.songId)) throw IOException("Saved lyrics could not be read")
+            if (existing != null) {
+                if (existing != expected || !existing.matches(track)) {
+                    throw IOException("Saved lyrics changed. Reopen lyrics before removing them.")
+                }
+                cache.remove(track.songId)
+            }
+        }
+    }
+
+    /** Shared requests use the full track identity; closing the screen cannot create a download. */
     suspend fun lookup(
         track: LyricsTrack,
         refresh: Boolean = false,
     ): OnlineLyricsResult {
         val job =
             lock.withLock {
-                inFlight[track.songId] ?: scope.async(start = CoroutineStart.LAZY) { resolve(track, refresh) }.also { deferred ->
-                    inFlight[track.songId] = deferred
-                    deferred.invokeOnCompletion {
-                        scope.launch {
-                            lock.withLock {
-                                if (inFlight[track.songId] ===
-                                    deferred
-                                ) {
-                                    inFlight.remove(track.songId)
-                                }
-                            }
+                inFlight[track]?.takeUnless { it.isCompleted } ?: scope
+                    .async(start = CoroutineStart.LAZY) {
+                        resolve(track, refresh)
+                    }.also { deferred ->
+                        inFlight[track] = deferred
+                        deferred.invokeOnCompletion {
+                            scope.launch { lock.withLock { if (inFlight[track] === deferred) inFlight.remove(track) } }
                         }
+                        deferred.start()
                     }
-                    deferred.start()
-                }
             }
         return job.await()
     }
@@ -104,7 +185,7 @@ class OnlineLyricsRepository(
     ): ProviderResponse<List<LyricsCandidate>> =
         providers.firstOrNull()?.search(track.query, freeText?.takeIf { it.isNotBlank() }) ?: ProviderResponse.NotFound
 
-    /** The user picked [candidate] for [track]: it is kept and preferred (also over the file's own lyrics). */
+    /** Selecting a match changes the session preference, not offline storage. */
     suspend fun choose(
         track: LyricsTrack,
         candidate: LyricsCandidate,
@@ -118,12 +199,20 @@ class OnlineLyricsRepository(
                 fetchedAtMs = nowMs(),
                 userChosen = true,
             )
-        withContext(io) { cache.put(entry) }
-        return OnlineLyricsResult.Found(candidate, fromCache = false, userChosen = true, fetchedAtMs = entry.fetchedAtMs)
+        lock.withLock {
+            response = track to entry
+            preferFile = null
+        }
+        return OnlineLyricsResult.Found(candidate, false, true, entry.fetchedAtMs, cached(track))
     }
 
-    /** Forgets what was fetched for [track] (the file's own lyrics, or a new lookup, take over). */
-    suspend fun forget(track: LyricsTrack) = withContext(io) { cache.remove(track.songId) }
+    /** Prefer embedded text this session without deleting any existing offline lyrics. */
+    suspend fun forget(track: LyricsTrack) {
+        lock.withLock {
+            if (response?.first == track) response = null
+            preferFile = track
+        }
+    }
 
     @Suppress("ReturnCount")
     private suspend fun resolve(
@@ -139,12 +228,18 @@ class OnlineLyricsRepository(
             if (outcome != null) return outcome
         }
         val best = LyricsMatcher.best(query, found)
-        if (best != null) return store(track, best)
+        if (best != null) return remember(track, best)
         val options = LyricsMatcher.plausible(query, found)
         if (options.isNotEmpty()) return OnlineLyricsResult.NeedsChoice(options)
-        cache.put(
-            CachedLyrics(songId = track.songId, fingerprint = fingerprint(query), status = CachedStatus.NOT_FOUND, fetchedAtMs = nowMs()),
-        )
+        lock.withLock {
+            response = track to
+                CachedLyrics(
+                    songId = track.songId,
+                    fingerprint = fingerprint(query),
+                    status = CachedStatus.NOT_FOUND,
+                    fetchedAtMs = nowMs(),
+                )
+        }
         return OnlineLyricsResult.NotFound
     }
 
@@ -187,36 +282,40 @@ class OnlineLyricsRepository(
         }
 
     private suspend fun fromCache(track: LyricsTrack): OnlineLyricsResult? {
-        val entry = cache.get(track.songId)?.takeIf { it.fingerprint == fingerprint(track.query) } ?: return null
+        val stored = withContext(io) { storageLock.withLock { savedEntry(track) } }
+        val saved = stored?.takeIf { it.status != CachedStatus.NOT_FOUND }
+        val memory = lock.withLock { response?.takeIf { it.first == track }?.second }
+        val entry = memory?.takeIf { it.userChosen } ?: saved ?: memory ?: stored ?: return null
         val candidate = entry.candidate
         return when {
             entry.status == CachedStatus.INSTRUMENTAL -> OnlineLyricsResult.Instrumental
             entry.status == CachedStatus.FOUND && candidate != null ->
-                OnlineLyricsResult.Found(candidate, fromCache = true, userChosen = entry.userChosen, fetchedAtMs = entry.fetchedAtMs)
-            // "Not found" is remembered for a while, then asked again (lyrics get added over time).
+                OnlineLyricsResult.Found(candidate, true, entry.userChosen && !prefersEmbedded(track), entry.fetchedAtMs, saved)
             entry.status == CachedStatus.NOT_FOUND && nowMs() - entry.fetchedAtMs < NOT_FOUND_TTL_MS -> OnlineLyricsResult.NotFound
-            else -> null
+            else -> {
+                lock.withLock { if (response?.second === entry) response = null }
+                null
+            }
         }
     }
 
-    private suspend fun store(
+    private suspend fun remember(
         track: LyricsTrack,
         best: LyricsCandidate,
     ): OnlineLyricsResult {
-        val status = if (best.instrumental) CachedStatus.INSTRUMENTAL else CachedStatus.FOUND
         val entry =
             CachedLyrics(
                 songId = track.songId,
                 fingerprint = fingerprint(track.query),
-                status = status,
+                status = if (best.instrumental) CachedStatus.INSTRUMENTAL else CachedStatus.FOUND,
                 candidate = best,
                 fetchedAtMs = nowMs(),
             )
-        cache.put(entry)
+        lock.withLock { response = track to entry }
         return if (best.instrumental) {
             OnlineLyricsResult.Instrumental
         } else {
-            OnlineLyricsResult.Found(best, fromCache = false, userChosen = false, fetchedAtMs = entry.fetchedAtMs)
+            OnlineLyricsResult.Found(best, false, false, entry.fetchedAtMs, cached(track))
         }
     }
 

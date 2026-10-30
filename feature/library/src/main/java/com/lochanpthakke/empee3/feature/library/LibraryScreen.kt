@@ -16,11 +16,16 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.Radio
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +58,10 @@ import androidx.paging.compose.itemKey
 import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuSection
 import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
@@ -473,43 +482,52 @@ internal fun LibrarySongRow(
                     modifier = Modifier.size(IconSize.small),
                 )
             }
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                DropdownMenuItem(
+            GlassMenu(label = "Song options", expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                GlassMenuSection("Playback")
+                GlassMenuItem(
+                    icon = Icons.AutoMirrored.Filled.PlaylistPlay,
                     text = { Text("Play next") },
                     onClick = {
                         menuExpanded = false
                         actions.onPlayNext(song)
                     },
                 )
-                DropdownMenuItem(
+                GlassMenuItem(
+                    icon = Icons.AutoMirrored.Filled.QueueMusic,
                     text = { Text("Add to queue") },
                     onClick = {
                         menuExpanded = false
                         actions.onAddToQueue(song)
                     },
                 )
-                DropdownMenuItem(
+                GlassMenuItem(
+                    icon = Icons.Default.Radio,
                     text = { Text("Start radio") },
                     onClick = {
                         menuExpanded = false
                         actions.onStartRadio(song)
                     },
                 )
-                DropdownMenuItem(
+                GlassMenuDivider()
+                GlassMenuSection("Library")
+                GlassMenuItem(
+                    icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                     text = { Text("Add to playlist") },
                     onClick = {
                         menuExpanded = false
                         actions.onAddToPlaylist(song)
                     },
                 )
-                DropdownMenuItem(
+                GlassMenuItem(
+                    icon = Icons.Default.AutoFixHigh,
                     text = { Text("Fix tags / metadata") },
                     onClick = {
                         menuExpanded = false
                         actions.onFixTags(song)
                     },
                 )
-                DropdownMenuItem(
+                GlassMenuItem(
+                    icon = Icons.Default.Info,
                     text = { Text("View metadata") },
                     onClick = {
                         menuExpanded = false
@@ -517,7 +535,9 @@ internal fun LibrarySongRow(
                     },
                 )
                 if (onRemoveFromPlaylist != null) {
-                    DropdownMenuItem(
+                    GlassMenuItem(
+                        icon = Icons.Default.RemoveCircleOutline,
+                        destructive = true,
                         text = { Text("Remove from playlist") },
                         onClick = {
                             menuExpanded = false

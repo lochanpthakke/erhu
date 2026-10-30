@@ -50,6 +50,9 @@ import kotlin.math.max
 /** Glass tokens of the active theme, or null for classic (non-glass) themes. */
 val LocalGlassTokens = staticCompositionLocalOf<GlassTokens?> { null }
 
+/** User/theme glass setting retained for popups inside intentionally plain content such as Now Playing. */
+val LocalMenuGlassTokens = staticCompositionLocalOf<GlassTokens?> { null }
+
 /** Design-system access to glass styling; every helper is a no-op for non-glass themes. */
 object EmPee3Glass {
     val tokens: GlassTokens?

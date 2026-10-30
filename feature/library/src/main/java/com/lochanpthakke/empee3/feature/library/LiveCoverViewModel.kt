@@ -7,6 +7,7 @@ import com.lochanpthakke.empee3.core.database.repository.AnimatedArtworkReposito
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverCheck
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverVariant
 import com.lochanpthakke.empee3.core.model.Album
+import com.lochanpthakke.empee3.core.model.ArtworkCompressionState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -57,6 +58,9 @@ class LiveCoverViewModel
     ) : ViewModel() {
         private val _state = MutableStateFlow<LiveCoverUi>(LiveCoverUi.Hidden)
         val state: StateFlow<LiveCoverUi> = _state.asStateFlow()
+        private val _compression = MutableStateFlow(ArtworkCompressionState())
+        val compression: StateFlow<ArtworkCompressionState> = _compression.asStateFlow()
+        private var compressionObservation: Job? = null
 
         private var album: Album? = null
         private var download: Job? = null
@@ -64,7 +68,18 @@ class LiveCoverViewModel
         fun bind(album: Album) {
             if (this.album?.id == album.id) return
             this.album = album
-            viewModelScope.launch { _state.value = check(album) }
+            compressionObservation?.cancel()
+            compressionObservation =
+                viewModelScope.launch {
+                    repository.compression.observe(album.id).collect {
+                        _compression.value = it
+                        if (it.compressedBytes != null) _state.value = check(album)
+                    }
+                }
+            viewModelScope.launch {
+                _state.value = check(album)
+                if (_state.value is LiveCoverUi.Saved) repository.compression.prepare(album.id)
+            }
         }
 
         fun selectVariant(variant: LiveCoverVariant) {
@@ -122,6 +137,7 @@ class LiveCoverViewModel
                                 (check(album) as? LiveCoverUi.Saved)
                                     ?: LiveCoverUi.Failed(offer, "Apple Music no longer offers a live cover for this album.")
                         }
+                    if (_state.value is LiveCoverUi.Saved) repository.compression.prepare(album.id)
                 }
         }
 
@@ -140,6 +156,16 @@ class LiveCoverViewModel
                 repository.deleteArtwork(album.id)
                 _state.value = check(album)
             }
+        }
+
+        fun compress() {
+            val current = album ?: return
+            if (_state.value !is LiveCoverUi.Saved || !_compression.value.available) return
+            viewModelScope.launch { repository.compression.start(current.id) }
+        }
+
+        fun cancelCompression() {
+            album?.let { repository.compression.cancel(it.id) }
         }
 
         private suspend fun check(album: Album): LiveCoverUi =

@@ -25,10 +25,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +50,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.CollectionKind
@@ -296,13 +298,13 @@ private fun TimelineTrack(
         if (pairAfter != null) {
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "More for ${track.song.title}") }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("Edit transition to next") }, onClick = {
+                GlassMenu(label = "Transition options", expanded = menu, onDismissRequest = { menu = false }) {
+                    GlassMenuItem(icon = Icons.Default.Tune, text = { Text("Edit transition to next") }, onClick = {
                         menu = false
                         onEdit(pairAfter)
                     })
                     if (pairAfter.choice != TransitionChoice.Inherit) {
-                        DropdownMenuItem(text = { Text("Reset transition to Auto") }, onClick = {
+                        GlassMenuItem(icon = Icons.Default.RestartAlt, text = { Text("Reset transition to Auto") }, onClick = {
                             menu = false
                             onReset(pairAfter.key)
                         })

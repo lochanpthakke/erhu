@@ -51,14 +51,96 @@ class LiveCoverCheckTest {
 
     private val repository = repository()
 
+    @Test
+    fun `deleting artwork joins an in flight download before removing its row and files`() =
+        runBlocking {
+            network.downloadGate = CompletableDeferred()
+            val download =
+                async(Dispatchers.Default) {
+                    repository.downloadAndSaveVariant(ALBUM_ID, ARTIST, ALBUM, "123", "us", AnimatedArtOrientation.SQUARE_1_1, SQUARE_1080)
+                }
+            withTimeout(5_000) { network.downloadStarted.await() }
+            withTimeout(5_000) { repository.deleteArtwork(ALBUM_ID) }
+            assertTrue(runCatching { withTimeout(5_000) { download.await() } }.isFailure)
+            assertTrue(download.isCompleted)
+            network.downloadGate!!.complete(Unit)
+            assertNull(dao.getByAlbumId(ALBUM_ID))
+            assertTrue(
+                fileStore.baseDir
+                    .listFiles()
+                    .orEmpty()
+                    .isEmpty(),
+            )
+        }
+
+    @Test
+    fun `manual and automatic requests share the same active album orientation job`() =
+        runBlocking {
+            network.resolve = AppResult.Success(ResolveOutcome.Matched("123", "us", SQUARE_MASTER, null))
+            network.downloadGate = CompletableDeferred()
+            val manual =
+                async(Dispatchers.Unconfined) {
+                    repository.downloadAndSaveVariant(ALBUM_ID, ARTIST, ALBUM, "123", "us", AnimatedArtOrientation.SQUARE_1_1, SQUARE_1080)
+                }
+            withTimeout(5_000) { network.downloadStarted.await() }
+            val automatic =
+                async(Dispatchers.Unconfined) {
+                    repository.fetchAndStoreArtworkByUrl(ALBUM_ID, ARTIST, ALBUM, "123", "us", AnimatedArtOrientation.SQUARE_1_1)
+                }
+            repository.cleanupOnStartup()
+            assertTrue(File(fileStore.baseDir, "${ALBUM_ID}_square_1_1.mp4.tmp").exists())
+            network.downloadGate!!.complete(Unit)
+            assertTrue(manual.await() is AppResult.Success)
+            assertTrue(automatic.await() is AppResult.Success)
+            assertEquals(1, network.downloads)
+        }
+
+    @Test
+    fun `failed replacement leaves an existing cover available`() =
+        runBlocking {
+            val original =
+                fileStore.getSquareFile(ALBUM_ID, ALBUM, ARTIST).apply {
+                    parentFile?.mkdirs()
+                    writeText("original")
+                }
+            dao.upsert(entity(status = AnimatedArtStatus.AVAILABLE, squareFileName = original.name))
+            network.failDownload = true
+            val result =
+                repository.downloadAndSaveVariant(
+                    ALBUM_ID,
+                    ARTIST,
+                    ALBUM,
+                    "123",
+                    "us",
+                    AnimatedArtOrientation.SQUARE_1_1,
+                    SQUARE_1080,
+                )
+            assertTrue(result is AppResult.Error)
+            assertEquals("original", original.readText())
+            assertEquals(AnimatedArtStatus.AVAILABLE.name, status())
+        }
+
+    @Test
+    fun `interrupted replacement recovers the saved cover state at startup`() =
+        runBlocking {
+            val original =
+                fileStore.getSquareFile(ALBUM_ID, ALBUM, ARTIST).apply {
+                    parentFile?.mkdirs()
+                    writeText("original")
+                }
+            dao.upsert(entity(status = AnimatedArtStatus.DOWNLOADING, squareFileName = original.name))
+            repository.cleanupOnStartup()
+            assertEquals(AnimatedArtStatus.AVAILABLE.name, status())
+            assertEquals("original", original.readText())
+        }
+
     @After
     fun close() {
         db.close()
         fileStore.deleteAll()
     }
 
-    private fun check(albumId: Long = ALBUM_ID) =
-        runBlocking { repository.checkLiveCover(albumId, ARTIST, ALBUM, TRACKS) }
+    private fun check(albumId: Long = ALBUM_ID) = runBlocking { repository.checkLiveCover(albumId, ARTIST, ALBUM, TRACKS) }
 
     private fun status(albumId: Long = ALBUM_ID) = runBlocking { dao.getByAlbumId(albumId)?.status }
 
@@ -201,7 +283,13 @@ class LiveCoverCheckTest {
         }
 
         assertEquals(AnimatedArtStatus.FOUND.name, status())
-        assertEquals(emptyList<String>(), fileStore.baseDir.list()?.toList().orEmpty())
+        assertEquals(
+            emptyList<String>(),
+            fileStore.baseDir
+                .list()
+                ?.toList()
+                .orEmpty(),
+        )
         assertTrue((check() as AppResult.Success).data is LiveCoverCheck.Downloadable)
     }
 
@@ -233,6 +321,7 @@ class LiveCoverCheckTest {
     )
 
     private class FakeNetwork : AnimatedArtworkNetworkDataSource {
+        var failDownload = false
         var resolve: AppResult<ResolveOutcome> = AppResult.Success(ResolveOutcome.NoMatch)
         var variantBytes: Long? = EXACT_BYTES
         var downloadGate: CompletableDeferred<Unit>? = null
@@ -279,6 +368,7 @@ class LiveCoverCheckTest {
             destination: File,
             tmp: File,
         ): AppResult<Unit> {
+            if (failDownload) return AppResult.Error(AppError.NetworkError("Download failed"))
             downloads++
             tmp.parentFile?.mkdirs()
             tmp.writeBytes(ByteArray(2048))

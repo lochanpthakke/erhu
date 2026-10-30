@@ -22,11 +22,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
@@ -237,18 +239,22 @@ private fun EditorTopBar(
         }
         Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "More options") }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(text = { Text("Undo") }, enabled = draft.undo.isNotEmpty(), onClick = {
+            GlassMenu(label = "Transition editor options", expanded = menu, onDismissRequest = { menu = false }) {
+                GlassMenuItem(icon = Icons.AutoMirrored.Filled.Undo, text = { Text("Undo") }, enabled = draft.undo.isNotEmpty(), onClick = {
                     menu = false
                     viewModel.undo()
                 })
                 if (draft.target is EditorTarget.Pair) {
-                    DropdownMenuItem(text = { Text("Reset cue points") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.RestartAlt, text = { Text("Reset cue points") }, onClick = {
                         menu = false
                         viewModel.resetCues()
                     })
                 }
-                DropdownMenuItem(text = { Text("Reset to preset") }, enabled = draft.mode == EditorMode.CUSTOM, onClick = {
+                GlassMenuItem(icon = Icons.Default.RestartAlt, text = {
+                    Text(
+                        "Reset to preset",
+                    )
+                }, enabled = draft.mode == EditorMode.CUSTOM, onClick = {
                     menu = false
                     viewModel.resetToPreset()
                 })

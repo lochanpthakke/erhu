@@ -9,6 +9,8 @@ import com.lochanpthakke.empee3.core.network.apple.ResolveOutcome
 import kotlinx.coroutines.flow.Flow
 
 interface AnimatedArtworkRepository {
+    val compression: ArtworkCompressionOperations
+
     fun observeAnimatedArtwork(albumId: Long): Flow<LocalAnimatedArtwork?>
 
     suspend fun resolveAlbum(

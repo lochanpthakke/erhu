@@ -135,8 +135,16 @@ class OnlineLyricsTest {
         assertTrue(LyricsMatcher.score(query, candidate(title = "Test Song (feat. Guest)", artist = "Someone & Guest")).confident)
         assertTrue(LyricsMatcher.score(query, candidate(title = "TEST SONG - 2011 Remaster", duration = 201.5)).confident)
         assertTrue(LyricsMatcher.score(LyricsQuery("Café", "Beyoncé", null, 180_000), candidate("Cafe", "Beyonce", null, 181.0)).confident)
-        assertTrue(LyricsMatcher.score(LyricsQuery("Stay With Me", "Sam Smith", null, 172_000), candidate("Stay With Me", "Sam Smith", null, 172.0)).confident)
-        assertTrue(LyricsMatcher.score(LyricsQuery("Help!", "The Beatles", null, 140_000), candidate("Help!", "Beatles", null, 139.0)).confident)
+        assertTrue(
+            LyricsMatcher
+                .score(
+                    LyricsQuery("Stay With Me", "Sam Smith", null, 172_000),
+                    candidate("Stay With Me", "Sam Smith", null, 172.0),
+                ).confident,
+        )
+        assertTrue(
+            LyricsMatcher.score(LyricsQuery("Help!", "The Beatles", null, 140_000), candidate("Help!", "Beatles", null, 139.0)).confident,
+        )
         // A different artist whose name contains the other is never confident.
         assertFalse(LyricsMatcher.score(query, candidate(artist = "Someone Else")).confident)
     }
@@ -374,9 +382,10 @@ class OnlineLyricsTest {
             val result = repository.lookup(track)
             assertTrue(result is OnlineLyricsResult.NeedsChoice)
             assertTrue(cache.entries.isEmpty())
-            // The user picks it: kept and preferred.
+            // Choosing changes the session preference without writing an offline download.
             repository.choose(track, (result as OnlineLyricsResult.NeedsChoice).candidates.single())
-            assertTrue(cache.entries.getValue(7).userChosen)
+            assertTrue(cache.entries.isEmpty())
+            assertTrue((repository.lookup(track) as OnlineLyricsResult.Found).userChosen)
         }
 
     @Test
@@ -391,10 +400,10 @@ class OnlineLyricsTest {
 
             cache.entries.clear()
             fake.exactResult = ProviderResponse.Offline
-            assertEquals(OnlineLyricsResult.Offline, repository.lookup(track))
+            assertEquals(OnlineLyricsResult.Offline, repository.lookup(track, refresh = true))
             assertTrue(cache.entries.isEmpty())
             fake.exactResult = ProviderResponse.RateLimited(clock + 5_000)
-            assertTrue(repository.lookup(track) is OnlineLyricsResult.RateLimited)
+            assertTrue(repository.lookup(track, refresh = true) is OnlineLyricsResult.RateLimited)
             assertTrue(cache.entries.isEmpty())
         }
 
@@ -421,6 +430,6 @@ class OnlineLyricsTest {
             assertTrue(a.await() is OnlineLyricsResult.Found)
             assertTrue(b.await() is OnlineLyricsResult.Found)
             assertEquals(1, fake.exactCalls)
-            assertTrue(cache.entries.containsKey(7)) // the shared lookup still finished and was cached
+            assertTrue(cache.entries.isEmpty()) // the shared lookup never creates a permanent download
         }
 }

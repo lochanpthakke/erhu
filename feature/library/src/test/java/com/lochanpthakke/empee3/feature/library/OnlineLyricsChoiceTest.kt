@@ -1,5 +1,7 @@
 package com.lochanpthakke.empee3.feature.library
 
+import com.lochanpthakke.empee3.core.network.lyrics.CachedLyrics
+import com.lochanpthakke.empee3.core.network.lyrics.CachedStatus
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsTiming
 import com.lochanpthakke.empee3.core.network.lyrics.Lyricsfile
@@ -11,6 +13,57 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OnlineLyricsChoiceTest {
+    private fun saved(explicit: Boolean) =
+        CachedLyrics(
+            songId = 7,
+            fingerprint = "identity",
+            status = CachedStatus.FOUND,
+            candidate = wordTimed,
+            fetchedAtMs = 0,
+            explicitDownload = explicit,
+        )
+
+    @Test
+    fun `session response and legacy saved content are never labelled explicit downloads`() {
+        val session = chooseLyrics(7, null, online(), ManualLyricsSearch.Idle)
+        assertFalse(session.downloaded)
+        assertNull(session.saved)
+        val legacy = chooseLyrics(7, null, online().copy(saved = saved(false)), ManualLyricsSearch.Idle)
+        assertFalse(legacy.downloaded)
+        assertFalse(legacy.saved!!.explicitDownload)
+        val downloaded = chooseLyrics(7, null, online().copy(saved = saved(true)), ManualLyricsSearch.Idle)
+        assertTrue(downloaded.downloaded)
+    }
+
+    @Test
+    fun `saving and failure preserve the displayed timed text and saved state`() {
+        val view = online().copy(saved = saved(true), saving = true)
+        val busy = chooseLyrics(7, null, view, ManualLyricsSearch.Idle)
+        assertTrue(busy.saving)
+        assertTrue(busy.downloaded)
+        assertEquals(wordTimed.bestText, busy.text)
+        val failed = chooseLyrics(7, null, view.copy(saving = false, saveError = "Could not remove lyrics"), ManualLyricsSearch.Idle)
+        assertTrue(failed.downloaded)
+        assertEquals("Could not remove lyrics", failed.saveError)
+        val removed = chooseLyrics(7, null, view.copy(saved = null, saving = false), ManualLyricsSearch.Idle)
+        assertFalse(removed.downloaded)
+        assertEquals(wordTimed.bestText, removed.text)
+    }
+
+    @Test
+    fun `embedded lyrics stay available when a download exists and a refreshed version is separate`() {
+        val stored = saved(true)
+        val embedded = chooseLyrics(7, fileLyrics, online().copy(saved = stored), ManualLyricsSearch.Idle)
+        assertEquals(fileLyrics, embedded.text)
+        assertEquals(LyricsOrigin.FILE, embedded.origin)
+        assertEquals(stored, embedded.saved)
+        assertFalse(embedded.downloaded)
+        val refreshed =
+            chooseLyrics(7, null, online().copy(candidate = wordTimed.copy(providerId = 99), saved = stored), ManualLyricsSearch.Idle)
+        assertFalse(refreshed.downloaded)
+        assertEquals(stored, refreshed.saved)
+    }
+
     private val fileLyrics = "[00:01.00]From the file"
     private val wordTimed =
         LyricsCandidate(
@@ -69,11 +122,27 @@ class OnlineLyricsChoiceTest {
     fun `online word timing reaches the karaoke parser, line timing stays line level`() {
         val words = LyricsParser.parse(wordTimed.bestText) as Lyrics.Synced
         assertTrue(words.hasWordTiming)
-        assertEquals(listOf("Hello ", "world"), words.lines.single().words!!.map { it.text })
-        assertEquals(listOf(12_000L, 12_650L), words.lines.single().words!!.map { it.timeMs })
+        assertEquals(
+            listOf("Hello ", "world"),
+            words.lines
+                .single()
+                .words!!
+                .map { it.text },
+        )
+        assertEquals(
+            listOf(12_000L, 12_650L),
+            words.lines
+                .single()
+                .words!!
+                .map { it.timeMs },
+        )
         val lineOnly = LyricsParser.parse(wordTimed.copy(wordSyncedLrc = null).bestText) as Lyrics.Synced
         assertFalse(lineOnly.hasWordTiming)
-        assertTrue(LyricsParser.parse(wordTimed.copy(wordSyncedLrc = null, syncedLyrics = null, plainLyrics = "Just text").bestText) is Lyrics.Plain)
+        assertTrue(
+            LyricsParser.parse(
+                wordTimed.copy(wordSyncedLrc = null, syncedLyrics = null, plainLyrics = "Just text").bestText,
+            ) is Lyrics.Plain,
+        )
     }
 
     @Test

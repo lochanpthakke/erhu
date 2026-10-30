@@ -93,10 +93,9 @@ class HlsMp4Assembler
             // Apple's timestamps start at 10 s; the joined file must start at 0 or the cover waits 10 s.
             FragmentedMp4Timeline.startAtZero(tmpFile)
 
-            if (destFile.exists()) destFile.delete()
-            if (!tmpFile.renameTo(destFile)) {
-                tmpFile.copyTo(destFile, overwrite = true)
-                tmpFile.delete()
+            val job = currentCoroutineContext()
+            VerifiedArtworkPublisher().publish(tmpFile, destFile) { staged ->
+                ArtworkVideoValidator.validate(staged) { job.ensureActive() }
             }
         }
 
