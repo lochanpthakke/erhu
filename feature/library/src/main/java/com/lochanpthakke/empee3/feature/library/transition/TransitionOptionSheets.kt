@@ -1,7 +1,5 @@
 package com.lochanpthakke.empee3.feature.library.transition
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,16 +7,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +20,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -35,9 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.lochanpthakke.empee3.core.designsystem.component.GlassModalBottomSheet
+import com.lochanpthakke.empee3.core.designsystem.component.GlassFloatingPanel
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.EqMove
 import com.lochanpthakke.empee3.core.model.TransitionCurve
@@ -46,11 +39,7 @@ import com.lochanpthakke.empee3.core.model.TransitionSpec
 import com.lochanpthakke.empee3.core.model.VolumeShape
 import kotlin.math.roundToInt
 
-/**
- * Options for Volume, EQ and Filter, one page each (swipe between them), starting at [start]. Each
- * option is a real automation the engine plays; choosing one makes this level's transition custom.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Each section owns one floating panel, without a pager competing with horizontal sliders. */
 @Composable
 internal fun TransitionOptionsSheet(
     viewModel: TransitionStudioViewModel,
@@ -58,26 +47,13 @@ internal fun TransitionOptionsSheet(
     start: EditorSection,
     onDismiss: () -> Unit,
 ) {
-    val pager = rememberPagerState(initialPage = start.ordinal, pageCount = { EditorSection.entries.size })
-    val spec = draft.shown
-    GlassModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(modifier = Modifier.navigationBarsPadding().padding(bottom = Spacing.md)) {
-            HorizontalPager(
-                state = pager,
-                contentPadding =
-                    androidx.compose.foundation.layout
-                        .PaddingValues(horizontal = Spacing.lg),
-            ) { page ->
-                Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.xs)) {
-                    when (EditorSection.entries[page]) {
-                        EditorSection.VOLUME -> VolumePage(spec, viewModel, onDismiss)
-                        EditorSection.EQ -> EqPage(spec, viewModel)
-                        EditorSection.FILTER -> FilterPage(spec, viewModel)
-                    }
-                }
-            }
-            PageDots(pager.currentPage, EditorSection.entries.size)
+    GlassFloatingPanel(onDismissRequest = onDismiss) {
+        when (start) {
+            EditorSection.VOLUME -> VolumePage(draft.shown, viewModel, onDismiss)
+            EditorSection.EQ -> EqPage(draft.shown, viewModel)
+            EditorSection.FILTER -> FilterPage(draft.shown, viewModel)
         }
+        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
     }
 }
 
@@ -168,7 +144,7 @@ private fun OptionRow(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
                 .padding(vertical = Spacing.md),
     ) {
         Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -176,37 +152,17 @@ private fun OptionRow(
     }
 }
 
-@Composable
-private fun PageDots(
-    current: Int,
-    count: Int,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.CenterHorizontally),
-        modifier = Modifier.fillMaxWidth().padding(top = Spacing.sm),
-    ) {
-        repeat(count) { i ->
-            Box(
-                Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(if (i == current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant),
-            )
-        }
-    }
-}
-
 /** Duration choices, as large cards, plus a custom length. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun DurationSheet(
     durationMs: Int,
     onDuration: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    GlassModalBottomSheet(onDismissRequest = onDismiss) {
+    GlassFloatingPanel(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.navigationBarsPadding().padding(horizontal = Spacing.lg).padding(bottom = Spacing.lg),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
@@ -237,6 +193,7 @@ internal fun DurationSheet(
                 valueRange = TransitionSpec.MIN_DURATION_MS.toFloat()..TransitionSpec.MAX_DURATION_MS.toFloat(),
                 steps = (TransitionSpec.MAX_DURATION_MS - TransitionSpec.MIN_DURATION_MS) / TransitionSpec.DURATION_STEP_MS - 1,
             )
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
             Text(
                 "Choose how long the tracks overlap. A transition never takes more than half of either track.",
                 style = MaterialTheme.typography.bodyMedium,

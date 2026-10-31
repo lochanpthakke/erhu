@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
@@ -102,7 +103,9 @@ internal fun Modifier.cachedPopupOptics(
     val moving = LocalPopupGlassInMotion.current
     val shader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) remember { RuntimeShader(ENVIRONMENT_SHADER) } else null
     val contrast = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) remember { RuntimeShader(POPUP_CONTRAST_SHADER) } else null
-    return onGloballyPositioned { position = it.positionOnScreen() }.drawWithCache {
+    return onGloballyPositioned {
+        position = if (backdrop.screenCoordinates) it.positionOnScreen() else it.positionInRoot()
+    }.drawWithCache {
         val cache = popupOpticalCache(glass, style, dark, shader, contrast)
         var lastReady: Boolean? = null
         onDrawBehind {
@@ -151,14 +154,21 @@ private fun CacheDrawScope.popupOpticalCache(
     val optical = obtainGraphicsLayer().apply { topLeft = IntOffset(-margin, -margin) }
     val reflection =
         Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = if (dark) 0.022f else 0.035f), Color.Transparent),
+            listOf(Color.White.copy(alpha = style.reflectionAlpha), Color.Transparent),
             endY = size.height * 0.32f,
         )
     val rim =
         Brush.linearGradient(
-            listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.04f), Color.White.copy(alpha = 0.14f)),
+            listOf(
+                Color.White.copy(alpha = style.edgeAlpha),
+                Color.White.copy(alpha = style.edgeAlpha * 0.15f),
+                Color.White.copy(
+                    alpha =
+                        style.edgeAlpha * 0.5f,
+                ),
+            ),
         )
-    return CachedPopupOptics(diffusion, optical, layerSize, margin, glass, shader, reflection, rim)
+    return CachedPopupOptics(diffusion, optical, layerSize, margin, glass, style, shader, reflection, rim)
 }
 
 private class CachedPopupOptics(
@@ -167,6 +177,7 @@ private class CachedPopupOptics(
     val layerSize: IntSize,
     val margin: Int,
     val glass: GlassTokens,
+    val style: PopupGlassStyle,
     val shader: RuntimeShader?,
     val reflection: Brush,
     val rim: Brush,
@@ -187,7 +198,8 @@ private class CachedPopupOptics(
         val current = backdrop.contentVersion
         val offset = position - backdrop.sourceOffset
         val sourceChanged = version != current || recordedPosition != offset
-        if (!rendered || (!moving && sourceChanged)) updateBacking(backdrop, offset, current)
+        val refreshAllowed = !moving && !backdrop.frozen
+        if (!rendered || (refreshAllowed && sourceChanged)) updateBacking(backdrop, offset, current)
         val rounded = outline as? Outline.Rounded
         val rect = rounded?.roundRect?.let { Rect(it.left, it.top, it.right, it.bottom) } ?: Rect(Offset.Zero, size)
         if (shader != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && aperture != rect) {
@@ -229,10 +241,10 @@ private class CachedPopupOptics(
                 layerSize = Size(layerSize.width.toFloat(), layerSize.height.toFloat()),
                 cornerRadii = radii,
                 band = band,
-                strength = 9.dp.toPx(),
+                strength = glass.lensStrengthDp.dp.toPx(),
                 capBoost = 0.35f,
                 dispersion = 0f,
-                highlight = 0.09f,
+                highlight = style.lensHighlight,
                 rimWidth = band * 0.3f,
                 shade = 0.06f,
                 environment = Color(glass.backgroundGradient.first()),

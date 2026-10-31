@@ -47,7 +47,7 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.foundation.TextStyles
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
+import com.lochanpthakke.empee3.core.designsystem.theme.liquidGlass
 
 /** Selected icon scale: a small lift, not a pop. */
 private const val SELECTED_ICON_SCALE = 1.08f
@@ -65,7 +65,7 @@ internal fun getOrderedSections(start: LibrarySection): List<LibrarySection> {
 /**
  * Floating, icon-first navigation between the library sections. Placed by
  * [LibraryBottomControls] in the lowest layer of the shell's bottom chrome,
- * directly under the mini player, and shares its shape and material.
+ * directly under the mini player, and shares its shape and spacing.
  */
 @Composable
 @Suppress("LongMethod")
@@ -109,7 +109,7 @@ fun LibraryNavigationBar(
         modifier =
             modifier
                 .fillMaxWidth()
-                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = NAVIGATION_OPTICS, environmentLens = true),
+                .liquidGlass(shape),
         shape = shape,
         color = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -221,7 +221,7 @@ private fun LibraryNavigationItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val accent = MaterialTheme.colorScheme.primary
+    val accent = if (EmPee3Glass.isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary
     val quiet = MaterialTheme.colorScheme.onSurfaceVariant
     val interactionSource = remember { MutableInteractionSource() }
     Box(
@@ -296,6 +296,3 @@ private fun NavigationLabel(
         modifier = modifier,
     )
 }
-
-/** Environment glass of the section bar: the mini player's material, thinner. */
-private const val NAVIGATION_OPTICS = 0.62f

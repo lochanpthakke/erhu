@@ -45,8 +45,8 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassIndication
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPressEffect
+import com.lochanpthakke.empee3.core.designsystem.theme.liquidGlass
 import com.lochanpthakke.empee3.core.model.PlaybackStatus
 import com.lochanpthakke.empee3.core.playback.repository.PlaybackRepository
 import com.lochanpthakke.empee3.feature.library.AnimatedTrack
@@ -90,17 +90,21 @@ fun MiniPlayer(
                 .fillMaxWidth()
                 // Floating card; shares margins and shape with the rest of the bottom chrome.
                 .padding(horizontal = BottomChrome.horizontalMargin, vertical = BottomChrome.gap)
-                // Glass: a borderless material layer over the content (tone + sheen, no stroke or shadow).
+                // Share navigation glass and strength, sampling the screen content underneath.
                 .onGloballyPositioned { coordinates -> transition?.miniBounds = coordinates.boundsInRoot() }
                 .graphicsLayer {
                     val p = transition?.fraction ?: 0f
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
                 }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)
                 .glassPressEffect(interactionSource, shape)
-                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = 1f, environmentLens = true)
+                .liquidGlass(shape)
                 .clickable(interactionSource = interactionSource, indication = glassIndication(), onClick = onMiniPlayerClick),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant)),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (glass) 0.dp else BottomChrome.elevation),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

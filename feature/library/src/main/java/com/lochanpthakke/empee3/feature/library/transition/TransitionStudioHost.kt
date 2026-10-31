@@ -1,12 +1,12 @@
 package com.lochanpthakke.empee3.feature.library.transition
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.lochanpthakke.empee3.core.designsystem.component.PopupGlassBackdropHost
 
 /**
  * Shows the Transition Studio for [input] full screen over the current page (its own window, so
@@ -26,6 +26,6 @@ internal fun TransitionStudioHost(
         onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        Box(Modifier.fillMaxSize()) { TransitionStudioScreen(viewModel, onClose) }
+        PopupGlassBackdropHost(Modifier.fillMaxSize()) { TransitionStudioScreen(viewModel, onClose) }
     }
 }

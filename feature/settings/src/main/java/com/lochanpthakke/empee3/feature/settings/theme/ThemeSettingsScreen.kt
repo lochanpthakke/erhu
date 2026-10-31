@@ -138,7 +138,7 @@ fun ThemeSettingsScreen(
                 row {
                     SettingsSwitchRow(
                         title = "Glass Effect",
-                        summary = "Translucent glass on the mini player, navigation and floating buttons. Works with any theme.",
+                        summary = "Clear glass on the mini-player, navigation, Search and popup surfaces.",
                         icon = Icons.Default.AutoAwesome,
                         checked = glassEffectEnabled,
                         onCheckedChange = viewModel::setGlassEffectEnabled,

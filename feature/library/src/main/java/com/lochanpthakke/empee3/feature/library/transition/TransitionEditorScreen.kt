@@ -90,12 +90,12 @@ internal fun TransitionEditorScreen(
             item(key = "bar") { EditorTopBar(viewModel, draft, collectionNoun) }
             pair?.let { item(key = "out") { TrackRow(it.from, "Outgoing", cueLabel(base, it, outgoing = true)) } }
             item(key = "timeline") { TimelineBlock(viewModel, draft, waves, preview, effectiveMs) }
-            item(key = "duration") { DurationBlock(draft, preview, requestedMs, effectiveMs) { durationSheet = true } }
+            item(key = "duration") { DurationBlock(draft, preview, requestedMs, effectiveMs) { sheet = null; durationSheet = true } }
             pair?.let { item(key = "in") { TrackRow(it.to, "Incoming", cueLabel(base, it, outgoing = false)) } }
             item(key = "presets") { PresetCards(draft, viewModel::choose) }
             item(key = "status") { StatusLine(draft) }
             items(EditorSection.entries, key = { it.name }) { section ->
-                SectionRow(section, sectionValue(section, shown)) { sheet = section }
+                SectionRow(section, sectionValue(section, shown)) { durationSheet = false; sheet = section }
             }
             item(key = "more") { SectionRowUnavailable() }
             if (draft.mode == EditorMode.CUSTOM && draft.spec.curve == TransitionCurve.CUSTOM) {

@@ -31,8 +31,8 @@ import com.lochanpthakke.empee3.core.designsystem.foundation.Motion
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassIndication
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPressEffect
+import com.lochanpthakke.empee3.core.designsystem.theme.liquidGlass
 
 /**
  * The library's bottom control row: the section navigation and, beside it, a
@@ -67,9 +67,14 @@ internal fun LibrarySearchButton(
     active: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // Active (searching): the same accent the selected section uses, so it reads as "here".
+    // Match the selected section ink while searching; glass stays neutral.
     val iconColor by animateColorAsState(
-        targetValue = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+        targetValue =
+            if (EmPee3Glass.isActive) {
+                if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            },
         animationSpec = Motion.fade(),
         label = "searchButtonIcon",
     )
@@ -81,7 +86,7 @@ internal fun LibrarySearchButton(
             modifier
                 .width(ComponentSize.chromeAction)
                 .glassPressEffect(interactionSource, shape)
-                .glassPanel(shape, strong = true, elevated = false, outlined = false, optics = SEARCH_OPTICS, environmentLens = true),
+                .liquidGlass(shape),
         shape = shape,
         color = EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -103,6 +108,3 @@ internal fun LibrarySearchButton(
         }
     }
 }
-
-/** Environment glass of the search button: the mini player's material, weaker. */
-private const val SEARCH_OPTICS = 0.55f

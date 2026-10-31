@@ -18,14 +18,14 @@ class LiquidMenuMaterialTest {
     @Test
     fun materialIsNeutralAtEveryClarityAndTheme() {
         for (dark in listOf(true, false)) {
-            for (opacity in listOf(0f, 0.5f, 1f)) {
+            for (opacity in listOf(0f, 0.25f, 0.5f, 0.75f, 1f)) {
                 val tokens = popupGlassTokens(dark, opacity)
                 val fill = Color(tokens.panelFill)
                 assertEquals(fill.red, fill.green, 0.001f)
                 assertEquals(fill.green, fill.blue, 0.001f)
                 assertEquals(0L, tokens.tint)
                 assertEquals(1f, tokens.frostSaturation)
-                assertTrue(fill.alpha < 0.5f)
+                assertTrue(fill.alpha < 0.7f)
             }
         }
     }
@@ -33,14 +33,24 @@ class LiquidMenuMaterialTest {
     @Test
     fun clarityCoordinatesDiffusionFillAndContrast() {
         for (dark in listOf(true, false)) {
-            val clear = popupGlassStyle(0f, dark)
-            val opaque = popupGlassStyle(1f, dark)
-            assertTrue(clear.opacity < opaque.opacity)
-            assertTrue(clear.blurDp < opaque.blurDp)
-            assertTrue(clear.dim + clear.lift < opaque.dim + opaque.lift)
+            val clear = popupGlassStyle(1f, dark)
+            val opaque = popupGlassStyle(0f, dark)
+            val middle = popupGlassStyle(0.5f, dark)
+            assertTrue(middle.opacity > clear.opacity && middle.opacity < opaque.opacity)
+            assertTrue(opaque.opacity - clear.opacity >= 0.5f)
+            assertTrue(opaque.blurDp - clear.blurDp >= 24)
+            assertTrue(clear.refractionDp > middle.refractionDp && middle.refractionDp > opaque.refractionDp)
+            val samples = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { popupGlassStyle(it, dark) }
+            samples.zipWithNext().forEach { (less, more) ->
+                assertTrue(less.opacity > more.opacity)
+                assertTrue(less.blurDp > more.blurDp)
+                assertTrue(less.refractionDp < more.refractionDp)
+                assertTrue(less.reflectionAlpha < more.reflectionAlpha)
+                assertTrue(less.edgeAlpha < more.edgeAlpha)
+            }
             assertEquals(popupGlassStyle(0.5f, dark), popupGlassStyle(Float.NaN, dark))
-            assertEquals(clear, popupGlassStyle(-1f, dark))
-            assertEquals(opaque, popupGlassStyle(2f, dark))
+            assertEquals(opaque, popupGlassStyle(-1f, dark))
+            assertEquals(clear, popupGlassStyle(2f, dark))
         }
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -26,18 +27,27 @@ internal fun PopupGlassControls(
     opacity: Float,
     onOpacityChange: (Float) -> Unit,
 ) {
-    var preview by remember(opacity) { mutableFloatStateOf(opacity) }
-    SettingsSection(title = "Liquid Glass", footer = "Adjust how clear or opaque popup glass appears.") {
+    var preview by remember { mutableFloatStateOf(opacity) }
+    var dragging by remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(opacity) { if (!dragging) preview = opacity }
+    SettingsSection(title = "Liquid Glass", footer = "Adjust clear glass on navigation, Search and popup surfaces.") {
         SettingsGroup {
             row {
                 Column(Modifier.fillMaxWidth().padding(Spacing.md)) {
                     CompositionLocalProvider(LocalPopupGlassOpacity provides preview) { PopupGlassPreview() }
-                    Text("Glass opacity: ${(preview * 100).roundToInt()}%", Modifier.padding(top = Spacing.md))
-                    Text("Clear · Higher contrast", style = MaterialTheme.typography.bodySmall)
+                    Text("Glass Strength: ${(preview * 100).roundToInt()}%", Modifier.padding(top = Spacing.md))
+                    Text("Less Glass · More Glass", style = MaterialTheme.typography.bodySmall)
                     Slider(
                         value = preview,
-                        onValueChange = { preview = it },
-                        onValueChangeFinished = { onOpacityChange(preview) },
+                        onValueChange = {
+                            dragging = true
+                            preview = it
+                            onOpacityChange(it)
+                        },
+                        onValueChangeFinished = {
+                            dragging = false
+                            onOpacityChange(preview)
+                        },
                         valueRange = 0f..1f,
                     )
                     TextButton(onClick = {

@@ -171,8 +171,8 @@ class ThemeRepositoryImpl
         override suspend fun setPopupGlassOpacity(value: Float): AppResult<Unit> =
             appResultOf {
                 val opacity = value.normalizedPopupGlassOpacity()
-                dataStore.updateData { it.toBuilder().setPopupGlassOpacity(opacity).build() }
                 _popupGlassOpacity.value = opacity
+                dataStore.updateData { it.toBuilder().setPopupGlassOpacity(opacity).build() }
             }
 
         override suspend fun setDefaultStartSection(section: String): AppResult<Unit> =

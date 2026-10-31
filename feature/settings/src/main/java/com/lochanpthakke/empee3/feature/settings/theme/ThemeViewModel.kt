@@ -7,6 +7,7 @@ import com.lochanpthakke.empee3.core.datastore.repository.ThemeRepository
 import com.lochanpthakke.empee3.core.designsystem.skin.SkinManifest
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,8 +68,11 @@ class ThemeViewModel
             }
         }
 
+        private var popupOpacityUpdate: Job? = null
+
         fun setPopupGlassOpacity(value: Float) {
-            viewModelScope.launch { themeRepository.setPopupGlassOpacity(value) }
+            popupOpacityUpdate?.cancel()
+            popupOpacityUpdate = viewModelScope.launch { themeRepository.setPopupGlassOpacity(value) }
         }
 
         fun selectLibraryLayout(mode: String) {

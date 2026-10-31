@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.LocalPopupGlassOpacity
 import kotlin.math.abs
 
 /*
@@ -40,7 +42,7 @@ private const val STRETCH_PER_VELOCITY = 0.025f
 private const val MAX_STRETCH = 0.1f
 private const val SQUASH_RATIO = 0.35f
 
-/** The frosted fill: brighter at the top, a breath of the theme's warmth so it belongs to it. */
+/** Neutral glass sheen; accent warmth is reserved for the non-glass fallback. */
 private const val FILL_TOP_ALPHA = 0.22f
 private const val FILL_BOTTOM_ALPHA = 0.12f
 private const val FILL_WARMTH = 0.12f
@@ -55,7 +57,7 @@ private const val LIGHT_PER_VELOCITY = 0.02f
 private const val MAX_LIGHT = 0.08f
 
 /**
- * The capsule, drawn over the row (give it the row's size). [accent] warms its glass slightly;
+ * The capsule, drawn over the row (give it the row's size). [accent] applies only when glass is disabled; glass itself stays neutral;
  * [visibility] (0..1, read while drawing) fades it, e.g. while no item is current.
  */
 @Composable
@@ -66,12 +68,14 @@ fun LiquidCapsule(
     modifier: Modifier = Modifier,
     visibility: () -> Float = { 1f },
 ) {
+    val glass = EmPee3Glass.isActive
+    val strength = LocalPopupGlassOpacity.current.coerceIn(0f, 1f)
     Box(
         modifier =
             modifier.drawWithCache {
                 val padding = CAPSULE_PADDING.toPx()
                 val inset = CAPSULE_INSET.toPx()
-                val frost = lerp(Color.White, accent, FILL_WARMTH)
+                val frost = if (glass) Color.White else lerp(Color.White, accent, FILL_WARMTH)
                 onDrawBehind {
                     val alpha = visibility().coerceIn(0f, 1f)
                     val rect = slots.capsuleBetween(position.value, padding, inset)
@@ -80,7 +84,7 @@ fun LiquidCapsule(
                     val stretch = (speed * STRETCH_PER_VELOCITY).coerceAtMost(MAX_STRETCH)
                     val light = (speed * LIGHT_PER_VELOCITY).coerceAtMost(MAX_LIGHT)
                     withTransform({ scale(1f + stretch, 1f - stretch * SQUASH_RATIO, pivot = rect.center) }) {
-                        drawFrost(rect, frost, alpha, light)
+                        drawFrost(rect, frost, alpha * if (glass) (0.8f - strength * 0.6f) else 1f, light)
                         drawEdge(rect, alpha)
                     }
                 }

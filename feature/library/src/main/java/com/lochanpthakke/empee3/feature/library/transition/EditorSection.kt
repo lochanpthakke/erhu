@@ -42,7 +42,7 @@ import com.lochanpthakke.empee3.feature.library.formatTimestamp
 
 // Building blocks of the transition editor (see TransitionEditorScreen).
 
-/** The editor's option sections, in pager order. */
+/** The editor's floating option panels. */
 internal enum class EditorSection(
     val title: String,
     val color: Color,
