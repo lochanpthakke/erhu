@@ -31,12 +31,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MovieFilter
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +63,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
 import com.lochanpthakke.empee3.core.model.AnimatedArtStatus
@@ -281,12 +281,12 @@ fun AnimatedArtworkScreen(
                                         Text(label, fontWeight = FontWeight.Medium)
                                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
                                     }
-                                    DropdownMenu(
+                                    GlassMenu(
                                         expanded = resolutionDropdownExpanded,
                                         onDismissRequest = { resolutionDropdownExpanded = false },
                                     ) {
                                         availableVariants.forEach { variant ->
-                                            DropdownMenuItem(
+                                            GlassMenuItem(
                                                 text = {
                                                     Text(
                                                         "${variant.resolutionText} — ${String.format("%.1f MB", variant.estimatedSizeMb)}",
@@ -481,7 +481,7 @@ fun AnimatedArtworkScreen(
 
     // Error Message Alert
     errorMessage?.let { message ->
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = viewModel::dismissErrorMessage,
             title = { Text("Notice") },
             text = { Text(message) },
@@ -496,7 +496,7 @@ fun AnimatedArtworkScreen(
     // Success Completion Dialog Popup
     successDialogArtwork?.let { artwork ->
         val filePath = artwork.squareFilePath ?: artwork.tallFilePath ?: "App Internal Storage"
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = viewModel::dismissSuccessDialog,
             title = { Text("Artwork Successfully Fetched") },
             text = {
@@ -592,7 +592,8 @@ private fun AnimatedQueueItemCard(
                 .clickable(onClick = onSelect),
         colors =
             CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                containerColor =
+                    if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
             ),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {

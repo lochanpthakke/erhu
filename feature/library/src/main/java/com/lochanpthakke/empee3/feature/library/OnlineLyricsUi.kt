@@ -2,7 +2,6 @@ package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -21,7 +20,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -40,8 +38,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.network.lyrics.CachedLyrics
 import com.lochanpthakke.empee3.core.network.lyrics.LyricsCandidate
@@ -63,8 +64,9 @@ internal fun LyricsSourceBar(
         modifier = Modifier.fillMaxWidth().padding(start = Spacing.xl, end = Spacing.xs),
     ) {
         LyricsSourceText(lyrics)
-        Box {
+        GlassMenuAnchor {
             IconButton(
+                modifier = Modifier.glassMenuTrigger(),
                 enabled = !lyrics.saving,
                 onClick = { menu = true },
             ) { Icon(Icons.Default.MoreVert, contentDescription = "Lyrics options") }
@@ -144,7 +146,7 @@ private fun LyricsRemovalDialog(
     onDismiss: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Remove saved lyrics?") },
         text = { Text("Remove this song's saved online lyrics? Lyrics in the music file will be kept.") },
@@ -250,7 +252,7 @@ internal fun ManualLyricsSearchDialog(
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf(initialQuery) }
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Search lyrics online") },
         text = {

@@ -46,6 +46,7 @@ interface ThemeRepository {
 
     val sidebarGlassyness: StateFlow<Float>
     val uiGlassyness: StateFlow<Float>
+    val popupGlassOpacity: StateFlow<Float>
 
     suspend fun setAppTheme(themeId: String): AppResult<Unit>
 
@@ -58,6 +59,8 @@ interface ThemeRepository {
     suspend fun setSidebarGlassyness(value: Float): AppResult<Unit>
 
     suspend fun setUiGlassyness(value: Float): AppResult<Unit>
+
+    suspend fun setPopupGlassOpacity(value: Float): AppResult<Unit>
 
     suspend fun setDefaultStartSection(section: String): AppResult<Unit>
 

@@ -52,7 +52,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,25 +62,18 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverCheck
 import com.lochanpthakke.empee3.core.database.repository.LiveCoverVariant
 import com.lochanpthakke.empee3.core.designsystem.artwork.AlbumArtwork
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
-import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
-import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.model.AnimatedArtOrientation
 import com.lochanpthakke.empee3.core.model.ArtworkCompressionState
 import com.lochanpthakke.empee3.feature.library.LiveCoverUi
 
 private val POPUP_MAX_WIDTH = 300.dp
 private val POPUP_MARGIN = 16.dp
-private val POPUP_GAP = 8.dp
 private val THUMBNAIL_SIZE = 64.dp
-private val POPUP_SHAPE = RoundedCornerShape(24.dp)
 
 private enum class BitrateTier { LOW, MEDIUM, HIGH }
 
@@ -153,28 +145,22 @@ fun LiveCoverControl(
     ) {
         Box {
             LiveCoverButton(state = state, onClick = { open = true })
-            if (open && state != LiveCoverUi.Hidden) {
-                val density = LocalDensity.current
-                Popup(
-                    popupPositionProvider =
-                        remember(density) {
-                            with(density) { BesideAnchor(POPUP_MARGIN.roundToPx(), POPUP_GAP.roundToPx()) }
-                        },
-                    onDismissRequest = { open = false },
-                    properties = PopupProperties(focusable = true),
-                ) {
-                    LiveCoverCard(
-                        state,
-                        artworkUri,
-                        onDownload,
-                        onCancel,
-                        onRemove,
-                        onSelectVariant,
-                        compression,
-                        onCompress,
-                        onCancelCompression,
-                    )
-                }
+            GlassMenu(
+                expanded = open && state != LiveCoverUi.Hidden,
+                onDismissRequest = { open = false },
+                label = "Live cover",
+            ) {
+                LiveCoverCard(
+                    state,
+                    artworkUri,
+                    onDownload,
+                    onCancel,
+                    onRemove,
+                    onSelectVariant,
+                    compression,
+                    onCompress,
+                    onCancelCompression,
+                )
             }
         }
     }
@@ -244,9 +230,6 @@ private fun LiveCoverCard(
         modifier =
             Modifier
                 .width(width)
-                // The popup is its own window: tinted glass without the page's frost behind it.
-                .glassPanel(POPUP_SHAPE, level = GlassLevel.Strong, backdrop = null)
-                .background(EmPee3Glass.containerColor(MaterialTheme.colorScheme.surfaceContainerHigh), POPUP_SHAPE)
                 .padding(Spacing.md),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -535,18 +518,6 @@ private fun orientationName(orientation: AnimatedArtOrientation): String =
         AnimatedArtOrientation.SQUARE_1_1 -> "Square"
         AnimatedArtOrientation.TALL_3_4 -> "Tall"
     }
-
-private class BesideAnchor(
-    private val marginPx: Int,
-    private val gapPx: Int,
-) : PopupPositionProvider {
-    override fun calculatePosition(
-        anchorBounds: IntRect,
-        windowSize: IntSize,
-        layoutDirection: LayoutDirection,
-        popupContentSize: IntSize,
-    ): IntOffset = popupBesideAnchor(anchorBounds, windowSize, layoutDirection, popupContentSize, marginPx, gapPx)
-}
 
 /**
  * Below the anchor with their end edges aligned (the button sits at the cover's end), kept

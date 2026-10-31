@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,7 +48,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
-import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
+import com.lochanpthakke.empee3.core.designsystem.theme.popupGlass
 import com.lochanpthakke.empee3.core.sound.dsp.CustomEqAudioProcessor
 import com.lochanpthakke.empee3.core.sound.dsp.FilterType
 import com.lochanpthakke.empee3.core.sound.model.BandConfig
@@ -303,11 +305,9 @@ private fun PresetAndResetHeader(
             ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                // Glass on: the frosted menu role. Off: the theme's own surface (the Material
-                // container roles are not part of the app's themes).
-                containerColor =
-                    if (EmPee3Glass.isActive) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
-                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.popupGlass(RoundedCornerShape(28.dp)),
+                containerColor = Color.Transparent,
+                shape = RoundedCornerShape(28.dp),
             ) {
                 for (preset in soundSettings.allPresets) {
                     DropdownMenuItem(

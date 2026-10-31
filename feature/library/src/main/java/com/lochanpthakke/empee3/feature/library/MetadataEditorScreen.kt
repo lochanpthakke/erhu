@@ -51,8 +51,6 @@ import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,6 +76,8 @@ import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.ActionButton
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.GroupDivider
 import com.lochanpthakke.empee3.core.designsystem.component.GroupRow
 import com.lochanpthakke.empee3.core.designsystem.component.GroupToggleRow
@@ -300,12 +300,12 @@ fun MetadataEditorScreen(
                                 trailing = Icons.Default.ArrowDropDown,
                                 onClick = { providerExpanded = true },
                             )
-                            DropdownMenu(
+                            GlassMenu(
                                 expanded = providerExpanded,
                                 onDismissRequest = { providerExpanded = false },
                             ) {
                                 providerOptions.forEach { (key, label) ->
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
                                         text = { Text(label) },
                                         onClick = {
                                             viewModel.setSelectedProvider(key)
@@ -324,16 +324,17 @@ fun MetadataEditorScreen(
                                 trailing = Icons.Default.ArrowDropDown,
                                 onClick = { actionExpanded = true },
                             )
-                            DropdownMenu(
+                            GlassMenu(
                                 expanded = actionExpanded,
+                                dismissOnSelection = false,
                                 onDismissRequest = { actionExpanded = false },
                             ) {
-                                DropdownMenuItem(
+                                GlassMenuItem(
                                     text = { Text("Select All Fields", fontWeight = FontWeight.Bold) },
                                     onClick = { viewModel.selectAllFields() },
                                 )
                                 allFields.forEach { field ->
-                                    DropdownMenuItem(
+                                    GlassMenuItem(
                                         text = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Checkbox(checked = field in selectedFields, onCheckedChange = null)
@@ -360,18 +361,18 @@ fun MetadataEditorScreen(
                                 trailing = Icons.Default.ArrowDropDown,
                                 onClick = { modeExpanded = true },
                             )
-                            DropdownMenu(
+                            GlassMenu(
                                 expanded = modeExpanded,
                                 onDismissRequest = { modeExpanded = false },
                             ) {
-                                DropdownMenuItem(
+                                GlassMenuItem(
                                     text = { Text("Automatic Tagging") },
                                     onClick = {
                                         viewModel.setRepairMode(LibraryViewModel.RepairMode.AUTOMATIC)
                                         modeExpanded = false
                                     },
                                 )
-                                DropdownMenuItem(
+                                GlassMenuItem(
                                     text = { Text("Manual Selection") },
                                     onClick = {
                                         viewModel.setRepairMode(LibraryViewModel.RepairMode.MANUAL)

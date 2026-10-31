@@ -1,7 +1,6 @@
 package com.lochanpthakke.empee3.feature.library
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -48,10 +47,12 @@ import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.OverlayHeader
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Radius
@@ -316,8 +317,8 @@ private fun PlaylistMenu(
     onDelete: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
+    GlassMenuAnchor {
+        IconButton(modifier = Modifier.glassMenuTrigger(), onClick = { expanded = true }) {
             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Playlist options")
         }
         GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }) {

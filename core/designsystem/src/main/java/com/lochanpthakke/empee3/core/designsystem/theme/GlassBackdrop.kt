@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionOnScreen
 import com.lochanpthakke.empee3.core.common.perf.traced
 
 /**
@@ -45,6 +46,7 @@ class GlassBackdrop internal constructor(
      * its region directly, toned, without blurring a blur again (no offscreen pass per surface).
      */
     internal val preBlurred: Boolean = false,
+    internal val screenCoordinates: Boolean = false,
 ) {
     internal val sourceSection = "GlassSource:$name"
     internal val frostSection = "GlassFrost:$name"
@@ -55,6 +57,8 @@ class GlassBackdrop internal constructor(
 
     /** Bumped whenever the source re-records, so glass surfaces redraw with it. */
     internal var contentVersion by mutableIntStateOf(0)
+
+    internal var consumers by mutableIntStateOf(0)
 
     internal var hasContent = false
 
@@ -74,9 +78,10 @@ class GlassBackdrop internal constructor(
 fun rememberGlassBackdrop(
     name: String = "backdrop",
     preBlurred: Boolean = false,
+    screenCoordinates: Boolean = false,
 ): GlassBackdrop {
     val layer = rememberGraphicsLayer()
-    return remember(layer, name, preBlurred) { GlassBackdrop(layer, name, preBlurred) }
+    return remember(layer, name, preBlurred, screenCoordinates) { GlassBackdrop(layer, name, preBlurred, screenCoordinates) }
 }
 
 /** The backdrop glass surfaces blur by default; null means tint-only glass. */
@@ -92,10 +97,13 @@ internal val isBackdropBlurSupported: Boolean
  * with Glass off this is a no-op.
  */
 @Composable
-fun Modifier.glassBackdropSource(backdrop: GlassBackdrop): Modifier {
-    if (LocalGlassTokens.current == null || !isBackdropBlurSupported) return this
+fun Modifier.glassBackdropSource(
+    backdrop: GlassBackdrop,
+    enabled: Boolean = true,
+): Modifier {
+    if (!enabled || LocalGlassTokens.current == null || !isBackdropBlurSupported) return this
     return this
-        .onGloballyPositioned { backdrop.sourceOffset = it.positionInRoot() }
+        .onGloballyPositioned { backdrop.sourceOffset = if (backdrop.screenCoordinates) it.positionOnScreen() else it.positionInRoot() }
         .drawWithContent {
             backdrop.isRecording = true
             traced(backdrop.sourceSection) { backdrop.layer.record { this@drawWithContent.drawContent() } }

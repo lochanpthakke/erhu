@@ -70,6 +70,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.BUTTON_PRESSED_SCALE
 import com.lochanpthakke.empee3.core.designsystem.component.CollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuSection
@@ -79,6 +80,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroBlock
 import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroDetails
 import com.lochanpthakke.empee3.core.designsystem.component.collapsingHeroTitle
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.component.pressScale
 import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingHeaderState
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
@@ -214,8 +216,9 @@ fun AlbumDetailScreen(
                             if (viewModel.animatedArtworkRepository != null) {
                                 AlbumLiveCover(album)
                             }
-                            Box {
+                            GlassMenuAnchor {
                                 IconButton(
+                                    modifier = Modifier.glassMenuTrigger(),
                                     onClick = { menuExpanded = true },
                                     colors =
                                         IconButtonDefaults.iconButtonColors(

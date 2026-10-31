@@ -32,6 +32,7 @@ class ThemeViewModel
         val fanartTvApiKey: StateFlow<String> = themeRepository.fanartTvApiKey
         val sidebarGlassyness: StateFlow<Float> = themeRepository.sidebarGlassyness
         val uiGlassyness: StateFlow<Float> = themeRepository.uiGlassyness
+        val popupGlassOpacity: StateFlow<Float> = themeRepository.popupGlassOpacity
 
         private val _importMessage = MutableStateFlow<String?>(null)
         val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
@@ -64,6 +65,10 @@ class ThemeViewModel
             viewModelScope.launch {
                 themeRepository.setUiGlassyness(value)
             }
+        }
+
+        fun setPopupGlassOpacity(value: Float) {
+            viewModelScope.launch { themeRepository.setPopupGlassOpacity(value) }
         }
 
         fun selectLibraryLayout(mode: String) {

@@ -100,14 +100,12 @@ import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Theme
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalGlassBackdrop
-import com.lochanpthakke.empee3.core.designsystem.theme.LocalPlaybackArtworkColors
 import com.lochanpthakke.empee3.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.lochanpthakke.empee3.core.designsystem.theme.ThemeManifest
 import com.lochanpthakke.empee3.core.designsystem.theme.WithoutGlass
 import com.lochanpthakke.empee3.core.designsystem.theme.glassBackdropSource
 import com.lochanpthakke.empee3.core.designsystem.theme.glassPanel
 import com.lochanpthakke.empee3.core.designsystem.theme.rememberGlassBackdrop
-import com.lochanpthakke.empee3.core.designsystem.theme.rememberPlaybackArtworkColors
 import com.lochanpthakke.empee3.core.model.Album
 import com.lochanpthakke.empee3.core.model.Artist
 import com.lochanpthakke.empee3.core.model.Song
@@ -211,6 +209,7 @@ fun MainScaffold() {
     val selectedThemeId by themeViewModel.appThemeId.collectAsState()
     val glassEffectEnabled by themeViewModel.glassEffectEnabled.collectAsState()
     val sidebarGlassyness by themeViewModel.sidebarGlassyness.collectAsState()
+    val popupGlassOpacity by themeViewModel.popupGlassOpacity.collectAsState()
     // System Default follows the device's light/dark setting (re-read on configuration changes).
     val isSystemDark = isSystemInDarkTheme()
 
@@ -220,8 +219,6 @@ fun MainScaffold() {
     val playbackState = playbackRepository.collectStablePlaybackState()
     val hasCurrentSong by remember(playbackState) { derivedStateOf { playbackState.value.currentSong != null } }
     val context = LocalContext.current
-
-    val playbackArtworkColors = rememberPlaybackArtworkColors(playbackState, enabled = glassEffectEnabled)
 
     // The artwork of the page in focus (album / artist) is not read here during composition:
     // only the artwork-colour themes watch it, so a page reporting its artwork does not
@@ -274,12 +271,12 @@ fun MainScaffold() {
     val setFocusedArtwork = remember { { uri: String? -> focusedArtworkUri.value = uri } }
     CompositionLocalProvider(
         LocalSetFocusedArtworkUri provides setFocusedArtwork,
-        LocalPlaybackArtworkColors provides playbackArtworkColors,
     ) {
         EmPee3Theme(
             themeManifest = currentTheme,
             skinManifest = currentSkin,
             glassEffectEnabled = glassEffectEnabled,
+            popupGlassOpacity = popupGlassOpacity,
         ) {
             // Content is drawn behind transparent system bars, so their icon colour must
             // follow the app theme rather than the system's light/dark setting.

@@ -2,6 +2,7 @@
 
 package com.lochanpthakke.empee3.core.designsystem.theme
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -13,6 +14,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.skin.SkinManifest
@@ -51,6 +53,7 @@ fun EmPee3Theme(
     themeManifest: ThemeManifest = BuiltInThemes.DEFAULT_DARK,
     skinManifest: SkinManifest? = null,
     glassEffectEnabled: Boolean = true,
+    popupGlassOpacity: Float = 0.5f,
     content: @Composable () -> Unit,
 ) {
     val colors = themeManifest.colors
@@ -117,7 +120,10 @@ fun EmPee3Theme(
             large = RoundedCornerShape(shapes.sheetCornerRadiusDp.dp),
         )
 
+    val popupBackdrop = rememberGlassBackdrop("popups", screenCoordinates = true)
     CompositionLocalProvider(
+        LocalPopupGlassOpacity provides popupGlassOpacity,
+        LocalPopupGlassBackdrop provides popupBackdrop,
         LocalEmPee3Colors provides colors,
         LocalEmPee3Shapes provides shapes,
         LocalEmPee3Skin provides skinManifest,
@@ -132,7 +138,9 @@ fun EmPee3Theme(
         ) {
             // Always the same node, whether or not the theme is glass: branching here
             // would remount the whole app (and reset navigation) on every theme switch.
-            GlassBackground(glass = glass, content = content)
+            Box(Modifier.glassBackdropSource(popupBackdrop, enabled = popupBackdrop.consumers > 0)) {
+                GlassBackground(glass = glass, content = content)
+            }
         }
     }
 }

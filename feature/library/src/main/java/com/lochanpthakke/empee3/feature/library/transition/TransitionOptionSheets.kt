@@ -22,7 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.lochanpthakke.empee3.core.designsystem.component.GlassModalBottomSheet
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.EqMove
 import com.lochanpthakke.empee3.core.model.TransitionCurve
@@ -60,7 +60,7 @@ internal fun TransitionOptionsSheet(
 ) {
     val pager = rememberPagerState(initialPage = start.ordinal, pageCount = { EditorSection.entries.size })
     val spec = draft.shown
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    GlassModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(modifier = Modifier.navigationBarsPadding().padding(bottom = Spacing.md)) {
             HorizontalPager(
                 state = pager,
@@ -204,7 +204,7 @@ internal fun DurationSheet(
     onDuration: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    GlassModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.navigationBarsPadding().padding(horizontal = Spacing.lg).padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md),

@@ -44,8 +44,6 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +71,8 @@ import coil.request.ImageRequest
 import com.lochanpthakke.empee3.core.designsystem.component.ActionButton
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.GlassAlertDialog
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.GroupDivider
 import com.lochanpthakke.empee3.core.designsystem.component.GroupRow
 import com.lochanpthakke.empee3.core.designsystem.component.LocalCollapsingTitle
@@ -215,12 +215,12 @@ fun ArtworkManagerScreen(
                             onClick = { providerDropdownExpanded = true },
                             trailing = Icons.Default.ArrowDropDown,
                         )
-                        DropdownMenu(
+                        GlassMenu(
                             expanded = providerDropdownExpanded,
                             onDismissRequest = { providerDropdownExpanded = false },
                         ) {
                             providerOptions.forEach { (key, label) ->
-                                DropdownMenuItem(
+                                GlassMenuItem(
                                     text = { Text(label) },
                                     onClick = {
                                         viewModel.setSelectedProvider(key)

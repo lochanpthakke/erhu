@@ -4,6 +4,8 @@ import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
@@ -50,7 +52,7 @@ import kotlin.math.ceil
  * Every sample is clamped to the rendered layer, and composited over the app's
  * environment colour (what is really behind the content), so nothing reads as empty.
  */
-private const val ENVIRONMENT_SHADER =
+internal const val ENVIRONMENT_SHADER =
     """
     uniform shader content;
     uniform float2 origin;
@@ -126,7 +128,7 @@ private const val ENVIRONMENT_SHADER =
 /** Environment lens of one surface, in px of its unclipped backdrop layer. */
 internal class EnvironmentLens(
     /** Where the surface starts in the layer (the margin). */
-    val origin: Float,
+    val origin: Offset,
     val size: Size,
     /** The whole layer: surface plus margin on every side. */
     val layerSize: Size,
@@ -151,25 +153,31 @@ internal fun environmentOptics(
     dim: Float,
     lift: Float,
     lens: EnvironmentLens,
-): androidx.compose.ui.graphics.RenderEffect {
-    val shader =
-        RuntimeShader(ENVIRONMENT_SHADER).apply {
-            setFloatUniform("origin", lens.origin, lens.origin)
-            setFloatUniform("size", lens.size.width, lens.size.height)
-            setFloatUniform("layer", lens.layerSize.width, lens.layerSize.height)
-            setFloatUniform("radii", lens.cornerRadii)
-            setFloatUniform("band", lens.band)
-            setFloatUniform("strength", lens.strength)
-            setFloatUniform("capBoost", lens.capBoost)
-            setFloatUniform("dispersion", lens.dispersion)
-            setFloatUniform("highlight", lens.highlight)
-            setFloatUniform("rimWidth", lens.rimWidth)
-            setFloatUniform("shade", lens.shade)
-            setFloatUniform("light", EDGE_LIGHT_X, EDGE_LIGHT_Y)
-            setFloatUniform("environment", lens.environment.red, lens.environment.green, lens.environment.blue, 1f)
-        }
-    val lensEffect = RenderEffect.createRuntimeShaderEffect(shader, "content")
-    return RenderEffect.createChainEffect(lensEffect, blurAndTone(blurPx, saturation, dim, lift)).asComposeRenderEffect()
+    shader: RuntimeShader,
+): androidx.compose.ui.graphics.RenderEffect =
+    RenderEffect.createChainEffect(environmentLensEffect(lens, shader), blurAndTone(blurPx, saturation, dim, lift)).asComposeRenderEffect()
+
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+internal fun environmentLensEffect(
+    lens: EnvironmentLens,
+    shader: RuntimeShader,
+): RenderEffect {
+    shader.apply {
+        setFloatUniform("origin", lens.origin.x, lens.origin.y)
+        setFloatUniform("size", lens.size.width, lens.size.height)
+        setFloatUniform("layer", lens.layerSize.width, lens.layerSize.height)
+        setFloatUniform("radii", lens.cornerRadii)
+        setFloatUniform("band", lens.band)
+        setFloatUniform("strength", lens.strength)
+        setFloatUniform("capBoost", lens.capBoost)
+        setFloatUniform("dispersion", lens.dispersion)
+        setFloatUniform("highlight", lens.highlight)
+        setFloatUniform("rimWidth", lens.rimWidth)
+        setFloatUniform("shade", lens.shade)
+        setFloatUniform("light", EDGE_LIGHT_X, EDGE_LIGHT_Y)
+        setFloatUniform("environment", lens.environment.red, lens.environment.green, lens.environment.blue, 1f)
+    }
+    return RenderEffect.createRuntimeShaderEffect(shader, "content")
 }
 
 /** Optical zone: this share of the surface's smaller side (a pill's height), at most [ZONE_MAX]. */
@@ -205,9 +213,12 @@ internal fun Modifier.environmentFrost(
     backdrop: GlassBackdrop,
     strength: Float,
     surfaceOffset: () -> Offset,
+    shader: RuntimeShader,
 ): Modifier =
     drawWithCache {
         val outline = shape.createOutline(size, layoutDirection, this)
+        val aperture =
+            (outline as? Outline.Rounded)?.roundRect?.let { Rect(it.left, it.top, it.right, it.bottom) } ?: Rect(Offset.Zero, size)
         val blurPx = glass.frostRadiusDp.dp.toPx()
         val shift = MAX_SHIFT.toPx() * strength
         val dispersion = DISPERSION.toPx() * strength
@@ -217,8 +228,8 @@ internal fun Modifier.environmentFrost(
         val layerSize = IntSize(size.width.toInt() + margin * 2, size.height.toInt() + margin * 2)
         val lens =
             EnvironmentLens(
-                origin = margin.toFloat(),
-                size = size,
+                origin = aperture.topLeft + Offset(margin.toFloat(), margin.toFloat()),
+                size = aperture.size,
                 layerSize = Size(layerSize.width.toFloat(), layerSize.height.toFloat()),
                 cornerRadii = outline.cornerRadii(),
                 band = band,
@@ -232,7 +243,7 @@ internal fun Modifier.environmentFrost(
             )
         val layer =
             obtainGraphicsLayer().apply {
-                renderEffect = environmentOptics(blurPx, glass.frostSaturation, glass.frostDim, glass.frostLift, lens)
+                renderEffect = environmentOptics(blurPx, glass.frostSaturation, glass.frostDim, glass.frostLift, lens, shader)
             }
         // Whether layer holds a rendering this cache can show again while the backdrop is frozen.
         var rendered = false
@@ -270,6 +281,7 @@ internal fun environmentSource(
 ): GlassBackdrop? = frost?.takeIf { environmentLens && !bar && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU }
 
 /** The environment-lens backdrop, drawn outside the shape clip (see [environmentFrost]). */
+@Composable
 internal fun Modifier.environmentLayer(
     environment: GlassBackdrop?,
     shape: Shape,
@@ -278,7 +290,9 @@ internal fun Modifier.environmentLayer(
     surfaceOffset: () -> Offset,
 ): Modifier =
     if (environment != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        then(Modifier.environmentFrost(shape, glass, environment, optics, surfaceOffset))
+        // Shape morphs retune uniforms; keep the compiled AGSL program for this surface.
+        val shader = remember { RuntimeShader(ENVIRONMENT_SHADER) }
+        then(Modifier.environmentFrost(shape, glass, environment, optics, surfaceOffset, shader))
     } else {
         this
     }

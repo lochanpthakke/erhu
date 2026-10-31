@@ -87,6 +87,9 @@ class ThemeRepositoryImpl
         private val _uiGlassyness = MutableStateFlow(0.35f)
         override val uiGlassyness: StateFlow<Float> = _uiGlassyness.asStateFlow()
 
+        private val _popupGlassOpacity = MutableStateFlow(DEFAULT_POPUP_GLASS_OPACITY)
+        override val popupGlassOpacity: StateFlow<Float> = _popupGlassOpacity.asStateFlow()
+
         init {
             scope.launch {
                 var proto = dataStore.data.first()
@@ -108,6 +111,7 @@ class ThemeRepositoryImpl
                 _fanartTvApiKey.value = proto.fanartTvApiKey
                 _sidebarGlassyness.value = if (proto.sidebarGlassyness > 0f) proto.sidebarGlassyness else 0.85f
                 _uiGlassyness.value = if (proto.uiGlassyness > 0f) proto.uiGlassyness else 0.35f
+                _popupGlassOpacity.value = proto.popupGlassOpacityOrDefault()
                 resolveTheme(proto.appThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = true)
                 resolveTheme(proto.widgetThemeId.ifBlank { BuiltInThemes.DEFAULT_DARK.id }, isApp = false)
             }
@@ -162,6 +166,13 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setUiGlassyness(value).build() }
                 _uiGlassyness.value = value
+            }
+
+        override suspend fun setPopupGlassOpacity(value: Float): AppResult<Unit> =
+            appResultOf {
+                val opacity = value.normalizedPopupGlassOpacity()
+                dataStore.updateData { it.toBuilder().setPopupGlassOpacity(opacity).build() }
+                _popupGlassOpacity.value = opacity
             }
 
         override suspend fun setDefaultStartSection(section: String): AppResult<Unit> =

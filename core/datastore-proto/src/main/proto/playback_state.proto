@@ -67,6 +67,8 @@ message PlaybackStateProto {
   AnimatedArtOrientationProto animated_art_orientation = 34;
   // Preferred resolution for live covers ("1080p", "720p", "480p", "Maximum")
   string preferred_live_cover_resolution = 35;
+  // Neutral transient glass: 0 = maximum clear, 1 = higher contrast. Absent = 0.5.
+  optional float popup_glass_opacity = 36;
 }
 
 message RepairBatchProto {

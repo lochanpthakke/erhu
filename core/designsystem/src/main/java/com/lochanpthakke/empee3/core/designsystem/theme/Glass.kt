@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -194,8 +195,9 @@ fun Modifier.glassPanel(
      * picture is kept until the backdrop is taken away (drawer closed). No edge lens.
      */
     stillBackdrop: Boolean = false,
+    material: GlassTokens? = LocalGlassTokens.current,
 ): Modifier {
-    val glass = LocalGlassTokens.current ?: return this
+    val glass = material ?: return this
     val frost = backdrop?.takeIf { isBackdropBlurSupported && !windowFrosted }
     // Floating surfaces: the lens pulls in the world around the surface.
     val environment = environmentSource(frost, environmentLens, bar)
@@ -210,7 +212,14 @@ fun Modifier.glassPanel(
     val stillPicture = if (stillBackdrop) rememberStillFrost(clippedFrost, glass, factor) else null
     val shadowModifier = Modifier.glassElevation(elevated && !level.floats, shape, glass)
     val floatShadow = Modifier.glassFloatShadow(enabled = level.floats && !bar, shape = shape, color = Color(glass.floatShadow))
-    val tracked = if (frost != null) Modifier.onGloballyPositioned { position.offset = it.positionInRoot() } else Modifier
+    val tracked =
+        if (frost !=
+            null
+        ) {
+            Modifier.onGloballyPositioned { position.offset = if (frost.screenCoordinates) it.positionOnScreen() else it.positionInRoot() }
+        } else {
+            Modifier
+        }
     return this
         .then(shadowModifier)
         .then(floatShadow)

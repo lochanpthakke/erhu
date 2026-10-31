@@ -1,6 +1,5 @@
 package com.lochanpthakke.empee3.feature.library
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -22,12 +21,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuSection
 import com.lochanpthakke.empee3.core.designsystem.component.PressIconButton
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 
 /**
  * The ⋮ menu of Now Playing: the secondary actions, grouped (the track, the library, playback and
@@ -42,8 +44,8 @@ internal fun NowPlayingMenu(
     enabled: Boolean,
 ) {
     var open by remember { mutableStateOf(false) }
-    Box {
-        PressIconButton(onClick = { open = true }, enabled = enabled) {
+    GlassMenuAnchor {
+        PressIconButton(modifier = Modifier.glassMenuTrigger(), onClick = { open = true }, enabled = enabled) {
             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More options")
         }
         GlassMenu(

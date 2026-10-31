@@ -43,7 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.designsystem.theme.EmPee3Glass
 import com.lochanpthakke.empee3.core.designsystem.theme.GlassLevel
@@ -237,8 +239,10 @@ private fun EditorTopBar(
                 modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
             )
         }
-        Box {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "More options") }
+        GlassMenuAnchor {
+            IconButton(modifier = Modifier.glassMenuTrigger(), onClick = {
+                menu = true
+            }) { Icon(Icons.Default.MoreVert, contentDescription = "More options") }
             GlassMenu(label = "Transition editor options", expanded = menu, onDismissRequest = { menu = false }) {
                 GlassMenuItem(icon = Icons.AutoMirrored.Filled.Undo, text = { Text("Undo") }, enabled = draft.undo.isNotEmpty(), onClick = {
                     menu = false

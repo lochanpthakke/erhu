@@ -18,11 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.isPopup
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -33,7 +35,11 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.espresso.Espresso
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertTrue
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuConfirmation
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
@@ -62,7 +68,7 @@ class GlassMenuInteractionTest {
             compose.onNodeWithText("Music information").assertDoesNotExist()
         }
         open()
-        compose.onNodeWithTag("canvas").performTouchInput { click(Offset(4f, height - 4f)) }
+        compose.onNode(isPopup()).performTouchInput { click(Offset(4f, height - 4f)) }
         compose.waitForIdle()
         compose.onNodeWithText("Music information").assertDoesNotExist()
         assertEquals(0, selections)
@@ -119,6 +125,54 @@ class GlassMenuInteractionTest {
         assertEquals(1, selections)
     }
 
+    @Test
+    fun multiSelectionMenuStaysOpenAndAllowsRepeatedSelections() {
+        fixture(dismissOnSelection = false)
+        open()
+        compose.onNodeWithText("Music information").performClick()
+        compose.onNodeWithText("Music information").assertIsDisplayed().performClick()
+        compose.waitForIdle()
+        assertEquals(2, selections)
+    }
+
+    @Test
+    fun darkClearGlassRendersNeutralWithReadableContrast() {
+        fixture()
+        open()
+        assertNeutralGlass(dark = true)
+    }
+
+    @Test
+    fun lightClearGlassRendersNeutralWithReadableContrast() {
+        fixture(light = true)
+        open()
+        assertNeutralGlass(dark = false)
+    }
+
+    private fun assertNeutralGlass(dark: Boolean) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val automation = instrumentation.uiAutomation
+        compose.waitUntil(5000) {
+            findInformationNode(automation.rootInActiveWindow) != null
+        }
+        val root = automation.rootInActiveWindow
+        assertEquals(instrumentation.targetContext.packageName, root.packageName.toString())
+        var item = checkNotNull(findInformationNode(root))
+        while (!item.isClickable && item.parent != null) item = item.parent
+        val bounds = android.graphics.Rect()
+        item.getBoundsInScreen(bounds)
+        // Display capture includes the native popup window; Activity PixelCopy can capture only the underlay.
+        val bitmap = checkNotNull(automation.takeScreenshot()).copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+        val file = java.io.File(instrumentation.targetContext.cacheDir, if (dark) "glass-dark.png" else "glass-light.png")
+        file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        val x = (bounds.right - with(compose.density) { 12.dp.toPx() }).toInt().coerceIn(0, bitmap.width - 1)
+        val y = bounds.centerY().coerceIn(0, bitmap.height - 1)
+        val sample = Color(bitmap.getPixel(x, y))
+        assertEquals(sample.red, sample.green, 0.02f)
+        assertEquals(sample.green, sample.blue, 0.02f)
+        assertTrue("Neutral contrast guard: $sample at $bounds", if (dark) sample.luminance() < 0.18f else sample.luminance() > 0.24f)
+    }
+
     private fun open() {
         compose.onNodeWithContentDescription("Test options").performClick()
         compose.waitForIdle()
@@ -130,6 +184,7 @@ class GlassMenuInteractionTest {
         rtl: Boolean = false,
         glass: Boolean = true,
         long: Boolean = false,
+        dismissOnSelection: Boolean = true,
     ) {
         compose.setContent {
             EmPee3Theme(
@@ -138,10 +193,10 @@ class GlassMenuInteractionTest {
             ) {
                 CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                     Box(Modifier.fillMaxSize().background(if (light) Color.Black else Color.White).testTag("canvas")) {
-                        Box(Modifier.align(if (bottom) Alignment.BottomEnd else Alignment.TopEnd).padding(24.dp)) {
+                        GlassMenuAnchor(Modifier.align(if (bottom) Alignment.BottomEnd else Alignment.TopEnd).padding(24.dp)) {
                             var open by remember { mutableStateOf(false) }
-                            IconButton(onClick = { open = true }) { Icon(Icons.Default.Info, contentDescription = "Test options") }
-                            GlassMenu(expanded = open, onDismissRequest = { open = false }, label = "Test options") {
+                            IconButton(modifier = Modifier.glassMenuTrigger(), onClick = { open = true }) { Icon(Icons.Default.Info, contentDescription = "Test options") }
+                            GlassMenu(expanded = open, onDismissRequest = { open = false }, label = "Test options", dismissOnSelection = dismissOnSelection) {
                                 GlassMenuSection("Track")
                                 GlassMenuItem(text = { Text("Music information") }, icon = Icons.Default.Info, onClick = { selections++ })
                                 GlassMenuItem(text = { Text("Unavailable") }, enabled = false, onClick = { error("Disabled action fired") })
@@ -165,4 +220,13 @@ class GlassMenuInteractionTest {
             }
         }
     }
+}
+
+private fun findInformationNode(node: android.view.accessibility.AccessibilityNodeInfo?): android.view.accessibility.AccessibilityNodeInfo? {
+    if (node == null) return null
+    if (node.text?.toString() == "Music information") return node
+    for (index in 0 until node.childCount) {
+        findInformationNode(node.getChild(index))?.let { return it }
+    }
+    return null
 }

@@ -58,6 +58,7 @@ fun ThemeSettingsScreen(
     val context = LocalContext.current
     val currentAppThemeId by viewModel.appThemeId.collectAsState()
     val glassEffectEnabled by viewModel.glassEffectEnabled.collectAsState()
+    val popupGlassOpacity by viewModel.popupGlassOpacity.collectAsState()
     val currentAppSkin by viewModel.appSkin.collectAsState()
     val currentWidgetTheme by viewModel.widgetTheme.collectAsState()
     val libraryLayout by viewModel.libraryLayout.collectAsState()
@@ -144,6 +145,10 @@ fun ThemeSettingsScreen(
                     )
                 }
             }
+        }
+
+        if (glassEffectEnabled) {
+            PopupGlassControls(opacity = popupGlassOpacity, onOpacityChange = viewModel::setPopupGlassOpacity)
         }
 
         if (glassEffectEnabled) {

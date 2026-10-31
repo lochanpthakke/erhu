@@ -5,7 +5,6 @@ package com.lochanpthakke.empee3.feature.library
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -59,6 +58,7 @@ import com.lochanpthakke.empee3.core.common.perf.Interactions
 import com.lochanpthakke.empee3.core.designsystem.component.AppScaffold
 import com.lochanpthakke.empee3.core.designsystem.component.EmptyState
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuDivider
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuSection
@@ -69,6 +69,7 @@ import com.lochanpthakke.empee3.core.designsystem.component.ReportInteraction
 import com.lochanpthakke.empee3.core.designsystem.component.ReportTitleScroll
 import com.lochanpthakke.empee3.core.designsystem.component.TopBarNavigation
 import com.lochanpthakke.empee3.core.designsystem.component.forScrollingContent
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.component.rememberCollapsingTitleState
 import com.lochanpthakke.empee3.core.designsystem.component.selectionJiggle
 import com.lochanpthakke.empee3.core.designsystem.foundation.ArtworkSize
@@ -473,8 +474,8 @@ internal fun LibrarySongRow(
                 modifier = Modifier.size(IconSize.small).selectionJiggle(song.isFavorite, identity = song.id, expressive = true),
             )
         }
-        Box {
-            PressIconButton(onClick = { menuExpanded = true }) {
+        GlassMenuAnchor {
+            PressIconButton(modifier = Modifier.glassMenuTrigger(), onClick = { menuExpanded = true }) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "Song options",

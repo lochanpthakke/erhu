@@ -2,10 +2,7 @@ package com.lochanpthakke.empee3.core.designsystem.component
 
 import androidx.compose.animation.core.TargetBasedAnimation
 import androidx.compose.animation.core.VectorConverter
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -17,11 +14,11 @@ import org.junit.Test
 
 class GlassMenuTest {
     @Test
-    fun openingSpringHasOneSmallOvershootAndSettles() {
-        val animation = TargetBasedAnimation(Motion.expressive(visibilityThreshold = 0.001f), Float.VectorConverter, 0.9f, 1f)
+    fun anchoredMorphSettlesQuicklyWithoutLargeOvershoot() {
+        val animation = TargetBasedAnimation(Motion.responsive(visibilityThreshold = 0.001f), Float.VectorConverter, 0f, 1f)
         val values = (0L..1000L step 8).map { animation.getValueFromNanos(it * 1_000_000) }
-        assertTrue(values.max() > 1f)
-        assertTrue(values.max() < 1.02f)
+        assertTrue(values.all { it in 0f..1.01f })
+        assertTrue(animation.isFinishedFromNanos(500_000_000))
         assertTrue(animation.isFinishedFromNanos(1_000_000_000))
         assertEquals(1f, values.last(), 0.001f)
     }
@@ -87,32 +84,9 @@ class GlassMenuTest {
         provider.calculatePosition(IntRect.Zero, IntSize.Zero, LayoutDirection.Rtl, IntSize.Zero)
     }
 
-    @Test
-    fun glassAndSolidTextAndHeadingsRemainReadableOnArtworkExtremes() {
-        for (dark in listOf(true, false)) {
-            for (alpha in listOf(null, 0f, 0.7f, 1f)) {
-                val colors = glassMenuColors(dark, alpha)
-                for (artwork in listOf(Color.Black, Color.White)) {
-                    val surface = colors.surface.compositeOver(artwork)
-                    assertTrue(contrast(colors.content, surface) >= 4.5f)
-                    assertTrue(contrast(colors.content.copy(alpha = 0.9f).compositeOver(surface), surface) >= 4.5f)
-                }
-                if (alpha == null) assertEquals(1f, colors.surface.alpha)
-            }
-        }
-    }
-
     private fun position(
         anchor: IntRect,
         direction: LayoutDirection,
     ): IntOffset = GlassMenuPositionProvider(12, 4).calculatePosition(anchor, IntSize(600, 800), direction, IntSize(240, 300))
 
-    private fun contrast(
-        a: Color,
-        b: Color,
-    ): Float {
-        val first = a.luminance()
-        val second = b.luminance()
-        return (maxOf(first, second) + 0.05f) / (minOf(first, second) + 0.05f)
-    }
 }

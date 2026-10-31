@@ -51,7 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lochanpthakke.empee3.core.designsystem.artwork.SongArtwork
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenu
+import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuAnchor
 import com.lochanpthakke.empee3.core.designsystem.component.GlassMenuItem
+import com.lochanpthakke.empee3.core.designsystem.component.glassMenuTrigger
 import com.lochanpthakke.empee3.core.designsystem.foundation.IconSize
 import com.lochanpthakke.empee3.core.designsystem.foundation.Spacing
 import com.lochanpthakke.empee3.core.model.CollectionKind
@@ -296,8 +298,10 @@ private fun TimelineTrack(
             )
         }
         if (pairAfter != null) {
-            Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "More for ${track.song.title}") }
+            GlassMenuAnchor {
+                IconButton(modifier = Modifier.glassMenuTrigger(), onClick = {
+                    menu = true
+                }) { Icon(Icons.Default.MoreVert, contentDescription = "More for ${track.song.title}") }
                 GlassMenu(label = "Transition options", expanded = menu, onDismissRequest = { menu = false }) {
                     GlassMenuItem(icon = Icons.Default.Tune, text = { Text("Edit transition to next") }, onClick = {
                         menu = false
