@@ -50,11 +50,11 @@ jobs:
         run: |
           chmod +x gradlew
           python3 -m unittest discover -s scripts/ci -p 'test_*.py'
-          ./gradlew :app:testReleaseUnitTest :core:common:testReleaseUnitTest \
-            :core:database:testReleaseUnitTest :core:datastore:testReleaseUnitTest \
-            :core:designsystem:testReleaseUnitTest :core:network:testReleaseUnitTest \
-            :core:playback:testReleaseUnitTest :core:sound:testReleaseUnitTest :core:vybe:test \
-            :feature:library:testReleaseUnitTest :feature:transfer:testReleaseUnitTest :app:lintVitalRelease \
+          ./gradlew :app:testDebugUnitTest :core:common:testDebugUnitTest \
+            :core:database:testDebugUnitTest :core:datastore:testDebugUnitTest \
+            :core:designsystem:testDebugUnitTest :core:network:testDebugUnitTest \
+            :core:playback:testDebugUnitTest :core:sound:testDebugUnitTest :core:vybe:test \
+            :feature:library:testDebugUnitTest :feature:transfer:testDebugUnitTest :app:lintVitalRelease \
             -PrequireReleaseSigning=true -PtargetAbi=arm64-v8a --no-configuration-cache \
             --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process \
             -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
