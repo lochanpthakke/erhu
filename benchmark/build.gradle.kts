@@ -3,14 +3,14 @@ plugins {
 }
 
 /*
- * Macrobenchmarks of empee3's everyday journeys, run against the ".bench" package only (see the
+ * Macrobenchmarks of erhu's everyday journeys, run against the ".bench" package only (see the
  * app's "benchmark" build type), so they never touch an installed copy of the real app.
  *
  * Install and run with adb rather than connected*AndroidTest, which uninstalls the target
  * afterwards and would discard its seeded library: see benchmark/README.md.
  */
 android {
-    namespace = "com.lochanpthakke.empee3.benchmark"
+    namespace = "com.erhu.erhu.benchmark"
     compileSdk = 37
 
     defaultConfig {

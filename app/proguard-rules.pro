@@ -1,4 +1,4 @@
-# R8 / ProGuard Keep Rules for empee3
+# R8 / ProGuard Keep Rules for erhu
 
 # Room Persistence
 -keep class * extends androidx.room.RoomDatabase
@@ -46,10 +46,10 @@
 # Navigation routes are @Serializable objects looked up by type. The library's own rules keep an
 # object's serializer only while its INSTANCE is used somewhere, so a route that is registered but
 # no longer navigated to directly (e.g. removed from the drawer) lost it and crashed at startup.
--keepclassmembers @kotlinx.serialization.Serializable class com.lochanpthakke.empee3.navigation.** {
+-keepclassmembers @kotlinx.serialization.Serializable class com.erhu.erhu.navigation.** {
     public static ** INSTANCE;
     kotlinx.serialization.KSerializer serializer(...);
 }
--keepclassmembers class com.lochanpthakke.empee3.navigation.**$Companion {
+-keepclassmembers class com.erhu.erhu.navigation.**$Companion {
     kotlinx.serialization.KSerializer serializer(...);
 }

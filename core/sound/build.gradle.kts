@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.core.sound"
+    namespace = "com.erhu.erhu.core.sound"
     compileSdk = 37
 
     defaultConfig {

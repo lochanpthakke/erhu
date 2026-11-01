@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.core.database"
+    namespace = "com.erhu.erhu.core.database"
     compileSdk {
         version = release(37)
     }

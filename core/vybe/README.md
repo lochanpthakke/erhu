@@ -23,7 +23,7 @@ classes (javap). Sources:
   ("Embedding Gemma", int4+int8, max 512 tokens; 200 ms CPU latency on a Galaxy S26 Ultra).
 - Prompts / 768-dim output: ai.google.dev/gemma/docs/embeddinggemma/model_card
 
-The model is a single bundle with its tokenizer, so no tensor handling is needed in empee3.
+The model is a single bundle with its tokenizer, so no tensor handling is needed in erhu.
 Inference is entirely local; the app never downloads or bundles the model.
 
 ## Supplying the model (manual, by the user)

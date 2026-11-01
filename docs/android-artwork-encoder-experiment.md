@@ -253,7 +253,7 @@ the PC FFmpeg operation has not been integrated into the app.
 Original AVC and previous HEVC hashes remain unchanged. Exact phone experiment files
 `corrected.mp4` and `experiment.jar` under `/data/local/tmp/empee3-phase4b-metadata-20261030`
 and that empty directory were removed after result collection. The installed APK hash remained
-`d53c660ced14432db11ac70f81a78ab8fd05de745d0855557df36efec3475cb1` before/after. No empee3
+`d53c660ced14432db11ac70f81a78ab8fd05de745d0855557df36efec3475cb1` before/after. No erhu
 build, launch, reinstall, app-data/artwork/Room access or write, dependency, UI change, automatic
 job, commit or push. All experiment scripts, videos, logs, native crops and proof JSON are outside
 Git in this chat's `work/artwork-phase4b/` and `outputs/artwork-phase4b/`; only this report changed.
@@ -262,9 +262,9 @@ Git in this chat's `work/artwork-phase4b/` and `outputs/artwork-phase4b/`; only 
 ## Personal S23 visual review — confirmed
 
 Recorded at 2026-10-30T21:38:38+05:30. The verified original and corrected 6 Mb/s HEVC copy were prepared unchanged
-in `Download/empee3-Phase4B-Comparison` with a two-item VLC playlist. Both phone-copy SHA-256 values
+in `Download/erhu-Phase4B-Comparison` with a two-item VLC playlist. Both phone-copy SHA-256 values
 matched the verified PC files. The existing VLC player was used; no viewer was built or installed
-and the agent did not launch a player or empee3. The user was instructed to compare motion, flicker,
+and the agent did not launch a player or erhu. The user was instructed to compare motion, flicker,
 color, fine detail and looping, then personally replied: **“its good”**.
 
 This records the user's **overall visual acceptance**, not an agent-performed full-motion review

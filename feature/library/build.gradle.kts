@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.feature.library"
+    namespace = "com.erhu.erhu.feature.library"
     compileSdk = 37
 
     defaultConfig {

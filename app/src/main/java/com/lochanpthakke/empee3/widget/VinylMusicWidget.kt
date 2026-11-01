@@ -1,3 +1,4 @@
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
 package com.lochanpthakke.empee3.widget
 
 import android.content.Context
@@ -51,11 +52,11 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.lochanpthakke.empee3.MainActivity
-import com.lochanpthakke.empee3.R
-import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
-import com.lochanpthakke.empee3.core.designsystem.theme.DominantColorExtractor
-import com.lochanpthakke.empee3.core.model.PlaybackStatus
+import com.erhu.erhu.MainActivity
+import com.erhu.erhu.R
+import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
+import com.erhu.erhu.core.designsystem.theme.DominantColorExtractor
+import com.erhu.erhu.core.model.PlaybackStatus
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -93,9 +94,10 @@ class VinylMusicWidget : GlanceAppWidget() {
                 }
             }
 
-            val circularArtwork = remember(rawArtwork) {
-                rawArtwork?.toCircularBitmap()
-            }
+            val circularArtwork =
+                remember(rawArtwork) {
+                    rawArtwork?.toCircularBitmap()
+                }
 
             WidgetContent(
                 title = song?.title ?: "Nothing playing",
@@ -134,13 +136,14 @@ class VinylMusicWidget : GlanceAppWidget() {
             val rawBg = BitmapFactory.decodeResource(context.resources, R.drawable.ic_vinyl_widget_bg, options)
             if (rawBg != null) {
                 val targetSize = 480
-                val baseBg = if (rawBg.width != targetSize) {
-                    val scaled = Bitmap.createScaledBitmap(rawBg, targetSize, targetSize, true)
-                    rawBg.recycle()
-                    scaled
-                } else {
-                    rawBg
-                }
+                val baseBg =
+                    if (rawBg.width != targetSize) {
+                        val scaled = Bitmap.createScaledBitmap(rawBg, targetSize, targetSize, true)
+                        rawBg.recycle()
+                        scaled
+                    } else {
+                        rawBg
+                    }
                 val canvas = Canvas(baseBg)
                 val w = baseBg.width
                 val h = baseBg.height

@@ -1,4 +1,4 @@
-# empee3 benchmarks
+# erhu benchmarks
 
 Macrobenchmarks of everyday journeys (startup, library scrolling, album detail, player
 expand/collapse, track swiping, lyrics, Library/VYBE switching). They measure frame timing

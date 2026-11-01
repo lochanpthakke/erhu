@@ -23,3 +23,7 @@ log2.txt
 
 # Design assets
 /Design assets/
+
+# Release-validation Python bytecode
+/scripts/ci/__pycache__/
+/.kotlin/

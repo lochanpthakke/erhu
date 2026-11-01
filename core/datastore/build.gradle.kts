@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.core.datastore"
+    namespace = "com.erhu.erhu.core.datastore"
     compileSdk = 37
 
     defaultConfig {

@@ -28,7 +28,7 @@ Repository lifecycle locking coordinates compression with downloads/deletes. Onl
 
 693 unit/regression tests pass: network 320, database 177, library 195, app 1; zero failures/errors/skips. Focused cases cover eligibility, exact metadata correction, malformed metadata rejection, insufficient space, encoding/validation/move failure, cancellation, source changes, atomic publication, concurrent operations, orphan recovery and repeated-compression prevention. Touched Kotlin formatting and new Java formatting pass. Final Detekt/build details are recorded below when complete; existing findings are not suppressed or baselined away.
 
-S23 identity: SM-S911B, serial RZCXA1H43GW, Android 17. Tests ran as isolated DEX command-line probes, without installing or launching empee3. Source SHA-256 was verified before use:
+S23 identity: SM-S911B, serial RZCXA1H43GW, Android 17. Tests ran as isolated DEX command-line probes, without installing or launching erhu. Source SHA-256 was verified before use:
 
 `3101f2316857b74d772dac317cab718f9fce07a5b2e479e3bd6b8ab77eb8e416`
 
@@ -69,6 +69,6 @@ Savings are asset-dependent. Devices or streams outside the verified subset reta
 
 ## Subsequent installation
 
-The user subsequently requested installation. The S23 identity and idle empee3 process state were checked; no UI taps or app launch were needed. A fresh full backup was validated at `D:\android-toolchain\dbbackup\pre-artwork-phase5-20261030-234416` (69 files, SQLite quick_check ok, schema 14, 208 songs and 1 animated-artwork record). A same-code, same-key Phase 3 debug bridge enabled the private-data backup without launching the app. The Phase 5 ARM64 release was then installed using `adb install -r`: **Success**. The installed APK SHA-256 matches `ed08bee19ecc92aff04bcd254de8e3de8eb56d648e148be54aa3653b20a669d9`.
+The user subsequently requested installation. The S23 identity and idle erhu process state were checked; no UI taps or app launch were needed. A fresh full backup was validated at `D:\android-toolchain\dbbackup\pre-artwork-phase5-20261030-234416` (69 files, SQLite quick_check ok, schema 14, 208 songs and 1 animated-artwork record). A same-code, same-key Phase 3 debug bridge enabled the private-data backup without launching the app. The Phase 5 ARM64 release was then installed using `adb install -r`: **Success**. The installed APK SHA-256 matches `ed08bee19ecc92aff04bcd254de8e3de8eb56d648e148be54aa3653b20a669d9`.
 
 This supersedes the earlier APK-only installation status. No app uninstall, data clear, artwork removal/compression, old-data restoration, startup/playback test, commit or push was performed during installation. The app was left unopened.

@@ -15,7 +15,7 @@
     <application>
         <!-- Runs only while a transfer session the user started is open; never exported. -->
         <service
-            android:name=".WifiTransferService"
+            android:name="com.lochanpthakke.empee3.feature.transfer.WifiTransferService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
     </application>

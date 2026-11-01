@@ -22,7 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "empee3"
+rootProject.name = "erhu"
 include(":app")
 include(":core:common")
 include(":core:designsystem")

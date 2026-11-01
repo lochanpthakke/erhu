@@ -1,3 +1,4 @@
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
 package com.lochanpthakke.empee3.widget
 
 import android.content.Context
@@ -45,10 +46,10 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.lochanpthakke.empee3.MainActivity
-import com.lochanpthakke.empee3.R
-import com.lochanpthakke.empee3.core.designsystem.artwork.ArtworkLoader
-import com.lochanpthakke.empee3.core.model.PlaybackStatus
+import com.erhu.erhu.MainActivity
+import com.erhu.erhu.R
+import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
+import com.erhu.erhu.core.model.PlaybackStatus
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.util.Locale
@@ -122,7 +123,7 @@ class MusicWidget : GlanceAppWidget() {
     ) {
         val extractedColors =
             artwork?.let {
-                com.lochanpthakke.empee3.core.designsystem.theme.DominantColorExtractor
+                com.erhu.erhu.core.designsystem.theme.DominantColorExtractor
                     .extractColors(it)
             }
         val rawAccent = extractedColors?.accentColor ?: Color(0xFFD2B48C)
@@ -166,7 +167,7 @@ class MusicWidget : GlanceAppWidget() {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "empee3",
+                        text = "erhu",
                         style = TextStyle(color = mutedAccentProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
                     )
 

@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.core.designsystem"
+    namespace = "com.erhu.erhu.core.designsystem"
     compileSdk = 37
 
     defaultConfig {

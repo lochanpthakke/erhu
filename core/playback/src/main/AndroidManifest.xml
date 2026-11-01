@@ -7,7 +7,7 @@
 
     <application>
         <service
-            android:name=".service.MusicPlaybackService"
+            android:name="com.lochanpthakke.empee3.core.playback.service.MusicPlaybackService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true">
             <intent-filter>

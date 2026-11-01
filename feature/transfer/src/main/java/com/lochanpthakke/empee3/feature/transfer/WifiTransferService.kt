@@ -1,3 +1,4 @@
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
 package com.lochanpthakke.empee3.feature.transfer
 
 import android.app.Notification
@@ -13,7 +14,10 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
-import com.lochanpthakke.empee3.feature.transfer.server.TransferStatus
+import com.erhu.erhu.feature.transfer.StopReason
+import com.erhu.erhu.feature.transfer.TransferServerState
+import com.erhu.erhu.feature.transfer.WifiTransferCoordinator
+import com.erhu.erhu.feature.transfer.server.TransferStatus
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

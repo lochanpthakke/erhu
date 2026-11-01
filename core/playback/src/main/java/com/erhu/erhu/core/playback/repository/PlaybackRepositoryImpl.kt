@@ -1,0 +1,105 @@
+package com.erhu.erhu.core.playback.repository
+
+import com.erhu.erhu.core.common.result.AppError
+import com.erhu.erhu.core.common.result.AppResult
+import com.erhu.erhu.core.common.result.appResultOf
+import com.erhu.erhu.core.model.AbLoopEdit
+import com.erhu.erhu.core.model.CollectionRef
+import com.erhu.erhu.core.model.PlaybackState
+import com.erhu.erhu.core.model.RepeatMode
+import com.erhu.erhu.core.model.Song
+import com.erhu.erhu.core.playback.PlaybackController
+import kotlinx.coroutines.flow.StateFlow
+import javax.inject.Inject
+
+/**
+ * Thin delegation over [PlaybackController]. No playback logic lives here —
+ * this only adapts PlaybackController's calls into the domain-facing
+ * PlaybackRepository contract, AppResult-wrapping the operations with a
+ * real failure mode (see PlaybackRepository doc comment).
+ */
+class PlaybackRepositoryImpl
+    @Inject
+    constructor(
+        private val playbackController: PlaybackController,
+    ) : PlaybackRepository {
+        override val playbackState: StateFlow<PlaybackState>
+            get() = playbackController.playbackState
+
+        override fun play() = playbackController.play()
+
+        override fun pause() = playbackController.pause()
+
+        override fun playSong(song: Song) = playbackController.playSong(song)
+
+        override fun playSongs(songs: List<Song>) = playbackController.playSongs(songs)
+
+        override fun playSongsFromQueue(
+            songs: List<Song>,
+            startIndex: Int,
+        ) = playbackController.playSongsFromQueue(songs, startIndex)
+
+        override fun playCollection(
+            songs: List<Song>,
+            startIndex: Int,
+            origin: CollectionRef?,
+            slots: List<Int>?,
+        ) = playbackController.playCollection(songs, startIndex, origin, slots)
+
+        override fun seekTo(positionMs: Long) = playbackController.seekTo(positionMs)
+
+        override fun skipNext() = playbackController.skipNext()
+
+        override fun skipPrevious() = playbackController.skipPrevious()
+
+        override fun skipToPreviousItem() = playbackController.skipToPreviousItem()
+
+        override fun skipToQueueItem(index: Int) = playbackController.skipToQueueItem(index)
+
+        override fun setShuffleModeEnabled(enabled: Boolean) = playbackController.setShuffleModeEnabled(enabled)
+
+        override fun setRepeatMode(repeatMode: RepeatMode) = playbackController.setRepeatMode(repeatMode)
+
+        override fun setVolume(volume: Float) = playbackController.setVolume(volume)
+
+        override suspend fun playNext(song: Song): AppResult<Unit> =
+            appResultOf(mapError = { AppError.ValidationError(it.message ?: "Failed to queue song next") }) {
+                playbackController.playNext(song)
+            }
+
+        override suspend fun addToQueue(song: Song): AppResult<Unit> =
+            appResultOf(mapError = { AppError.ValidationError(it.message ?: "Failed to add song to queue") }) {
+                playbackController.addToQueue(song)
+            }
+
+        override suspend fun removeFromQueue(index: Int): AppResult<Unit> =
+            appResultOf(mapError = { AppError.ValidationError(it.message ?: "Invalid queue index") }) {
+                playbackController.removeFromQueue(index)
+            }
+
+        override fun undoQueueRemoval(): Boolean = playbackController.undoQueueRemoval()
+
+        override fun shuffleUpcoming(): Boolean = playbackController.shuffleUpcoming()
+
+        override fun replaceUpcoming(songs: List<Song>) = playbackController.replaceUpcoming(songs)
+
+        override fun playFromHistory(entryId: Long) = playbackController.playFromHistory(entryId)
+
+        override fun setLoopStart(): AbLoopEdit = playbackController.setLoopStart()
+
+        override fun setLoopEnd(): AbLoopEdit = playbackController.setLoopEnd()
+
+        override fun setLoopEnabled(enabled: Boolean): AbLoopEdit = playbackController.setLoopEnabled(enabled)
+
+        override fun clearLoop() = playbackController.clearLoop()
+
+        override fun currentPositionMs(): Long = playbackController.currentPositionMs()
+
+        override suspend fun reorder(
+            from: Int,
+            to: Int,
+        ): AppResult<Unit> =
+            appResultOf(mapError = { AppError.ValidationError(it.message ?: "Invalid reorder indices") }) {
+                playbackController.reorder(from, to)
+            }
+    }

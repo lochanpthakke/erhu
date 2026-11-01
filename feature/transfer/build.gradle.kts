@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.feature.transfer"
+    namespace = "com.erhu.erhu.feature.transfer"
     compileSdk = 37
 
     defaultConfig {

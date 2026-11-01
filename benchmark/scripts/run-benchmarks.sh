@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# The only supported way to run empee3's benchmarks on a phone (Git Bash on Windows).
+# The only supported way to run erhu's benchmarks on a phone (Git Bash on Windows).
 #
 #   benchmark/scripts/run-benchmarks.sh LABEL [extra `am instrument` arguments...]
 #   benchmark/scripts/run-benchmarks.sh --recover LABEL   (after the PC side died mid-run: wait for the
 #       phone's run to end, then move its results/traces to LABEL and clean the phone)
-#   e.g. run-benchmarks.sh release-partial -e class com.lochanpthakke.empee3.benchmark.JourneyBenchmarks#albumsScroll
+#   e.g. run-benchmarks.sh release-partial -e class com.erhu.erhu.benchmark.JourneyBenchmarks#albumsScroll
 #
 # Before: refuses to start unless the phone is connected over USB, idle (home screen or the
 # benchmark app in front) and has plenty of free space; removes any leftover benchmark trace.
@@ -24,11 +24,11 @@ RECOVER=0
 LABEL=${1:?usage: run-benchmarks.sh [--recover] LABEL [am instrument args...]}
 shift
 OUT=${BENCH_OUT:-/d/android-toolchain/smoothness}/$LABEL
-TEST_PKG=com.lochanpthakke.empee3.benchmark
+TEST_PKG=com.erhu.erhu.benchmark
 APP_PKG=com.lochanpthakke.empee3.bench
 RUNNER=$TEST_PKG/androidx.test.runner.AndroidJUnitRunner
 MEDIA=/sdcard/Android/media/$TEST_PKG
-WATCHDOG=/data/local/tmp/empee3-bench-watchdog.sh
+WATCHDOG=/data/local/tmp/erhu-bench-watchdog.sh
 MIN_FREE_KB=10000000
 
 fail() { echo "run-benchmarks: $*" >&2; exit 1; }
@@ -55,8 +55,8 @@ if [ "$RECOVER" = 1 ]; then
     mkdir -p "$OUT/traces"
     "$A" shell sh "$WATCHDOG" clean | tr -d '\r'
     move_traces
-    "$A" shell cat /data/local/tmp/empee3-bench-watchdog.log 2>/dev/null | tr -d '\r' > "$OUT/watchdog.log"
-    "$A" shell rm -f /data/local/tmp/empee3-bench-watchdog.log
+    "$A" shell cat /data/local/tmp/erhu-bench-watchdog.log 2>/dev/null | tr -d '\r' > "$OUT/watchdog.log"
+    "$A" shell rm -f /data/local/tmp/erhu-bench-watchdog.log
     "$A" shell am force-stop "$APP_PKG"
     echo "run-benchmarks: recovered into $OUT (results: traces/*benchmarkData.json); phone free space $(( $(free_kb) / 1000000 )) GB"
     exit 0
@@ -86,13 +86,13 @@ mkdir -p "$OUT/traces"
 cleanup() {
     trap - EXIT INT TERM HUP
     echo "run-benchmarks: cleaning up"
-    "$A" shell touch /data/local/tmp/empee3-bench-watchdog.stop 2>/dev/null
+    "$A" shell touch /data/local/tmp/erhu-bench-watchdog.stop 2>/dev/null
     "$A" shell am force-stop "$TEST_PKG" 2>/dev/null
     "$A" shell am force-stop "$APP_PKG" 2>/dev/null
     "$A" shell sh "$WATCHDOG" clean 2>/dev/null | tr -d '\r'
     move_traces
-    "$A" shell cat /data/local/tmp/empee3-bench-watchdog.log 2>/dev/null | tr -d '\r' > "$OUT/watchdog.log"
-    "$A" shell rm -f /data/local/tmp/empee3-bench-watchdog.log
+    "$A" shell cat /data/local/tmp/erhu-bench-watchdog.log 2>/dev/null | tr -d '\r' > "$OUT/watchdog.log"
+    "$A" shell rm -f /data/local/tmp/erhu-bench-watchdog.log
     "$A" shell dumpsys battery | grep -E "^  temperature" | tr -d '\r' >> "$OUT/conditions.txt"
     echo "run-benchmarks: phone free space $(( $(free_kb) / 1000000 )) GB; results in $OUT"
 }

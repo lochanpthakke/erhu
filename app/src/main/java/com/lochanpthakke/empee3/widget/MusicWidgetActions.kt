@@ -1,10 +1,12 @@
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
 package com.lochanpthakke.empee3.widget
 
 import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
-import com.lochanpthakke.empee3.core.model.PlaybackStatus
+import com.erhu.erhu.core.model.PlaybackStatus
+import com.erhu.erhu.widget.PlaybackControllerEntryPoint
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

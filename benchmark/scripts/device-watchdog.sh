@@ -10,11 +10,11 @@
 # /data/misc/perfetto-traces/trace_output.pb until the storage is full (21 GB on 2026-10-17).
 # Only that writer is touched; other perfetto sessions (the system's own) are left alone.
 
-TEST_PKG=com.lochanpthakke.empee3.benchmark
+TEST_PKG=com.erhu.erhu.benchmark
 APP_PKG=com.lochanpthakke.empee3.bench
 TRACE=/data/misc/perfetto-traces/trace_output.pb
-LOG=/data/local/tmp/empee3-bench-watchdog.log
-STOP_FILE=/data/local/tmp/empee3-bench-watchdog.stop
+LOG=/data/local/tmp/erhu-bench-watchdog.log
+STOP_FILE=/data/local/tmp/erhu-bench-watchdog.stop
 # Sizes in KB: the phone's shell has 32-bit arithmetic (bytes of a multi-GB file overflow it).
 MAX_TRACE_KB=3000000
 MIN_FREE_KB=6000000

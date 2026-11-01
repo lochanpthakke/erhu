@@ -1,3 +1,4 @@
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
 package com.lochanpthakke.empee3.core.database.scanner
 
 import android.app.NotificationChannel
@@ -10,7 +11,9 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.lochanpthakke.empee3.core.common.logging.Logger
+import com.erhu.erhu.core.common.logging.Logger
+import com.erhu.erhu.core.database.scanner.JAudioTaggerEnricher
+import com.erhu.erhu.core.database.scanner.MediaStoreScanner
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.DelicateCoroutinesApi

@@ -59,45 +59,45 @@ Correction tests used separately installed `com.lochanpthakke.empee3.perf` and `
 
 Affected modules: `app`, `core:designsystem`, `core:datastore`, `core:datastore-proto`, `feature:library`, `feature:settings`.
 
-- `app/src/androidTest/java/com/lochanpthakke/empee3/GlassMenuInteractionTest.kt`
-- `app/src/main/java/com/lochanpthakke/empee3/MainScaffold.kt`
+- `app/src/androidTest/java/com/erhu/erhu/GlassMenuInteractionTest.kt`
+- `app/src/main/java/com/erhu/erhu/MainScaffold.kt`
 - `core/datastore-proto/src/main/proto/playback_state.proto`
-- `core/datastore/src/main/java/com/lochanpthakke/empee3/core/datastore/repository/PopupGlassPreference.kt`
-- `core/datastore/src/main/java/com/lochanpthakke/empee3/core/datastore/repository/ThemeRepository.kt`
-- `core/datastore/src/main/java/com/lochanpthakke/empee3/core/datastore/repository/ThemeRepositoryImpl.kt`
-- `core/datastore/src/test/java/com/lochanpthakke/empee3/core/datastore/PopupGlassPreferenceTest.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/GlassAlertDialog.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/GlassMenu.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/GlassModalBottomSheet.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/LiquidMenuSurface.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/PopupGlassPreview.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/PopupMorph.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/theme/EmPee3Theme.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/theme/Glass.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/theme/GlassBackdrop.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/theme/GlassEnvironmentOptics.kt`
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/theme/PopupGlass.kt`
-- `core/designsystem/src/test/java/com/lochanpthakke/empee3/core/designsystem/component/GlassMenuTest.kt`
-- `core/designsystem/src/test/java/com/lochanpthakke/empee3/core/designsystem/component/LiquidMenuMaterialTest.kt`
-- `core/designsystem/src/test/java/com/lochanpthakke/empee3/core/designsystem/component/PopupMorphTest.kt`
+- `core/datastore/src/main/java/com/erhu/erhu/core/datastore/repository/PopupGlassPreference.kt`
+- `core/datastore/src/main/java/com/erhu/erhu/core/datastore/repository/ThemeRepository.kt`
+- `core/datastore/src/main/java/com/erhu/erhu/core/datastore/repository/ThemeRepositoryImpl.kt`
+- `core/datastore/src/test/java/com/erhu/erhu/core/datastore/PopupGlassPreferenceTest.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/GlassAlertDialog.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/GlassMenu.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/GlassModalBottomSheet.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/LiquidMenuSurface.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/PopupGlassPreview.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/PopupMorph.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/theme/ErhuTheme.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/theme/Glass.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/theme/GlassBackdrop.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/theme/GlassEnvironmentOptics.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/theme/PopupGlass.kt`
+- `core/designsystem/src/test/java/com/erhu/erhu/core/designsystem/component/GlassMenuTest.kt`
+- `core/designsystem/src/test/java/com/erhu/erhu/core/designsystem/component/LiquidMenuMaterialTest.kt`
+- `core/designsystem/src/test/java/com/erhu/erhu/core/designsystem/component/PopupMorphTest.kt`
 - `docs/liquid-glass-overflow-menus.md`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/AnimatedArtworkScreen.kt`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/ArtworkManagerScreen.kt`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/MetadataEditorScreen.kt`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/OnlineLyricsUi.kt`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/QueueSheet.kt`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/components/LiveCoverControl.kt`
-- `feature/library/src/main/java/com/lochanpthakke/empee3/feature/library/transition/TransitionOptionSheets.kt`
-- `feature/settings/src/main/java/com/lochanpthakke/empee3/feature/settings/sound/SoundSettingsScreen.kt`
-- `feature/settings/src/main/java/com/lochanpthakke/empee3/feature/settings/theme/PopupGlassControls.kt`
-- `feature/settings/src/main/java/com/lochanpthakke/empee3/feature/settings/theme/ThemeSettingsScreen.kt`
-- `feature/settings/src/main/java/com/lochanpthakke/empee3/feature/settings/theme/ThemeViewModel.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/AnimatedArtworkScreen.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/ArtworkManagerScreen.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/MetadataEditorScreen.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/OnlineLyricsUi.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/QueueSheet.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/components/LiveCoverControl.kt`
+- `feature/library/src/main/java/com/erhu/erhu/feature/library/transition/TransitionOptionSheets.kt`
+- `feature/settings/src/main/java/com/erhu/erhu/feature/settings/sound/SoundSettingsScreen.kt`
+- `feature/settings/src/main/java/com/erhu/erhu/feature/settings/theme/PopupGlassControls.kt`
+- `feature/settings/src/main/java/com/erhu/erhu/feature/settings/theme/ThemeSettingsScreen.kt`
+- `feature/settings/src/main/java/com/erhu/erhu/feature/settings/theme/ThemeViewModel.kt`
 
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/AnchoredMenuLayout.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/AnchoredMenuLayout.kt`
 
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/component/GlassMenuAnchorState.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/component/GlassMenuAnchorState.kt`
 
-- `core/designsystem/src/main/java/com/lochanpthakke/empee3/core/designsystem/theme/CachedPopupOptics.kt`
+- `core/designsystem/src/main/java/com/erhu/erhu/core/designsystem/theme/CachedPopupOptics.kt`
 
 ## Release artifact
 

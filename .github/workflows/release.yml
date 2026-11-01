@@ -1,0 +1,110 @@
+name: erhu Release APK
+
+on:
+  push:
+    branches: [kshitij]
+    tags: ['erhu-v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a GitHub Release after all build and signature checks pass'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erhu-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-37 build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/kshitij' }}
+      - name: Prepare existing signing key
+        env:
+          ERHU_KEYSTORE_BASE64: ${{ secrets.ERHU_KEYSTORE_BASE64 }}
+          ERHU_KEYSTORE_PASSWORD: ${{ secrets.ERHU_KEYSTORE_PASSWORD }}
+          ERHU_KEY_ALIAS: ${{ secrets.ERHU_KEY_ALIAS }}
+          ERHU_KEY_PASSWORD: ${{ secrets.ERHU_KEY_PASSWORD }}
+        run: python3 scripts/ci/signing.py
+      - name: Unit tests and release lint
+        run: |
+          chmod +x gradlew
+          python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+          ./gradlew :app:testReleaseUnitTest :core:common:testReleaseUnitTest \
+            :core:database:testReleaseUnitTest :core:datastore:testReleaseUnitTest \
+            :core:designsystem:testReleaseUnitTest :core:network:testReleaseUnitTest \
+            :core:playback:testReleaseUnitTest :core:sound:testReleaseUnitTest :core:vybe:test \
+            :feature:library:testReleaseUnitTest :feature:transfer:testReleaseUnitTest :app:lintVitalRelease \
+            -PrequireReleaseSigning=true -PtargetAbi=arm64-v8a --no-configuration-cache \
+            --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
+      - name: Compile optimized release APK
+        run: |
+          ./gradlew :app:assembleRelease -PrequireReleaseSigning=true -PtargetAbi=arm64-v8a \
+            --no-configuration-cache --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
+      - name: Verify release outputs and signature
+        id: verify
+        run: python3 scripts/ci/verify_release.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: erhu-release-${{ github.run_id }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload test reports and R8 mapping
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erhu-validation-${{ github.run_id }}
+          path: |
+            **/build/test-results/**/TEST-*.xml
+            app/build/reports/lint-results-release*
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Remove signing material
+        if: always()
+        run: python3 scripts/ci/signing.py --cleanup
+
+  publish:
+    needs: release-apk
+    if: startsWith(github.ref, 'refs/tags/erhu-v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: erhu-release-${{ github.run_id }}
+          path: dist
+      - name: Publish verified APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_VERSION: ${{ needs.release-apk.outputs.version }}
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: |
+          gh release create "erhu-v$RELEASE_VERSION" dist/*.apk dist/*.sha256 dist/verification.json \
+            --target "$RELEASE_COMMIT" --title "erhu $RELEASE_VERSION" \
+            --notes "Optimized ARM64 APK. Existing installation identity and signing certificate preserved."

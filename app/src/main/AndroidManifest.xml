@@ -21,23 +21,33 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Empee3"
-        android:name=".EmPee3Application">
+        android:theme="@style/Theme.Erhu"
+        android:name=".ErhuApplication">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Empee3"
+            android:theme="@style/Theme.Erhu"
             android:windowSoftInputMode="adjustResize">
+
+        </activity>
+
+
+        <!-- Keep the published launcher component so existing home-screen shortcuts survive. -->
+        <activity-alias
+            android:name="com.lochanpthakke.empee3.MainActivity"
+            android:targetActivity="com.erhu.erhu.MainActivity"
+            android:exported="true"
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
 
         <receiver
-            android:name=".widget.MusicWidgetReceiver"
+            android:name="com.lochanpthakke.empee3.widget.MusicWidgetReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -48,7 +58,7 @@
         </receiver>
 
         <receiver
-            android:name=".widget.GlassMusicWidgetReceiver"
+            android:name="com.lochanpthakke.empee3.widget.GlassMusicWidgetReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -59,7 +69,7 @@
         </receiver>
 
         <receiver
-            android:name=".widget.VinylMusicWidgetReceiver"
+            android:name="com.lochanpthakke.empee3.widget.VinylMusicWidgetReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

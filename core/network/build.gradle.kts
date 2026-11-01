@@ -21,12 +21,24 @@ val lastFmApiKey: String =
         ?.takeIf { it.isNotEmpty() }
         ?: System.getenv("LASTFM_API_KEY")?.trim().orEmpty()
 
+// Provision only with licensed subtitle access; never commit credentials.
+val musixmatchApiKey: String =
+    rootProject
+        .file("local.properties")
+        .takeIf { it.isFile }
+        ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
+        ?.getProperty("musixmatch.apiKey")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: System.getenv("MUSIXMATCH_API_KEY")?.trim().orEmpty()
+
 android {
-    namespace = "com.lochanpthakke.empee3.core.network"
+    namespace = "com.erhu.erhu.core.network"
     compileSdk = 37
 
     defaultConfig {
         minSdk = 26
+        buildConfigField("String", "MUSIXMATCH_API_KEY", "\"${musixmatchApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "LASTFM_API_KEY", "\"${lastFmApiKey.replace("\"", "")}\"")
     }
 

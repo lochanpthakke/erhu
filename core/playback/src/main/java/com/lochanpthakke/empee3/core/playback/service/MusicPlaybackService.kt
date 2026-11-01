@@ -1,5 +1,7 @@
 @file:Suppress("detekt:All")
 
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
+
 package com.lochanpthakke.empee3.core.playback.service
 
 import android.app.PendingIntent
@@ -12,18 +14,20 @@ import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
+import com.erhu.erhu.core.common.dispatcher.DispatcherProvider
+import com.erhu.erhu.core.common.logging.Logger
+import com.erhu.erhu.core.database.repository.LibraryRepository
+import com.erhu.erhu.core.database.repository.RecentlyPlayedRecorder
+import com.erhu.erhu.core.playback.PlaybackController
+import com.erhu.erhu.core.playback.browse.BrowseTree
+import com.erhu.erhu.core.playback.browse.MediaId
+import com.erhu.erhu.core.playback.service.PlaybackServiceConnector
+import com.erhu.erhu.core.playback.service.SongArtworkBitmapLoader
+import com.erhu.erhu.core.playback.toMediaItem
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
-import com.lochanpthakke.empee3.core.common.dispatcher.DispatcherProvider
-import com.lochanpthakke.empee3.core.common.logging.Logger
-import com.lochanpthakke.empee3.core.database.repository.LibraryRepository
-import com.lochanpthakke.empee3.core.database.repository.RecentlyPlayedRecorder
-import com.lochanpthakke.empee3.core.playback.PlaybackController
-import com.lochanpthakke.empee3.core.playback.browse.BrowseTree
-import com.lochanpthakke.empee3.core.playback.browse.MediaId
-import com.lochanpthakke.empee3.core.playback.toMediaItem
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob

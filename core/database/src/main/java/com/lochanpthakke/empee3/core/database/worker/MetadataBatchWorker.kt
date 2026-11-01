@@ -1,5 +1,7 @@
 @file:Suppress("detekt:All")
 
+// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
+
 package com.lochanpthakke.empee3.core.database.worker
 
 import android.app.NotificationChannel
@@ -12,11 +14,11 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
-import com.lochanpthakke.empee3.core.common.logging.Logger
-import com.lochanpthakke.empee3.core.database.dao.SongDao
-import com.lochanpthakke.empee3.core.database.entity.ProcessingStatus
-import com.lochanpthakke.empee3.core.database.mapper.toDomainModel
-import com.lochanpthakke.empee3.core.database.usecase.ProcessSingleTrackUseCase
+import com.erhu.erhu.core.common.logging.Logger
+import com.erhu.erhu.core.database.dao.SongDao
+import com.erhu.erhu.core.database.entity.ProcessingStatus
+import com.erhu.erhu.core.database.mapper.toDomainModel
+import com.erhu.erhu.core.database.usecase.ProcessSingleTrackUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
@@ -61,7 +63,7 @@ class MetadataBatchWorker
                 logger.w(TAG, "Foreground notification start failed: ${e.message}", e)
             }
 
-            val failedForRetry = mutableListOf<com.lochanpthakke.empee3.core.model.Song>()
+            val failedForRetry = mutableListOf<com.erhu.erhu.core.model.Song>()
 
             for (song in allSongs) {
                 if (isStopped) break

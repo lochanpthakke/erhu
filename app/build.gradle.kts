@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3"
+    namespace = "com.erhu.erhu"
     compileSdk = 37
 
     defaultConfig {
@@ -19,8 +19,8 @@ android {
         if (project.hasProperty("perfApp")) applicationIdSuffix = ".perf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         // Optional device-specific sideload; omitted = the existing universal APK.
         // Keep every library for the selected ABI, including VYBE's two MediaPipe runtimes.
@@ -36,6 +36,13 @@ android {
 
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val hasReleaseKeystore = keystorePropertiesFile.exists()
+
+    if (providers.gradleProperty("requireReleaseSigning").orNull == "true") {
+        require(hasReleaseKeystore) { "Release signing is required: configure the ERHU signing secrets in GitHub Actions." }
+        require(!project.hasProperty("perfApp") && !project.hasProperty("benchApp")) {
+            "Measurement application IDs cannot be published as releases."
+        }
+    }
 
     signingConfigs {
         if (hasReleaseKeystore) {

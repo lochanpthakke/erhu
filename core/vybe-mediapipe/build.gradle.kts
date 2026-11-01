@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.lochanpthakke.empee3.core.vybe.mediapipe"
+    namespace = "com.erhu.erhu.core.vybe.mediapipe"
     compileSdk {
         version = release(37)
     }
