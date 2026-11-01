@@ -23,3 +23,24 @@ Required repository Actions secrets:
 - `ERHU_KEY_PASSWORD`
 
 The verifier requires SHA-256 `5bb0fc457b96d9fb6cbc606009de44d633bee95b58fec2dc633a7a4eb54a9ce5`. A different key will fail rather than produce an incompatible update. No keystore, credential or secret value is committed. At initial inspection GitHub had no signing secrets; compatible signing must be provisioned before a signed build can finish. Existing Musixmatch configuration remains inactive without its separately licensed key.
+
+## Completed release and device validation — 2026-11-01
+
+[GitHub Actions run 41302362949](https://github.com/lochanpthakke/empee3/actions/runs/41302362949) succeeded. All 1,009 JVM tests passed with zero failures/errors/skips, release lint passed, and GitHub compiled and verified the signed non-debuggable ARM64 APK. Three host release-validation tests also passed. The SDK package request was corrected to android-37.0, and JVM tasks use this project's available testDebugUnitTest variants; APK assembly remains release-only.
+
+[Verified release artifact](https://github.com/lochanpthakke/empee3/actions/runs/41302362949/artifacts/13083155808). APK SHA-256: `c20c893e328ff55c234f84a5b1d0b22dab108dcc03b6a72e927f24409486e747`. The existing compatible key was provisioned into repository Actions Secrets with explicit user approval. No signing values were committed. Public release publication was skipped for this branch build.
+
+The verified erhu 1.0.1 (2) APK was installed on the S23 as an in-place update after an app-data backup. Installed version and non-debuggable status were verified. No uninstall or data clearing occurred. The previous debug install was the confirmed packaging regression; no desired glass or animations were disabled.
+
+Short same-device gfxinfo observations after warm-up:
+
+| Scenario | Debug jank | Release jank | Debug p95 | Release p95 |
+|---|---:|---:|---:|---:|
+| Home scrolling | 11.75% | 4.05% | 44 ms | 20 ms |
+| Home/Albums navigation | 2.85% | 1.56% | 25 ms | 18 ms |
+| Queue presentation | 11.05% | 4.18% | 29 ms | 11 ms |
+| Popup presentation | 10.48% | 11.15% | 48 ms | 32 ms |
+
+Warmed PSS fell from 431,988 to 303,066 KiB. Popup p95 improved but its jank percentage did not. These were short representative checks, not a sustained controlled benchmark: the user changed the song/Home content between runs, and battery temperatures were 37.7 C versus 38.5 C.
+
+On-device radio details displayed the correct Her Loss station, artwork/description, 31 generated songs and Play Radio. Scrolling, track menus, favorite toggle/restoration and Back worked. Opening and leaving retained PAUSED playback, position 0 and current item 1, with no app toast observed. Play Radio/individual-row playback were not invoked on the user's queue; their existing playback path remains covered by the implementation and unit suites. No queue/settings changes remain from the device checks. The app was left on Home, paused.

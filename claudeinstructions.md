@@ -1,6 +1,6 @@
-# empee3 — Claude working instructions, progress and pending work
+# erhu — Claude working instructions, progress and pending work
 
-_Last updated: 2026-10-29. Branch `kshitij`; latest Lochan pull is in 3.15; Home work is in 5.9, menu/Audio Details work in 5.10, size/storage forensics in 5.11, and the real ARM64 installation in 5.12._
+_Last updated: 2026-11-01. Current implementation is `a2d3cb2` on `kshitij`; erhu 1.0.1 (2) was built and verified by GitHub Actions and installed on the S23. Release/device results are in 3.17 and `docs/radio-navigation-and-release.md`. Older build, installation and pending-work entries are historical where superseded._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -9,14 +9,14 @@ is still open. Verify anything specific (file names, functions) against the code
 
 ## 1. Project and environment
 
-- **empee3**: Android local music player — Kotlin, Jetpack Compose, Hilt, Room (DB version 11),
+- **erhu**: Android local music player — Kotlin, Jetpack Compose, Hilt, Room (DB version 14),
   Media3/ExoPlayer 1.5.1, proto DataStore (`PlaybackStateProto`), WorkManager.
 - Repo: `D:\Personal Projects\empee3`. Modules: `app`, `core:{common, designsystem, playback, model,
   datastore, datastore-proto, database, sound, network, vybe, vybe-mediapipe}`,
   `feature:{library, settings, transfer}`.
 - No Android Studio. Portable toolchain in `D:\android-toolchain`:
   - Build: `JAVA_HOME=/d/android-toolchain/jdk21/ ./gradlew …` (Git Bash).
-  - adb: `/d/android-toolchain/sdk/platform-tools/adb.exe`, device **Galaxy S23** `RZCXA1H43GW` (Android 16).
+  - adb: `/d/android-toolchain/sdk/platform-tools/adb.exe`, device **Galaxy S23** `RZCXA1H43GW`, model **SM-S911B** (last verified Android 17).
 - Checks normally run: `ktlintFormat`, `ktlintCheck`, `detekt`, `testDebugUnitTest` for touched
   modules, then `:app:assembleDebug`.
 
@@ -35,7 +35,7 @@ is still open. Verify anything specific (file names, functions) against the code
 ### Phone / installs
 - Before installing: check the focused window (`dumpsys window | grep mCurrentFocus`); never tap
   while the user is using the phone (no taps have been needed for installs).
-- Check empee3 is not running (`pidof com.lochanpthakke.empee3`) so playback is not interrupted.
+- Check erhu is not running (`pidof com.lochanpthakke.empee3`) so playback is not interrupted.
 - Back up app data first:
   `adb exec-out run-as com.lochanpthakke.empee3 tar -cf - . > D:\android-toolchain\dbbackup\pre-<feature>-<timestamp>\appdata.tar`
 - Install with `adb install -r app/build/outputs/apk/debug/app-debug.apk` (keeps data).
@@ -52,6 +52,100 @@ is still open. Verify anything specific (file names, functions) against the code
   each feature isolated and easy to revert.
 
 ## 3. Completed and committed work (newest first)
+
+### 3.17 erhu identity, Home/lyrics, radio details and CI release (2026-11-01)
+- Implementation committed as `12bccfd`, SDK package correction `4033e81`, and CI unit-test task
+  correction `a2d3cb2`, all pushed to `origin/kshitij`. The user now explicitly requests the
+  current project state on both `origin/kshitij` and `origin/master`; this is an exception to the
+  normal kshitij-only push rule. No force push or history rewrite is authorized.
+- Display name/namespace are erhu / `com.erhu.erhu`; installed application ID remains
+  `com.lochanpthakke.empee3`. Room 14, storage/wire identifiers, launcher/widget/service/worker
+  compatibility and the original signing certificate remain preserved.
+- Home separates Featured Radio Stations and Featured Albums, followed by Recently Played Albums.
+  Synced lyrics retain embedded/LRCLIB support and add a configurable official Musixmatch fallback,
+  failure isolation and separate automatic disk caching. Musixmatch requires a licensed subtitle
+  API key and remains unconfigured; live provider availability has not been validated.
+- Featured station cards now open details without playback/enqueueing/toast. Play Radio reuses
+  the displayed generated plan; song rows/actions use existing playback/library infrastructure.
+  Radio/VYBE ranking and Transition Studio functionality were not changed.
+- GitHub Actions run 41302362949 succeeded: 1,009 JVM tests, release lint, optimized ARM64 APK,
+  metadata and original-certificate verification. Three host workflow tests also passed.
+  Signing secrets were provisioned with the user's explicit approval using the existing key;
+  no key, password or token was committed. Public release publication was not triggered.
+- S23 now has the CI-built **release** 1.0.1 (2), non-debuggable, installed in place with data
+  preserved. APK SHA-256: `c20c893e328ff55c234f84a5b1d0b22dab108dcc03b6a72e927f24409486e747`.
+  Do not reinstall an older local debug APK when asked to install the current version.
+- The preceding install had accidentally used a debug/unminified APK with frame diagnostics.
+  Short S23 checks: Home jank 11.75% -> 4.05%, p95 44 -> 20 ms; navigation p95 25 -> 18 ms;
+  queue p95 29 -> 11 ms; popup p95 48 -> 32 ms, but popup jank 10.48% -> 11.15%.
+  Warmed PSS 431,988 -> 303,066 KiB. Content/artwork changed between runs and battery temperatures
+  were 37.7/38.5 C, so these are representative observations, not a controlled benchmark.
+- Device radio checks passed for opening, scrolling, menus, favorite toggle/restoration and Back.
+  Opening/closing retained paused playback, position and current item; no app toast was observed.
+  Play Radio/row playback were not pressed on the user's real queue. No settings or queue edits
+  remain from testing. See `docs/radio-navigation-and-release.md` for evidence and limits.
+
+
+### 3.16 Opt-in lyrics, artwork compression and Liquid Glass menus (2026-10-30–31)
+- At the user's explicit request, committed the completed work together as **`b25a22c`**,
+  `Add opt-in lyrics, artwork compression and Liquid Glass menus`: 56 files, on `kshitij`.
+  Working tree was clean after this commit. **Nothing pushed.** This instructions update is
+  subsequent documentation work; do not assume it is committed or commit it without a request.
+- **Lyrics:** online lookup is opt-in; explicit offline downloads are separate from transient
+  cache, with saved-download removal confirmation. Existing embedded lyrics and playback behavior
+  are retained. See the lifecycle details in `docs/storage-lifecycle-audit.md`.
+- **Storage/artwork hardening:** Phase 3 HLS assembly, validation, staged publication and recovery
+  are recorded in `docs/storage-lifecycle-audit.md`. Earlier user-authorized downloaded-artwork
+  removal was a one-time action, not permission for future removal or app-data clearing.
+- **Hardware experiment:** Phase 4B corrected explicit SAR 1:1 and top-left chroma signalling
+  without changing coded picture samples. The user personally accepted the S23 full-motion
+  comparison ("its good"). Do not repeat or request that approval again. Original Graduation
+  SHA-256: `3101f2316857b74d772dac317cab718f9fce07a5b2e479e3bd6b8ab77eb8e416`.
+  See `docs/android-artwork-encoder-experiment.md`; no 4 Mbps candidate was attempted.
+- **Opt-in compression:** the existing album live-cover popup exposes compression only for a
+  conservative eligible AVC 1080×1080/30 FPS subset. Uses HEVC Main 6 Mbps VBR, preserves explicit
+  SAR/chroma and 8-bit BT.709 limited-range SDR, and handles actual YUV plane strides. No automatic
+  or batch compression, dependency or schema change. Original remains until metadata, cadence,
+  full decode and worthwhile savings pass; existing atomic publication then replaces it.
+  Cancellation, source fingerprints, owned staging recovery and download/delete coordination
+  are covered. Successful intentional compression does not retain an undo copy of the original.
+- Actual isolated S23 encoder/transaction checks passed: cancellation preserves the original,
+  disposable-copy publication succeeds, and HEVC recompression is rejected. Graduation result:
+  **18,113,173 → 11,188,275 bytes (38.2313% saved)**; 1080×1080, 30 FPS, 450 frames, 15 seconds.
+  PC full decode and independent bitstream validation passed. No production artwork was compressed
+  by these probes. Phase 5 regression checks: **693 tests passed**; debug/benchmark/release builds
+  completed. Detekt retains model 1, network 63, database 22 and library 87 findings, including a
+  new method-count warning on the extended existing repository; no rules were weakened.
+  Full settings, evidence and limitations: `docs/opt-in-artwork-compression.md`.
+- **Unified menus:** shared `GlassMenu`, `GlassMenuItem` and `GlassMenuPositionProvider` replace
+  eight overflow implementations: album detail, artist detail, shared Library song rows,
+  Now Playing, online lyrics, playlist detail, Transition Studio and Transition Editor.
+  Shared rows cover Home, search, tracks and Smart Playlists. VYBE/featured cards had no separate
+  overflow implementation. Form selectors and the dedicated live-cover popup remain separate.
+  Original actions, callbacks, enabled conditions and confirmation flows are preserved.
+  Supports sections, icons, secondary/destructive/disabled states, bounded scrolling, RTL/edge
+  placement, keyboard/back/outside dismissal and repeat-selection protection.
+- **Liquid Glass refinement:** `LiquidMenuSurface` reuses existing `glassPanel` drawing for
+  translucent graded fill, restrained upper/corner reflections, inner rim and soft shadow.
+  Existing anchored spring scale, fade, settling/overshoot and reverse exit are retained;
+  28 dp corners and comfortable rows remain. No continuous shader or animation, new dependency
+  or true cross-window backdrop blur. Glass disabled uses a solid neutral fallback.
+- `rememberPlaybackArtworkColors` / `LocalPlaybackArtworkColors` reuse `ArtworkLoader` and
+  `DominantColorExtractor` for the **currently playing** track, independently of the browsed
+  album. A stable shell-provided state avoids reading playback position; only open menus read
+  the palette. Fill, reflection and rim tint animate over 300 ms. Missing artwork falls back
+  smoothly to neutral. `LocalMenuGlassTokens` preserves menu glass inside Now Playing's existing
+  `WithoutGlass` scope without redesigning the rest of the player.
+- Final menu validation: **248 tests passed** (design system 52, library 195, app 1); ARM64 debug
+  app and Android interaction-test APK assembly passed. KtLint on all nine changed Kotlin files
+  and whitespace checks passed. Detekt retains existing design-system 7, library 87 and app 14
+  findings, none in changed menu/palette/shell files. The eight screen menu files were unchanged
+  by the final material refinement. See `docs/unified-overflow-menus.md` and
+  `docs/liquid-glass-overflow-menus.md` for implementation and validation details.
+- **Still unverified:** the user selected **Skip device checks** for menus. Interaction tests
+  compiled but were not run on the S23. Gloss, live tint transitions, OEM positioning and
+  scrolling/playback performance have no device visual/performance pass. Installation success
+  is not UI validation. No release build was created for the final Liquid Glass refinement.
 
 ### 3.15 Lochan pull: widgets and artwork/builder fixes (2026-10-28)
 - Pulled `origin/lochan` through `332f44f` into `kshitij` using a non-fast-forward merge.
@@ -152,7 +246,7 @@ is still open. Verify anything specific (file names, functions) against the code
   always awaits a touch first.
 
 ### 3.4 Online lyrics (`core/network/.../lyrics`, `feature/library/OnlineLyrics*`)
-- LRCLIB provider: `api/get` exact match then `api/search`; User-Agent `empee3/1.0.0 (…)`; one
+- LRCLIB provider: `api/get` exact match then `api/search`; User-Agent `erhu/1.0.0 (…)`; one
   request at a time (400 ms gap); 429 → no requests until Retry-After; offline/timeouts handled.
 - Word timing comes only from LRCLIB's **`lyricsfile`** (YAML, `lines[].words[]` with `start_ms`)
   when `hasWordSync` is true — parsed with `snakeyaml-engine` 2.9 and converted to enhanced LRC so the
@@ -440,7 +534,7 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   ignoring explicit fills ("just blurring"). Reverted in `Glass.kt`; `frostFactor` now only softens the blur
   (1 = original; drawer slider default 0.85). The "UI Elements Frostiness" slider is not read anywhere.
 - **Tint:** `GlassTokens.tint` = background colour at `TINT_ALPHA` 0x52 for `dominant_color` / `gradient_ui` only
-  (`EmPee3Theme`), composited into the fill colour (no extra draw). Explicit fills (Now Playing cards, drawer) untouched.
+  (`ErhuTheme`), composited into the fill colour (no extra draw). Explicit fills (Now Playing cards, drawer) untouched.
 - **Drawer:** Animated Artwork entry removed (route + screen kept). Trace showed the shell re-records on every frame of
   the drawer slide (`GlassSource:shell` ×49/51; the menu button's press animation is one cause), so the drawer
   re-blurred every frame. Now `glassPanel(stillBackdrop = true)` renders ONE blurred bitmap of the shell per opening
@@ -448,7 +542,7 @@ Glass on). Results in `D:\android-toolchain\smoothness\expand-*`; analysis scrip
   Baseline before: 41% janky, p50 28 ms, p99 65 ms (5 open/close, `drawer-loop.sh` in the session scratchpad).
   The final build was NOT cleanly measured (the user was using the phone during the run).
 - **R8:** a `@Serializable` route object whose INSTANCE is no longer used (drawer entry removed) lost its serializer
-  and crashed the release at startup ("Serializer for class 'wi'"). Keep rule for `com.lochanpthakke.empee3.navigation.**`.
+  and crashed the release at startup ("Serializer for class 'wi'"). Keep rule for `com.erhu.erhu.navigation.**`.
 - **Lesson:** debug builds feel laggy (gfxinfo 30% janky, p99 300 ms); after testing with a debug build, put the
   release back. Smoke-test every release on `.bench` (install, launch, check FATAL, uninstall) before the main app.
 - Lochan's `527adbb` (merged): each album check now sizes every HLS variant (+ the chosen one again) — ~4 Apple
@@ -717,7 +811,7 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 
 ### 5.8 Batch network failures + Last.fm (2026-10-14)
 - Cause of "No address associated with hostname" x84: Battery Saver on (low_power=1); Android blocks network
-  for background apps (netpolicy UID 10485 blocked=BATTERY_SAVER|APP_BACKGROUND). Reproduced: run-as empee3
+  for background apps (netpolicy UID 10485 blocked=BATTERY_SAVER|APP_BACKGROUND). Reproduced: run-as erhu
   can't resolve musicbrainz.org while the shell can. Wi-Fi also flapped ~19:50.
 - Batch: RepairBatchRunner pauses on OFFLINE/BLOCKED/unreachable (track put back, not "no match"),
   NETWORK_FAILED + NO_MATCH statuses, preflight (network + DNS only), RetryPolicy (3 tries, backoff+jitter,
@@ -727,6 +821,30 @@ _5.5–5.8 were labelled "uncommitted" in older notes; they are in git history (
 - OkHttp request logs now redact api_key.
 
 ## 6. Last known state
+- **2026-11-01, current:** CI-built erhu release 1.0.1 (2), non-debuggable, original signing key,
+  installed in place on S23 `RZCXA1H43GW`. GitHub run 41302362949 succeeded. App left on Home,
+  paused, after read-only navigation/performance checks and a favorite toggle that was restored.
+  Release `run-as` is unavailable; do not assume the historical debug-backup commands work.
+  The user explicitly requests the current code/notes pushed to both origin/kshitij and origin/master.
+- **2026-10-31, historical:** implementation committed locally as **`b25a22c`** on `kshitij`, no push.
+  User-requested Liquid Glass **ARM64 debug** APK installed in place on the real S23 with
+  `adb install -r`; installed SHA-256 verified:
+  `99d01e755881c5f1290c55e62ebb190c369e5a6349b41df90139086a876ca323`.
+  Package remains `com.lochanpthakke.empee3`, same signing key, versionCode 1 / versionName 1.0.
+  APK size **63,909,668 bytes**. Current debug installation supports direct `run-as` backups;
+  do not install an old debug bridge unnecessarily.
+- Fresh pre-install backup: **`D:\android-toolchain\dbbackup\pre-liquid-menus-20261031-010418`**,
+  71 files; SQLite quick_check ok, schema 14, 208 songs and 3 artwork records. No uninstall,
+  app-data clearing, artwork removal/compression or database changes during this update.
+  App was left unopened; no phone menu, startup, playback or performance tests were performed.
+- Current APK/evidence are outside Git in the chat workspace
+  `C:\Users\kshit\Documents\Codex\2026-10-29\d-personal-projects-empee3\outputs\liquid-menus\`:
+  `empee3-liquid-menus-debug-arm64.apk`, `report.md`, `verification.json` and `install-summary.json`.
+  Signing certificate SHA-256 remains
+  `5bb0fc457b96d9fb6cbc606009de44d633bee95b58fec2dc633a7a4eb54a9ce5`.
+  Existing install scripts encode old expected hashes; inspect/adapt before reuse. Preserve all
+  backups and user comparison videos; the Downloads Phase 4B comparison is not disposable cleanup.
+  Earlier installed-release/debug statuses below are superseded by this entry.
 - **2026-10-29:** user authorized committing and pushing all pending Featured Setlists, Now Playing
   menu/Audio Details, ARM64 packaging and storage documentation work together to `origin/kshitij` only.
   Validation and physical-device results remain recorded in 5.9-5.12. APKs, backups and keys stay outside Git.
