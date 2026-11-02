@@ -1,0 +1,7 @@
+<resources>
+    <string name="widget_music_name">Music player</string>
+    <string name="widget_glass_name">Glass player</string>
+    <string name="widget_vinyl_name">Vinyl player</string>
+    <string name="widget_idle_title">Nothing playing</string>
+    <string name="widget_idle_hint">Choose music in erhu</string>
+</resources>

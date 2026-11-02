@@ -190,7 +190,7 @@ object NetworkModule {
         return Retrofit
             .Builder()
             .baseUrl("https://api.github.com/")
-            .client(okHttpClient)
+            .client(okHttpClient.newBuilder().callTimeout(20, TimeUnit.SECONDS).build())
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(com.erhu.erhu.core.network.api.GitHubUpdateApi::class.java)

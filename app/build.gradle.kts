@@ -19,8 +19,8 @@ android {
         if (project.hasProperty("perfApp")) applicationIdSuffix = ".perf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         // Optional device-specific sideload; omitted = the existing universal APK.
         // Keep every library for the selected ABI, including VYBE's two MediaPipe runtimes.

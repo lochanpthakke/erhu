@@ -34,6 +34,7 @@ import com.erhu.erhu.core.playback.transition.TransitionSettingsRepository
 import com.erhu.erhu.core.sound.dsp.TransitionGainProcessor
 import com.erhu.erhu.core.sound.repository.SoundRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -128,6 +129,7 @@ class PlaybackControllerImpl
 
         /** Persisting before the restore finished would overwrite the saved queue with an empty one. */
         private var restoreFinished = false
+        private val restoration = CompletableDeferred<Unit>()
         private var consecutiveErrors = 0
 
         /** Sound Capsule: plays (half a song actually heard) and listening time, from the player's own callbacks. */
@@ -412,6 +414,7 @@ class PlaybackControllerImpl
                 logger.w(TAG, "Could not restore playback state: ${e.message}", e)
             } finally {
                 restoreFinished = true
+                restoration.complete(Unit)
             }
         }
 
@@ -449,6 +452,15 @@ class PlaybackControllerImpl
             scope.launch {
                 persistence.save(snapshot).onError { logger.w(TAG, "Failed to persist playback state: ${it.message}") }
             }
+        }
+
+        override suspend fun awaitRestored() {
+            restoration.await()
+        }
+
+        override suspend fun playFromWidget() {
+            awaitRestored()
+            if (player.mediaItemCount > 0) serviceConnector.playFromWidget()
         }
 
         override fun play() {

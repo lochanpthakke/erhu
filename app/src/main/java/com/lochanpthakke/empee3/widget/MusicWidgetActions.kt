@@ -1,4 +1,4 @@
-// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
+// Published callback identities retained for existing widget PendingIntents.
 package com.lochanpthakke.empee3.widget
 
 import android.content.Context
@@ -7,9 +7,8 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.appwidget.action.ActionCallback
 import com.erhu.erhu.core.model.PlaybackStatus
 import com.erhu.erhu.widget.PlaybackControllerEntryPoint
+import com.erhu.erhu.widget.performWidgetAction
 import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private fun Context.widgetEntryPoint() = EntryPointAccessors.fromApplication(this, PlaybackControllerEntryPoint::class.java)
 
@@ -17,22 +16,18 @@ internal fun Context.playbackController() = widgetEntryPoint().playbackControlle
 
 internal fun Context.libraryRepository() = widgetEntryPoint().libraryRepository()
 
-// ExoPlayer must be driven from the thread it was created on (main); Glance
-// runs action callbacks on a background dispatcher.
-
 class PlayPauseAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        val controller = context.playbackController()
-        val status = controller.playbackState.value.status
-        val isPlaying = status == PlaybackStatus.PLAYING || status == PlaybackStatus.BUFFERING
-        if (isPlaying) controller.pause() else controller.play()
-        val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)
-        val widget = MusicWidget()
-        manager.getGlanceIds(MusicWidget::class.java).forEach { widget.update(context, it) }
+    ) {
+        performWidgetAction(context, "PlayPause") { controller ->
+            val playing =
+                controller.playbackState.value.status
+                    .let { it == PlaybackStatus.PLAYING || it == PlaybackStatus.BUFFERING }
+            if (playing) controller.pause() else controller.playFromWidget()
+        }
     }
 }
 
@@ -41,11 +36,10 @@ class SkipNextAction : ActionCallback {
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        context.playbackController().skipNext()
-        val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)
-        val widget = MusicWidget()
-        manager.getGlanceIds(MusicWidget::class.java).forEach { widget.update(context, it) }
+    ) {
+        performWidgetAction(context, "SkipNext") { controller ->
+            controller.skipNext()
+        }
     }
 }
 
@@ -54,40 +48,23 @@ class SkipPreviousAction : ActionCallback {
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        context.playbackController().skipPrevious()
-        val manager = androidx.glance.appwidget.GlanceAppWidgetManager(context)
-        val widget = MusicWidget()
-        manager.getGlanceIds(MusicWidget::class.java).forEach { widget.update(context, it) }
+    ) {
+        performWidgetAction(context, "SkipPrevious") { controller ->
+            controller.skipPrevious()
+        }
     }
 }
 
-/** Toggles the favorite flag of the playing song in Room (same state the app shows). */
 class ToggleFavoriteAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        val songId =
-            context
-                .playbackController()
-                .playbackState.value.currentSong
-                ?.id ?: return
-        context.libraryRepository().toggleFavorite(songId)
-        MusicWidget().update(context, glanceId)
-    }
-}
-
-class SeekForwardAction : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        val controller = context.playbackController()
-        val currentPos = controller.playbackState.value.positionMs
-        controller.seekTo(currentPos + 10_000)
+        performWidgetAction(context, "ToggleFavorite") { controller ->
+            controller.playbackState.value.currentSong
+                ?.let { context.libraryRepository().toggleFavorite(it.id) }
+        }
     }
 }
 
@@ -96,17 +73,27 @@ class SeekToPercentAction : ActionCallback {
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        val percent = parameters[KEY_PERCENT] ?: return@withContext
-        val controller = context.playbackController()
-        val durationMs = controller.playbackState.value.durationMs
-        if (durationMs > 0) {
-            val targetPos = (durationMs * percent).toLong()
-            controller.seekTo(targetPos)
+    ) {
+        performWidgetAction(context, "SeekToPercent") { controller ->
+            val percent = parameters[KEY_PERCENT]?.takeIf { it.isFinite() }?.coerceIn(0f, 1f)
+            val duration = controller.playbackState.value.durationMs
+            if (percent != null && duration > 0) controller.seekTo((duration * percent).toLong())
         }
     }
 
     companion object {
         val KEY_PERCENT = ActionParameters.Key<Float>("percent")
+    }
+}
+
+class SeekForwardAction : ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: ActionParameters,
+    ) {
+        performWidgetAction(context, "SeekForward") { controller ->
+            controller.seekTo(controller.playbackState.value.positionMs + 10_000L)
+        }
     }
 }

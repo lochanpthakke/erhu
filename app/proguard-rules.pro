@@ -53,3 +53,6 @@
 -keepclassmembers class com.erhu.erhu.navigation.**$Companion {
     kotlinx.serialization.KSerializer serializer(...);
 }
+
+# Glance stores widget implementation names across process death/app updates.
+-keepnames class com.lochanpthakke.empee3.widget.** extends androidx.glance.appwidget.GlanceAppWidget

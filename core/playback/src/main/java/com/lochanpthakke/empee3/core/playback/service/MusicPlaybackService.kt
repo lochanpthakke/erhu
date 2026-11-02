@@ -122,6 +122,62 @@ class MusicPlaybackService : MediaLibraryService() {
         serviceScope.launch(dispatchers.io) { recentlyPlayed.recordSongPlayed(songId) }
     }
 
+    /** Android 17 requires a user-started media FGS before the first audio-focus request.
+     * Media3 1.5.1 only performs its pre-play promotion on API 31/32. Bootstrap the
+     * existing media notification here; Media3 immediately owns subsequent updates. */
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int {
+        if (intent?.action != ACTION_WIDGET_PLAY) return super.onStartCommand(intent, flags, startId)
+        val session = mediaLibrarySession
+        if (session == null || player.mediaItemCount == 0) {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        val channel = androidx.media3.session.DefaultMediaNotificationProvider.DEFAULT_CHANNEL_ID
+        getSystemService(android.app.NotificationManager::class.java).createNotificationChannel(
+            android.app.NotificationChannel(
+                channel,
+                getString(androidx.media3.session.DefaultMediaNotificationProvider.DEFAULT_CHANNEL_NAME_RESOURCE_ID),
+                android.app.NotificationManager.IMPORTANCE_LOW,
+            ),
+        )
+        val notification =
+            androidx.core.app.NotificationCompat
+                .Builder(this, channel)
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle(
+                    playbackController.playbackState.value.currentSong
+                        ?.title,
+                ).setContentText(
+                    playbackController.playbackState.value.currentSong
+                        ?.artist,
+                ).setContentIntent(session.sessionActivity)
+                .setStyle(
+                    androidx.media3.session.MediaStyleNotificationHelper
+                        .MediaStyle(session),
+                ).setOnlyAlertOnce(true)
+                .setSilent(true)
+                .build()
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            startForeground(
+                androidx.media3.session.DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID,
+                notification,
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            )
+        } else {
+            startForeground(androidx.media3.session.DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID, notification)
+        }
+        playbackController.play()
+        return START_STICKY
+    }
+
+    companion object {
+        const val ACTION_WIDGET_PLAY = "com.erhu.erhu.action.WIDGET_PLAY"
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
 
     override fun onDestroy() {

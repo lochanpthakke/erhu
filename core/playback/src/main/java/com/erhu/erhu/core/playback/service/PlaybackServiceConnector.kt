@@ -48,6 +48,14 @@ class PlaybackServiceConnector
             logger.d(TAG, "Binding to playback service")
         }
 
+        /** Called only for an explicit widget Play tap, never for widget refresh/preview work. */
+        fun playFromWidget() {
+            androidx.core.content.ContextCompat.startForegroundService(
+                context,
+                android.content.Intent(context, MusicPlaybackService::class.java).setAction(MusicPlaybackService.ACTION_WIDGET_PLAY),
+            )
+        }
+
         @Suppress("TooGenericExceptionCaught")
         private fun ListenableFuture<MediaController>.connectedControllerOrNull(): MediaController? =
             try {

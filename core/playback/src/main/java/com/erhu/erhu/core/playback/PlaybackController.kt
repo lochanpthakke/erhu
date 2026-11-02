@@ -11,6 +11,12 @@ import kotlinx.coroutines.flow.StateFlow
 interface PlaybackController {
     val playbackState: StateFlow<PlaybackState>
 
+    /** Suspends until saved queue restoration has completed; safe for cold-start widget actions. */
+    suspend fun awaitRestored() = Unit
+
+    /** User-initiated widget playback must go through Media3's foreground-service command path. */
+    suspend fun playFromWidget() = play()
+
     fun play()
 
     fun pause()

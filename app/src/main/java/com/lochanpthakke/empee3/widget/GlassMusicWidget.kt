@@ -26,6 +26,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
@@ -33,6 +34,7 @@ import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.color.ColorProvider
@@ -50,7 +52,6 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.erhu.erhu.MainActivity
@@ -62,10 +63,47 @@ import kotlinx.coroutines.flow.map
 import java.util.Locale
 
 private const val ALBUM_ART_SIZE_PX = 400
-private const val CONTROL_ICON_SIZE_DP = 26
-private const val CONTROL_ICON_SIZE_LARGE_DP = 36
 
 class GlassMusicWidget : GlanceAppWidget() {
+    override val sizeMode = androidx.glance.appwidget.SizeMode.Exact
+    override val previewSizeMode =
+        androidx.glance.appwidget.SizeMode.Responsive(
+            setOf(
+                androidx.compose.ui.unit
+                    .DpSize(220.dp, 140.dp),
+                androidx.compose.ui.unit
+                    .DpSize(300.dp, 200.dp),
+            ),
+        )
+
+    override suspend fun providePreview(
+        context: Context,
+        widgetCategory: Int,
+    ) {
+        provideContent {
+            WidgetContent(
+                title = "Nothing playing",
+                artist = "Choose music in erhu",
+                artwork = null,
+                isPlaying = false,
+                isFavorite = false,
+                hasSong = false,
+                positionMs = 0L,
+                durationMs = 0L,
+            )
+        }
+    }
+
+    override fun onCompositionError(
+        context: Context,
+        glanceId: GlanceId,
+        appWidgetId: Int,
+        throwable: Throwable,
+    ) {
+        android.util.Log.e("ErhuWidget", "GlassMusicWidget rendering failed: $appWidgetId", throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
+    }
+
     override val stateDefinition: GlanceStateDefinition<Preferences> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(
@@ -73,14 +111,14 @@ class GlassMusicWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         provideContent {
-            // Throttle position updates to 3-second buckets to eliminate high-frequency SystemUI re-inflation (flickering)
+            // Throttle position updates to 15-second buckets to eliminate high-frequency SystemUI re-inflation (flickering)
             val throttledPlaybackFlow =
                 remember(context) {
                     context
                         .playbackController()
                         .playbackState
                         .map { state ->
-                            val bucketedPosition = (state.positionMs / 3000) * 3000
+                            val bucketedPosition = (state.positionMs / 15000) * 15000
                             state.copy(positionMs = bucketedPosition)
                         }.distinctUntilChanged()
                 }
@@ -131,195 +169,101 @@ class GlassMusicWidget : GlanceAppWidget() {
         positionMs: Long,
         durationMs: Long,
     ) {
-        val whiteProvider = ColorProvider(day = Color.White, night = Color.White)
-        val mutedWhiteProvider = ColorProvider(day = Color.White.copy(alpha = 0.7f), night = Color.White.copy(alpha = 0.7f))
-
+        val compact = LocalSize.current.height < 180.dp
+        val white = ColorProvider(day = Color.White, night = Color.White)
+        val muted = ColorProvider(day = Color.White.copy(alpha = 0.7f), night = Color.White.copy(alpha = 0.7f))
+        val artSide = if (compact) 48.dp else 64.dp
         Box(
-            modifier =
-                GlanceModifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .background(ImageProvider(R.drawable.glass_widget_background))
-                    .clickable(actionStartActivity<MainActivity>()),
+            GlanceModifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .background(
+                    ImageProvider(R.drawable.glass_widget_background),
+                ).appWidgetBackground()
+                .clickable(actionStartActivity<MainActivity>()),
         ) {
-            Column(
-                modifier =
-                    GlanceModifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                // Header Row: Brand Title
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "erhu",
-                        style = TextStyle(color = mutedWhiteProvider, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                    )
-                }
-
-                Spacer(modifier = GlanceModifier.defaultWeight())
-
-                // Main Track Details Row: 72dp Artwork + Song Title, Artist & Like Heart Button
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier =
-                            GlanceModifier
-                                .size(72.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (artwork != null) {
-                            Image(
-                                provider = ImageProvider(artwork),
-                                contentDescription = null,
-                                modifier = GlanceModifier.size(72.dp),
-                                contentScale = ContentScale.Crop,
-                            )
+            Column(GlanceModifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                Text("erhu", style = TextStyle(color = muted, fontSize = 12.sp))
+                Spacer(GlanceModifier.defaultWeight())
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Box(GlanceModifier.size(artSide), contentAlignment = Alignment.Center) {
+                        if (artwork !=
+                            null
+                        ) {
+                            Image(ImageProvider(artwork), null, GlanceModifier.size(artSide), contentScale = ContentScale.Crop)
                         } else {
                             Image(
-                                provider = ImageProvider(R.drawable.ic_widget_thumb),
-                                contentDescription = null,
-                                modifier = GlanceModifier.size(36.dp),
-                                colorFilter = ColorFilter.tint(mutedWhiteProvider),
+                                ImageProvider(R.drawable.ic_widget_thumb),
+                                null,
+                                GlanceModifier.size(32.dp),
+                                colorFilter = ColorFilter.tint(muted),
                             )
                         }
                     }
-
-                    Column(
-                        modifier =
-                            GlanceModifier
-                                .defaultWeight()
-                                .padding(start = 14.dp, end = 8.dp),
-                    ) {
-                        MarqueeTitle(
-                            title = title,
-                            textColor = Color.White,
-                            modifier = GlanceModifier.fillMaxWidth(),
-                        )
-
-                        Text(
-                            text = if (artist.isNotEmpty()) artist else "Unknown Artist",
-                            style = TextStyle(color = mutedWhiteProvider, fontSize = 14.sp),
-                            maxLines = 1,
-                        )
+                    Column(GlanceModifier.defaultWeight().padding(start = 10.dp)) {
+                        MarqueeTitle(title, Color.White, GlanceModifier.fillMaxWidth())
+                        Text(artist.ifEmpty { "Choose music in erhu" }, style = TextStyle(color = muted, fontSize = 13.sp), maxLines = 1)
                     }
-
                     if (hasSong) {
-                        val favoriteIconRes = if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border
-                        Image(
-                            provider = ImageProvider(favoriteIconRes),
-                            contentDescription = "Favorite",
-                            modifier =
-                                GlanceModifier
-                                    .size(24.dp)
-                                    .clickable(actionRunCallback<GlassToggleFavoriteAction>()),
-                            colorFilter = ColorFilter.tint(whiteProvider),
+                        WidgetControl(
+                            if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border,
+                            "Favorite",
+                            actionRunCallback<GlassToggleFavoriteAction>(),
+                            white,
                         )
                     }
                 }
-
-                Spacer(modifier = GlanceModifier.defaultWeight())
-
-                // Progress Bar with 10-Segment Interactive Tap-to-Seek Overlay & mm:ss Timestamps
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
-
-                    Text(
-                        text = formatTime(positionMs),
-                        style = TextStyle(color = mutedWhiteProvider, fontSize = 11.sp),
-                        modifier = GlanceModifier.padding(end = 8.dp),
-                    )
-
-                    Box(
-                        modifier = GlanceModifier.defaultWeight().height(16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        LinearProgressIndicator(
-                            progress = progress,
-                            modifier = GlanceModifier.fillMaxWidth().height(3.dp),
-                            color = whiteProvider,
-                            backgroundColor = ColorProvider(day = Color.White.copy(alpha = 0.2f), night = Color.White.copy(alpha = 0.2f)),
-                        )
-
-                        // 10 invisible touch targets tightly aligned over the progress bar track
-                        Row(
-                            modifier = GlanceModifier.fillMaxWidth().height(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            for (i in 0 until 10) {
-                                val targetPercent = (i + 0.5f) / 10f
-                                Box(
-                                    modifier =
-                                        GlanceModifier
-                                            .defaultWeight()
-                                            .height(16.dp)
-                                            .clickable(
-                                                actionRunCallback<GlassSeekToPercentAction>(
-                                                    actionParametersOf(
-                                                        GlassSeekToPercentAction.KEY_PERCENT to targetPercent,
-                                                    ),
+                Spacer(GlanceModifier.defaultWeight())
+                if (!compact) {
+                    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(formatTime(positionMs), style = TextStyle(color = muted, fontSize = 11.sp))
+                        Box(GlanceModifier.defaultWeight().height(20.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                            LinearProgressIndicator(
+                                progress,
+                                GlanceModifier.fillMaxWidth().height(2.dp),
+                                color = white,
+                                backgroundColor = muted,
+                            )
+                            Row(GlanceModifier.fillMaxWidth().height(20.dp)) {
+                                repeat(10) { i ->
+                                    Box(
+                                        GlanceModifier.defaultWeight().height(20.dp).clickable(
+                                            actionRunCallback<GlassSeekToPercentAction>(
+                                                actionParametersOf(
+                                                    GlassSeekToPercentAction.KEY_PERCENT to (i + 0.5f) / 10f,
                                                 ),
                                             ),
-                                ) {}
+                                        ),
+                                    ) {}
+                                }
                             }
                         }
+                        Text(formatTime(durationMs), style = TextStyle(color = muted, fontSize = 11.sp))
                     }
-
-                    Text(
-                        text = formatTime(durationMs),
-                        style = TextStyle(color = mutedWhiteProvider, fontSize = 11.sp),
-                        modifier = GlanceModifier.padding(start = 8.dp),
-                    )
                 }
-
-                Spacer(modifier = GlanceModifier.defaultWeight())
-
-                // Central Playback Controls Row (3 Buttons: Prev | Play/Pause | Next)
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_widget_skip_previous),
-                        contentDescription = "Previous",
-                        modifier =
-                            GlanceModifier
-                                .size(CONTROL_ICON_SIZE_DP.dp)
-                                .clickable(actionRunCallback<GlassSkipPreviousAction>()),
-                        colorFilter = ColorFilter.tint(whiteProvider),
+                Spacer(GlanceModifier.defaultWeight())
+                Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    WidgetControl(
+                        R.drawable.ic_widget_skip_previous,
+                        "Previous",
+                        (if (hasSong) actionRunCallback<GlassSkipPreviousAction>() else actionStartActivity<MainActivity>()),
+                        white,
                     )
-
-                    Spacer(modifier = GlanceModifier.width(44.dp))
-
-                    Image(
-                        provider = ImageProvider(if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play),
-                        contentDescription = "Play/Pause",
-                        modifier =
-                            GlanceModifier
-                                .size(CONTROL_ICON_SIZE_LARGE_DP.dp)
-                                .clickable(actionRunCallback<GlassPlayPauseAction>()),
-                        colorFilter = ColorFilter.tint(whiteProvider),
+                    Spacer(GlanceModifier.width(12.dp))
+                    WidgetControl(
+                        if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
+                        if (isPlaying) "Pause" else "Play",
+                        (if (hasSong) actionRunCallback<GlassPlayPauseAction>() else actionStartActivity<MainActivity>()),
+                        white,
+                        iconSize = 36,
                     )
-
-                    Spacer(modifier = GlanceModifier.width(44.dp))
-
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_widget_skip_next),
-                        contentDescription = "Next",
-                        modifier =
-                            GlanceModifier
-                                .size(CONTROL_ICON_SIZE_DP.dp)
-                                .clickable(actionRunCallback<GlassSkipNextAction>()),
-                        colorFilter = ColorFilter.tint(whiteProvider),
+                    Spacer(GlanceModifier.width(12.dp))
+                    WidgetControl(
+                        R.drawable.ic_widget_skip_next,
+                        "Next",
+                        (if (hasSong) actionRunCallback<GlassSkipNextAction>() else actionStartActivity<MainActivity>()),
+                        white,
                     )
                 }
             }
@@ -337,9 +281,10 @@ class GlassMusicWidget : GlanceAppWidget() {
             remoteViews =
                 RemoteViews(packageName, R.layout.widget_title_marquee).apply {
                     setTextViewText(R.id.widget_title_text, title)
+                    setInt(R.id.widget_title_text, "setMaxLines", 1)
                     setTextColor(R.id.widget_title_text, textColor.toArgb())
                 },
-            modifier = modifier,
+            modifier = modifier.height(24.dp),
         )
     }
 

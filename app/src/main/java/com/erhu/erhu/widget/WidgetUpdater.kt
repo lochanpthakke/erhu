@@ -7,13 +7,12 @@ import com.erhu.erhu.core.playback.PlaybackController
 import com.lochanpthakke.empee3.widget.GlassMusicWidget
 import com.lochanpthakke.empee3.widget.MusicWidget
 import com.lochanpthakke.empee3.widget.VinylMusicWidget
-import com.lochanpthakke.empee3.widget.libraryRepository
-import com.lochanpthakke.empee3.widget.playbackController
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -26,7 +25,7 @@ import javax.inject.Singleton
 /**
  * Keeps home-screen widgets (MusicWidget, GlassMusicWidget & VinylMusicWidget) live.
  *
- * provideGlance() only reads playbackState once at render time.
+ * Glance sessions expire; explicit updates also keep inactive instances synchronized.
  * This class re-renders all instances of widgets when state changes:
  * song, play/pause status, favorite flag, or theme.
  */
@@ -42,54 +41,78 @@ class WidgetUpdater
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+        private val started =
+            java.util.concurrent.atomic
+                .AtomicBoolean(false)
+        private val requests = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+        fun requestUpdate() {
+            requests.tryEmit(Unit)
+        }
+
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
         fun start() {
+            if (!started.compareAndSet(false, true)) return
             val displayedPlayback =
                 playbackController.playbackState
-                    .map { Triple(it.currentSong?.id, it.status, it.shuffleModeEnabled) }
+                    .map {
+                        WidgetDisplayState(it.currentSong, it.status, it.shuffleModeEnabled, it.positionMs / 15_000L, it.durationMs)
+                    }.distinctUntilChanged()
+            val favorite =
+                playbackController.playbackState
+                    .map { it.currentSong?.id }
                     .distinctUntilChanged()
-
-            displayedPlayback
-                .onEach { updateAllWidgetInstances() }
-                .launchIn(scope)
-
-            displayedPlayback
-                .map { it.first }
-                .distinctUntilChanged()
-                .flatMapLatest { songId -> songId?.let { libraryRepository.observeIsFavorite(it) } ?: flowOf(false) }
-                .distinctUntilChanged()
-                .onEach { updateAllWidgetInstances() }
-                .launchIn(scope)
-
-            themeRepository.widgetThemeState
+                    .flatMapLatest { id -> id?.let { libraryRepository.observeIsFavorite(it) } ?: flowOf(false) }
+                    .distinctUntilChanged()
+            kotlinx.coroutines.flow
+                .merge(
+                    kotlinx.coroutines.flow.combine(displayedPlayback, favorite, themeRepository.widgetThemeState) { _, _, _ -> Unit },
+                    requests,
+                ).debounce(150L)
                 .onEach { updateAllWidgetInstances() }
                 .launchIn(scope)
         }
 
         private suspend fun updateAllWidgetInstances() {
             val manager = GlanceAppWidgetManager(context)
-
-            val glanceIds = manager.getGlanceIds(MusicWidget::class.java)
-            if (glanceIds.isNotEmpty()) {
-                val widget = MusicWidget()
-                glanceIds.forEach { glanceId ->
-                    widget.update(context, glanceId)
-                }
-            }
-
-            val glassGlanceIds = manager.getGlanceIds(GlassMusicWidget::class.java)
-            if (glassGlanceIds.isNotEmpty()) {
-                val glassWidget = GlassMusicWidget()
-                glassGlanceIds.forEach { glanceId ->
-                    glassWidget.update(context, glanceId)
-                }
-            }
-
-            val vinylGlanceIds = manager.getGlanceIds(VinylMusicWidget::class.java)
-            if (vinylGlanceIds.isNotEmpty()) {
-                val vinylWidget = VinylMusicWidget()
-                vinylGlanceIds.forEach { glanceId ->
-                    vinylWidget.update(context, glanceId)
+            for (widget in listOf(MusicWidget(), GlassMusicWidget(), VinylMusicWidget())) {
+                try {
+                    for (id in manager.getGlanceIds(widget.javaClass)) {
+                        try {
+                            widget.update(context, id)
+                            if (com.erhu.erhu.BuildConfig.DEBUG) {
+                                android.util.Log.d(
+                                    "ErhuWidget",
+                                    "Updated ${widget.javaClass.simpleName}: $id",
+                                )
+                            }
+                        } catch (
+                            cancelled: kotlinx.coroutines.CancellationException,
+                        ) {
+                            throw cancelled
+                        } catch (
+                            error: Exception,
+                        ) {
+                            android.util.Log.e("ErhuWidget", "Update failed: ${widget.javaClass.simpleName}", error)
+                        }
+                    }
+                } catch (
+                    cancelled: kotlinx.coroutines.CancellationException,
+                ) {
+                    throw cancelled
+                } catch (
+                    error: Exception,
+                ) {
+                    android.util.Log.e("ErhuWidget", "Provider lookup failed: ${widget.javaClass.simpleName}", error)
                 }
             }
         }
     }
+
+internal data class WidgetDisplayState(
+    val song: com.erhu.erhu.core.model.Song?,
+    val status: com.erhu.erhu.core.model.PlaybackStatus,
+    val shuffle: Boolean,
+    val positionBucket: Long,
+    val durationMs: Long,
+)

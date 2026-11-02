@@ -36,5 +36,19 @@ class ErhuApplication :
         }
         crashThemeHandler.install()
         widgetUpdater.start()
+        com.erhu.erhu.widget.WidgetPreviewWorker
+            .enqueue(this)
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "monthly-app-update-check",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            androidx.work
+                .PeriodicWorkRequestBuilder<MonthlyUpdateWorker>(30, java.util.concurrent.TimeUnit.DAYS)
+                .setConstraints(
+                    androidx.work.Constraints
+                        .Builder()
+                        .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                        .build(),
+                ).build(),
+        )
     }
 }

@@ -338,7 +338,7 @@ fun NowPlayingScreen(
                                             .fillMaxWidth()
                                             .weight(1f)
                                             .then(gestureRegion),
-                                ) { track, isCurrent, distance ->
+                                ) { track, isCurrent, distance, slot ->
                                     CarouselCard(
                                         track = track,
                                         isCurrent = isCurrent,
@@ -347,7 +347,17 @@ fun NowPlayingScreen(
                                         isFavorite = isFavorite,
                                         onToggleFavorite = { onToggleFavorite(track) },
                                         // A neighbour card is a shortcut to its track: the same motion as a swipe.
-                                        onSelect = { if (distance() < 0f) previous() else next() },
+                                        onSelect = {
+                                            carousel.skipFromButton(slot) { direction ->
+                                                if (direction >
+                                                    0
+                                                ) {
+                                                    playbackRepository.skipNext()
+                                                } else {
+                                                    playbackRepository.skipToPreviousItem()
+                                                }
+                                            }
+                                        },
                                         selectable = !stacked,
                                         // The cover moves only while the player is open (it stays composed when collapsed).
                                         isPlaying = isPlaying && transition?.isOpen != false,
