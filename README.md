@@ -49,6 +49,11 @@ The source namespace is `com.erhu.erhu`. The installed application ID remains `c
 
 Report bugs through [GitHub Issues](https://github.com/lochanpthakke/erhu/issues). Include the device model, Android and One UI versions where relevant, app version, and steps to reproduce the problem.
 
+## Contributors
+
+- [Kshitij Kekunnaya](https://github.com/Kshitij1425)
+- [Lochan Thakke](https://github.com/lochanpthakke)
+
 ## License
 
 [GNU General Public License v3.0](LICENSE).
