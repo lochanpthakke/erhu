@@ -24,6 +24,14 @@ Existing installations can update in place. The application ID and signing certi
 
 The optional Musixmatch synced-lyrics provider requires a licensed API key. It is disabled when no key is configured. See [provider configuration](docs/synced-lyrics-providers.md).
 
+## VYBE setup
+
+VYBE searches your library using descriptions of what you want to hear. It runs on the device and needs a separate EmbeddingGemma model.
+
+Download the [VYBE model pack](https://github.com/lochanpthakke/erhu/releases/download/v1.0.2-beta.1/vybe-embeddinggemma-300m-int4int8.zip), read the included model terms, and extract `embedding_gemma.task`. Open **VYBE** in erhu, tap **Choose model file**, and select the extracted file. Leave the app open while it indexes your library.
+
+The model is about 184 MB before compression. It is supplied under Google's Gemma Terms of Use, separately from erhu's GPL-3.0 licence. See [VYBE setup](docs/vybe-setup.md) for the model source, checksum and terms.
+
 ## Screenshots
 
 These saved development screenshots show the radio station screen and album menu. Updated release images will follow.
