@@ -1,19 +1,54 @@
 # erhu
 
-Android local music player built with Kotlin, Jetpack Compose, Media3, Room and DataStore.
+A local music player for Android, built with Kotlin, Jetpack Compose and Media3.
 
-The project owner and source namespace are **erhu** (`com.erhu.erhu`). The installed
-application ID remains `com.lochanpthakke.empee3` so existing installations receive
-an in-place update with their library, preferences and playback data intact.
+## Beta 1
+
+The first beta is available as an ARM64 APK for Android 8.0 and newer. It has been tested on a Samsung Galaxy S23 running One UI. Compatibility with other devices is still being tested.
+
+[Download Beta 1](https://github.com/lochanpthakke/erhu/releases/tag/v1.0.2-beta.1)
+
+Install the APK from the release page and grant music access when prompted. erhu plays music stored on your device; radio stations select tracks from your own library.
+
+Existing installations can update in place. The application ID and signing certificate are unchanged, so an update preserves library data, preferences, favourites and playback history.
+
+## Features
+
+- Albums, artists, playlists, favourites and listening history.
+- Smart playlists and radio stations generated from your library, with VYBE sound matching.
+- Synced lyrics from embedded lyrics, cached results and LRCLIB.
+- Queue management, metadata editing and artwork controls.
+- Floating navigation, adjustable glass surfaces and Now Playing artwork transitions.
+- Three Home screen widget styles with playback controls and resizable layouts.
+- Manual update checks and a monthly automatic check for published stable releases.
+
+The optional Musixmatch synced-lyrics provider requires a licensed API key. It is disabled when no key is configured. See [provider configuration](docs/synced-lyrics-providers.md).
+
+## Screenshots
+
+These saved development screenshots show the radio station screen and album menu. Updated release images will follow.
+
+<p>
+  <img src="docs/images/radio-station.png" alt="Radio station details and track list" width="280">
+  <img src="docs/images/album-menu.png" alt="Album actions in a floating glass menu" width="280">
+</p>
 
 ## Build
 
-Use JDK 21 and the configured Android SDK:
+Use JDK 21, the Android SDK configured by the project and the checked-in Gradle wrapper.
 
-```powershell
-.\gradlew.bat :app:assembleRelease -PtargetAbi=arm64-v8a
-.\gradlew.bat testDebugUnitTest
+```sh
+./gradlew :app:assembleDebug
 ```
 
-Signing configuration is unchanged. See [identity migration](docs/identity-migration.md)
-for compatibility identifiers and external repository links awaiting a confirmed replacement.
+The [release workflow](.github/workflows/release.yml) runs unit tests and release lint, builds the optimized ARM64 APK, and verifies its package, version and signing certificate. Signing material is supplied through GitHub Actions Secrets.
+
+The source namespace is `com.erhu.erhu`. The installed application ID remains `com.lochanpthakke.empee3` for compatibility with existing installations.
+
+## Feedback
+
+Report bugs through [GitHub Issues](https://github.com/lochanpthakke/erhu/issues). Include the device model, Android and One UI versions where relevant, app version, and steps to reproduce the problem.
+
+## License
+
+[GNU General Public License v3.0](LICENSE).
