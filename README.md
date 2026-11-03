@@ -1,4 +1,4 @@
-<h1><img src="images/branding/erhu-wordmark.png" alt="erhu" width="160"></h1>
+<h1><img src="images/branding/erhu-cube.png" alt="erhu app icon" width="64"> <img src="images/branding/erhu-wordmark.png" alt="erhu" width="160"></h1>
 
 An Android music player for your own collection.
 
@@ -20,7 +20,9 @@ Existing installations can update in place. The application ID and signing certi
 - Smart playlists and radio stations generated from your library.
 - On-device VYBE search using local song metadata.
 - Synced lyrics from embedded lyrics, cached results and LRCLIB.
-- Queue management, metadata editing and artwork controls.
+- Queue management, Auto Fix Tags and online or local artwork selection.
+- Library Builder with reviewed file moves into artist and album folders.
+- Transition Studio with global, collection and track-pair crossfades, plus Volume, EQ and Filter controls.
 - Floating navigation, adjustable glass surfaces and Now Playing artwork transitions.
 - Three Home screen widget styles with playback controls and resizable layouts.
 - Manual update checks and a monthly automatic check for published stable releases.
@@ -30,6 +32,8 @@ The optional Musixmatch synced-lyrics provider requires a licensed API key. It i
 ## Screenshots
 
 Captured from erhu 1.0.2 on a Galaxy S23, including working One UI widgets.
+
+The library tools and Transition Studio below were captured from the current installed build on 3 November 2026. They show the real interfaces; no repairs, file moves or transition changes were applied during capture.
 
 ### Home and discovery
 
@@ -82,6 +86,44 @@ Captured from erhu 1.0.2 on a Galaxy S23, including working One UI widgets.
   <summary>Floating album controls</summary>
   <p><img src="images/showcase/glass.png" alt="Album actions on the actual translucent popup surface" width="420"></p>
 </details>
+
+### Library tools
+
+<table>
+  <tr>
+    <th width="33%">Library Builder</th>
+    <th width="33%">Artwork Fetcher</th>
+    <th width="33%">Auto Fix Tags</th>
+  </tr>
+  <tr>
+    <td><a href="images/showcase/library-builder.png"><img src="images/showcase/library-builder.png" alt="Library Builder on a Galaxy S23, showing folder scanning and organization controls" width="260"></a></td>
+    <td><a href="images/showcase/artwork-fetcher.png"><img src="images/showcase/artwork-fetcher.png" alt="Artwork Fetcher on a Galaxy S23, showing providers, album search and resolution targets" width="260"></a></td>
+    <td><a href="images/showcase/auto-fix-tags.png"><img src="images/showcase/auto-fix-tags.png" alt="Auto Fix Tags on a Galaxy S23, showing repair search, metadata fields and matching mode" width="260"></a></td>
+  </tr>
+</table>
+
+- **Library Builder:** scan your configured music folder or choose another folder, review proposed destinations, resolve conflicts, then execute the moves. Files are organized as artist / album / track title.
+- **Artwork Fetcher:** find album covers and artist photos, choose a provider and resolution target, inspect candidates and apply your selection. Album menus also accept a local cover image.
+- **Auto Fix Tags:** add tracks, albums or artists to a repair queue, select the metadata fields to change, and use automatic matching or manual result selection. File writes may require Android approval.
+
+### Transition Studio
+
+Choose the default crossfade for all music, override it for an album or playlist, or edit one track pair. Volume, EQ and Filter open their own floating panels. Preview a pair when available, then Save to apply the draft.
+
+<table>
+  <tr>
+    <th width="50%">Defaults and track pairs</th>
+    <th width="50%">Floating Volume controls</th>
+  </tr>
+  <tr>
+    <td><a href="images/showcase/transition-studio.png"><img src="images/showcase/transition-studio.png" alt="Transition Studio on a Galaxy S23, showing global defaults, album settings and track pairs" width="340"></a></td>
+    <td><a href="images/showcase/transition-volume.png"><img src="images/showcase/transition-volume.png" alt="The actual floating Volume panel in Transition Studio on a Galaxy S23" width="340"></a></td>
+  </tr>
+</table>
+
+[Using Transition Studio](docs/transition-studio.md)
+
+The in-app introduction includes these tools and a separate Transition Studio page. Reopen it from **Settings → Diagnostics & About → Introduction**.
 
 ### Widgets
 

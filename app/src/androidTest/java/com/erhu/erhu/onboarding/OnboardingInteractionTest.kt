@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
@@ -36,10 +37,10 @@ class OnboardingInteractionTest {
             compose.onNodeWithText("Next").performClick()
             compose.waitForIdle()
             if (index + 1 == introductionPages(true, true).indexOf(IntroductionPage.ARTWORK)) {
-                compose.onNodeWithText("Details").performClick()
-                compose.onNodeWithText("Album covers and artist photos").assertIsDisplayed()
-                compose.onNodeWithText("How to use").performClick()
-                compose.onNodeWithText("1. Find an album or artist").assertIsDisplayed()
+                compose.onNodeWithText("Details").performScrollTo().performClick()
+                compose.onNodeWithText("Album covers and artist photos").performScrollTo().assertIsDisplayed()
+                compose.onNodeWithText("How to use").performScrollTo().performClick()
+                compose.onNodeWithText("1. Find an album or artist").performScrollTo().assertIsDisplayed()
             }
         }
         compose.onNodeWithText("Discover VYBE.").assertIsDisplayed()

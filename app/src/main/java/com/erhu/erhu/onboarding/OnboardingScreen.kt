@@ -210,7 +210,10 @@ fun OnboardingScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Image(painterResource(R.drawable.onb_wordmark), "erhu", Modifier.width(82.dp).height(32.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Image(painterResource(R.drawable.erhu_logo), null, Modifier.size(32.dp))
+                            Image(painterResource(R.drawable.onb_wordmark), "erhu", Modifier.width(82.dp).height(32.dp))
+                        }
                         TextButton(onClick = finish, enabled = !finishing) { Text("Skip") }
                     }
                     HorizontalPager(
@@ -407,6 +410,7 @@ private fun IntroductionContent(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else if (toolGuide != null) {
+            PreviewGallery(page)
             ToolGuideContent(page, toolGuide)
         } else {
             PreviewGallery(page)

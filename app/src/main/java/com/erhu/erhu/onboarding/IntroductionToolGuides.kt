@@ -75,5 +75,27 @@ internal fun IntroductionPage.toolGuide(): IntroductionToolGuide? =
                             "Normally, previously organized files can be skipped. Enable Force Re-organize to include them in a new scan. Scanning and reviewing alone do not execute the proposed moves.",
                     ),
             )
+        IntroductionPage.TRANSITIONS ->
+            IntroductionToolGuide(
+                entryPoint = "Album or playlist → Transition Studio",
+                steps =
+                    listOf(
+                        "Choose where it applies" to
+                            "Open Transition Studio from an album or playlist. Edit Default for all music, use a Custom transition for this collection, or tap a transition between two tracks to edit that exact pair.",
+                        "Shape the transition" to
+                            "Choose a preset and duration. Open Volume, EQ or Filter for their floating controls. Custom volume curves let you move points on the timeline.",
+                        "Preview and save" to
+                            "For a track pair, use the preview control when available to hear the handover. Save applies your draft; closing the editor without saving discards it.",
+                    ),
+                details =
+                    listOf(
+                        "Automatic crossfades" to
+                            "The master switch controls transitions across the app. Turning it off keeps your settings and plays tracks back to back.",
+                        "Default, Off and Custom" to
+                            "Default follows the global transition. Off disables crossfades for this album or playlist. Custom gives that collection its own transition. Individual pairs can have their own settings.",
+                        "Track pairs and shuffle" to
+                            "A pair's saved transition applies when those two tracks play back to back, including with shuffle. Auto follows the collection's setting. Use Reset to default to remove a collection override.",
+                    ),
+            )
         else -> null
     }

@@ -6,9 +6,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IntroductionPagesTest {
-    @Test fun allAvailableFeaturesHaveElevenPagesWithBookends() {
+    @Test fun allAvailableFeaturesHaveTwelvePagesWithBookends() {
         val pages = introductionPages(true, true)
-        assertEquals(11, pages.size)
+        assertEquals(12, pages.size)
         assertEquals(IntroductionPage.WELCOME, pages.first())
         assertEquals(IntroductionPage.READY, pages.last())
         assertEquals(pages.size, pages.distinct().size)
@@ -22,7 +22,7 @@ class IntroductionPagesTest {
         }
     }
     @Test fun currentPageIdentitySurvivesOptionalPageChanges() {
-        for (page in listOf(IntroductionPage.LIBRARY, IntroductionPage.ARTWORK, IntroductionPage.TAGS, IntroductionPage.BUILDER, IntroductionPage.LISTENING, IntroductionPage.READY)) {
+        for (page in listOf(IntroductionPage.LIBRARY, IntroductionPage.ARTWORK, IntroductionPage.TAGS, IntroductionPage.BUILDER, IntroductionPage.LISTENING, IntroductionPage.TRANSITIONS, IntroductionPage.READY)) {
             for (vybe in listOf(false, true)) {
                 val pages = introductionPages(vybe, true)
                 assertEquals(page, pages[restoredIntroductionPage(page.name, pages)])

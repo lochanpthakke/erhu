@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.ImageSearch
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ internal fun ToolGuideContent(
                 when (page) {
                     IntroductionPage.ARTWORK -> Icons.Outlined.ImageSearch
                     IntroductionPage.TAGS -> Icons.Outlined.EditNote
+                    IntroductionPage.TRANSITIONS -> Icons.Outlined.Tune
                     else -> Icons.Outlined.Folder
                 },
                 contentDescription = null,

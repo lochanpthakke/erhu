@@ -22,7 +22,11 @@ internal enum class IntroductionPage(
         "Stay with the words.",
         "Follow synchronized lyrics on supported tracks. Availability depends on the file and online providers.",
     ),
-    SOUND("Make sound yours.", "Adjust the equalizer. Use Transition Studio for crossfade curves and filters between tracks."),
+    SOUND("Make sound yours.", "Adjust the eight-band equalizer and choose a preset for your listening experience."),
+    TRANSITIONS(
+        "Make the next track flow.",
+        "Use Transition Studio to shape the handover between tracks, with defaults and individual transitions.",
+    ),
     VYBE("Discover VYBE.", "Search your own collection and browse generated radio stations. Playback starts when you choose."),
     WIDGETS("Music on your Home screen.", "Touch and hold your Android Home screen, open Widgets, then choose an erhu player."),
     READY("Everything is in place.", "Your music is ready. Make yourself at home."),
@@ -78,5 +82,13 @@ internal fun IntroductionPage.previews(): List<IntroductionPreview> =
                 IntroductionPreview("Glass", R.drawable.onb_widget_glass),
                 IntroductionPreview("Vinyl", R.drawable.onb_widget_vinyl),
             )
-        IntroductionPage.ARTWORK, IntroductionPage.TAGS, IntroductionPage.BUILDER, IntroductionPage.READY -> emptyList()
+        IntroductionPage.ARTWORK -> listOf(IntroductionPreview("Artwork Fetcher", R.drawable.onb_artwork_fetcher))
+        IntroductionPage.TAGS -> listOf(IntroductionPreview("Auto Fix Tags", R.drawable.onb_auto_fix_tags))
+        IntroductionPage.BUILDER -> listOf(IntroductionPreview("Library Builder", R.drawable.onb_library_builder))
+        IntroductionPage.TRANSITIONS ->
+            listOf(
+                IntroductionPreview("Studio", R.drawable.onb_transition_studio),
+                IntroductionPreview("Volume panel", R.drawable.onb_transition_volume),
+            )
+        IntroductionPage.READY -> emptyList()
     }
