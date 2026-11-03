@@ -250,14 +250,16 @@ fun AlbumDetailScreen(
                                             songs.forEach { song -> viewModel.addToQueue(song) }
                                         },
                                     )
-                                    GlassMenuItem(
-                                        icon = Icons.Default.Radio,
-                                        text = { Text("Start Radio") },
-                                        onClick = {
-                                            menuExpanded = false
-                                            viewModel.startRadio(RadioSeed.Album(album.id))
-                                        },
-                                    )
+                                    if (LocalVybeEnabled.current) {
+                                        GlassMenuItem(
+                                            icon = Icons.Default.Radio,
+                                            text = { Text("Start Radio") },
+                                            onClick = {
+                                                menuExpanded = false
+                                                viewModel.startRadio(RadioSeed.Album(album.id))
+                                            },
+                                        )
+                                    }
                                     GlassMenuDivider()
                                     GlassMenuSection("Album")
                                     GlassMenuItem(

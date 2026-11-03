@@ -63,7 +63,7 @@ internal fun HomeFeed(
     bottomInset: Dp,
     emptyMessage: String = "No songs found on this device",
 ) {
-    val mixes = smartMixes?.mixes.orEmpty()
+    val mixes = visibleHomeMixes(smartMixes?.mixes.orEmpty(), LocalVybeEnabled.current)
     val hasSongs = songs.itemCount > 0
     // Shown once the library has songs: the mixes, and a note while history is still short.
     val hasSmartPlaylists = hasSongs && (mixes.isNotEmpty() || smartMixes?.needsMoreListening == true)
@@ -136,7 +136,7 @@ private fun AlbumShelves(
     val setlists = remember(featuredAlbums, artistArtwork) { FeaturedSetlists.select(featuredAlbums, artistArtwork) }
     val radios = setlists.filterIsInstance<FeaturedSetlist.RadioPick>()
     val albums = setlists.filterIsInstance<FeaturedSetlist.AlbumPick>()
-    if (radios.isNotEmpty()) {
+    if (LocalVybeEnabled.current && radios.isNotEmpty()) {
         Shelf(title = "Featured Radio Stations") {
             items(radios, key = { it.key }, contentType = { "radio" }) { radio ->
                 RadioTile(

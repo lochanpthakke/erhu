@@ -32,6 +32,16 @@ interface ThemeRepository {
     val scanLocationConfigured: StateFlow<Boolean>
     val defaultStartSection: StateFlow<String>
 
+    /** Null until persisted navigation preferences have loaded; absent preference defaults to true. */
+    val vybeEnabled: StateFlow<Boolean?>
+
+    /** Null while loading; absent/false means the introduction has not been completed. */
+    val onboardingCompleted: StateFlow<Boolean?>
+
+    suspend fun completeOnboarding(): AppResult<Unit>
+
+    suspend fun setVybeEnabled(enabled: Boolean): AppResult<Unit>
+
     /** Metadata & Artwork provider choice as stored ("" until the user picks one). */
     val metadataProvider: StateFlow<String>
 

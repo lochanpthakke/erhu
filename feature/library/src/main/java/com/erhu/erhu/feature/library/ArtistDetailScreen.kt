@@ -210,14 +210,16 @@ fun ArtistDetailScreen(
                                         allSongs.forEach { song -> viewModel.addToQueue(song) }
                                     },
                                 )
-                                GlassMenuItem(
-                                    icon = Icons.Default.Radio,
-                                    text = { Text("Start Radio") },
-                                    onClick = {
-                                        menuExpanded = false
-                                        viewModel.startRadio(RadioSeed.Artist(artist.id))
-                                    },
-                                )
+                                if (LocalVybeEnabled.current) {
+                                    GlassMenuItem(
+                                        icon = Icons.Default.Radio,
+                                        text = { Text("Start Radio") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            viewModel.startRadio(RadioSeed.Artist(artist.id))
+                                        },
+                                    )
+                                }
                                 GlassMenuDivider()
                                 GlassMenuSection("Artist")
                                 GlassMenuItem(

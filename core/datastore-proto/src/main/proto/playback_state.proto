@@ -70,6 +70,10 @@ message PlaybackStateProto {
   // Shared Glass Strength: 0 = frosted / Less Glass, 1 = clear / More Glass. Absent = 0.5.
   // Legacy wire name and field number retained for existing saved preferences.
   optional float popup_glass_opacity = 36;
+  // Master feature visibility. Absent in existing installations = enabled.
+  optional bool vybe_enabled = 37;
+  // Introduction completion is independent of music permission and playback.
+  bool onboarding_completed = 38;
 }
 
 message RepairBatchProto {

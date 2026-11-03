@@ -84,3 +84,7 @@ data class SettingsCategory(
 data class RadioStationDetail(
     val albumId: Long,
 )
+
+/** Replays the introduction without resetting the completion preference. */
+@Serializable
+object Introduction

@@ -34,6 +34,7 @@ fun DiagnosticsScreen(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenIntroduction: (() -> Unit)? = null,
 ) {
     val crashLogs by viewModel.crashLogs.collectAsState()
 
@@ -49,6 +50,19 @@ fun DiagnosticsScreen(
             }
         },
     ) {
+        if (onOpenIntroduction != null) {
+            SettingsSection(title = "About") {
+                SettingsGroup {
+                    row {
+                        com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
+                            title = "Introduction",
+                            summary = "Explore erhu and music access setup.",
+                            onClick = onOpenIntroduction,
+                        )
+                    }
+                }
+            }
+        }
         SettingsSection(title = "Updates") {
             UpdatePanel(viewModel)
         }

@@ -184,6 +184,7 @@ fun SettingsCategoryScreen(
     diagnosticsViewModel: DiagnosticsViewModel,
     libraryViewModel: LibraryViewModel,
     visualizerViewModel: VisualizerViewModel,
+    onOpenIntroduction: (() -> Unit)? = null,
 ) {
     val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
     when (categoryId) {
@@ -202,7 +203,13 @@ fun SettingsCategoryScreen(
                 onBack = onBack,
             )
         "visualizer" -> VisualizerSettingsSubPage(viewModel = visualizerViewModel, title = title, onBack = onBack)
-        "diagnostics" -> DiagnosticsScreen(viewModel = diagnosticsViewModel, title = title, onBack = onBack)
+        "diagnostics" ->
+            DiagnosticsScreen(
+                viewModel = diagnosticsViewModel,
+                title = title,
+                onBack = onBack,
+                onOpenIntroduction = onOpenIntroduction,
+            )
         else ->
             MetadataSettingsSubPage(
                 viewModel = libraryViewModel,
@@ -221,8 +228,21 @@ private fun NavigationSettingsSubPage(
     onBack: () -> Unit,
 ) {
     val defaultStartSection by viewModel.defaultStartSection.collectAsState()
+    val vybeEnabled by viewModel.vybeEnabled.collectAsState()
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
+        SettingsSection(title = "Navigation & Home") {
+            SettingsGroup {
+                row {
+                    SettingsSwitchRow(
+                        title = "Enable VYBE",
+                        summary = "Show VYBE in navigation and Home.",
+                        checked = vybeEnabled != false,
+                        onCheckedChange = viewModel::setVybeEnabled,
+                    )
+                }
+            }
+        }
         SettingsSection(
             title = "Home page",
             footer =
@@ -511,7 +531,9 @@ private fun FanartTvApiKeySection(
     var textInput by remember(apiKey) { mutableStateOf(apiKey) }
     SettingsSection(
         title = "Fanart.tv API Key",
-        footer = "Fanart.tv provides high-resolution community artist thumbs and backgrounds. Get a free personal API key at fanart.tv/get-an-api-key/",
+        footer =
+            "Fanart.tv provides high-resolution community artist thumbs and backgrounds. " +
+                "Get a free personal API key at fanart.tv/get-an-api-key/",
     ) {
         SettingsGroup {
             row {

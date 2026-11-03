@@ -2260,6 +2260,7 @@ class LibraryViewModel
          * Play button does. Nothing happens when the mix isn't offered right now.
          */
         fun playSmartMix(mixKey: String) {
+            if (isVybeMix(mixKey) && themeRepository.vybeEnabled.value != true) return
             val mix = smartMixes.value?.mixes?.firstOrNull { it.kind.key == mixKey } ?: return
             viewModelScope.launch { playInOrder(libraryRepository.getSongsByIds(mix.songIds)) }
         }
@@ -2284,6 +2285,7 @@ class LibraryViewModel
 
         /** Starts a new queue: the seed's start song, then the radio's picks, in radio order. */
         fun startRadio(seed: RadioSeed) {
+            if (themeRepository.vybeEnabled.value != true) return
             viewModelScope.launch {
                 val plan = radioRepository.build(seed) ?: return@launch report(null)
                 val songs = libraryRepository.getSongsByIds(listOf(plan.startSongId) + plan.songIds)

@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStream
 import javax.inject.Inject
@@ -68,6 +70,28 @@ class ThemeRepositoryImpl
 
         private val _defaultStartSection = MutableStateFlow("TRACKS")
         override val defaultStartSection: StateFlow<String> = _defaultStartSection.asStateFlow()
+
+        override val vybeEnabled: StateFlow<Boolean?> =
+            dataStore.data
+                .map { it.vybeEnabledOrDefault() }
+                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+
+        override val onboardingCompleted: StateFlow<Boolean?> =
+            dataStore.data
+                .map { it.onboardingCompleted }
+                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+
+        override suspend fun completeOnboarding(): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setOnboardingCompleted(true).build() }
+                Unit
+            }
+
+        override suspend fun setVybeEnabled(enabled: Boolean): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setVybeEnabled(enabled).build() }
+                Unit
+            }
 
         private val _metadataProvider = MutableStateFlow("")
         override val metadataProvider: StateFlow<String> = _metadataProvider.asStateFlow()
