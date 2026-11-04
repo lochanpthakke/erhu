@@ -109,14 +109,16 @@ class AlbumArtworkTest {
             val finder = AlbumArtworkFinder(OkHttpClient(), Json { ignoreUnknownKeys = true }, cache, JvmArtworkInspector, endpoints = endpoints, musicBrainzRequest = { it() })
             val input = query.copy(releaseId = id)
             val a = async { finder.search(input) }; val b = async { finder.search(input) }
-            val result = a.await()
+            val results = kotlinx.coroutines.awaitAll(a, b)
+            val result = results.single { !it.fromCache }
+            val cached = results.single { it.fromCache }
             assertTrue("No image: ${result.outcomes}", result.candidates.isNotEmpty())
             assertEquals("Unexpected candidates: ${result.candidates}", "Cover Art Archive release-group", result.candidates.first().source)
             assertEquals(600, result.candidates.first().width)
             assertNull(result.candidates.first().releaseId)
             assertFalse(result.candidates.first().canRecommend)
             assertTrue("Missing failure: ${result.outcomes}", result.outcomes.any { it.providerName == "Deezer" && it.status.name == "FAILED" })
-            assertTrue(b.await().fromCache)
+            assertEquals(result.candidates, cached.candidates)
             val recording = finder.search(query.copy(recordingId = id))
             assertTrue("Recording credits must not overwrite an album's own artist", recording.outcomes.any { it.providerName == "MusicBrainz release identification" && it.candidateCount == 1 })
             val count = server.requestCount
