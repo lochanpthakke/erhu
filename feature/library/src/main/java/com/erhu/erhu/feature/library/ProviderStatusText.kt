@@ -19,7 +19,7 @@ fun providerStatusText(outcome: ProviderOutcome): String {
         ProviderStatus.NO_RESULTS -> "No results found"
         ProviderStatus.SKIPPED -> withReason("Not queried")
         ProviderStatus.NOT_CONFIGURED -> withReason("Not configured")
-        ProviderStatus.AUTH_FAILED -> withReason("Credentials rejected")
+        ProviderStatus.AUTH_FAILED -> withReason("Access refused")
         ProviderStatus.NETWORK_ERROR -> withReason("Network unavailable")
         ProviderStatus.TIMED_OUT -> "Request timed out"
         ProviderStatus.RATE_LIMITED -> withReason("Rate limited")

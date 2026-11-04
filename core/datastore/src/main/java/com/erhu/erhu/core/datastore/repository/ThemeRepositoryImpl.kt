@@ -102,9 +102,6 @@ class ThemeRepositoryImpl
         private val _metadataConfidenceThreshold = MutableStateFlow(0f)
         override val metadataConfidenceThreshold: StateFlow<Float> = _metadataConfidenceThreshold.asStateFlow()
 
-        private val _fanartTvApiKey = MutableStateFlow("")
-        override val fanartTvApiKey: StateFlow<String> = _fanartTvApiKey.asStateFlow()
-
         private val _sidebarGlassyness = MutableStateFlow(0.85f)
         override val sidebarGlassyness: StateFlow<Float> = _sidebarGlassyness.asStateFlow()
 
@@ -132,7 +129,6 @@ class ThemeRepositoryImpl
                 _metadataProvider.value = proto.metadataProvider
                 _metadataFixAction.value = proto.metadataFixAction
                 _metadataConfidenceThreshold.value = proto.metadataConfidenceThreshold
-                _fanartTvApiKey.value = proto.fanartTvApiKey
                 _sidebarGlassyness.value = if (proto.sidebarGlassyness > 0f) proto.sidebarGlassyness else 0.85f
                 _uiGlassyness.value = if (proto.uiGlassyness > 0f) proto.uiGlassyness else 0.35f
                 _popupGlassOpacity.value = proto.popupGlassOpacityOrDefault()
@@ -221,12 +217,6 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setMetadataConfidenceThreshold(threshold).build() }
                 _metadataConfidenceThreshold.value = threshold
-            }
-
-        override suspend fun setFanartTvApiKey(apiKey: String): AppResult<Unit> =
-            appResultOf {
-                dataStore.updateData { it.toBuilder().setFanartTvApiKey(apiKey.trim()).build() }
-                _fanartTvApiKey.value = apiKey.trim()
             }
 
         override suspend fun setCustomScanLocation(

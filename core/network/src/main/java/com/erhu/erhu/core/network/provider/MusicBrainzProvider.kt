@@ -150,7 +150,7 @@ class MusicBrainzProvider
             }
         }
 
-        private suspend fun <T> throttled(request: suspend () -> T): T =
+        internal suspend fun <T> throttled(request: suspend () -> T): T =
             gate.withLock {
                 val wait = lastRequestAtMs + MIN_REQUEST_INTERVAL_MS - nowMs()
                 if (wait > 0) delay(wait)

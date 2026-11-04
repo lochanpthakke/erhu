@@ -14,7 +14,6 @@ import com.erhu.erhu.core.network.cleaner.CleanedFilename
 import com.erhu.erhu.core.network.cleaner.FilenameCleaner
 import com.erhu.erhu.core.network.model.MusicBrainzGenreDto
 import com.erhu.erhu.core.network.provider.DeezerProvider
-import com.erhu.erhu.core.network.provider.LastFmProvider
 import com.erhu.erhu.core.network.provider.LrclibProvider
 import com.erhu.erhu.core.network.provider.MusicBrainzProvider
 import com.erhu.erhu.core.network.retry.RetryPolicy
@@ -29,7 +28,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -43,14 +41,9 @@ class MetadataRepositoryImpl
     constructor(
         private val musicBrainzProvider: MusicBrainzProvider,
         private val deezerProvider: DeezerProvider,
-        private val lastFmProvider: LastFmProvider,
         private val lrclibProvider: LrclibProvider,
         private val iTunesProvider: com.erhu.erhu.core.network.provider.ITunesProvider,
-        private val wikipediaProvider: com.erhu.erhu.core.network.provider.WikipediaProvider,
-        private val geniusProvider: com.erhu.erhu.core.network.provider.GeniusProvider,
-        private val duckDuckGoImageSearchProvider: com.erhu.erhu.core.network.provider.DuckDuckGoImageSearchProvider,
-        private val fanartTvProvider: com.erhu.erhu.core.network.provider.FanartTvProvider,
-        private val discogsProvider: com.erhu.erhu.core.network.provider.DiscogsProvider,
+        private val albumArtworkFinder: com.erhu.erhu.core.network.artwork.AlbumArtworkFinder,
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
@@ -62,7 +55,7 @@ class MetadataRepositoryImpl
         private val retryPolicy = RetryPolicy()
 
         private val providers: List<MetadataProvider> by lazy {
-            listOf(iTunesProvider, musicBrainzProvider, deezerProvider, lastFmProvider)
+            listOf(iTunesProvider, musicBrainzProvider, deezerProvider)
         }
 
         override fun cleanFilename(
@@ -135,12 +128,16 @@ class MetadataRepositoryImpl
                 onSessionFailure = { status, reason -> providerHealth.markUnusable(provider.providerName, status, reason) },
             )
 
-        private fun availabilityOf(provider: MetadataProvider): ProviderAvailability =
-            when {
-                provider === lastFmProvider && !lastFmProvider.isConfigured ->
-                    ProviderAvailability.NotConfigured(LastFmProvider.NOT_CONFIGURED_MESSAGE)
-                else -> providerHealth.availabilityOf(provider.providerName)
+        private fun availabilityOf(provider: MetadataProvider): ProviderAvailability = providerHealth.availabilityOf(provider.providerName)
+
+        override suspend fun searchAlbumArtwork(
+            query: com.erhu.erhu.core.network.artwork.AlbumArtworkQuery,
+        ): AppResult<com.erhu.erhu.core.network.artwork.AlbumArtworkResult> =
+            appResultOf {
+                albumArtworkFinder.search(query)
             }
+
+        override fun artworkPreviewUrl(url: String): String = albumArtworkFinder.cache.preview(url)
 
         override suspend fun fetchAlbumArt(
             albumTitle: String,
@@ -148,10 +145,12 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<String?> =
             appResultOf {
-                withContext(Dispatchers.IO) {
-                    val candidates = fetchAlbumArtCandidates(albumTitle, artist, sourceProvider).getOrDefault(emptyList())
-                    candidates.firstOrNull()
-                }
+                albumArtworkFinder
+                    .search(
+                        com.erhu.erhu.core.network.artwork
+                            .AlbumArtworkQuery(albumTitle, artist.orEmpty()),
+                    ).recommended
+                    ?.imageUrl
             }
 
         override suspend fun fetchAlbumArtCandidates(
@@ -160,35 +159,12 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<List<String>> =
             appResultOf {
-                withContext(Dispatchers.IO) {
-                    val iTunesList =
-                        if (MetadataSources.matches(MetadataSources.ITUNES, sourceProvider)) {
-                            iTunesProvider.fetchAlbumArtList(albumTitle, artist)
-                        } else {
-                            emptyList()
-                        }
-
-                    val musicBrainzList =
-                        if (MetadataSources.matches(MetadataSources.MUSICBRAINZ, sourceProvider)) {
-                            musicBrainzProvider.fetchReleaseGroupArtList(albumTitle, artist)
-                        } else {
-                            emptyList()
-                        }
-
-                    val deezerList =
-                        if (MetadataSources.matches(MetadataSources.DEEZER, sourceProvider)) {
-                            deezerProvider.fetchAlbumArtList(albumTitle, artist)
-                        } else {
-                            emptyList()
-                        }
-
-                    val trackCandidates =
-                        searchTrack(title = albumTitle, artist = artist, album = albumTitle, sourceProvider = sourceProvider)
-                            .getOrDefault(emptyList())
-                    val candidateUrls = trackCandidates.mapNotNull { it.coverArtUrl }.filter { it.isNotBlank() }
-
-                    (iTunesList + musicBrainzList + deezerList + candidateUrls).distinct()
-                }
+                albumArtworkFinder
+                    .search(
+                        com.erhu.erhu.core.network.artwork
+                            .AlbumArtworkQuery(albumTitle, artist.orEmpty()),
+                    ).candidates
+                    .map { it.imageUrl }
             }
 
         override suspend fun fetchArtistArtworkCandidates(
@@ -196,10 +172,7 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<List<String>> =
             appResultOf {
-                when (val result = fetchArtistArtworkCandidatesDetailed(artistName, sourceProvider)) {
-                    is com.erhu.erhu.core.common.result.AppResult.Success -> result.data.candidates
-                    is com.erhu.erhu.core.common.result.AppResult.Error -> emptyList()
-                }
+                deezerProvider.fetchArtistPortraitList(artistName)
             }
 
         override suspend fun fetchArtistArtworkCandidatesDetailed(
@@ -207,101 +180,8 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<ArtistArtworkSearchResponse> =
             appResultOf {
-                withContext(Dispatchers.IO) {
-                    // 1. Resolve MBID once up front
-                    val mbid = musicBrainzProvider.resolveArtistMbid(artistName)
-
-                    // 2. Fan out provider calls in parallel
-                    val map = mutableMapOf<String, List<String>>()
-                    coroutineScope {
-                        val geniusDeferred =
-                            if (MetadataSources.matches(MetadataSources.GENIUS, sourceProvider)) {
-                                async { geniusProvider.fetchArtistPortraits(artistName).filter { isArtistPhotoUrl(it) } }
-                            } else {
-                                null
-                            }
-
-                        val duckDeferred =
-                            if (MetadataSources.matches(MetadataSources.DUCKDUCKGO, sourceProvider)) {
-                                async { duckDuckGoImageSearchProvider.fetchArtistPortraits(artistName).filter { isArtistPhotoUrl(it) } }
-                            } else {
-                                null
-                            }
-
-                        val fanartDeferred =
-                            if (MetadataSources.matches(MetadataSources.FANART_TV, sourceProvider) && fanartTvProvider.isConfigured) {
-                                async {
-                                    fanartTvProvider
-                                        .fetchArtistPortraits(
-                                            artistName,
-                                            preResolvedMbid = mbid,
-                                        ).filter { isArtistPhotoUrl(it) }
-                                }
-                            } else {
-                                null
-                            }
-
-                        val discogsDeferred =
-                            if (MetadataSources.matches(MetadataSources.DISCOGS, sourceProvider)) {
-                                async {
-                                    discogsProvider
-                                        .fetchArtistPortraits(
-                                            artistName,
-                                            preResolvedMbid = mbid,
-                                        ).filter { isArtistPhotoUrl(it) }
-                                }
-                            } else {
-                                null
-                            }
-
-                        val deezerDeferred =
-                            if (MetadataSources.matches(MetadataSources.DEEZER, sourceProvider)) {
-                                async { deezerProvider.fetchArtistPortraitList(artistName).filter { isArtistPhotoUrl(it) } }
-                            } else {
-                                null
-                            }
-
-                        val wikiDeferred =
-                            if (MetadataSources.matches(MetadataSources.WIKIPEDIA, sourceProvider)) {
-                                async {
-                                    wikipediaProvider
-                                        .fetchArtistPortraits(
-                                            artistName,
-                                            preResolvedMbid = mbid,
-                                        ).filter { isArtistPhotoUrl(it) }
-                                }
-                            } else {
-                                null
-                            }
-
-                        val iTunesArtistDeferred =
-                            if (MetadataSources.matches(MetadataSources.ITUNES, sourceProvider)) {
-                                async { iTunesProvider.fetchArtistArtworkList(artistName).filter { isArtistPhotoUrl(it) } }
-                            } else {
-                                null
-                            }
-
-                        geniusDeferred?.await()?.let { map["Genius"] = it }
-                        duckDeferred?.await()?.let { map["DuckDuckGo Web Search"] = it }
-                        fanartDeferred?.await()?.let { map["Fanart.tv"] = it }
-                        discogsDeferred?.await()?.let { map["Discogs"] = it }
-                        deezerDeferred?.await()?.let { map["Deezer"] = it }
-                        wikiDeferred?.await()?.let { map["Wikipedia / Wikimedia"] = it }
-                        iTunesArtistDeferred?.await()?.let { map["iTunes / Apple Music"] = it }
-                    }
-
-                    // 3. Merge layer: Pin top Deezer candidate first, followed by others, deduplicated
-                    val deezerTop = map["Deezer"]?.firstOrNull()
-                    val allFlattened = map.values.flatten().distinct()
-                    val allCandidates =
-                        if (deezerTop != null) {
-                            listOf(deezerTop) + (allFlattened - deezerTop)
-                        } else {
-                            allFlattened
-                        }
-
-                    ArtistArtworkSearchResponse(candidates = allCandidates, providerCandidates = map, resolvedMbid = mbid)
-                }
+                val urls = deezerProvider.fetchArtistPortraitList(artistName)
+                ArtistArtworkSearchResponse(urls, mapOf("Deezer" to urls))
             }
 
         override suspend fun lookupGenre(match: MetadataCandidate): GenreLookup =
@@ -331,6 +211,7 @@ class MetadataRepositoryImpl
         override suspend fun downloadArtwork(url: String): AppResult<ByteArray> =
             appResultOf {
                 withContext(Dispatchers.IO) {
+                    albumArtworkFinder.cache.bytes(url)?.let { return@withContext it }
                     val request =
                         Request
                             .Builder()
@@ -371,23 +252,6 @@ class MetadataRepositoryImpl
         }
     }
 
-private fun isArtistPhotoUrl(url: String): Boolean {
-    if (url.isBlank()) return false
-    val lower = url.lowercase()
-    if (lower.contains("genius.com") || lower.contains("rapgenius") || lower.contains("amazonaws.com/rapgenius")) {
-        return true
-    }
-    if (lower.contains("/cover/") ||
-        lower.contains("/album/") ||
-        lower.contains("cover_") ||
-        lower.contains("coverart") ||
-        lower.contains("album_art")
-    ) {
-        return false
-    }
-    return true
-}
-
 /**
  * The genres to write from MusicBrainz's curated release-group genres: every usable one, most-voted
  * first. Genres with equal votes are all kept (in MusicBrainz's order): a tie used to give no genre
@@ -407,12 +271,7 @@ internal fun genreFromMusicBrainz(genres: List<MusicBrainzGenreDto>): GenreLooku
 sealed interface ProviderAvailability {
     data object Available : ProviderAvailability
 
-    /** No credentials: never called. */
-    data class NotConfigured(
-        val reason: String,
-    ) : ProviderAvailability
-
-    /** Its credentials were rejected earlier this session: not called again with the same key. */
+    /** Access was refused earlier this session: not requested again automatically. */
     data class Rejected(
         val reason: String,
     ) : ProviderAvailability
@@ -424,7 +283,7 @@ sealed interface ProviderAvailability {
 }
 
 /**
- * Providers that can't help for the rest of this session: credentials rejected, or the service
+ * Providers that can't help for the rest of this session: access refused, or the service
  * withheld in this country. One request finds out; later tracks get the same truthful status
  * without asking again. Cleared by restarting the app.
  */
@@ -450,8 +309,8 @@ class ProviderHealth
     }
 
 /**
- * One provider's part of a search. Not selected: [ProviderStatus.SKIPPED]; not configured or
- * rejected earlier: [ProviderStatus.NOT_CONFIGURED] / [ProviderStatus.AUTH_FAILED], all without a
+ * One provider's part of a search. Not selected: [ProviderStatus.SKIPPED]; access refused
+ * earlier: [ProviderStatus.AUTH_FAILED], all without a
  * request. Otherwise the request runs under [retry] (transient failures only, bounded backoff,
  * Retry-After respected) and a failure keeps its real category: network, timeout, rate limit,
  * credentials or other, never "no results". The status reflects the best score, not the first.
@@ -476,13 +335,8 @@ internal suspend fun searchProviderScored(
             ProviderOutcome(name, status = ProviderStatus.SKIPPED, errorMessage = "Not selected (source: ${sourceLabel(selection)})")
     }
     when (availability) {
-        is ProviderAvailability.NotConfigured -> {
-            log("provider=$name decision=not-queried reason=not-configured")
-            return emptyList<MetadataCandidate>() to
-                ProviderOutcome(name, status = ProviderStatus.NOT_CONFIGURED, errorMessage = availability.reason)
-        }
         is ProviderAvailability.Rejected -> {
-            log("provider=$name decision=not-queried reason=credentials-rejected-earlier")
+            log("provider=$name decision=not-queried reason=access-refused-earlier")
             return emptyList<MetadataCandidate>() to
                 ProviderOutcome(name, status = ProviderStatus.AUTH_FAILED, errorMessage = "${availability.reason} (not retried)")
         }

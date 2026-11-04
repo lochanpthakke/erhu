@@ -3,6 +3,7 @@
 package com.erhu.erhu.feature.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,11 +31,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -71,8 +70,6 @@ import coil.request.ImageRequest
 import com.erhu.erhu.core.designsystem.component.ActionButton
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
-import com.erhu.erhu.core.designsystem.component.GlassMenu
-import com.erhu.erhu.core.designsystem.component.GlassMenuItem
 import com.erhu.erhu.core.designsystem.component.GroupDivider
 import com.erhu.erhu.core.designsystem.component.GroupRow
 import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
@@ -141,15 +138,6 @@ fun ArtworkManagerScreen(
     val selectedEnlargedArtworkUrl by viewModel.selectedEnlargedArtworkUrl.collectAsState()
     val minResolution by viewModel.minArtworkResolution.collectAsState()
 
-    val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
-    val selectedProviderKey by viewModel.selectedProvider.collectAsState()
-    val providerOptions = remember(sourceOptions) { sourceOptions.map { it.key to it.label } }
-    val currentProviderLabel =
-        remember(selectedProviderKey, sourceOptions) {
-            sourceOptions.firstOrNull { it.key == selectedProviderKey }?.label ?: selectedProviderKey
-        }
-    var providerDropdownExpanded by remember { mutableStateOf(false) }
-
     val activeQueueCount = if (selectedTab == 0) artworkQueue.size else artistArtworkQueue.size
     val doneCount =
         if (selectedTab == 0) {
@@ -207,29 +195,18 @@ fun ArtworkManagerScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 SectionHeading(title = "Find artwork")
                 Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
-                    Box {
-                        GroupRow(
-                            icon = Icons.Default.Cloud,
-                            title = "Source provider",
-                            summary = currentProviderLabel,
-                            onClick = { providerDropdownExpanded = true },
-                            trailing = Icons.Default.ArrowDropDown,
-                        )
-                        GlassMenu(
-                            expanded = providerDropdownExpanded,
-                            onDismissRequest = { providerDropdownExpanded = false },
+                    Text(
+                        if (selectedTab ==
+                            0
                         ) {
-                            providerOptions.forEach { (key, label) ->
-                                GlassMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        viewModel.setSelectedProvider(key)
-                                        providerDropdownExpanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
+                            "MusicBrainz / Cover Art Archive → Deezer → iTunes → TheAudioDB"
+                        } else {
+                            "Deezer artist catalogue"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(Spacing.lg),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     GroupDivider()
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
@@ -469,6 +446,13 @@ fun ArtworkManagerScreen(
                                 items(artworkCandidates) { candidateUrl ->
                                     SquareArtworkCandidateCard(
                                         imageUrl = candidateUrl,
+                                        detail = diagnostics?.candidates?.firstOrNull { it.url == candidateUrl },
+                                        selected =
+                                            selectedEnlargedArtworkUrl == candidateUrl ||
+                                                (
+                                                    selectedEnlargedArtworkUrl == null &&
+                                                        diagnostics?.candidates?.any { it.url == candidateUrl && it.recommended } == true
+                                                ),
                                         onClick = { viewModel.selectEnlargedArtwork(candidateUrl) },
                                     )
                                 }
@@ -602,18 +586,43 @@ fun ArtworkManagerScreen(
                         model =
                             ImageRequest
                                 .Builder(LocalContext.current)
-                                .data(selectedEnlargedArtworkUrl)
+                                .data(selectedEnlargedArtworkUrl?.let(viewModel::artworkPreviewUrl))
                                 .setHeader("User-Agent", USER_AGENT)
                                 .crossfade(true)
                                 .build(),
                         contentDescription = "Enlarged Artwork",
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.Fit,
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
                                 .clip(MaterialTheme.shapes.medium),
                     )
+                    val inspected =
+                        viewModel.artworkSearchDiagnostics.collectAsState().value?.candidates?.firstOrNull {
+                            it.url ==
+                                selectedEnlargedArtworkUrl
+                        }
+                    inspected?.let { candidate ->
+                        Text(
+                            listOf(candidate.matchedAlbum, candidate.matchedArtist).filter(String::isNotBlank).joinToString(" \u00b7 "),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            listOf(
+                                candidate.sourceProvider,
+                                candidate.edition,
+                                if (candidate.width >
+                                    0
+                                ) {
+                                    "${candidate.width}\u00d7${candidate.height}"
+                                } else {
+                                    ""
+                                },
+                            ).filter(String::isNotBlank).joinToString(" \u00b7 "),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(Spacing.md))
                     Text(
                         text =
@@ -721,42 +730,72 @@ private fun RowThumb(
 @Composable
 private fun SquareArtworkCandidateCard(
     imageUrl: String,
+    detail: ArtworkCandidateDetail?,
+    selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(role = Role.Button, onClick = onClick),
-    ) {
-        AsyncImage(
-            model =
-                ImageRequest
-                    .Builder(LocalContext.current)
-                    .data(imageUrl)
-                    .setHeader("User-Agent", USER_AGENT)
-                    .crossfade(true)
-                    .build(),
-            contentDescription = "Artwork Candidate",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
             modifier =
                 Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(Spacing.xs)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = BADGE_FILL_ALPHA))
-                    .padding(horizontal = Spacing.sm, vertical = 2.dp),
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .border(
+                        if (selected) 2.dp else 0.dp,
+                        if (selected) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
+                        MaterialTheme.shapes.small,
+                    ).clickable(role = Role.Button, onClick = onClick),
         ) {
+            AsyncImage(
+                model =
+                    ImageRequest
+                        .Builder(LocalContext.current)
+                        .data(detail?.previewUrl ?: imageUrl)
+                        .setHeader("User-Agent", USER_AGENT)
+                        .crossfade(true)
+                        .build(),
+                contentDescription = "Artwork Candidate",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(Spacing.xs)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = BADGE_FILL_ALPHA))
+                        .padding(horizontal = Spacing.sm, vertical = 2.dp),
+            ) {
+                Text(
+                    text = if (detail != null && detail.width > 0) "${detail.width}×${detail.height}" else "Preview",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        detail?.let { candidate ->
+            Text(candidate.sourceProvider, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            if (candidate.matchedAlbum.isNotBlank()) Text(candidate.matchedAlbum, style = MaterialTheme.typography.bodyMedium, maxLines = 2)
+            if (candidate.matchedArtist.isNotBlank()) {
+                Text(
+                    candidate.matchedArtist,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                )
+            }
+            val edition =
+                listOfNotNull(
+                    candidate.year.takeIf { it > 0 }?.toString(),
+                    candidate.edition.takeIf(String::isNotBlank),
+                ).joinToString(" · ")
+            if (edition.isNotBlank()) Text(edition, style = MaterialTheme.typography.labelSmall)
             Text(
-                text = if (imageUrl.contains("cover_xl") || imageUrl.contains("picture_xl")) "1000×1000" else "High Res",
+                if (candidate.recommended) "Recommended match" else candidate.reviewReasons.firstOrNull() ?: "Choose manually",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

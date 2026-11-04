@@ -46,69 +46,48 @@ sealed interface GenreLookup {
 /** Provider names as stored in settings ("ALL", "Deezer", "MusicBrainz", …). */
 object MetadataSources {
     const val ALL = "ALL"
-    const val GENIUS = "Genius"
-    const val DUCKDUCKGO = "DuckDuckGo"
-    const val FANART_TV = "FanartTv"
-    const val DISCOGS = "Discogs"
-    const val WIKIPEDIA = "Wikipedia"
     const val ITUNES = "iTunes"
     const val MUSICBRAINZ = "MusicBrainz"
     const val DEEZER = "Deezer"
-    const val LAST_FM = "LastFm"
 
-    /** Whether provider [providerName] is selected by [selection]; "Last.fm" and "LastFm" are the same. */
+    /** Unsupported legacy selections use the remaining providers instead of producing an empty lookup. */
+    fun normalizeSelection(selection: String?): String =
+        HOSTS.firstOrNull { canonicalKey(it.first) == canonicalKey(selection.orEmpty()) }?.first ?: ALL
+
+    /** Whether keyless provider [providerName] is selected by a supported or legacy saved selection. */
     fun matches(
         providerName: String,
         selection: String,
     ): Boolean {
-        if (selection.equals(ALL, ignoreCase = true) ||
-            selection.equals("All Sources", ignoreCase = true) ||
-            selection.equals("All Providers", ignoreCase = true) ||
-            selection.equals("All providers", ignoreCase = true)
-        ) {
+        val normalized = normalizeSelection(selection)
+        if (normalized == ALL) {
             return true
         }
         val pKey = canonicalKey(providerName)
-        val sKey = canonicalKey(selection)
-        return pKey == sKey || pKey.contains(sKey) || sKey.contains(pKey)
+        return pKey == canonicalKey(normalized)
     }
 
     private fun canonicalKey(name: String): String {
         val raw = name.lowercase().filter { it.isLetterOrDigit() }
         return when {
-            raw.startsWith("genius") -> "genius"
-            raw.startsWith("duckduckgo") || raw.startsWith("duck") -> "duckduckgo"
-            raw.startsWith("fanart") -> "fanarttv"
-            raw.startsWith("wikipedia") || raw.startsWith("wikimedia") -> "wikipedia"
-            raw.startsWith("discogs") -> "discogs"
             raw.startsWith("deezer") -> "deezer"
             raw.startsWith("itunes") || raw.startsWith("applemusic") -> "itunes"
             raw.startsWith("musicbrainz") -> "musicbrainz"
-            raw.startsWith("lastfm") -> "lastfm"
             else -> raw
         }
     }
 
     private val HOSTS =
         listOf(
-            GENIUS to "genius.com",
-            DUCKDUCKGO to "duckduckgo.com",
-            FANART_TV to "webservice.fanart.tv",
-            DISCOGS to "api.discogs.com",
-            WIKIPEDIA to "en.wikipedia.org",
             ITUNES to "itunes.apple.com",
             MUSICBRAINZ to "musicbrainz.org",
             DEEZER to "api.deezer.com",
-            LAST_FM to "ws.audioscrobbler.com",
         )
 
-    /** The hosts [selection] will contact (for a DNS-only preflight); Last.fm only when it has a key. */
-    fun hostsFor(
-        selection: String,
-        lastFmConfigured: Boolean,
-    ): List<String> =
+    /** Keyless hosts contacted by this selection, for the DNS-only preflight. */
+    fun hostsFor(selection: String): List<String> =
         HOSTS
-            .filter { (provider, _) -> matches(provider, selection) && (provider != LAST_FM || lastFmConfigured) }
+            .filter { (provider, _) -> matches(provider, selection) }
             .map { it.second }
 }
 
@@ -140,6 +119,12 @@ interface MetadataRepository {
         durationMs: Long? = null,
         sourceProvider: String = "ALL",
     ): AppResult<DetailedSearchResponse>
+
+    suspend fun searchAlbumArtwork(
+        query: com.erhu.erhu.core.network.artwork.AlbumArtworkQuery,
+    ): AppResult<com.erhu.erhu.core.network.artwork.AlbumArtworkResult>
+
+    fun artworkPreviewUrl(url: String): String = url
 
     suspend fun fetchAlbumArt(
         albumTitle: String,

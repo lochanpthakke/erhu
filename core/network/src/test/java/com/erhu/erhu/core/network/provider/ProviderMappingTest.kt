@@ -5,11 +5,6 @@ import com.erhu.erhu.core.network.model.DeezerArtistDto
 import com.erhu.erhu.core.network.model.DeezerErrorDto
 import com.erhu.erhu.core.network.model.DeezerSearchResponse
 import com.erhu.erhu.core.network.model.DeezerTrackDto
-import com.erhu.erhu.core.network.model.LastFmImageDto
-import com.erhu.erhu.core.network.model.LastFmResultsDto
-import com.erhu.erhu.core.network.model.LastFmSearchResponse
-import com.erhu.erhu.core.network.model.LastFmTrackDto
-import com.erhu.erhu.core.network.model.LastFmTrackMatchesDto
 import com.erhu.erhu.core.network.model.MusicBrainzReleaseDto
 import com.erhu.erhu.core.network.model.MusicBrainzReleaseGroupDto
 import com.erhu.erhu.core.network.model.MusicBrainzSearchResponse
@@ -91,49 +86,6 @@ class ProviderMappingTest {
         assertEquals("", bare.artist)
         assertEquals("", bare.album)
         assertNull(bare.coverArtUrl)
-    }
-
-    // ---- Last.fm
-
-    /** What ws.audioscrobbler.com answered for the key that was in the code (2026-10-13 and -14). */
-    @Test
-    fun lastFm_rejectedKey_isAnAuthFailure_notNoResults() {
-        val response =
-            json.decodeFromString<LastFmSearchResponse>("""{"message":"Invalid API key - You must be granted a valid key by last.fm","error":10}""")
-        try {
-            lastFmTrackCandidates(response, "Last.fm")
-            fail("expected ProviderAuthException")
-        } catch (e: ProviderAuthException) {
-            assertTrue(e.message.orEmpty().contains("Invalid API key"))
-        }
-    }
-
-    @Test
-    fun lastFm_hasNoAlbum_andItsPlaceholderStarIsNotArtwork() {
-        val response =
-            LastFmSearchResponse(
-                results =
-                    LastFmResultsDto(
-                        LastFmTrackMatchesDto(
-                            listOf(
-                                LastFmTrackDto(
-                                    name = "Runaway",
-                                    artist = "Kanye West",
-                                    image = listOf(LastFmImageDto(LAST_FM_STAR, "extralarge")),
-                                ),
-                            ),
-                        ),
-                    ),
-            )
-        val candidate = lastFmTrackCandidates(response, "Last.fm").single()
-        assertEquals("", candidate.album)
-        assertNull(candidate.coverArtUrl)
-        assertNull(candidate.genre)
-        assertNull(candidate.bpm)
-    }
-
-    private companion object {
-        const val LAST_FM_STAR = "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png"
     }
 
     // ---- MusicBrainz

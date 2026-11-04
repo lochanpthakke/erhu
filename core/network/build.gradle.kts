@@ -7,20 +7,6 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
-/**
- * Last.fm API key: `lastfm.apiKey=…` in local.properties (git-ignored) or the LASTFM_API_KEY
- * environment variable. Never committed; blank means Last.fm is reported as not configured.
- */
-val lastFmApiKey: String =
-    rootProject
-        .file("local.properties")
-        .takeIf { it.isFile }
-        ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
-        ?.getProperty("lastfm.apiKey")
-        ?.trim()
-        ?.takeIf { it.isNotEmpty() }
-        ?: System.getenv("LASTFM_API_KEY")?.trim().orEmpty()
-
 // Provision only with licensed subtitle access; never commit credentials.
 val musixmatchApiKey: String =
     rootProject
@@ -32,14 +18,24 @@ val musixmatchApiKey: String =
         ?.takeIf { it.isNotEmpty() }
         ?: System.getenv("MUSIXMATCH_API_KEY")?.trim().orEmpty()
 
+// Optional app-owner production access. Public test key is confined to debug builds.
+val audioDbApiKey =
+    rootProject
+        .file("local.properties")
+        .takeIf { it.isFile }
+        ?.let { file -> Properties().apply { file.inputStream().use { load(it) } }.getProperty("theaudiodb.apiKey") }
+        ?.trim()
+        .orEmpty()
+        .ifBlank { System.getenv("THEAUDIODB_API_KEY")?.trim().orEmpty() }
+
 android {
     namespace = "com.erhu.erhu.core.network"
     compileSdk = 37
 
     defaultConfig {
         minSdk = 26
+        buildConfigField("String", "THEAUDIODB_API_KEY", "\"${audioDbApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "MUSIXMATCH_API_KEY", "\"${musixmatchApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
-        buildConfigField("String", "LASTFM_API_KEY", "\"${lastFmApiKey.replace("\"", "")}\"")
     }
 
     buildFeatures {

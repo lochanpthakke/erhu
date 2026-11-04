@@ -213,7 +213,6 @@ fun SettingsCategoryScreen(
         else ->
             MetadataSettingsSubPage(
                 viewModel = libraryViewModel,
-                themeViewModel = themeViewModel,
                 title = title,
                 onBack = onBack,
                 onNavigateToMetadataEditor = onNavigateToMetadataEditor,
@@ -450,7 +449,6 @@ private fun parseFolderDisplayName(uri: Uri): String {
 @Composable
 private fun MetadataSettingsSubPage(
     viewModel: LibraryViewModel,
-    themeViewModel: ThemeViewModel,
     title: String,
     onBack: () -> Unit,
     onNavigateToMetadataEditor: () -> Unit,
@@ -459,7 +457,6 @@ private fun MetadataSettingsSubPage(
     val selectedFields by viewModel.selectedFields.collectAsState()
     val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
     val confidenceThreshold by viewModel.confidenceThreshold.collectAsState()
-    val fanartTvApiKey by themeViewModel.fanartTvApiKey.collectAsState()
     val context = LocalContext.current
     val hasAllFilesAccess =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -491,11 +488,9 @@ private fun MetadataSettingsSubPage(
         StorageAccessSection(hasAllFilesAccess = hasAllFilesAccess, context = context)
         ConfidenceThresholdSection(threshold = confidenceThreshold, onChange = viewModel::setConfidenceThreshold)
 
-        FanartTvApiKeySection(apiKey = fanartTvApiKey, onSaveApiKey = themeViewModel::setFanartTvApiKey)
-
         SettingsSection(
             title = "Primary Source Provider",
-            footer = "Last.fm needs your own API key (lastfm.apiKey in local.properties, then rebuild); without one it is not queried.",
+            footer = "Used for tag matching. Artwork Fetcher searches music catalogues in priority order.",
         ) {
             SettingsGroup(selectable = true) {
                 sourceOptions.forEach { option ->
@@ -520,46 +515,6 @@ private fun MetadataSettingsSubPage(
         )
 
         FieldsToFixSection(selectedFields = selectedFields, onToggle = viewModel::toggleField)
-    }
-}
-
-@Composable
-private fun FanartTvApiKeySection(
-    apiKey: String,
-    onSaveApiKey: (String) -> Unit,
-) {
-    var textInput by remember(apiKey) { mutableStateOf(apiKey) }
-    SettingsSection(
-        title = "Fanart.tv API Key",
-        footer =
-            "Fanart.tv provides high-resolution community artist thumbs and backgrounds. " +
-                "Get a free personal API key at fanart.tv/get-an-api-key/",
-    ) {
-        SettingsGroup {
-            row {
-                Column(modifier = Modifier.fillMaxWidth().padding(Spacing.md)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        OutlinedTextField(
-                            value = textInput,
-                            onValueChange = { textInput = it },
-                            label = { Text("Fanart.tv Personal API Key") },
-                            placeholder = { Text("e.g. 0123456789abcdef0123456789abcdef") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                        )
-                        Button(
-                            onClick = { onSaveApiKey(textInput) },
-                        ) {
-                            Text("Save")
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

@@ -34,7 +34,6 @@ import com.erhu.erhu.core.network.lyrics.LyricsTrack
 import com.erhu.erhu.core.network.lyrics.OnlineLyricsRepository
 import com.erhu.erhu.core.network.lyrics.OnlineLyricsResult
 import com.erhu.erhu.core.network.lyrics.ProviderResponse
-import com.erhu.erhu.core.network.provider.LastFmCredentials
 import com.erhu.erhu.core.network.repository.DetailedSearchResponse
 import com.erhu.erhu.core.network.repository.GenreLookup
 import com.erhu.erhu.core.network.repository.MatchDecision
@@ -122,7 +121,17 @@ data class SelectAllSelection(
 data class ArtworkCandidateDetail(
     val url: String,
     val sourceProvider: String,
-    val isHighRes: Boolean = true,
+    val isHighRes: Boolean = false,
+    val matchedAlbum: String = "",
+    val matchedArtist: String = "",
+    val edition: String = "",
+    val year: Int = 0,
+    val width: Int = 0,
+    val height: Int = 0,
+    val matchScore: Double = 0.0,
+    val reviewReasons: List<String> = emptyList(),
+    val recommended: Boolean = false,
+    val previewUrl: String = url,
 )
 
 data class ArtworkSearchDiagnostics(
@@ -198,9 +207,7 @@ class LibraryViewModel
         private val trackMatcher: TrackMatcher,
         private val networkStatus: NetworkStatusSource,
         private val repairBatchPersistence: RepairBatchPersistence,
-        private val lastFmCredentials: LastFmCredentials,
         private val bpmFinder: BpmFinder,
-        private val fanartTvCredentials: com.erhu.erhu.core.network.provider.FanartTvCredentials,
         private val radioRepository: RadioRepository,
     ) : ViewModel() {
         /**
@@ -982,290 +989,147 @@ class LibraryViewModel
         private val _artworkSearchDiagnostics = MutableStateFlow<ArtworkSearchDiagnostics?>(null)
         val artworkSearchDiagnostics: StateFlow<ArtworkSearchDiagnostics?> = _artworkSearchDiagnostics.asStateFlow()
 
+        private var artworkSearchJob: kotlinx.coroutines.Job? = null
+        private var artworkRequestSequence = 0
+
         fun clearArtworkDiagnostics() {
+            artworkRequestSequence++
+            artworkSearchJob?.cancel()
+            _isSearchingArtwork.value = false
             _artworkSearchDiagnostics.value = null
             _artworkCandidates.value = emptyList()
             _currentProcessingAlbum.value = null
             _currentProcessingArtist.value = null
+            _selectedEnlargedArtworkUrl.value = null
         }
+
+        fun artworkPreviewUrl(url: String): String = metadataRepository.artworkPreviewUrl(url)
 
         fun selectEnlargedArtwork(url: String?) {
             _selectedEnlargedArtworkUrl.value = url
         }
 
         fun searchArtworkForAlbum(album: Album) {
-            viewModelScope.launch {
-                _isSearchingArtwork.value = true
-                _currentProcessingAlbum.value = album
-                _currentProcessingArtist.value = null
-                val queryText = "\"${album.title}\" by ${album.artist}"
-                val result = metadataRepository.fetchAlbumArtCandidates(album.title, album.artist, selectedProvider.value)
-                val artUrls = result.getOrDefault(emptyList())
-                _artworkCandidates.value = artUrls
-                _isSearchingArtwork.value = false
-
-                val sel = selectedProvider.value
-                val itunesSelected = MetadataSources.matches(MetadataSources.ITUNES, sel)
-                val mbSelected = MetadataSources.matches(MetadataSources.MUSICBRAINZ, sel)
-                val deezerSelected = MetadataSources.matches(MetadataSources.DEEZER, sel)
-
-                val itunesCount = artUrls.count { "mzstatic" in it.lowercase() || "apple" in it.lowercase() }
-                val mbCount = artUrls.count { "coverartarchive" in it.lowercase() || "musicbrainz" in it.lowercase() }
-                val deezerCount = artUrls.count { "deezer" in it.lowercase() || "dzcdn" in it.lowercase() }
-                val lastFmCount = artUrls.count { "lastfm" in it.lowercase() || "audioscrobbler" in it.lowercase() }
-
-                val outcomes =
-                    listOf(
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "iTunes / Apple Music",
-                            candidateCount = itunesCount,
-                            status =
-                                if (!itunesSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (itunesCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "MusicBrainz Cover Art Archive",
-                            candidateCount = mbCount,
-                            status =
-                                if (!mbSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (mbCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Deezer",
-                            candidateCount = deezerCount,
-                            status =
-                                if (!deezerSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (deezerCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Last.fm",
-                            candidateCount = lastFmCount,
-                            status =
-                                if (lastFmCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                    )
-                val details =
-                    artUrls.map { url ->
-                        val lower = url.lowercase()
-                        val provider =
+            artworkSearchJob?.cancel()
+            val requestSequence = ++artworkRequestSequence
+            artworkSearchJob =
+                viewModelScope.launch {
+                    _isSearchingArtwork.value = true
+                    _currentProcessingAlbum.value = album
+                    _currentProcessingArtist.value = null
+                    _selectedEnlargedArtworkUrl.value = null
+                    _artworkCandidates.value = emptyList()
+                    _artworkSearchDiagnostics.value = null
+                    try {
+                        val firstSong = libraryRepository.getSongsByAlbumId(album.id).first().firstOrNull()
+                        val ids = firstSong?.filePath?.let { embeddedTagReader.artworkIdentity(it) }
+                        val type =
                             when {
-                                "googleapis" in lower || "googleusercontent" in lower -> "Google Images"
-                                "mzstatic" in lower || "apple" in lower -> "iTunes / Apple Music"
-                                "coverartarchive" in lower || "musicbrainz" in lower -> "MusicBrainz"
-                                "lastfm" in lower || "audioscrobbler" in lower -> "Last.fm"
-                                else -> "Deezer"
+                                Regex(
+                                    "(?i)(?:-|–)\\s*single$",
+                                ).containsMatchIn(album.title) -> com.erhu.erhu.core.network.artwork.ArtworkReleaseKind.SINGLE
+                                Regex(
+                                    "(?i)(?:-|–)\\s*ep$",
+                                ).containsMatchIn(album.title) -> com.erhu.erhu.core.network.artwork.ArtworkReleaseKind.EP
+                                album.songCount >= 4 -> com.erhu.erhu.core.network.artwork.ArtworkReleaseKind.ALBUM
+                                else -> com.erhu.erhu.core.network.artwork.ArtworkReleaseKind.UNKNOWN
                             }
-                        ArtworkCandidateDetail(url = url, sourceProvider = provider)
+                        val query =
+                            com.erhu.erhu.core.network.artwork.AlbumArtworkQuery(
+                                album.title,
+                                album.artist,
+                                album.year,
+                                type,
+                                ids?.first,
+                                ids?.second,
+                                ids?.third,
+                            )
+                        val result = metadataRepository.searchAlbumArtwork(query)
+                        val data = (result as? AppResult.Success)?.data
+                        if (requestSequence != artworkRequestSequence) return@launch
+                        _artworkCandidates.value = data?.candidates.orEmpty().map { it.imageUrl }
+                        _artworkSearchDiagnostics.value =
+                            ArtworkSearchDiagnostics(
+                                targetName = album.title,
+                                searchQuery = "${album.artist} — ${album.title}",
+                                resolvedArtistInfo =
+                                    if (data?.fromCache ==
+                                        true
+                                    ) {
+                                        "Validated cached results"
+                                    } else {
+                                        "Music release matching; review editions before applying"
+                                    },
+                                providerOutcomes = data?.outcomes.orEmpty(),
+                                candidates =
+                                    data?.candidates.orEmpty().map { candidate ->
+                                        ArtworkCandidateDetail(
+                                            candidate.imageUrl,
+                                            candidate.source,
+                                            minOf(candidate.width, candidate.height) >= 500,
+                                            candidate.album,
+                                            candidate.artist,
+                                            candidate.edition,
+                                            candidate.year,
+                                            candidate.width,
+                                            candidate.height,
+                                            candidate.score,
+                                            candidate.reviewReasons,
+                                            candidate.imageUrl == data?.recommended?.imageUrl,
+                                            metadataRepository.artworkPreviewUrl(candidate.imageUrl),
+                                        )
+                                    },
+                            )
+                    } finally {
+                        if (requestSequence == artworkRequestSequence) _isSearchingArtwork.value = false
                     }
-                _artworkSearchDiagnostics.value =
-                    ArtworkSearchDiagnostics(
-                        targetName = album.title,
-                        searchQuery = queryText,
-                        providerOutcomes = outcomes,
-                        candidates = details,
-                    )
-            }
+                }
         }
 
         fun searchArtworkForArtist(artist: Artist) {
-            viewModelScope.launch {
-                _isSearchingArtwork.value = true
-                _currentProcessingArtist.value = artist
-                _currentProcessingAlbum.value = null
-                val queryText = artist.name
-                val result = metadataRepository.fetchArtistArtworkCandidatesDetailed(artist.name, selectedProvider.value)
-                val searchData =
-                    when (result) {
-                        is AppResult.Success -> result.data
-                        is AppResult.Error ->
-                            com.erhu.erhu.core.network.repository
-                                .ArtistArtworkSearchResponse(emptyList())
+            artworkSearchJob?.cancel()
+            val requestSequence = ++artworkRequestSequence
+            artworkSearchJob =
+                viewModelScope.launch {
+                    _isSearchingArtwork.value = true
+                    _currentProcessingArtist.value = artist
+                    _currentProcessingAlbum.value = null
+                    _selectedEnlargedArtworkUrl.value = null
+                    try {
+                        val result = metadataRepository.fetchArtistArtworkCandidatesDetailed(artist.name)
+                        val data = (result as? AppResult.Success)?.data
+                        if (requestSequence != artworkRequestSequence) return@launch
+                        val urls = data?.candidates.orEmpty()
+                        _artworkCandidates.value = urls
+                        _artworkSearchDiagnostics.value =
+                            ArtworkSearchDiagnostics(
+                                artist.name,
+                                artist.name,
+                                providerOutcomes =
+                                    listOf(
+                                        com.erhu.erhu.core.model.ProviderOutcome(
+                                            "Deezer artist catalogue",
+                                            urls.size,
+                                            if (urls.isEmpty()) {
+                                                com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
+                                            } else {
+                                                com.erhu.erhu.core.model.ProviderStatus.SUCCESS
+                                            },
+                                        ),
+                                    ),
+                                candidates =
+                                    urls.map {
+                                        ArtworkCandidateDetail(
+                                            it,
+                                            "Deezer artist catalogue",
+                                            matchedArtist = artist.name,
+                                        )
+                                    },
+                            )
+                    } finally {
+                        if (requestSequence == artworkRequestSequence) _isSearchingArtwork.value = false
                     }
-                val artUrls = searchData.candidates
-                val pMap = searchData.providerCandidates
-                _artworkCandidates.value = artUrls
-                _isSearchingArtwork.value = false
-
-                val sel = selectedProvider.value
-                val geniusSelected = MetadataSources.matches(MetadataSources.GENIUS, sel)
-                val duckSelected = MetadataSources.matches(MetadataSources.DUCKDUCKGO, sel)
-                val fanartSelected = MetadataSources.matches(MetadataSources.FANART_TV, sel)
-                val discogsSelected = MetadataSources.matches(MetadataSources.DISCOGS, sel)
-                val deezerSelected = MetadataSources.matches(MetadataSources.DEEZER, sel)
-                val wikiSelected = MetadataSources.matches(MetadataSources.WIKIPEDIA, sel)
-                val iTunesSelected = MetadataSources.matches(MetadataSources.ITUNES, sel)
-
-                val geniusCount = pMap["Genius"]?.size ?: 0
-                val duckCount = pMap["DuckDuckGo Web Search"]?.size ?: 0
-                val fanartCount = pMap["Fanart.tv"]?.size ?: 0
-                val discogsCount = pMap["Discogs"]?.size ?: 0
-                val deezerCount = pMap["Deezer"]?.size ?: 0
-                val wikiCount = pMap["Wikipedia / Wikimedia"]?.size ?: 0
-                val iTunesCount = pMap["iTunes / Apple Music"]?.size ?: 0
-
-                val outcomes =
-                    listOf(
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Genius",
-                            candidateCount = geniusCount,
-                            status =
-                                if (!geniusSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (geniusCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "DuckDuckGo Web Search",
-                            candidateCount = duckCount,
-                            status =
-                                if (!duckSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (duckCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Fanart.tv",
-                            candidateCount = fanartCount,
-                            status =
-                                if (!fanartSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (!fanartTvCredentials.isConfigured) {
-                                    com.erhu.erhu.core.model.ProviderStatus.NOT_CONFIGURED
-                                } else if (fanartCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Discogs",
-                            candidateCount = discogsCount,
-                            status =
-                                if (!discogsSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (discogsCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Deezer",
-                            candidateCount = deezerCount,
-                            status =
-                                if (!deezerSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (deezerCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "Wikipedia / Wikimedia",
-                            candidateCount = wikiCount,
-                            status =
-                                if (!wikiSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (wikiCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                        com.erhu.erhu.core.model.ProviderOutcome(
-                            "iTunes / Apple Music",
-                            candidateCount = iTunesCount,
-                            status =
-                                if (!iTunesSelected) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SKIPPED
-                                } else if (iTunesCount >
-                                    0
-                                ) {
-                                    com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                } else {
-                                    com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                },
-                        ),
-                    )
-                val details =
-                    artUrls.map { url ->
-                        val returnedProvider = pMap.entries.firstOrNull { (_, list) -> url in list }?.key
-                        val lower = url.lowercase()
-                        val provider =
-                            returnedProvider ?: when {
-                                "genius" in lower || "rapgenius" in lower -> "Genius"
-                                "fanart.tv" in lower -> "Fanart.tv"
-                                "discogs" in lower -> "Discogs"
-                                "wikimedia" in lower || "wikipedia" in lower -> "Wikipedia / Wikimedia"
-                                "mzstatic" in lower || "apple" in lower -> "iTunes / Apple Music"
-                                "deezer" in lower || "dzcdn" in lower -> "Deezer"
-                                else -> "DuckDuckGo Web Search"
-                            }
-                        ArtworkCandidateDetail(url = url, sourceProvider = provider)
-                    }
-                val resolvedMbid = searchData.resolvedMbid
-                val resolvedInfo =
-                    if (!resolvedMbid.isNullOrBlank()) {
-                        "Resolved: ${artist.name} (MBID: $resolvedMbid)"
-                    } else {
-                        null
-                    }
-
-                _artworkSearchDiagnostics.value =
-                    ArtworkSearchDiagnostics(
-                        targetName = artist.name,
-                        searchQuery = queryText,
-                        resolvedArtistInfo = resolvedInfo,
-                        providerOutcomes = outcomes,
-                        candidates = details,
-                    )
-            }
+                }
         }
 
         private val _isReverting = MutableStateFlow(false)
@@ -1703,29 +1567,10 @@ class LibraryViewModel
             if (_isFixingQueue.value) pauseRequested = true
         }
 
-        /** The sources offered in Settings and the editor, with Last.fm's & Fanart.tv's real configuration state. */
-        private val _metadataSourceOptions =
-            MutableStateFlow(
-                metadataSourceOptions(
-                    lastFmConfigured = lastFmCredentials.isConfigured,
-                    fanartTvConfigured = fanartTvCredentials.isConfigured,
-                ),
-            )
-        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> = _metadataSourceOptions.asStateFlow()
-
-        private fun metadataSourceLabel(key: String): String = metadataSourceOptions.value.firstOrNull { it.key == key }?.label ?: key
+        /** Keyless sources shared by Settings, tag repair and artwork selection. */
+        val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> = MutableStateFlow(metadataSourceOptions()).asStateFlow()
 
         init {
-            viewModelScope.launch {
-                themeRepository.fanartTvApiKey.collect { key ->
-                    fanartTvCredentials.apiKey = key
-                    _metadataSourceOptions.value =
-                        metadataSourceOptions(
-                            lastFmConfigured = lastFmCredentials.isConfigured,
-                            fanartTvConfigured = key.isNotBlank(),
-                        )
-                }
-            }
             viewModelScope.launch {
                 restoreRepairBatch()
                 // Saved as it changes, so a batch survives the process; a track mid-lookup is saved as pending.
@@ -1820,9 +1665,9 @@ class LibraryViewModel
                     return Preflight.Paused(BatchPause(BatchPause.Kind.BLOCKED, "Android is blocking erhu's network access"))
                 NetworkStatus.AVAILABLE -> Unit
             }
-            val hosts = MetadataSources.hostsFor(provider, lastFmCredentials.isConfigured)
+            val hosts = MetadataSources.hostsFor(provider)
             if (hosts.isEmpty()) {
-                return Preflight.Refused("${metadataSourceLabel(provider)} isn't configured: add its API key or choose another source")
+                return Preflight.Refused("Choose a supported metadata source.")
             }
             if (netStatus == NetworkStatus.AVAILABLE) {
                 return Preflight.Ready

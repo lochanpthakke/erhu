@@ -1,0 +1,296 @@
+[
+  {
+    "category": "mainstream/local",
+    "query": {
+      "album": "SOS",
+      "artist": "SZA",
+      "year": 2022,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "SOS",
+    "expectedArtist": "SZA",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1658650093",
+    "expectedEdition": "standard original cover design",
+    "observedLocalTrackMetadata": {
+      "title": "SOS",
+      "artist": "SZA",
+      "album": "SOS",
+      "year": "2022"
+    },
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "hiphop/local",
+    "query": {
+      "album": "IGOR",
+      "artist": "Tyler, The Creator",
+      "year": 2019,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "IGOR",
+    "expectedArtist": "Tyler, The Creator",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1463409338",
+    "expectedEdition": "standard original cover design",
+    "observedLocalTrackMetadata": {
+      "title": "A BOY IS A GUN*",
+      "artist": "Tyler/ The Creator",
+      "album": "IGOR",
+      "year": "2019"
+    },
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "hiphop",
+    "query": {
+      "album": "Flower Boy",
+      "artist": "Tyler, The Creator",
+      "year": 2017,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Flower Boy",
+    "expectedArtist": "Tyler, The Creator",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1254572564",
+    "expectedEdition": "standard original cover design",
+    "observedLocalTrackMetadata": {
+      "title": "Boredom",
+      "artist": "Tyler/ The Creator/Rex Orange County/Anna of the North",
+      "album": "Flower Boy",
+      "year": "2017"
+    },
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "hiphop/local",
+    "query": {
+      "album": "Her Loss",
+      "artist": "Drake & 21 Savage",
+      "year": 2022,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Her Loss",
+    "expectedArtist": "Drake & 21 Savage",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1653012564",
+    "expectedEdition": "standard original cover design",
+    "observedLocalTrackMetadata": {
+      "title": "3AM on Glenwood",
+      "artist": "21 Savage",
+      "album": "Her Loss",
+      "year": "2023"
+    },
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "electronic",
+    "query": {
+      "album": "Discovery",
+      "artist": "Daft Punk",
+      "year": 2001,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Discovery",
+    "expectedArtist": "Daft Punk",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/697194953",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "less popular/hiphop",
+    "query": {
+      "album": "Madvillainy",
+      "artist": "Madvillain",
+      "year": 2004,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Madvillainy",
+    "expectedArtist": "Madvillain",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/887699504",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "mixtape",
+    "query": {
+      "album": "Acid Rap",
+      "artist": "Chance the Rapper",
+      "year": 2013,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Acid Rap",
+    "expectedArtist": "Chance the Rapper",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1470464025",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "older",
+    "query": {
+      "album": "The Dark Side of the Moon",
+      "artist": "Pink Floyd",
+      "year": 1973,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "The Dark Side of the Moon",
+    "expectedArtist": "Pink Floyd",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1065973699",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "less popular/electronic",
+    "query": {
+      "album": "EARS",
+      "artist": "Kaitlyn Aurelia Smith",
+      "year": 2016,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "EARS",
+    "expectedArtist": "Kaitlyn Aurelia Smith",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1077883780",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "EP",
+    "query": {
+      "album": "Come to Daddy - EP",
+      "artist": "Aphex Twin",
+      "year": 1997,
+      "kind": "EP"
+    },
+    "expectedAlbum": "Come to Daddy - EP",
+    "expectedArtist": "Aphex Twin",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/282478739",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "single",
+    "query": {
+      "album": "Get Lucky - Single",
+      "artist": "Daft Punk",
+      "year": 2013,
+      "kind": "SINGLE"
+    },
+    "expectedAlbum": "Get Lucky - Single",
+    "expectedArtist": "Daft Punk",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://musicbrainz.org/release/12b86859-ac48-4b8a-850b-0755adc88d8a",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "deluxe",
+    "query": {
+      "album": "Nevermind (Deluxe Edition)",
+      "artist": "Nirvana",
+      "year": 2011,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Nevermind (Deluxe Edition)",
+    "expectedArtist": "Nirvana",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1586895441",
+    "expectedEdition": "2011 deluxe edition",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "remaster",
+    "query": {
+      "album": "OK Computer OKNOTOK 1997 2017",
+      "artist": "Radiohead",
+      "year": 2017,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "OK Computer OKNOTOK 1997 2017",
+    "expectedArtist": "Radiohead",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1239489060",
+    "expectedEdition": "2017 OKNOTOK remaster",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "similar-name",
+    "query": {
+      "album": "Greatest Hits",
+      "artist": "Queen",
+      "year": 1981,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Greatest Hits",
+    "expectedArtist": "Queen",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/6781080300",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "similar-name",
+    "query": {
+      "album": "Greatest Hits",
+      "artist": "Fleetwood Mac",
+      "year": 1988,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Greatest Hits",
+    "expectedArtist": "Fleetwood Mac",
+    "expectAbstention": false,
+    "expectedArtworkReference": "https://music.apple.com/us/album/202271826",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "missing artist",
+    "query": {
+      "album": "SOS",
+      "artist": "Unknown artist",
+      "year": 2022,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "SOS",
+    "expectedArtist": "SZA",
+    "expectAbstention": true,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1658650093",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "incorrect embedded artist/local",
+    "query": {
+      "album": "Flower Boy",
+      "artist": "Various Artists",
+      "year": 2017,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Flower Boy",
+    "expectedArtist": "Tyler, The Creator",
+    "expectAbstention": true,
+    "expectedArtworkReference": "https://music.apple.com/us/album/1254572564",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  },
+  {
+    "category": "incorrect artist",
+    "query": {
+      "album": "Discovery",
+      "artist": "Queen",
+      "year": 2001,
+      "kind": "ALBUM"
+    },
+    "expectedAlbum": "Discovery",
+    "expectedArtist": "Daft Punk",
+    "expectAbstention": true,
+    "expectedArtworkReference": "https://music.apple.com/us/album/697194953",
+    "expectedEdition": "standard original cover design",
+    "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+  }
+]

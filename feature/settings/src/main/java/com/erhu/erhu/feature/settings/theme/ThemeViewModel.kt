@@ -39,7 +39,6 @@ class ThemeViewModel
         }
 
         val defaultStartSection: StateFlow<String> = themeRepository.defaultStartSection
-        val fanartTvApiKey: StateFlow<String> = themeRepository.fanartTvApiKey
         val sidebarGlassyness: StateFlow<Float> = themeRepository.sidebarGlassyness
         val uiGlassyness: StateFlow<Float> = themeRepository.uiGlassyness
         val popupGlassOpacity: StateFlow<Float> = themeRepository.popupGlassOpacity
@@ -93,12 +92,6 @@ class ThemeViewModel
         fun setDefaultStartSection(section: String) {
             viewModelScope.launch {
                 themeRepository.setDefaultStartSection(section)
-            }
-        }
-
-        fun setFanartTvApiKey(key: String) {
-            viewModelScope.launch {
-                themeRepository.setFanartTvApiKey(key)
             }
         }
 

@@ -53,7 +53,7 @@ message PlaybackStateProto {
   RepairBatchProto repair_batch = 28;
   // Score a metadata match needs to be written automatically (0.50–0.95). 0 = default (0.85).
   float metadata_confidence_threshold = 29;
-  // User-supplied Fanart.tv personal API key for high-resolution artist thumbs and backgrounds.
+  // Legacy Fanart.tv value retained for storage compatibility; no active provider reads or exposes it.
   string fanart_tv_api_key = 30;
   // Songs the user hid from Smart Playlists (recommendations only: the files, the library and
   // the user's own playlists are untouched). Empty = none hidden.
