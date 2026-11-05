@@ -112,7 +112,7 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "GitHub Releases · Monthly automatic check",
+                    "GitHub Releases (including beta) · Monthly automatic check",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

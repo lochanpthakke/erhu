@@ -1,0 +1,8 @@
+# Public client configuration only. Copy values to untracked user Gradle properties.
+# Obtain the actual values from YOUR registered Firebase Android client.
+erhu.firebase.projectId=<FIREBASE_PROJECT_ID>
+erhu.firebase.appId=<FIREBASE_ANDROID_APP_ID>
+erhu.firebase.senderId=<FIREBASE_SENDER_NUMBER>
+erhu.firebase.apiKey=<RESTRICTED_PUBLIC_CLIENT_API_KEY>
+erhu.announcements.url=<ACTUAL_DEPLOYED_HTTPS_API_BASE>
+# Never place service-account JSON, admin passwords, GitHub PATs or server keys here.

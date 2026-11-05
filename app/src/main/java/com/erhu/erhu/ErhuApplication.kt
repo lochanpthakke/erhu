@@ -22,6 +22,8 @@ class ErhuApplication :
     @Inject
     lateinit var crashThemeHandler: CrashThemeHandler
 
+    @Inject lateinit var announcements: com.erhu.erhu.announcements.AnnouncementController
+
     override val workManagerConfiguration: Configuration
         get() =
             Configuration
@@ -35,6 +37,23 @@ class ErhuApplication :
             Timber.plant(Timber.DebugTree())
         }
         crashThemeHandler.install()
+        com.erhu.erhu.announcements.AnnouncementPush
+            .initialize(this)
+        if (announcements.configured) {
+            com.erhu.erhu.announcements.AnnouncementPush
+                .periodic(this)
+        }
+        androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : androidx.lifecycle.DefaultLifecycleObserver {
+                override fun onStart(owner: androidx.lifecycle.LifecycleOwner) {
+                    announcements.resumed()
+                }
+
+                override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                    announcements.paused()
+                }
+            },
+        )
         widgetUpdater.start()
         com.erhu.erhu.widget.WidgetPreviewWorker
             .enqueue(this)

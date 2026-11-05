@@ -4,6 +4,7 @@ import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.common.result.AppError
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.network.api.GitHubUpdateApi
+import com.erhu.erhu.core.network.api.UpdateRepositoryConfig
 import com.erhu.erhu.core.network.model.GitHubAssetDto
 import com.erhu.erhu.core.network.update.InstalledAppVersion
 import com.erhu.erhu.core.network.update.PublishedAppVersion
@@ -38,6 +39,7 @@ class UpdateCheckerRepositoryImpl internal constructor(
     private val api: GitHubUpdateApi,
     private val logger: Logger,
     private val manifest: suspend (GitHubAssetDto) -> PublishedAppVersion?,
+    private val includePrereleases: Boolean = UpdateRepositoryConfig.INCLUDE_PRERELEASES,
     private val now: () -> Long = System::currentTimeMillis,
 ) : UpdateCheckerRepository {
     @Inject
@@ -71,7 +73,7 @@ class UpdateCheckerRepositoryImpl internal constructor(
                 ) {
                     return@withTimeout error("GitHub rate limit reached. Retry after ${Instant.ofEpochMilli(blockedUntil)}.", 429)
                 }
-                val response = api.getLatestRelease()
+                val response = api.getReleases()
                 if (!response.isSuccessful) {
                     val limited =
                         response.code() == 429 ||
@@ -87,31 +89,52 @@ class UpdateCheckerRepositoryImpl internal constructor(
                         }
                         response.code() == 404 ->
                             error(
-                                "No public published release is available. The repository may be private or have no releases. GitHub Actions artifacts are not Releases.",
+                                "The configured GitHub repository is unavailable to public clients (HTTP 404). " +
+                                    "Check the repository name and public release distribution.",
                                 404,
                             )
                         else -> error("GitHub update check failed (HTTP ${response.code()}). Please retry.", response.code())
                     }
                 }
-                val release = response.body() ?: return@withTimeout error("GitHub returned an empty release response.")
-                if (release.draft ||
-                    release.prerelease ||
-                    release.publishedAt.isNullOrBlank()
-                ) {
-                    return@withTimeout error("No published stable release is available.")
-                }
-                val latest =
-                    UpdateVersion.parse(release.tagName)
-                        ?: return@withTimeout error("The release has an invalid version tag: ${release.tagName}.")
-                if (latest.prerelease.isNotEmpty()) {
-                    return@withTimeout error("The latest release tag is a prerelease; no stable update is available.")
-                }
+                val releases = response.body() ?: return@withTimeout error("GitHub returned an empty release response.")
+                val eligible =
+                    releases.filter {
+                        !it.draft &&
+                            !it.publishedAt.isNullOrBlank() &&
+                            (includePrereleases || (!it.prerelease && UpdateVersion.parse(it.tagName)?.prerelease.isNullOrEmpty()))
+                    }
+                val release =
+                    eligible
+                        .filter { UpdateVersion.parse(it.tagName) != null }
+                        .maxWithOrNull(
+                            compareBy<com.erhu.erhu.core.network.model.GitHubReleaseDto> { UpdateVersion.parse(it.tagName) }
+                                .thenBy { runCatching { Instant.parse(it.publishedAt).toEpochMilli() }.getOrDefault(0L) },
+                        )
+                        ?: return@withTimeout error(
+                            if (eligible.isEmpty()) {
+                                "No eligible published releases were found. CI artifacts are not published Releases."
+                            } else {
+                                "Published releases have invalid version tags."
+                            },
+                        )
+                val latest = requireNotNull(UpdateVersion.parse(release.tagName))
                 val installed = UpdateVersion.parse(current.versionName)
-                if (installed != null && latest < installed) return@withTimeout AppResult.Success(UpdateCheck.UpToDate)
                 val versionAsset = release.assets.firstOrNull { it.name == "verification.json" && trustedReleaseAsset(it) }
                 val declared = versionAsset?.let { manifest(it) }
                 if (declared != null &&
-                    (declared.packageName != current.packageName || UpdateVersion.parse(declared.versionName) != latest)
+                    (
+                        declared.packageName != current.packageName ||
+                            declared.versionCode <= 0 ||
+                            UpdateVersion.parse(declared.versionName)?.let { version ->
+                                if (release.prerelease ||
+                                    latest.prerelease.isNotEmpty()
+                                ) {
+                                    version.numbers != latest.numbers
+                                } else {
+                                    version != latest
+                                }
+                            } != false
+                    )
                 ) {
                     return@withTimeout error("The release version metadata does not match this application.")
                 }
@@ -127,13 +150,13 @@ class UpdateCheckerRepositoryImpl internal constructor(
                         "Cannot compare this release with the installed version. The release needs verification.json version metadata.",
                     )
                 }
-                if (installed != null && latest == installed && declared == null) return@withTimeout AppResult.Success(UpdateCheck.UpToDate)
+                if (declared == null && installed != null && latest <= installed) return@withTimeout AppResult.Success(UpdateCheck.UpToDate)
                 val asset =
                     selectReleaseApk(release.assets, current.abis)
                         ?: return@withTimeout error(
                             "This release has no compatible signed APK for this device (${current.abis.joinToString()}).",
                         )
-                AppResult.Success(UpdateCheck.Available(release, asset, declared?.versionCode))
+                AppResult.Success(UpdateCheck.Available(release, asset, declared?.versionCode, declared?.versionName))
             }
         } catch (e: TimeoutCancellationException) {
             error("The GitHub update check timed out. Check your connection and retry.")

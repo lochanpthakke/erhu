@@ -27,3 +27,13 @@ log2.txt
 # Release-validation Python bytecode
 /scripts/ci/__pycache__/
 /.kotlin/
+
+# Firebase deployment and local backend dependencies
+**/node_modules/
+**/.firebase/
+**/firebase-debug.log
+**/.env.local
+**/service-account*.json
+**/*serviceAccount*.json
+/app/google-services.json
+/backend/announcements/.firebaserc

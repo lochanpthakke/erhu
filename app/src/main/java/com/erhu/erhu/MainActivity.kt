@@ -1,5 +1,6 @@
 package com.erhu.erhu
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,8 +16,21 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var playbackServiceConnector: PlaybackServiceConnector
 
+    @Inject lateinit var announcements: com.erhu.erhu.announcements.AnnouncementController
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        announcements.requestFromNotification(intent.getStringExtra(com.erhu.erhu.announcements.ANNOUNCEMENT_EXTRA))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState ==
+            null
+        ) {
+            announcements.requestFromNotification(intent.getStringExtra(com.erhu.erhu.announcements.ANNOUNCEMENT_EXTRA))
+        }
         // Bind the MediaLibraryService up front so the media session (and the
         // notification / lock-screen controls) exist as soon as playback starts.
         playbackServiceConnector.ensureConnected()

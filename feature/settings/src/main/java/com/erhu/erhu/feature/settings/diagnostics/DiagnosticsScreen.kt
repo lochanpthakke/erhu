@@ -35,6 +35,7 @@ fun DiagnosticsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenIntroduction: (() -> Unit)? = null,
+    onOpenAnnouncements: (() -> Unit)? = null,
 ) {
     val crashLogs by viewModel.crashLogs.collectAsState()
 
@@ -58,6 +59,19 @@ fun DiagnosticsScreen(
                             title = "Introduction",
                             summary = "Explore erhu and music access setup.",
                             onClick = onOpenIntroduction,
+                        )
+                    }
+                }
+            }
+        }
+        if (onOpenAnnouncements != null) {
+            SettingsSection(title = "Announcements") {
+                SettingsGroup {
+                    row {
+                        com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
+                            title = "Announcements",
+                            summary = "Read active erhu news and notices.",
+                            onClick = onOpenAnnouncements,
                         )
                     }
                 }

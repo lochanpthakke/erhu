@@ -24,8 +24,8 @@ class UpdateCheckerTest {
     private val release = GitHubReleaseDto("v1.0.2", "erhu", "Release notes", "https://github.com/lochanpthakke/erhu/releases/tag/v1.0.2", listOf(apk), publishedAt = "2026-11-01T10:00:00Z")
     private class Api : GitHubUpdateApi {
         @Volatile var calls = 0
-        var answer: suspend () -> Response<GitHubReleaseDto> = { error("unset") }
-        override suspend fun getLatestRelease(): Response<GitHubReleaseDto> { calls++; return answer() }
+        var answer: suspend () -> Response<List<GitHubReleaseDto>> = { error("unset") }
+        override suspend fun getReleases(limit: Int): Response<List<GitHubReleaseDto>> { calls++; return answer() }
     }
     private val logger = object : Logger {
         override fun v(tag: String, message: String, throwable: Throwable?) = Unit
@@ -48,7 +48,7 @@ class UpdateCheckerTest {
     }
 
     @Test fun `newer release offers notes date and correct ABI`() = runBlocking {
-        val api = Api().apply { answer = { Response.success(release) } }
+        val api = Api().apply { answer = { Response.success(listOf(release)) } }
         val result = repo(api).checkForUpdates(installed) as AppResult.Success
         val candidate = result.data as UpdateCheck.Available
         assertEquals(apk, candidate.asset)
@@ -58,7 +58,7 @@ class UpdateCheckerTest {
 
     @Test fun `actual installed versionCode blocks same-code and older APK manifests`() = runBlocking {
         val manifest = apk.copy(name = "verification.json")
-        val api = Api().apply { answer = { Response.success(release.copy(assets = listOf(apk, manifest))) } }
+        val api = Api().apply { answer = { Response.success(listOf(release.copy(assets = listOf(apk, manifest)))) } }
         assertEquals(UpdateCheck.UpToDate, (repo(api, PublishedAppVersion(installed.packageName, "1.0.2", 2)).checkForUpdates(installed) as AppResult.Success).data)
         assertTrue((repo(api, PublishedAppVersion(installed.packageName, "1.0.2", 3)).checkForUpdates(installed) as AppResult.Success).data is UpdateCheck.Available)
         assertTrue(repo(api, PublishedAppVersion("other.app", "1.0.2", 3)).checkForUpdates(installed) is AppResult.Error)
@@ -67,11 +67,11 @@ class UpdateCheckerTest {
     @Test fun `equal and older release names are up to date and drafts never offered`() = runBlocking {
         val api = Api()
         for (tag in listOf("v1.0.1", "1.0.1", "erhu-v1.0.1", "1.0.0")) {
-            api.answer = { Response.success(release.copy(tagName = tag)) }
+            api.answer = { Response.success(listOf(release.copy(tagName = tag))) }
             assertEquals(UpdateCheck.UpToDate, (repo(api).checkForUpdates(installed) as AppResult.Success).data)
         }
-        for (r in listOf(release.copy(draft = true), release.copy(prerelease = true), release.copy(tagName = "1.0.2-beta.1"), release.copy(publishedAt = null))) {
-            api.answer = { Response.success(r) }
+        for (r in listOf(release.copy(draft = true), release.copy(publishedAt = null))) {
+            api.answer = { Response.success(listOf(r)) }
             assertTrue(repo(api).checkForUpdates(installed) is AppResult.Error)
         }
     }
@@ -81,7 +81,7 @@ class UpdateCheckerTest {
         assertTrue((repo(api).checkForUpdates(installed) as AppResult.Error).error.message.contains("internet"))
         api.answer = { Response.error(404, "not found".toResponseBody()) }
         assertTrue((repo(api).checkForUpdates(installed) as AppResult.Error).error.message.contains("public"))
-        api.answer = { Response.success(release.copy(assets = emptyList())) }
+        api.answer = { Response.success(listOf(release.copy(assets = emptyList()))) }
         assertTrue((repo(api).checkForUpdates(installed) as AppResult.Error).error.message.contains("APK"))
     }
 
@@ -106,7 +106,7 @@ class UpdateCheckerTest {
 
     @Test fun `manual and monthly simultaneous lookups share a request`() = runBlocking {
         val ready = CompletableDeferred<Unit>()
-        val api = Api().apply { answer = { ready.await(); Response.success(release) } }
+        val api = Api().apply { answer = { ready.await(); Response.success(listOf(release)) } }
         val repo = repo(api)
         val a = async { repo.checkForUpdates(installed) }
         val b = async { repo.checkForUpdates(installed) }
@@ -125,5 +125,26 @@ class UpdateCheckerTest {
         assertNull(selectReleaseApk(listOf(x86), installed.abis))
         assertNull(selectReleaseApk(listOf(apk.copy(name = "erhu-debug-arm64-v8a.apk")), installed.abis))
         assertNull(selectReleaseApk(listOf(apk.copy(browserDownloadUrl = "https://example.com/app.apk")), installed.abis))
+    }
+    @Test fun `published beta manifests use the APK version and installed code not the beta label`() = runBlocking {
+        val manifest = apk.copy(name = "verification.json")
+        val beta = release.copy(tagName = "v1.0.2-beta.1", prerelease = true, assets = listOf(apk, manifest))
+        val api = Api().apply { answer = { Response.success(listOf(beta)) } }
+        val old = InstalledAppVersion(installed.packageName,"1.0.3",4,installed.abis)
+        assertEquals(UpdateCheck.UpToDate,(repo(api,PublishedAppVersion(installed.packageName,"1.0.2",3)).checkForUpdates(old) as AppResult.Success).data)
+        api.answer = { Response.success(listOf(beta.copy(tagName="erhu-v1.0.4-beta.1"))) }
+        val available = (repo(api,PublishedAppVersion(installed.packageName,"1.0.4",5)).checkForUpdates(old) as AppResult.Success).data as UpdateCheck.Available
+        assertEquals(5L,available.versionCode)
+        assertEquals("1.0.4",available.versionName)
+    }
+
+    @Test fun `stable policy excludes betas and ordering ignores drafts and API result order`() = runBlocking {
+        val beta = release.copy(tagName="1.10.0-beta.1",prerelease=true)
+        val api = Api().apply{answer={Response.success(listOf(release,beta,release.copy(tagName="99.0.0",draft=true)))}}
+        assertEquals(beta,(repo(api).checkForUpdates(installed) as AppResult.Success).data.let{it as UpdateCheck.Available}.release)
+        val stable = UpdateCheckerRepositoryImpl(api,logger,{null},includePrereleases=false)
+        assertEquals(release,((stable.checkForUpdates(installed) as AppResult.Success).data as UpdateCheck.Available).release)
+        api.answer={Response.success(emptyList())}
+        assertTrue(repo(api).checkForUpdates(installed) is AppResult.Error)
     }
 }

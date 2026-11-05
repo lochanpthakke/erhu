@@ -51,6 +51,15 @@ is still open. Verify anything specific (file names, functions) against the code
 - The user tests everything on the S23 and may scrap features ("rollback to last version") — keep
   each feature isolated and easy to revert.
 
+## Update checker and remote announcements (2026-11-05; local, uncommitted)
+
+- Implementation and setup/validation report: [docs/updates-and-announcements.md](docs/updates-and-announcements.md). Current task prohibits commits/pushes; none performed. Nothing deployed, published or installed in production.
+- Official repository is public. /releases/latest returned 404 because only v1.0.2-beta.1 is published. Checker now uses published release lists, explicitly handles beta channel and manifest APK versionName/code. CI artifacts remain separate from Releases. Signed APK validation and monthly/manual checks are preserved.
+- Release publishing supports beta/stable, increasing code checks and draft-first asset upload/verification. No workflow was triggered; future client release must increment code beyond installed 4.
+- Firebase client options/API endpoint are external Gradle/environment inputs; no real project/configuration/credentials were invented. Backend/admin live under backend/announcements. FCM data-only IDs, trusted HTTPS content, admin custom claims, deny-all Firestore rules, test-token-only default, scheduling/deactivation and persistent Android read/dismiss/notified state are implemented. Production delivery is UNVERIFIED until configured/deployed.
+- Validation: 364 JVM tests, 8 mocked backend HTTP/domain tests, 6 Python publisher tests, debug + Android-test builds and scoped ktlint pass. Separate live public GitHub updater integration passed on retry. S23 persistence test passed (1 test, 0.117s); inbox/unconfigured state and permission-revoked startup checked. No test was broadcast to actual users.
+- Benchmark packages removed, screen awake restored to 0; production remains erhu 1.0.3 (4), lastUpdateTime 2026-11-04 22:32:25. User music unchanged. Do not install a production-ID debug build or claim live Firebase delivery from mocked tests.
+
 ## Current metadata and artwork implementation (2026-11-04)
 
 This section supersedes older artwork-provider notes. The user subsequently requested building the latest changes through GitHub Actions and installing them. That authorizes the necessary commit/push to `kshitij` for a signed 1.0.3 (4) artifact. It does not authorize a public release or changes to `master`/`main`. Do not discard unrelated working-tree changes. Build/installation confirmation must come from the actual CI and device results.

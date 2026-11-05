@@ -35,7 +35,7 @@ def main():
     version = re.search(r'versionName = "([^"\n]+)"', build).group(1)
     code = int(re.search(r'versionCode = (\d+)', build).group(1))
     tag = os.environ.get('GITHUB_REF', '')
-    if tag.startswith('refs/tags/') and tag != f'refs/tags/erhu-v{version}':
+    if tag.startswith('refs/tags/') and not re.fullmatch(r"refs/tags/erhu-v" + re.escape(version) + r"(?:-(?:alpha|beta|rc)\.[1-9]\d*)?", tag):
         raise ValueError('Release tag must match the APK version')
     tools = Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0'
     metadata = []

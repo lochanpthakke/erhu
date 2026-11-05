@@ -36,7 +36,8 @@ fun validateUpdateIdentity(
     require(
         update.versionCode == null || downloaded.versionCode == update.versionCode,
     ) { "The APK versionCode does not match the release." }
-    val publishedVersion = requireNotNull(UpdateVersion.parse(update.release.tagName)) { "The release tag is invalid." }
+    val publishedVersion =
+        requireNotNull(UpdateVersion.parse(update.versionName ?: update.release.tagName)) { "The release tag is invalid." }
     require(UpdateVersion.parse(downloaded.versionName) == publishedVersion) {
         "The APK version does not match the release tag."
     }

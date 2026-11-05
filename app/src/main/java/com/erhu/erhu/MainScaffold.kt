@@ -194,7 +194,10 @@ private val DRAWER_DESTINATIONS =
 
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
-fun MainScaffold(startAtHome: Boolean = false) {
+fun MainScaffold(
+    startAtHome: Boolean = false,
+    onOpenAnnouncements: (() -> Unit)? = null,
+) {
     val themeViewModel: ThemeViewModel = hiltViewModel()
     val soundViewModel: SoundViewModel = hiltViewModel()
     val diagnosticsViewModel: DiagnosticsViewModel = hiltViewModel()
@@ -763,6 +766,7 @@ fun MainScaffold(startAtHome: Boolean = false) {
                                                         themeViewModel = themeViewModel,
                                                         soundViewModel = soundViewModel,
                                                         diagnosticsViewModel = diagnosticsViewModel,
+                                                        onOpenAnnouncements = onOpenAnnouncements,
                                                         libraryViewModel = libraryViewModel,
                                                         visualizerViewModel = visualizerViewModel,
                                                     )

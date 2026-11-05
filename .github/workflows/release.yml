@@ -9,7 +9,16 @@ on:
       publish:
         description: 'Publish a GitHub Release after all build and signature checks pass'
         type: boolean
-        default: false
+        default: true
+      channel:
+        description: 'Release channel when publication is explicitly requested'
+        type: choice
+        options: [beta, stable]
+        default: beta
+      release_notes:
+        description: 'Release notes for the published GitHub Release'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -46,6 +55,15 @@ jobs:
           ERHU_KEY_ALIAS: ${{ secrets.ERHU_KEY_ALIAS }}
           ERHU_KEY_PASSWORD: ${{ secrets.ERHU_KEY_PASSWORD }}
         run: python3 scripts/ci/signing.py
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/announcements/functions/package-lock.json
+      - name: Announcement backend tests
+        run: |
+          npm ci --prefix backend/announcements/functions --ignore-scripts --no-audit --no-fund
+          npm test --prefix backend/announcements/functions
       - name: Unit tests and release lint
         run: |
           chmod +x gradlew
@@ -94,6 +112,12 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: actions/download-artifact@v4
         with:
           name: erhu-release-${{ github.run_id }}
@@ -102,9 +126,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_VERSION: ${{ needs.release-apk.outputs.version }}
-          RELEASE_COMMIT: ${{ github.sha }}
-        run: |
-          gh release create "erhu-v$RELEASE_VERSION" dist/*.apk dist/*.sha256 dist/verification.json \
-            --target "$RELEASE_COMMIT" --title "erhu $RELEASE_VERSION" \
-            --notes "Optimized ARM64 APK. Existing installation identity and signing certificate preserved."
+          RELEASE_CHANNEL: ${{ inputs.channel || 'beta' }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: python3 scripts/ci/publish_release.py

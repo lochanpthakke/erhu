@@ -34,6 +34,10 @@ android {
 
     defaultConfig {
         minSdk = 26
+        val announcementUrl =
+            providers.gradleProperty("erhu.announcements.url").orNull
+                ?: System.getenv("ERHU_ANNOUNCEMENTS_URL").orEmpty()
+        buildConfigField("String", "ANNOUNCEMENT_API_URL", groovy.json.JsonOutput.toJson(announcementUrl))
         buildConfigField("String", "THEAUDIODB_API_KEY", "\"${audioDbApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "MUSIXMATCH_API_KEY", "\"${musixmatchApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
     }

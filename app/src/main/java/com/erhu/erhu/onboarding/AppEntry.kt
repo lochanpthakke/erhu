@@ -26,7 +26,10 @@ fun AppEntry(viewModel: ThemeViewModel = hiltViewModel()) {
     var startAtHome by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     when (completed) {
-        true -> MainScaffold(startAtHome = startAtHome)
+        true ->
+            com.erhu.erhu.announcements.AnnouncementHost { openAnnouncements ->
+                MainScaffold(startAtHome = startAtHome, onOpenAnnouncements = openAnnouncements)
+            }
         false ->
             OnboardingScreen(
                 vybeEnabled = vybeEnabled == true,

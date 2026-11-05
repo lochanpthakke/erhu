@@ -19,8 +19,19 @@ android {
         if (project.hasProperty("perfApp")) applicationIdSuffix = ".perf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
+
+        // Public Firebase client identifiers only. Never use service-account or server credentials here.
+        for ((field, property, environment) in listOf(
+            Triple("FIREBASE_APP_ID", "erhu.firebase.appId", "ERHU_FIREBASE_APP_ID"),
+            Triple("FIREBASE_API_KEY", "erhu.firebase.apiKey", "ERHU_FIREBASE_API_KEY"),
+            Triple("FIREBASE_PROJECT_ID", "erhu.firebase.projectId", "ERHU_FIREBASE_PROJECT_ID"),
+            Triple("FIREBASE_SENDER_ID", "erhu.firebase.senderId", "ERHU_FIREBASE_SENDER_ID"),
+        )) {
+            val value = providers.gradleProperty(property).orNull ?: System.getenv(environment).orEmpty()
+            buildConfigField("String", field, groovy.json.JsonOutput.toJson(value))
+        }
 
         // Optional device-specific sideload; omitted = the existing universal APK.
         // Keep every library for the selected ABI, including VYBE's two MediaPipe runtimes.
@@ -92,6 +103,10 @@ android {
 }
 
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
+    implementation(libs.coil.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)

@@ -185,6 +185,7 @@ fun SettingsCategoryScreen(
     libraryViewModel: LibraryViewModel,
     visualizerViewModel: VisualizerViewModel,
     onOpenIntroduction: (() -> Unit)? = null,
+    onOpenAnnouncements: (() -> Unit)? = null,
 ) {
     val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
     when (categoryId) {
@@ -209,6 +210,7 @@ fun SettingsCategoryScreen(
                 title = title,
                 onBack = onBack,
                 onOpenIntroduction = onOpenIntroduction,
+                onOpenAnnouncements = onOpenAnnouncements,
             )
         else ->
             MetadataSettingsSubPage(

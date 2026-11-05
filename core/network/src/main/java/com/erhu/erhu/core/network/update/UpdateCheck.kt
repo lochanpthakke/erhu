@@ -12,6 +12,7 @@ sealed interface UpdateCheck {
         val release: GitHubReleaseDto,
         val asset: GitHubAssetDto,
         val versionCode: Long? = null,
+        val versionName: String? = null,
     ) : UpdateCheck
 }
 
