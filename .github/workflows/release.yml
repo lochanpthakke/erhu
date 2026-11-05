@@ -30,6 +30,12 @@ concurrency:
 jobs:
   release-apk:
     runs-on: ubuntu-24.04
+    env:
+      ERHU_FIREBASE_APP_ID: ${{ vars.ERHU_FIREBASE_APP_ID }}
+      ERHU_FIREBASE_API_KEY: ${{ vars.ERHU_FIREBASE_API_KEY }}
+      ERHU_FIREBASE_PROJECT_ID: ${{ vars.ERHU_FIREBASE_PROJECT_ID }}
+      ERHU_FIREBASE_SENDER_ID: ${{ vars.ERHU_FIREBASE_SENDER_ID }}
+      ERHU_ANNOUNCEMENTS_URL: ${{ vars.ERHU_ANNOUNCEMENTS_URL }}
     timeout-minutes: 60
     outputs:
       version: ${{ steps.verify.outputs.version }}

@@ -20,7 +20,36 @@ FCM is best-effort, not guaranteed delivery. Devices recover through foreground/
 
 ## Firebase configuration and deployment
 
-No real project ID, app ID, API key, endpoint, account or service-account file has been invented or provisioned.
+### Free Spark deployment (current default, 2026-11-05)
+
+The owner authorized project creation and accepted Firebase terms. The actual project is `erhu-app-25b513`; Android package `com.lochanpthakke.empee3` is registered. Its generated client configuration stays in untracked local setup files and GitHub Actions variables. No billing account or private server key is required by this path.
+
+`firebase.spark.json` deploys only static Firebase Hosting JSON. The app uses the same `/api/feed` and `/api/announcements/<UUID>` contract, material, persistence, expiry/version checks and FCM worker. `functions/spark.mjs` is the trusted local administrator/publisher, sharing the existing validation and message model. No Functions, Firestore, Scheduler, public admin login or server is deployed. Hosting content is public: never put secrets or confidential messages in notices. Test notices are omitted from the feed, but their opaque direct URLs are not access control.
+
+From `backend/announcements`, after `npm ci --prefix functions` and `firebase login`:
+
+```powershell
+$env:ERHU_ANNOUNCEMENTS_STATE = 'C:\private\erhu-announcements.json'
+# Use a private, real location outside Git; the path above is an example.
+# Authenticate FCM with Application Default Credentials, or supply a short-lived
+# GOOGLE_OAUTH_ACCESS_TOKEN authorized for this project. Never commit credentials.
+$env:ERHU_TEST_FCM_TOKEN = '<actual device registration token>'
+node functions/spark.mjs put erhu-app-25b513 notice.json
+```
+
+The notice JSON requires `title`, `body`, `type` (`general`, `feature`, `important_update` or `maintenance`), and ISO `expiresAt`. Audience defaults to `test`. Optional fields match the existing domain model. Keep the returned ID in later edits. `audience: "all"` additionally requires the explicit `--all` argument; it is never inferred from a missing device token. The token is passed only through the environment and never written to state, Hosting or logs.
+
+The publisher validates, writes durable local state, deploys content, then sends ID-only pushes through the official FCM HTTP v1 API. Failed deployment sends nothing. Successful sends record the revision so repeating `sync` does not resend unchanged notices. Failures can be retried with `node functions/spark.mjs sync erhu-app-25b513`. An interrupted process between FCM acceptance and recording the receipt can redeliver the same ID; Android's persistent IDs prevent duplicate presentation. Back up this local state securely; it is the publisher's source of truth. Do not run concurrent publishers against the same site/state.
+
+To deactivate, put the same ID with `active: false`; static content updates before an invalidation push. Expired notices are rejected on device even if Hosting has not been synchronized. Future publication requires running `sync` when due (manually or using an existing trusted workstation scheduler); there is no always-running cloud scheduler on Spark. No all-user test has been authorized.
+
+Actual Hosting URL is obtained from `firebase hosting:sites:list`, not guessed. Set Android `ERHU_ANNOUNCEMENTS_URL` to that URL plus `/api`. The release workflow now imports the five public client configuration fields below from repository Actions variables. An APK built without them remains safely disabled. The original signing certificate and production application ID are preserved.
+
+Setup verified: Spark-only Hosting deployment succeeded at `https://erhu-app-25b513.web.app`; `/api/feed` returned HTTP 200 with an empty JSON feed. All five generated public client fields were set as repository Actions variables. Eleven backend tests passed, including Spark audience filtering, expiry/scheduling boundaries, one-token targeting, HTTP v1 payloads and failed delivery. No message has yet been sent; configured APK build/installation and actual S23 delivery remain pending. The phone was disconnected at setup time.
+
+### Optional Cloud Functions backend (requires Blaze; not deployed)
+
+The original Functions/admin implementation remains available for a future explicitly approved billing upgrade. The following steps apply only to that optional deployment, not the Spark setup above.
 
 1. Create/select your Firebase project. Enable Firestore, Firebase Authentication Email/Password, Cloud Messaging and Hosting. Cloud Functions/Scheduler may require the Blaze billing plan; review billing before deployment.
 2. Register a Firebase Web app for the admin Hosting configuration and authorize the Hosting domain in Firebase Authentication. Register the existing Android package `com.lochanpthakke.empee3`. For isolated device tests, register the separate `com.lochanpthakke.empee3.bench` Android client in a test project. Obtain that client's public Firebase application ID, project ID, sender number and restricted client API key. These are client identifiers, not server credentials.

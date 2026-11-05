@@ -1,0 +1,15 @@
+{
+  "hosting": {
+    "public": "spark/public",
+    "ignore": ["**/.*"],
+    "headers": [{
+      "source": "**",
+      "headers": [
+        {"key": "Content-Type", "value": "application/json; charset=utf-8"},
+        {"key": "Cache-Control", "value": "no-store"},
+        {"key": "X-Content-Type-Options", "value": "nosniff"},
+        {"key": "Content-Security-Policy", "value": "default-src 'none'; frame-ancestors 'none'"}
+      ]
+    }]
+  }
+}

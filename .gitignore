@@ -37,3 +37,5 @@ log2.txt
 **/*serviceAccount*.json
 /app/google-services.json
 /backend/announcements/.firebaserc
+/backend/announcements/spark/public/
+/backend/announcements/spark-state*.json
