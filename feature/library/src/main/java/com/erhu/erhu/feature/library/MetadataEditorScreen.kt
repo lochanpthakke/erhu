@@ -139,6 +139,10 @@ fun MetadataEditorScreen(
     val revertCompletionMessage by viewModel.revertCompletionMessage.collectAsState()
     val isReverting by viewModel.isReverting.collectAsState()
 
+    var songForFixTags by remember { mutableStateOf<Song?>(null) }
+    val metadataCandidates by viewModel.metadataCandidates.collectAsState()
+    var showAmbiguousFixedDialog by remember { mutableStateOf(false) }
+
     // The summary appears whenever a run ends: finished, paused by the connection or by the user.
     var wasFixing by remember { mutableStateOf(false) }
     LaunchedEffect(isFixingQueue) {
@@ -148,7 +152,6 @@ fun MetadataEditorScreen(
         wasFixing = isFixingQueue
     }
 
-    var reviewBeforeApplying by remember { mutableStateOf(false) }
     var providerExpanded by remember { mutableStateOf(false) }
     var actionExpanded by remember { mutableStateOf(false) }
     var modeExpanded by remember { mutableStateOf(false) }
@@ -388,12 +391,6 @@ fun MetadataEditorScreen(
                             checked = forceFixTags,
                             onCheckedChange = { viewModel.setForceFixTags(it) },
                         )
-                        GroupDivider()
-                        GroupToggleRow(
-                            title = "Review changes before applying",
-                            checked = reviewBeforeApplying,
-                            onCheckedChange = { reviewBeforeApplying = it },
-                        )
                     }
                 }
             }
@@ -437,7 +434,6 @@ fun MetadataEditorScreen(
                                             },
                                         onClick = {
                                             viewModel.revertSelectedChanges(selectedRevertIds)
-                                            selectedRevertIds = emptySet()
                                         },
                                         icon = Icons.Default.Refresh,
                                         enabled = selectedRevertIds.isNotEmpty() && !isReverting && !isFixingQueue,
@@ -453,7 +449,8 @@ fun MetadataEditorScreen(
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
-                                val isAllSelected = repairQueue.isNotEmpty() && selectedRevertIds.size == repairQueue.size
+                                val revertableQueue = repairQueue.filter { it.successDetails != null }
+                                val isAllSelected = revertableQueue.isNotEmpty() && selectedRevertIds.size == revertableQueue.size
                                 ActionButton(
                                     text = if (isAllSelected) "Deselect All Tracks" else "Select All Tracks",
                                     onClick = {
@@ -461,11 +458,11 @@ fun MetadataEditorScreen(
                                             if (isAllSelected) {
                                                 emptySet()
                                             } else {
-                                                repairQueue.map { it.song.id }.toSet()
+                                                revertableQueue.map { it.song.id }.toSet()
                                             }
                                     },
                                     icon = Icons.Default.DoneAll,
-                                    enabled = !isReverting && !isFixingQueue && repairQueue.isNotEmpty(),
+                                    enabled = !isReverting && !isFixingQueue && revertableQueue.isNotEmpty(),
                                 )
                             }
                         } else if (isFixingQueue) {
@@ -511,22 +508,64 @@ fun MetadataEditorScreen(
                     )
                 }
             } else {
-                items(repairQueue, key = { it.song.id }) { queueItem ->
-                    RepairQueueCard(
-                        queueItem = queueItem,
-                        selectedForRevert = queueItem.song.id in selectedRevertIds,
-                        onSelectForRevert = { checked ->
-                            selectedRevertIds =
-                                if (checked) {
-                                    selectedRevertIds + queueItem.song.id
-                                } else {
-                                    selectedRevertIds - queueItem.song.id
-                                }
-                        },
-                        onRetry = { viewModel.retryRepairQueueItem(queueItem.song) },
-                        onRemove = { viewModel.removeFromRepairQueue(queueItem.song) },
-                        modifier = Modifier.padding(vertical = Spacing.xs),
-                    )
+                val (needsReview, others) = repairQueue.partition { it.status == RepairStatus.NEEDS_REVIEW }
+
+                if (needsReview.isNotEmpty()) {
+                    item(key = "needs-review-header") {
+                        Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm, top = Spacing.md)) {
+                            SectionHeading(title = "Requires Manual Selection")
+                        }
+                    }
+                    items(needsReview, key = { it.song.id }) { queueItem ->
+                        RepairQueueCard(
+                            queueItem = queueItem,
+                            selectedForRevert = queueItem.song.id in selectedRevertIds,
+                            onSelectForRevert = { checked ->
+                                selectedRevertIds =
+                                    if (checked) {
+                                        selectedRevertIds + queueItem.song.id
+                                    } else {
+                                        selectedRevertIds - queueItem.song.id
+                                    }
+                            },
+                            onReviewMatches = {
+                                songForFixTags = queueItem.song
+                                viewModel.searchMetadataForSong(queueItem.song)
+                            },
+                            onRetry = { viewModel.retryRepairQueueItem(queueItem.song) },
+                            onRemove = { viewModel.removeFromRepairQueue(queueItem.song) },
+                            modifier = Modifier.padding(vertical = Spacing.xs),
+                        )
+                    }
+                }
+
+                if (others.isNotEmpty()) {
+                    item(key = "others-header") {
+                        Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm, top = Spacing.md)) {
+                            SectionHeading(title = "Processed / Pending")
+                        }
+                    }
+                    items(others, key = { it.song.id }) { queueItem ->
+                        RepairQueueCard(
+                            queueItem = queueItem,
+                            selectedForRevert = queueItem.song.id in selectedRevertIds,
+                            onSelectForRevert = { checked ->
+                                selectedRevertIds =
+                                    if (checked) {
+                                        selectedRevertIds + queueItem.song.id
+                                    } else {
+                                        selectedRevertIds - queueItem.song.id
+                                    }
+                            },
+                            onReviewMatches = {
+                                songForFixTags = queueItem.song
+                                viewModel.searchMetadataForSong(queueItem.song)
+                            },
+                            onRetry = { viewModel.retryRepairQueueItem(queueItem.song) },
+                            onRemove = { viewModel.removeFromRepairQueue(queueItem.song) },
+                            modifier = Modifier.padding(vertical = Spacing.xs),
+                        )
+                    }
                 }
             }
 
@@ -550,13 +589,17 @@ fun MetadataEditorScreen(
 
     revertCompletionMessage?.let { msg ->
         GlassAlertDialog(
-            onDismissRequest = { viewModel.dismissRevertCompletionMessage() },
+            onDismissRequest = {
+                viewModel.dismissRevertCompletionMessage()
+                selectedRevertIds = emptySet()
+            },
             title = { Text("Revert Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
             text = { Text(msg, style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.dismissRevertCompletionMessage()
+                        selectedRevertIds = emptySet()
                         viewModel.clearRepairQueue()
                         onNavigateToLibrary()
                     },
@@ -565,7 +608,12 @@ fun MetadataEditorScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissRevertCompletionMessage() }) {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissRevertCompletionMessage()
+                        selectedRevertIds = emptySet()
+                    },
+                ) {
                     Text("Keep Inspecting Queue")
                 }
             },
@@ -629,6 +677,14 @@ fun MetadataEditorScreen(
                     ) {
                         Text("Resume ($toProcessCount left)")
                     }
+                } else if (summary.needsReview > 0) {
+                    Button(
+                        onClick = {
+                            showCompletionDialog = false
+                        },
+                    ) {
+                        Text("Review Ambiguous Tracks")
+                    }
                 } else {
                     Button(
                         onClick = {
@@ -648,6 +704,33 @@ fun MetadataEditorScreen(
             },
         )
     }
+
+    songForFixTags?.let { song ->
+        FixTagsDialog(
+            song = song,
+            candidates = metadataCandidates,
+            onDismiss = { songForFixTags = null },
+            onSaveTags = { title, artist, album, year, genre, bpm ->
+                viewModel.writeTags(song, title, artist, album, year, genre, bpm)
+                viewModel.removeFromRepairQueue(song)
+                songForFixTags = null
+                showAmbiguousFixedDialog = true
+            },
+        )
+    }
+
+    if (showAmbiguousFixedDialog) {
+        GlassAlertDialog(
+            onDismissRequest = { showAmbiguousFixedDialog = false },
+            title = { Text("Success", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+            text = { Text("Ambiguous track fixed", style = MaterialTheme.typography.bodyMedium) },
+            confirmButton = {
+                Button(onClick = { showAmbiguousFixedDialog = false }) {
+                    Text("OK")
+                }
+            },
+        )
+    }
 }
 
 /** One queued track: its artwork, title and status, with its search details and changes on demand. */
@@ -656,6 +739,7 @@ private fun RepairQueueCard(
     queueItem: RepairQueueItem,
     selectedForRevert: Boolean,
     onSelectForRevert: (Boolean) -> Unit,
+    onReviewMatches: () -> Unit,
     onRetry: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -685,6 +769,7 @@ private fun RepairQueueCard(
                     Checkbox(
                         checked = selectedForRevert,
                         onCheckedChange = onSelectForRevert,
+                        enabled = queueItem.successDetails != null,
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs))
                 }
@@ -841,20 +926,40 @@ private fun RepairQueueCard(
 
         var expanded by remember { mutableStateOf(false) }
         val diag = queueItem.diagnostics
-        if (diag != null) {
-            TextButton(
-                onClick = { expanded = !expanded },
-                modifier = Modifier.padding(horizontal = Spacing.md),
-            ) {
-                Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text(if (expanded) "Show less" else "Show more", style = MaterialTheme.typography.labelSmall)
+        
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, end = Spacing.md, bottom = if (expanded) 0.dp else Spacing.sm),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (diag != null) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                ) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                    Text(if (expanded) "Show less" else "Show more", style = MaterialTheme.typography.labelSmall)
+                }
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
 
+            if (queueItem.status == RepairStatus.NEEDS_REVIEW) {
+                Button(
+                    onClick = onReviewMatches,
+                    contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text("Review Matches", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+
+        if (diag != null) {
             AnimatedVisibility(
                 visible = expanded,
                 enter = fadeIn() + expandVertically(),

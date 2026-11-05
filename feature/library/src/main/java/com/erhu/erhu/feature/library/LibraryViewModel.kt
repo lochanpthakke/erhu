@@ -70,6 +70,7 @@ import com.erhu.erhu.feature.library.mix.RadioSeed
 import com.erhu.erhu.feature.library.mix.SmartMixRepository
 import com.erhu.erhu.feature.library.mix.SmartMixes
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -190,6 +191,7 @@ sealed interface RecentSearchItem {
 class LibraryViewModel
     @Inject
     constructor(
+        @ApplicationContext private val appContext: android.content.Context,
         val libraryRepository: LibraryRepository,
         val playbackRepository: PlaybackRepository,
         val animatedArtworkRepository: AnimatedArtworkRepository,
@@ -1149,7 +1151,10 @@ class LibraryViewModel
                 currentQueue.indices.filter {
                     currentQueue[it].song.id in selectedSongIds && currentQueue[it].successDetails != null
                 }
-            if (targetIndices.isEmpty()) return
+            if (targetIndices.isEmpty()) {
+                _userMessage.value = "No modified tracks selected to revert."
+                return
+            }
 
             _isReverting.value = true
             viewModelScope.launch(Dispatchers.IO) {
@@ -1690,6 +1695,13 @@ class LibraryViewModel
             pauseRequested = false
             autoResumeArmed = false
             _batchPause.value = null
+            
+            // Start the foreground service orchestration
+            val intent = android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java).apply {
+                action = com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_START
+            }
+            androidx.core.content.ContextCompat.startForegroundService(appContext, intent)
+            
             val plans = mutableMapOf<Long, FieldFixPlan>()
             val runner =
                 RepairBatchRunner(
@@ -1712,6 +1724,11 @@ class LibraryViewModel
                         }
                     _isFixingQueue.value = false
                     throw e
+                } finally {
+                    val stopIntent = android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java).apply {
+                        action = com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_STOP
+                    }
+                    appContext.startService(stopIntent)
                 }
             _batchPause.value = phase.pause
             phase.pause?.let { pause ->
