@@ -12,7 +12,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,10 +57,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.heading
@@ -78,10 +76,13 @@ import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.findActivity
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 
-private val IntroductionBackground = Color(0xff101112)
+@Suppress("MagicNumber") // Onboarding palette, isolated from the app theme.
+private val IntroductionBackground = Color(0xff0b0e11)
 
 /** Local UI state is saveable; only completion and optional VYBE visibility are persisted settings. */
+@Suppress("LongMethod", "CyclomaticComplexMethod") // Existing declarative navigation/permission tree.
 @Composable
 fun OnboardingScreen(
     vybeEnabled: Boolean,
@@ -102,6 +103,13 @@ fun OnboardingScreen(
             if (lightStatus != null) controller.isAppearanceLightStatusBars = lightStatus
             if (lightNavigation != null) controller.isAppearanceLightNavigationBars = lightNavigation
         }
+    }
+    var resumed by remember { mutableStateOf(false) }
+    var motionEnabled by remember { mutableStateOf(true) }
+    LifecycleResumeEffect(context) {
+        resumed = true
+        motionEnabled = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+        onPauseOrDispose { resumed = false }
     }
     val permission = audioPermission()
 
@@ -180,13 +188,13 @@ fun OnboardingScreen(
                     snapshotFlow { pager.settledPage }.collect { savedPage = pages[it].name }
                 }
                 val previous: () -> Unit = {
-                    if (!finishing && !pager.isScrollInProgress) {
-                        if (pager.currentPage == 0) {
+                    if (!finishing) {
+                        if (pager.targetPage == 0) {
                             onExit()
                         } else {
                             scope.launch {
                                 pager.animateScrollToPage(
-                                    pager.currentPage - 1,
+                                    (pager.targetPage - 1).coerceAtLeast(0),
                                     animationSpec = tween(Motion.CONTENT, easing = Motion.Standard),
                                 )
                             }
@@ -200,7 +208,7 @@ fun OnboardingScreen(
                 Column(
                     modifier
                         .fillMaxSize()
-                        .background(IntroductionBackground)
+                        .background(Brush.verticalGradient(listOf(IntroductionBackground, Color(0xff131a20), IntroductionBackground)))
                         .statusBarsPadding()
                         .navigationBarsPadding()
                         .graphicsLayer { alpha = entrance },
@@ -225,6 +233,9 @@ fun OnboardingScreen(
                         val page = pages[index]
                         IntroductionContent(
                             page = page,
+                            active = resumed && pager.settledPage == index && !pager.isScrollInProgress,
+                            motionEnabled = motionEnabled,
+                            pageOffset = { ((pager.currentPage - index) + pager.currentPageOffsetFraction).absoluteValue },
                             mediaGranted = mediaGranted,
                             requested = requested,
                             permanentlyDenied = permanentlyDenied,
@@ -244,7 +255,7 @@ fun OnboardingScreen(
                             onVybeEnabledChange = onVybeEnabledChange,
                         )
                     }
-                    Surface(color = Color(0xff17191b), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+                    Surface(color = Color(0xed11161b), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
                             Row(
                                 Modifier.fillMaxWidth(),
@@ -253,17 +264,19 @@ fun OnboardingScreen(
                             ) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     pages.indices.forEach { i ->
+                                        val emphasis by animateFloatAsState(
+                                            if (i == pager.currentPage) 1f else .35f,
+                                            tween(Motion.MICRO),
+                                            label = "pageIndicator",
+                                        )
                                         Box(
-                                            Modifier.size(6.dp).background(
-                                                if (i ==
-                                                    pager.currentPage
-                                                ) {
-                                                    Color.White
-                                                } else {
-                                                    Color(0xff505455)
-                                                },
-                                                CircleShape,
-                                            ),
+                                            Modifier
+                                                .width(12.dp)
+                                                .height(4.dp)
+                                                .graphicsLayer {
+                                                    scaleX = emphasis
+                                                    alpha = emphasis
+                                                }.background(Color.White, CircleShape),
                                         )
                                     }
                                 }
@@ -284,29 +297,29 @@ fun OnboardingScreen(
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 TextButton(
                                     onClick = previous,
-                                    enabled = pager.currentPage > 0 && !finishing && !pager.isScrollInProgress,
+                                    enabled = pager.targetPage > 0 && !finishing,
                                 ) { Text("Back") }
                                 Spacer(Modifier.weight(1f))
                                 Button(
                                     onClick = {
-                                        if (pager.currentPage == pages.lastIndex) {
+                                        if (pager.settledPage == pages.lastIndex) {
                                             finish()
                                         } else {
                                             scope.launch {
                                                 pager.animateScrollToPage(
-                                                    pager.currentPage + 1,
+                                                    (pager.targetPage + 1).coerceAtMost(pages.lastIndex),
                                                     animationSpec = tween(Motion.CONTENT, easing = Motion.Standard),
                                                 )
                                             }
                                         }
                                     },
-                                    enabled = !finishing && !pager.isScrollInProgress,
+                                    enabled = !finishing,
                                     modifier = Modifier.heightIn(min = 48.dp),
                                 ) {
                                     Text(
                                         if (finishing) {
                                             "Saving…"
-                                        } else if (pager.currentPage == pages.lastIndex) {
+                                        } else if (pager.settledPage == pages.lastIndex) {
                                             "Start Listening"
                                         } else {
                                             "Next"
@@ -322,9 +335,13 @@ fun OnboardingScreen(
     }
 }
 
+@Suppress("LongMethod", "CyclomaticComplexMethod") // Keep the existing page explanations and callbacks together.
 @Composable
 private fun IntroductionContent(
     page: IntroductionPage,
+    active: Boolean,
+    motionEnabled: Boolean,
+    pageOffset: () -> Float,
     mediaGranted: Boolean,
     requested: Boolean,
     permanentlyDenied: Boolean,
@@ -335,12 +352,26 @@ private fun IntroductionContent(
 ) {
     val toolGuide = remember(page) { page.toolGuide() }
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                val offset = if (motionEnabled) pageOffset().coerceIn(0f, 1f) else 0f
+                alpha = 1f - offset * .18f
+                translationY = offset * 6.dp.toPx()
+            }.verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
             page.title,
-            style = MaterialTheme.typography.headlineLarge,
+            style =
+                if (page == IntroductionPage.WELCOME ||
+                    page == IntroductionPage.READY
+                ) {
+                    MaterialTheme.typography.displaySmall
+                } else {
+                    MaterialTheme.typography.headlineLarge
+                },
             fontWeight = FontWeight.SemiBold,
             modifier =
                 Modifier.semantics {
@@ -358,6 +389,9 @@ private fun IntroductionContent(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (page == IntroductionPage.READY) {
+            IntroductionVisual(page, null, active, motionEnabled)
+        }
         if (page == IntroductionPage.LIBRARY) {
             Surface(shape = RoundedCornerShape(20.dp), color = Color(0xff212426)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -410,10 +444,10 @@ private fun IntroductionContent(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else if (toolGuide != null) {
-            PreviewGallery(page)
+            PreviewGallery(page, active, motionEnabled)
             ToolGuideContent(page, toolGuide)
         } else {
-            PreviewGallery(page)
+            PreviewGallery(page, active, motionEnabled)
         }
         if (page == IntroductionPage.VYBE) {
             Text(
@@ -426,7 +460,11 @@ private fun IntroductionContent(
 }
 
 @Composable
-private fun PreviewGallery(page: IntroductionPage) {
+private fun PreviewGallery(
+    page: IntroductionPage,
+    active: Boolean,
+    motionEnabled: Boolean,
+) {
     val previews = remember(page) { page.previews() }
     var selected by rememberSaveable(page.name) { mutableIntStateOf(0) }
     val shown = previews[selected.coerceIn(previews.indices)]
@@ -437,18 +475,7 @@ private fun PreviewGallery(page: IntroductionPage) {
             }
         }
     }
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(if (page == IntroductionPage.LIBRARY) 180.dp else 260.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xff191b1c))
-            .border(1.dp, Color(0xff333738), RoundedCornerShape(24.dp))
-            .padding(8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Image(painterResource(shown.image), "${shown.label} preview", Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-    }
+    IntroductionVisual(page, shown, active, motionEnabled)
     Text(
         "Preview from an existing erhu library.",
         style = MaterialTheme.typography.labelSmall,

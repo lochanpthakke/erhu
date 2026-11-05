@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +22,28 @@ import org.junit.Test
 /** Component tests use the isolated test activity and never touch playback or saved preferences. */
 class OnboardingInteractionTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test fun nextAndBackCanInterruptPageMotionWithoutCompletingSetup() {
+        var exited = false
+        var completed = false
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            OnboardingScreen(true, {}, onFinish = { completed = true; true }, onExit = { exited = true })
+        }
+        compose.mainClock.advanceTimeBy(400)
+        compose.onNodeWithText("Next").performClick()
+        compose.mainClock.advanceTimeBy(32)
+        compose.onNodeWithText("Next").assertIsEnabled().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("Give every album its cover.").assertIsDisplayed()
+        compose.onNodeWithText("Back").performClick()
+        compose.mainClock.advanceTimeBy(32)
+        compose.onNodeWithText("Back").assertIsEnabled().performClick()
+        compose.mainClock.advanceTimeBy(600)
+        compose.onNodeWithText("Your music. Your space.").assertIsDisplayed()
+        assertEquals(false, completed)
+        assertEquals(false, exited)
+    }
 
     @Test fun swipeButtonsAndLiveVybeAvailabilityKeepPageIdentity() {
         compose.setContent {
