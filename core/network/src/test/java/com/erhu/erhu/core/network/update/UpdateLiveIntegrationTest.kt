@@ -33,10 +33,10 @@ class UpdateLiveIntegrationTest {
         assertTrue("Actual release check: $available",available is AppResult.Success)
         val update=(available as AppResult.Success).data as UpdateCheck.Available
         assertTrue(update.release.prerelease)
-        assertEquals("v1.0.2-beta.1",update.release.tagName)
-        assertEquals(3L,update.versionCode)
-        assertEquals("1.0.2",update.versionName)
+        assertTrue(requireNotNull(update.versionCode) > old.versionCode)
+        assertEquals(UpdateVersion.parse(update.release.tagName)?.numbers,UpdateVersion.parse(requireNotNull(update.versionName))?.numbers)
         assertTrue(update.asset.name.endsWith(".apk"))
-        assertEquals(UpdateCheck.UpToDate,(repository.checkForUpdates(old.copy(versionName="1.0.3",versionCode=4)) as AppResult.Success).data)
+        val current=old.copy(versionName=requireNotNull(update.versionName),versionCode=requireNotNull(update.versionCode))
+        assertEquals(UpdateCheck.UpToDate,(repository.checkForUpdates(current) as AppResult.Success).data)
     }
 }

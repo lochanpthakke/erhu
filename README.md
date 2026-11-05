@@ -4,11 +4,11 @@ An Android music player for your own collection.
 
 <img src="images/showcase/hero.png" alt="erhu Home and Now Playing on a Galaxy S23" width="1200">
 
-## Beta 1
+## Current beta — 1.0.5
 
-The first beta is available as an ARM64 APK for Android 8.0 and newer. It has been tested on a Samsung Galaxy S23 running One UI. Compatibility with other devices is still being tested.
+The current beta is available as an ARM64 APK for Android 8.0 and newer. It has been tested on a Samsung Galaxy S23 running One UI. Compatibility with other devices is still being tested.
 
-[Download Beta 1](https://github.com/lochanpthakke/erhu/releases/tag/v1.0.2-beta.1)
+[Download erhu 1.0.5 beta](https://github.com/lochanpthakke/erhu/releases/tag/erhu-v1.0.5-beta.1)
 
 Install the APK from the release page and grant music access when prompted. erhu plays music stored on your device; radio stations select tracks from your own library.
 
@@ -25,7 +25,8 @@ Existing installations can update in place. The application ID and signing certi
 - Transition Studio with global, collection and track-pair crossfades, plus Volume, EQ and Filter controls.
 - Floating navigation, adjustable glass surfaces and Now Playing artwork transitions.
 - Three Home screen widget styles with playback controls and resizable layouts.
-- Manual update checks and a monthly automatic check for published stable releases.
+- Manual update checks and a monthly automatic check for published releases, including the current beta channel.
+- Remote announcements with an inbox and optional Android notifications.
 
 The optional Musixmatch synced-lyrics provider requires a licensed API key. It is disabled when no key is configured. See [provider configuration](docs/synced-lyrics-providers.md).
 
