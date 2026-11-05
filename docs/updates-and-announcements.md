@@ -93,8 +93,12 @@ No Firebase deployment, real registered-device delivery, production announcement
 
 Key changes: core/network update checker/API/version validation and announcements models/client; app announcements persistence/controller/FCM workers/custom UI/notification routing; Diagnostics navigation; release workflow and CI publisher; Firebase Functions, Firestore rules/indexes and Hosting admin under backend/announcements. No playback, metadata, library-scanning or database schema implementation was changed.
 
-### Current public APK distribution (2026-11-05)
+### 1.0.5 publication record (2026-11-05)
 
 The verified 1.0.5/code 6 APK from Actions run 42057716869 was published with owner authorization under [`erhu-v1.0.5-beta.1`](https://github.com/lochanpthakke/erhu/releases/tag/erhu-v1.0.5-beta.1). Uploaded APK, checksum and verification.json were downloaded again and byte/hash checked before publication. The superseded 1.0.2 APK/checksum/metadata were backed up locally, then removed from the older release; its two VYBE model assets remain unchanged. APK source remains `faddb77`; documentation-only commits do not change that build identity. The original application ID/certificate are preserved. The older beta tag and VYBE model assets remain intact; its old APK is superseded by the current release. Release tag numbers and verification.json must agree so the update checker can validate them. No repeat compilation is needed for this documentation/publication step.
 
 Post-publication validation: the opt-in real GitHub update-check integration passed against the published release (1 test, no failures/skips): an older app receives an available update and the published version is up to date. The test now derives current version metadata from the release instead of hardcoding the superseded beta. The automatic tag-triggered duplicate build was cancelled; the published bytes remain the successful run 42057716869 artifact.
+
+### Current release: 1.0.6 (7)
+
+Only missing Lochan application-source updates through 5c18a91 were imported, preserving the update checker and free announcement configuration. Actions run 42074317364 successfully built source 4670c400e17f4c7f67cb464fcf2a16009657d382. That verified source was fast-forwarded to master, then the exact CI APK, checksum and verification.json were published at https://github.com/lochanpthakke/erhu/releases/tag/erhu-v1.0.6-beta.1. Uploaded bytes were downloaded and hash checked. The superseded 1.0.5 installer assets were backed up and removed; the original VYBE model assets remain unchanged. Original app identity/certificate remain intact. No phone installation or new broadcast was performed.
