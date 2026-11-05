@@ -105,7 +105,21 @@ class BpmFinder
         suspend fun find(
             match: MetadataCandidate,
             filePath: String,
+            candidates: List<MetadataCandidate> = emptyList(),
         ): BpmLookup {
+            // 1. Direct candidate match BPM (e.g. from Deezer or iTunes metadata)
+            val candidateBpm =
+                match.bpm?.takeIf { it in PLAUSIBLE_BPM }
+                    ?: candidates.mapNotNull { it.bpm }.firstOrNull { it in PLAUSIBLE_BPM }
+            val candidateSource =
+                match.takeIf { it.bpm != null && it.bpm in PLAUSIBLE_BPM }?.sourceName
+                    ?: candidates.firstOrNull { it.bpm != null && it.bpm in PLAUSIBLE_BPM }?.sourceName
+                    ?: "online candidate"
+
+            if (candidateBpm != null) {
+                return BpmLookup.Found(candidateBpm, candidateSource, estimated = false)
+            }
+
             val reasons = mutableListOf<String>()
             var failures = 0
             val recordingId = match.id.takeIf { it.startsWith(MUSICBRAINZ_PREFIX) }?.removePrefix(MUSICBRAINZ_PREFIX)

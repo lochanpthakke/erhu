@@ -148,6 +148,7 @@ fun AlbumDetailScreen(
     playlistsViewModel: PlaylistsViewModel,
     transitionsViewModel: TransitionStudioViewModel,
     onBack: () -> Unit,
+    onNavigateToArtworkFetcher: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val detail = rememberAlbumDetail(albumId, viewModel)
@@ -276,6 +277,7 @@ fun AlbumDetailScreen(
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.enqueueAlbumForArtwork(album)
+                                            onNavigateToArtworkFetcher()
                                         },
                                     )
                                     GlassMenuItem(

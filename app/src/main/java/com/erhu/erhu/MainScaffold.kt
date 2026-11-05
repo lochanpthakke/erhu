@@ -589,6 +589,9 @@ fun MainScaffold(startAtHome: Boolean = false) {
                                                         playlistsViewModel = playlistsViewModel,
                                                         transitionsViewModel = hiltViewModel(),
                                                         onBack = { navController.popBackStack() },
+                                                        onNavigateToArtworkFetcher = {
+                                                            navController.navigate(com.erhu.erhu.navigation.ArtworkManager)
+                                                        },
                                                     )
                                                 }
                                             }

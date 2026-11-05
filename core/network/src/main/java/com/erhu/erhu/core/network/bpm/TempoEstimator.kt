@@ -84,11 +84,20 @@ object TempoEstimator {
         val needed = if (sections.size == 1) 1 else sections.size / 2 + 1
         return when {
             agreeing.size >= needed -> TempoEstimate.Found(agreeing.average().roundToInt(), agreeing.size, sections.size)
-            ambiguous.isNotEmpty() ->
-                ambiguous.first().let { (a, b) ->
-                    TempoEstimate.Uncertain("Half-time / double-time ambiguity: ${a.roundToInt()} or ${b.roundToInt()} BPM")
+            ambiguous.isNotEmpty() -> {
+                val allCandidateTempos =
+                    (tempos + ambiguous.flatMap { listOf(it.bpm, it.alternative) })
+                        .filter { it.roundToInt() in com.erhu.erhu.core.network.tagger.PLAUSIBLE_BPM }
+                val picked = allCandidateTempos.minByOrNull { abs(it - PRIOR_CENTER_BPM) }
+                if (picked != null) {
+                    TempoEstimate.Found(picked.roundToInt(), 1, sections.size)
+                } else {
+                    ambiguous.first().let { (a, b) ->
+                        TempoEstimate.Uncertain("Half-time / double-time ambiguity: ${a.roundToInt()} or ${b.roundToInt()} BPM")
+                    }
                 }
-            tempos.isEmpty() -> TempoEstimate.Uncertain("No steady beat found")
+            }
+            tempos.isNotEmpty() -> TempoEstimate.Found(tempos.average().roundToInt(), tempos.size, sections.size)
             else -> disagreement(tempos)
         }
     }

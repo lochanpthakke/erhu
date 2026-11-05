@@ -159,7 +159,7 @@ interface MetadataRepository {
      * The genre of a confident match: MusicBrainz's top-voted curated genre of the release group,
      * or the first genre of the Deezer album. Album-level, never invented.
      */
-    suspend fun lookupGenre(match: MetadataCandidate): GenreLookup
+    suspend fun lookupGenre(match: MetadataCandidate, candidates: List<MetadataCandidate> = emptyList()): GenreLookup
 
     /** Downloads an image for embedding (artwork); fails rather than returning a non-image. */
     suspend fun downloadArtwork(url: String): AppResult<ByteArray>

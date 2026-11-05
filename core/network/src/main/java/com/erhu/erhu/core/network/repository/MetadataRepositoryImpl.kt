@@ -184,22 +184,55 @@ class MetadataRepositoryImpl
                 ArtistArtworkSearchResponse(urls, mapOf("Deezer" to urls))
             }
 
-        override suspend fun lookupGenre(match: MetadataCandidate): GenreLookup =
+        override suspend fun lookupGenre(
+            match: MetadataCandidate,
+            candidates: List<MetadataCandidate>,
+        ): GenreLookup =
             withContext(Dispatchers.IO) {
                 try {
                     val releaseGroupId = match.releaseGroupId
                     val deezerAlbumId = match.deezerAlbumId
-                    when {
-                        releaseGroupId != null ->
-                            genreFromMusicBrainz(musicBrainzProvider.fetchReleaseGroupGenres(releaseGroupId))
-                        deezerAlbumId != null ->
-                            Genres
-                                .normalize(deezerProvider.fetchAlbumGenres(deezerAlbumId))
-                                .takeIf { it.isNotEmpty() }
-                                ?.let { GenreLookup.Found(it, "Deezer album") }
-                                ?: GenreLookup.NotFound("Deezer lists no genre for this album")
-                        else -> GenreLookup.NotFound("${match.sourceName} doesn't provide genres")
+
+                    val mbGenre =
+                        if (releaseGroupId != null) {
+                            try {
+                                genreFromMusicBrainz(musicBrainzProvider.fetchReleaseGroupGenres(releaseGroupId))
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    if (mbGenre is GenreLookup.Found) return@withContext mbGenre
+
+                    val deezerGenre =
+                        if (deezerAlbumId != null) {
+                            try {
+                                Genres
+                                    .normalize(deezerProvider.fetchAlbumGenres(deezerAlbumId))
+                                    .takeIf { it.isNotEmpty() }
+                                    ?.let { GenreLookup.Found(it, "Deezer album") }
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    if (deezerGenre is GenreLookup.Found) return@withContext deezerGenre
+
+                    val allCandidates = listOf(match) + candidates
+                    val siblingGenre =
+                        allCandidates
+                            .mapNotNull { c ->
+                                c.genre?.let { Genres.parse(it) }?.takeIf { it.isNotEmpty() }?.let { it to c.sourceName }
+                            }
+                            .firstOrNull()
+
+                    if (siblingGenre != null) {
+                        return@withContext GenreLookup.Found(siblingGenre.first, "${siblingGenre.second} genre")
                     }
+
+                    GenreLookup.NotFound("No genre found for ${match.sourceName} candidate")
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {

@@ -129,7 +129,9 @@ fun releaseDateFor(
     today: LocalDate,
     confidentScore: Float,
 ): ReleaseDateDecision {
-    val date = ReleaseDate.parse(match.releaseDate, today)
+    val date =
+        ReleaseDate.parse(match.releaseDate, today)
+            ?: candidates.mapNotNull { ReleaseDate.parse(it.releaseDate, today) }.firstOrNull()
     val otherYears =
         candidates
             .filter { it !== match && it.confidenceScore >= confidentScore && match.confidenceScore - it.confidenceScore <= TIE_MARGIN }

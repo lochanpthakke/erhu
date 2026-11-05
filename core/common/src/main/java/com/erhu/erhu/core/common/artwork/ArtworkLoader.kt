@@ -88,9 +88,9 @@ object ArtworkLoader {
                 decoding(+1)
                 try {
                     traced("Artwork decode") {
-                        loadThumbnail(context, songUri, sizePx)
+                        loadEmbeddedPicture(context, songUri, sizePx)
+                            ?: loadThumbnail(context, songUri, sizePx)
                             ?: albumArtUri?.let { loadFromStream(context, it, sizePx) }
-                            ?: loadEmbeddedPicture(context, songUri, sizePx)
                     }
                 } finally {
                     decoding(-1)
