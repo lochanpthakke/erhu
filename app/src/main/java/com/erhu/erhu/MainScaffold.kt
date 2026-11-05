@@ -121,6 +121,7 @@ import com.erhu.erhu.feature.library.LibraryScreen
 import com.erhu.erhu.feature.library.LibrarySection
 import com.erhu.erhu.feature.library.LibraryViewModel
 import com.erhu.erhu.feature.library.LocalPlayerTransition
+import com.erhu.erhu.feature.library.LocalVybeEnabled
 import com.erhu.erhu.feature.library.MetadataEditorScreen
 import com.erhu.erhu.feature.library.NowPlayingScreen
 import com.erhu.erhu.feature.library.PlayerExtrasViewModel
@@ -134,8 +135,10 @@ import com.erhu.erhu.feature.library.VisualizerViewModel
 import com.erhu.erhu.feature.library.builder.LibraryBuilderScreen
 import com.erhu.erhu.feature.library.builder.LibraryBuilderViewModel
 import com.erhu.erhu.feature.library.collectStablePlaybackState
+import com.erhu.erhu.feature.library.isVybeMix
 import com.erhu.erhu.feature.library.rememberLibraryChromeState
 import com.erhu.erhu.feature.library.rememberPlayerTransitionState
+import com.erhu.erhu.feature.library.visibleWithVybe
 import com.erhu.erhu.feature.settings.SettingsCategoryScreen
 import com.erhu.erhu.feature.settings.SettingsScreen
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsViewModel
@@ -191,7 +194,7 @@ private val DRAWER_DESTINATIONS =
 
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
-fun MainScaffold() {
+fun MainScaffold(startAtHome: Boolean = false) {
     val themeViewModel: ThemeViewModel = hiltViewModel()
     val soundViewModel: SoundViewModel = hiltViewModel()
     val diagnosticsViewModel: DiagnosticsViewModel = hiltViewModel()
@@ -281,10 +284,18 @@ fun MainScaffold() {
             glassEffectEnabled = glassEffectEnabled,
             popupGlassOpacity = popupGlassOpacity,
         ) {
+            val navController = rememberNavController()
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentDestination = navBackStackEntry?.destination
+            // Now Playing is a sheet over the shell (not a destination), so dragging it down
+            // reveals the live screen underneath.
+            val player = rememberPlayerTransitionState()
+            val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
+            val isOnIntroduction = currentDestination?.hasRoute(com.erhu.erhu.navigation.Introduction::class) == true
             // Content is drawn behind transparent system bars, so their icon colour must
             // follow the app theme rather than the system's light/dark setting.
             val view = LocalView.current
-            val isDarkTheme = currentTheme.isDark
+            val isDarkTheme = isOnIntroduction || currentTheme.isDark
             SideEffect {
                 view.context.findActivity()?.window?.let { window ->
                     WindowCompat.getInsetsController(window, view).apply {
@@ -294,14 +305,8 @@ fun MainScaffold() {
                 }
             }
 
-            val navController = rememberNavController()
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentDestination = navBackStackEntry?.destination
-            // Now Playing is a sheet over the shell (not a destination), so dragging it down
-            // reveals the live screen underneath.
-            val player = rememberPlayerTransitionState()
-            val isOnLibrary = currentDestination?.hasRoute(Library::class) == true
-
+            val persistedVybeEnabled by themeViewModel.vybeEnabled.collectAsState()
+            val vybeEnabled = persistedVybeEnabled == true
             val defaultStartSectionName by themeViewModel.defaultStartSection.collectAsState()
             val defaultStartSection =
                 remember(defaultStartSectionName) {
@@ -314,12 +319,18 @@ fun MainScaffold() {
                 }
 
             // Library section lives here because its navigation is part of the shell's bottom chrome.
-            var librarySection by rememberSaveable { mutableStateOf(defaultStartSection) }
-            var hasInitializedSection by rememberSaveable { mutableStateOf(false) }
+            var librarySection by rememberSaveable { mutableStateOf(if (startAtHome) LibrarySection.TRACKS else defaultStartSection) }
+            var hasInitializedSection by rememberSaveable { mutableStateOf(startAtHome) }
             LaunchedEffect(defaultStartSection) {
                 if (!hasInitializedSection) {
                     hasInitializedSection = true
                     librarySection = defaultStartSection
+                }
+            }
+            val visibleLibrarySection = librarySection.visibleWithVybe(vybeEnabled)
+            LaunchedEffect(persistedVybeEnabled, librarySection) {
+                if (persistedVybeEnabled == false && librarySection == LibrarySection.VYBE) {
+                    librarySection = LibrarySection.TRACKS
                 }
             }
             // Search is opened from the bottom controls, so its on/off state lives here too.
@@ -393,7 +404,7 @@ fun MainScaffold() {
 
             // Opened by the menu button only: horizontal edge swipes are reserved for the
             // player. Once open, it can still be swiped or tapped closed.
-            CompositionLocalProvider(LocalPlayerTransition provides player) {
+            CompositionLocalProvider(LocalPlayerTransition provides player, LocalVybeEnabled provides vybeEnabled) {
                 ModalNavigationDrawer(
                     drawerState = drawerState,
                     gesturesEnabled = drawerState.isOpen,
@@ -495,35 +506,37 @@ fun MainScaffold() {
                                     modifier = Modifier.glassBackdropSource(shellBackdrop),
                                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                                     bottomBar = {
-                                        CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
-                                            // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
-                                            // Stack: mini player, then (on Library) the section navigation, then the gesture area.
-                                            Column {
-                                                // Mini player + (on the Library) sections and search, as one chrome
-                                                // that compacts while the library scrolls.
-                                                LibraryBottomChrome(
-                                                    state = libraryChrome,
-                                                    showNavigation = isOnLibrary && isLibraryContentShown,
-                                                    selected = librarySection,
-                                                    onSelect = { librarySection = it },
-                                                    defaultStartSection = defaultStartSection,
-                                                    onSearch = { isLibrarySearchActive = true },
-                                                    onExpand = { scope.launch { libraryChrome.expand() } },
-                                                    searching = isLibrarySearchActive,
-                                                    hasCurrentSong = hasCurrentSong,
-                                                    onShufflePlayLibrary = { libraryViewModel.shufflePlayLibrary() },
-                                                    miniPlayer = { compact ->
-                                                        // The collapsed form of the player; the expanding player grows out of it.
-                                                        MiniPlayer(
-                                                            playbackRepository = playbackRepository,
-                                                            onMiniPlayerClick = {
-                                                                openPlayer()
-                                                            },
-                                                            compact = compact,
-                                                        )
-                                                    },
-                                                )
-                                                Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+                                        if (!isOnIntroduction) {
+                                            CompositionLocalProvider(LocalGlassBackdrop provides screensBackdrop) {
+                                                // Under glass, content scrolls beneath the chrome; the fade keeps it legible.
+                                                // Stack: mini player, then (on Library) the section navigation, then the gesture area.
+                                                Column {
+                                                    // Mini player + (on the Library) sections and search, as one chrome
+                                                    // that compacts while the library scrolls.
+                                                    LibraryBottomChrome(
+                                                        state = libraryChrome,
+                                                        showNavigation = isOnLibrary && isLibraryContentShown,
+                                                        selected = visibleLibrarySection,
+                                                        onSelect = { librarySection = it.visibleWithVybe(vybeEnabled) },
+                                                        defaultStartSection = defaultStartSection,
+                                                        onSearch = { isLibrarySearchActive = true },
+                                                        onExpand = { scope.launch { libraryChrome.expand() } },
+                                                        searching = isLibrarySearchActive,
+                                                        hasCurrentSong = hasCurrentSong,
+                                                        onShufflePlayLibrary = { libraryViewModel.shufflePlayLibrary() },
+                                                        miniPlayer = { compact ->
+                                                            // The collapsed form of the player; the expanding player grows out of it.
+                                                            MiniPlayer(
+                                                                playbackRepository = playbackRepository,
+                                                                onMiniPlayerClick = {
+                                                                    openPlayer()
+                                                                },
+                                                                compact = compact,
+                                                            )
+                                                        },
+                                                    )
+                                                    Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+                                                }
                                             }
                                         }
                                     },
@@ -546,15 +559,21 @@ fun MainScaffold() {
                                                     LibraryRoute(
                                                         libraryViewModel = libraryViewModel,
                                                         playlistsViewModel = playlistsViewModel,
-                                                        section = librarySection,
+                                                        section = visibleLibrarySection,
                                                         onOpenDrawer = openDrawer,
                                                         onContentShownChange = { isLibraryContentShown = it },
                                                         onOpenAlbum = { openAlbum(it) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
                                                         onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                                                        onOpenSmartPlaylist = { navController.navigate(SmartPlaylistDetail(it)) },
-                                                        onOpenRadio = { navController.navigate(RadioStationDetail(it)) },
-                                                        onSelectSection = { librarySection = it },
+                                                        onOpenSmartPlaylist = {
+                                                            if (vybeEnabled ||
+                                                                !isVybeMix(it)
+                                                            ) {
+                                                                navController.navigate(SmartPlaylistDetail(it))
+                                                            }
+                                                        },
+                                                        onOpenRadio = { if (vybeEnabled) navController.navigate(RadioStationDetail(it)) },
+                                                        onSelectSection = { librarySection = it.visibleWithVybe(vybeEnabled) },
                                                         isSearchActive = isLibrarySearchActive,
                                                         onSearchActiveChange = { isLibrarySearchActive = it },
                                                         chromeScroll = libraryChrome.connection,
@@ -574,20 +593,26 @@ fun MainScaffold() {
                                                 }
                                             }
                                             composable<RadioStationDetail> { entry ->
-                                                ProvideMotionScope(this) {
-                                                    val route = entry.toRoute<RadioStationDetail>()
-                                                    val homeEntry = remember(entry) { navController.getBackStackEntry<Library>() }
-                                                    val featured by hiltViewModel<FeaturedAlbumsViewModel>(
-                                                        homeEntry,
-                                                    ).albums.collectAsState()
-                                                    RadioStationDetailScreen(
-                                                        albumId = route.albumId,
-                                                        featuredAlbums = featured,
-                                                        viewModel = hiltViewModel(),
-                                                        libraryViewModel = libraryViewModel,
-                                                        playlistsViewModel = playlistsViewModel,
-                                                        onBack = { navController.popBackStack() },
-                                                    )
+                                                if (!vybeEnabled) {
+                                                    LaunchedEffect(persistedVybeEnabled) {
+                                                        if (persistedVybeEnabled == false) navController.popBackStack<Library>(false)
+                                                    }
+                                                } else {
+                                                    ProvideMotionScope(this) {
+                                                        val route = entry.toRoute<RadioStationDetail>()
+                                                        val homeEntry = remember(entry) { navController.getBackStackEntry<Library>() }
+                                                        val featured by hiltViewModel<FeaturedAlbumsViewModel>(
+                                                            homeEntry,
+                                                        ).albums.collectAsState()
+                                                        RadioStationDetailScreen(
+                                                            albumId = route.albumId,
+                                                            featuredAlbums = featured,
+                                                            viewModel = hiltViewModel(),
+                                                            libraryViewModel = libraryViewModel,
+                                                            playlistsViewModel = playlistsViewModel,
+                                                            onBack = { navController.popBackStack() },
+                                                        )
+                                                    }
                                                 }
                                             }
                                             composable<ArtistDetail> { entry ->
@@ -603,15 +628,21 @@ fun MainScaffold() {
                                                 }
                                             }
                                             composable<SmartPlaylistDetail> { entry ->
-                                                ProvideMotionScope(this) {
-                                                    val route = entry.toRoute<SmartPlaylistDetail>()
-                                                    SmartPlaylistDetailScreen(
-                                                        mixKey = route.playlist,
-                                                        viewModel = hiltViewModel(),
-                                                        libraryViewModel = libraryViewModel,
-                                                        playlistsViewModel = playlistsViewModel,
-                                                        onBack = { navController.popBackStack() },
-                                                    )
+                                                if (!vybeEnabled && isVybeMix(entry.toRoute<SmartPlaylistDetail>().playlist)) {
+                                                    LaunchedEffect(persistedVybeEnabled) {
+                                                        if (persistedVybeEnabled == false) navController.popBackStack<Library>(false)
+                                                    }
+                                                } else {
+                                                    ProvideMotionScope(this) {
+                                                        val route = entry.toRoute<SmartPlaylistDetail>()
+                                                        SmartPlaylistDetailScreen(
+                                                            mixKey = route.playlist,
+                                                            viewModel = hiltViewModel(),
+                                                            libraryViewModel = libraryViewModel,
+                                                            playlistsViewModel = playlistsViewModel,
+                                                            onBack = { navController.popBackStack() },
+                                                        )
+                                                    }
                                                 }
                                             }
                                             composable<PlaylistDetail> { entry ->
@@ -703,11 +734,28 @@ fun MainScaffold() {
                                                     )
                                                 }
                                             }
+                                            composable<com.erhu.erhu.navigation.Introduction> {
+                                                com.erhu.erhu.onboarding.OnboardingScreen(
+                                                    vybeEnabled = vybeEnabled,
+                                                    onVybeEnabledChange = themeViewModel::setVybeEnabled,
+                                                    onFinish = {
+                                                        librarySection = LibrarySection.TRACKS
+                                                        navController.popBackStack<Library>(false)
+                                                        true
+                                                    },
+                                                    onExit = { navController.popBackStack() },
+                                                )
+                                            }
                                             composable<SettingsCategory> { entry ->
                                                 ProvideMotionScope(this) {
                                                     val route = entry.toRoute<SettingsCategory>()
                                                     SettingsCategoryScreen(
                                                         categoryId = route.categoryId,
+                                                        onOpenIntroduction = {
+                                                            navController.navigate(
+                                                                com.erhu.erhu.navigation.Introduction,
+                                                            )
+                                                        },
                                                         onBack = { navController.popBackStack() },
                                                         onNavigateToMetadataEditor = {
                                                             navController.navigate(MetadataEditor)
@@ -757,9 +805,17 @@ fun MainScaffold() {
                                             onShowMusicInfo = { songForMusicInfo = it },
                                             isHiddenFromMixes = currentSongId in hiddenFromMixes,
                                             onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
-                                            onStartRadio = libraryViewModel::startRadioFromCurrent,
-                                            radioSongIds = radio?.let { it.suggested + it.startSongId }.orEmpty(),
-                                            onRefreshRadio = libraryViewModel::refreshRadio,
+                                            onStartRadio = if (vybeEnabled) libraryViewModel::startRadioFromCurrent else null,
+                                            radioSongIds =
+                                                if (vybeEnabled) {
+                                                    radio
+                                                        ?.let {
+                                                            it.suggested + it.startSongId
+                                                        }.orEmpty()
+                                                } else {
+                                                    emptySet()
+                                                },
+                                            onRefreshRadio = if (vybeEnabled) libraryViewModel::refreshRadio else null,
                                             playlistMessage = playerPlaylistMessage,
                                             onPlaylistMessageShown = { playerPlaylistMessage = null },
                                         )
@@ -821,14 +877,14 @@ private enum class PermissionUiState {
     PERMANENTLY_DENIED,
 }
 
-private fun audioPermission(): String =
+internal fun audioPermission(): String =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
 
-private fun Context.findActivity(): Activity? =
+internal fun Context.findActivity(): Activity? =
     when (this) {
         is Activity -> this
         is ContextWrapper -> baseContext.findActivity()
@@ -895,12 +951,6 @@ private fun LibraryRoute(
                 libraryViewModel.triggerScan()
             }
         }
-
-    LaunchedEffect(Unit) {
-        if (permissionState == PermissionUiState.NOT_REQUESTED) {
-            launcher.launch(permission)
-        }
-    }
 
     // Pick up a grant (or revoke) made in system settings while the app was in the background.
     LifecycleResumeEffect(Unit) {

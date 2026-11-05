@@ -1,25 +1,13 @@
 package com.erhu.erhu.feature.settings.diagnostics
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,16 +17,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.common.logging.CrashLogEntry
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
-import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.feature.settings.component.SettingsGroup
-import com.erhu.erhu.feature.settings.component.SettingsIcon
 import com.erhu.erhu.feature.settings.component.SettingsPage
 import com.erhu.erhu.feature.settings.component.SettingsPanel
 import com.erhu.erhu.feature.settings.component.SettingsSection
@@ -50,11 +34,9 @@ fun DiagnosticsScreen(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenIntroduction: (() -> Unit)? = null,
 ) {
-    val context = LocalContext.current
     val crashLogs by viewModel.crashLogs.collectAsState()
-    val latestRelease by viewModel.latestRelease.collectAsState()
-    val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
 
     SettingsPage(
         title = title,
@@ -68,61 +50,21 @@ fun DiagnosticsScreen(
             }
         },
     ) {
-        SettingsSection(title = "Updates") {
-            SettingsPanel {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SettingsIcon(Icons.Default.SystemUpdate)
-                    Spacer(modifier = Modifier.width(Spacing.lg))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("App Update Checker", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            text = "Current Version: 1.0.0 (GitHub Release Monthly Auto-Check)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (onOpenIntroduction != null) {
+            SettingsSection(title = "About") {
+                SettingsGroup {
+                    row {
+                        com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
+                            title = "Introduction",
+                            summary = "Explore erhu and music access setup.",
+                            onClick = onOpenIntroduction,
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(Spacing.md))
-                val release = latestRelease
-                if (release != null) {
-                    Text(
-                        text = "New Release Available: ${release.tagName}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.xs))
-                    Text(
-                        text = release.body,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
-                    )
-                    Spacer(modifier = Modifier.height(Spacing.md))
-                    Button(
-                        onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.htmlUrl))) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                        Spacer(modifier = Modifier.width(Spacing.sm))
-                        Text("Download Latest APK")
-                    }
-                } else {
-                    FilledTonalButton(
-                        onClick = { viewModel.checkForUpdates() },
-                        enabled = !isCheckingUpdate,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (isCheckingUpdate) {
-                            CircularProgressIndicator(modifier = Modifier.size(IconSize.small), strokeWidth = 2.dp)
-                        } else {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                        }
-                        Spacer(modifier = Modifier.width(Spacing.sm))
-                        Text(if (isCheckingUpdate) "Checking GitHub..." else "Check for Updates Now")
-                    }
-                }
             }
+        }
+        SettingsSection(title = "Updates") {
+            UpdatePanel(viewModel)
         }
 
         SettingsSection(title = "Local crash log history") {

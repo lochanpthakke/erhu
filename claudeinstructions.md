@@ -1,6 +1,6 @@
 # erhu — Claude working instructions, progress and pending work
 
-_Last updated: 2026-11-01. Current implementation is `a2d3cb2` on `kshitij`; erhu 1.0.1 (2) was built and verified by GitHub Actions and installed on the S23. Release/device results are in 3.17 and `docs/radio-navigation-and-release.md`. Older build, installation and pending-work entries are historical where superseded._
+_Last updated: 2026-11-04. Checkout `kshitij` contains the metadata/provider cleanup and music-only artwork pipeline below. The user requested a GitHub Actions build and installation of 1.0.3 (4); the installed production release was verified as 1.0.2 (3) before that update. Earlier release/build/pending-work notes are historical where superseded._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
@@ -50,6 +50,24 @@ is still open. Verify anything specific (file names, functions) against the code
 - Don't do broad performance audits or broad playback-engine refactors unless asked.
 - The user tests everything on the S23 and may scrap features ("rollback to last version") — keep
   each feature isolated and easy to revert.
+
+## Current metadata and artwork implementation (2026-11-04)
+
+This section supersedes older artwork-provider notes. The user subsequently requested building the latest changes through GitHub Actions and installing them. That authorizes the necessary commit/push to `kshitij` for a signed 1.0.3 (4) artifact. It does not authorize a public release or changes to `master`/`main`. Do not discard unrelated working-tree changes. Build/installation confirmation must come from the actual CI and device results.
+
+- Restored implementation report: [docs/artwork-retrieval.md](docs/artwork-retrieval.md). Detailed retained measurements: [docs/artwork-accuracy-results.json](docs/artwork-accuracy-results.json). The report was found empty and reconstructed from these records on 2026-11-04; do not treat reconstruction as a new test run.
+- Album artwork uses one shared `MetadataRepository` / `AlbumArtworkFinder` pipeline: MusicBrainz release identification, CAA exact approved front covers, CAA release-group fallback, Deezer album search, public iTunes album search, then TheAudioDB.
+- Removed artwork sources: Genius, DuckDuckGo, Discogs, Wikipedia/Wikimedia and the exclusive Wikidata resolver. The preceding uncommitted key cleanup also removed Last.fm, Fanart.tv and Google image search. Tag matching retains iTunes, MusicBrainz and Deezer; artist photos use Deezer separately. Do not restore obsolete provider options or user API-key fields.
+- TheAudioDB public key `123` is for permitted debug/testing use. Release builds skip it unless the app owner configures `THEAUDIODB_API_KEY` or untracked `theaudiodb.apiKey`. No private key is hardcoded or committed; request-path credentials are redacted. Musixmatch lyrics configuration is separate and remains intact. The old Fanart proto field remains inert for compatibility.
+- Matching uses album/artist, IDs, year, edition, release type and decoded dimensions. Promotional/box-set/alternate editions and uncertain matches require review. Release-group covers require edition confirmation and must not claim an unrelated exact release ID. Preserve a release's own artist credit when resolving a recording ID.
+- Candidate grid/preview shows source, matched identity, edition/year, actual dimensions and recommended/review status. Applying a preview is explicit. Searches must never modify tags or overwrite existing custom covers. Preserve manual editing and local cover selection.
+- Private durable cache: seven-day query freshness, 256 query records, 64 MiB image budget. Preserve bounded downloads, cancellable calls, shared MusicBrainz pacing, provider failure isolation and stale-UI protection. No playback, scanning or database-schema changes were made. Do not touch the already-fixed Transition Studio.
+- Accuracy: 18 curated album-level cases, with observed local track tags recorded where available. Visually correct cover available in 16/18 (88.9%); correct album/artist 17/18 each (94.4%); exact edition independently verified in 9/18 (50.0%). Seven automatic recommendations were all visually correct in this sample, not proof of general accuracy. No usable expected cover in 2/18; zero candidate images in 1/18. Mean response 16.05 seconds with live metadata and previously validated image bytes cached.
+- Known gaps: requested Nirvana deluxe artwork missing; contradictory Discovery/Queen query rejected; group/community candidates do not prove exact editions. Deezer returned no album candidates in the test environment; MusicBrainz/CAA had intermittent failures/timeouts and Apple missed known albums. TheAudioDB test availability is not a production guarantee.
+- Validation already completed: 554 JVM tests passed (network 348, library 206); the opt-in live evaluator ran separately; isolated debug/app-test builds, changed-file ktlint and whitespace checks passed. S23 grid/preview/cancel/cache/source-menu checks passed. One Android test passed in 13.939 seconds, applying online artwork only to a generated private-cache WAV, preserving manual tags/custom artwork during search, and verifying cache access with networking blocked.
+- Phone safety: test using `-PbenchApp -PtargetAbi=arm64-v8a` and confirm package `com.lochanpthakke.empee3.bench` before installing. Temporary `.bench`/`.bench.test` apps were removed; screen-awake setting restored to 0. Production app `com.lochanpthakke.empee3` stayed 1.0.2 (3), lastUpdateTime 2026-11-03 23:54:39. Do not install a production-ID debug APK or uninstall the real app for testing.
+
+---
 
 ## 3. Completed and committed work (newest first)
 

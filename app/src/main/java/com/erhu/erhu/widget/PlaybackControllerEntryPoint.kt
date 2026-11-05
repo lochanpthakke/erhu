@@ -12,4 +12,6 @@ interface PlaybackControllerEntryPoint {
     fun playbackController(): PlaybackController
 
     fun libraryRepository(): LibraryRepository
+
+    fun widgetUpdater(): WidgetUpdater
 }

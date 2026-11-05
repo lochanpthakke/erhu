@@ -56,8 +56,13 @@ private const val SELECTED_ICON_SCALE = 1.08f
 private val ICON_BOX_WIDTH = IconSize.standard + Spacing.lg * 2
 private val ICON_BOX_HEIGHT = IconSize.standard + Spacing.xs * 2
 
-internal fun getOrderedSections(start: LibrarySection): List<LibrarySection> {
-    val defaultList = listOf(LibrarySection.TRACKS, LibrarySection.ALBUMS, LibrarySection.LIBRARY, LibrarySection.VYBE)
+internal fun getOrderedSections(
+    start: LibrarySection,
+    vybeEnabled: Boolean = true,
+): List<LibrarySection> {
+    val defaultList =
+        listOf(LibrarySection.TRACKS, LibrarySection.ALBUMS, LibrarySection.LIBRARY, LibrarySection.VYBE)
+            .filter { vybeEnabled || it != LibrarySection.VYBE }
     if (start !in defaultList) return defaultList
     return listOf(start) + defaultList.filter { it != start }
 }
@@ -92,12 +97,14 @@ fun LibraryNavigationBar(
     )
     val glass = ErhuGlass.isActive
     val shape = BottomChrome.shape()
-    val sections = remember(defaultStartSection) { getOrderedSections(defaultStartSection) }
-    val selectedIndex = sections.indexOf(selected).coerceAtLeast(0)
+    val vybeEnabled = LocalVybeEnabled.current
+    val sections = remember(defaultStartSection, vybeEnabled) { getOrderedSections(defaultStartSection, vybeEnabled) }
+    val visibleSelected = selected.visibleWithVybe(vybeEnabled)
+    val selectedIndex = sections.indexOf(visibleSelected).coerceAtLeast(0)
 
     // Retargeting cancels the running animation and continues from the current
     // position and velocity, so rapid taps always end on the last selection.
-    val indicatorPosition = remember { Animatable(selectedIndex.toFloat()) }
+    val indicatorPosition = remember(sections.size) { Animatable(selectedIndex.toFloat()) }
     LaunchedEffect(selectedIndex) {
         indicatorPosition.animateTo(
             targetValue = selectedIndex.toFloat(),
@@ -148,7 +155,7 @@ fun LibraryNavigationBar(
                 sections.forEachIndexed { index, section ->
                     LibraryNavigationItem(
                         section = section,
-                        selected = section == selected && !searching,
+                        selected = section == visibleSelected && !searching,
                         index = index,
                         slots = slots,
                         emphasis = { capsuleEmphasis(indicatorPosition.value, index) * indicatorAlpha },
@@ -158,7 +165,7 @@ fun LibraryNavigationBar(
                 }
             }
             CompactSectionButton(
-                section = selected,
+                section = visibleSelected,
                 enabled = isCompact,
                 onClick = if (!hasCurrentSong) onShufflePlayLibrary else onExpand,
                 hasCurrentSong = hasCurrentSong,

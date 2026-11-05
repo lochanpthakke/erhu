@@ -10,49 +10,13 @@ data class MetadataSourceOption(
     val summary: String,
 )
 
-/**
- * The sources offered for tag fixing, with what each really provides. Last.fm and Fanart.tv are offered with their
- * true state: without an API key they are listed as not configured;
- * LRCLIB serves lyrics only (Lyrics page) and is not a tag source.
- */
-fun metadataSourceOptions(
-    lastFmConfigured: Boolean,
-    fanartTvConfigured: Boolean = false,
-): List<MetadataSourceOption> =
+/** Keyless metadata and artwork sources. Lyrics providers belong to the separate Lyrics flow. */
+fun metadataSourceOptions(): List<MetadataSourceOption> =
     listOf(
         MetadataSourceOption(
             MetadataSources.ALL,
             "All providers",
-            "Genius, DuckDuckGo, Fanart.tv, Discogs, Wikipedia, iTunes, MusicBrainz, Deezer and Last.fm together",
-        ),
-        MetadataSourceOption(
-            MetadataSources.GENIUS,
-            "Genius",
-            "Keyless artist profile pictures and high-res header portraits",
-        ),
-        MetadataSourceOption(
-            MetadataSources.DUCKDUCKGO,
-            "DuckDuckGo Web Search",
-            "Resilient web image search fallback for artist portraits",
-        ),
-        MetadataSourceOption(
-            MetadataSources.FANART_TV,
-            "Fanart.tv",
-            if (fanartTvConfigured) {
-                "High-resolution community artist thumbs and backgrounds"
-            } else {
-                "Not configured: needs a Fanart.tv API key in Settings"
-            },
-        ),
-        MetadataSourceOption(
-            MetadataSources.DISCOGS,
-            "Discogs",
-            "Music database catalog and artist profile pictures",
-        ),
-        MetadataSourceOption(
-            MetadataSources.WIKIPEDIA,
-            "Wikipedia / Wikimedia",
-            "Wikipedia lead photos and Wikimedia Commons public domain artist images",
+            "iTunes, MusicBrainz and Deezer together",
         ),
         MetadataSourceOption(
             MetadataSources.ITUNES,
@@ -69,34 +33,10 @@ fun metadataSourceOptions(
             "Deezer",
             "Title, artist, album and cover; album genre; no release year. Returns no tracks where Deezer isn't offered, such as India",
         ),
-        MetadataSourceOption(
-            MetadataSources.LAST_FM,
-            "Last.fm",
-            if (lastFmConfigured) {
-                "Title and artist only: Last.fm's search has no album, year or genre"
-            } else {
-                "Not configured: needs a Last.fm API key (lastfm.apiKey in local.properties)"
-            },
-        ),
     )
 
-private val OFFERED_KEYS =
-    listOf(
-        MetadataSources.ALL,
-        MetadataSources.GENIUS,
-        MetadataSources.DUCKDUCKGO,
-        MetadataSources.FANART_TV,
-        MetadataSources.DISCOGS,
-        MetadataSources.WIKIPEDIA,
-        MetadataSources.ITUNES,
-        MetadataSources.MUSICBRAINZ,
-        MetadataSources.DEEZER,
-        MetadataSources.LAST_FM,
-    )
-
-/** A stored source back to an offered one; anything unknown means all providers. */
-fun offeredMetadataSource(stored: String?): String =
-    OFFERED_KEYS.firstOrNull { it.equals(stored, ignoreCase = true) } ?: MetadataSources.ALL
+/** Old or unsupported saved provider choices fall back to the working keyless providers. */
+fun offeredMetadataSource(stored: String?): String = MetadataSources.normalizeSelection(stored)
 
 /** What each field does when it is selected (all tag fields together = "All Fields"). */
 fun MetadataField.summary(): String =

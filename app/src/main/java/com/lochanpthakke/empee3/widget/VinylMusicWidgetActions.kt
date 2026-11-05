@@ -1,36 +1,25 @@
-// Published Android/Glance/WorkManager identity retained for upgrade compatibility.
+// Published callback identities retained for existing widget PendingIntents.
 package com.lochanpthakke.empee3.widget
 
 import android.content.Context
 import androidx.glance.GlanceId
 import androidx.glance.action.ActionParameters
-import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.ActionCallback
 import com.erhu.erhu.core.model.PlaybackStatus
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
-private suspend fun updateAllWidgets(context: Context) {
-    val manager = GlanceAppWidgetManager(context)
-    val vinylWidget = VinylMusicWidget()
-    manager.getGlanceIds(VinylMusicWidget::class.java).forEach { vinylWidget.update(context, it) }
-    val glassWidget = GlassMusicWidget()
-    manager.getGlanceIds(GlassMusicWidget::class.java).forEach { glassWidget.update(context, it) }
-    val musicWidget = MusicWidget()
-    manager.getGlanceIds(MusicWidget::class.java).forEach { musicWidget.update(context, it) }
-}
+import com.erhu.erhu.widget.performWidgetAction
 
 class VinylPlayPauseAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        val controller = context.playbackController()
-        val status = controller.playbackState.value.status
-        val isPlaying = status == PlaybackStatus.PLAYING || status == PlaybackStatus.BUFFERING
-        if (isPlaying) controller.pause() else controller.play()
-        updateAllWidgets(context)
+    ) {
+        performWidgetAction(context, "PlayPause") { controller ->
+            val playing =
+                controller.playbackState.value.status
+                    .let { it == PlaybackStatus.PLAYING || it == PlaybackStatus.BUFFERING }
+            if (playing) controller.pause() else controller.playFromWidget()
+        }
     }
 }
 
@@ -39,9 +28,10 @@ class VinylSkipNextAction : ActionCallback {
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        context.playbackController().skipNext()
-        updateAllWidgets(context)
+    ) {
+        performWidgetAction(context, "SkipNext") { controller ->
+            controller.skipNext()
+        }
     }
 }
 
@@ -50,8 +40,9 @@ class VinylSkipPreviousAction : ActionCallback {
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
-    ) = withContext(Dispatchers.Main) {
-        context.playbackController().skipPrevious()
-        updateAllWidgets(context)
+    ) {
+        performWidgetAction(context, "SkipPrevious") { controller ->
+            controller.skipPrevious()
+        }
     }
 }

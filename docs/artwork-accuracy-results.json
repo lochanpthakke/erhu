@@ -1,0 +1,1793 @@
+{
+  "date": "2026-11-04",
+  "method": "Production AlbumArtworkFinder with independent official catalogue reference images, visual comparison and conservative edition review; metadata fetched live, previously validated image bytes warm in cache. No music files modified.",
+  "metrics": {
+    "cases": 18,
+    "coverDesignMatchRate": 0.8888888888888888,
+    "correctAlbumRate": 0.9444444444444444,
+    "correctArtistRate": 0.9444444444444444,
+    "verifiedEditionRate": 0.5,
+    "noCorrectCoverRate": 0.1111111111111111,
+    "noImageCandidatesRate": 0.05555555555555555,
+    "automaticRecommendations": 7,
+    "automaticRecommendationCorrect": 7,
+    "meanElapsedMs": 16050.166666666666
+  },
+  "cases": [
+    {
+      "case": 0,
+      "input": {
+        "category": "mainstream/local",
+        "query": {
+          "album": "SOS",
+          "artist": "SZA",
+          "year": 2022,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "SOS",
+        "expectedArtist": "SZA",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1658650093",
+        "expectedEdition": "standard original cover design",
+        "observedLocalTrackMetadata": {
+          "title": "SOS",
+          "artist": "SZA",
+          "album": "SOS",
+          "year": "2022"
+        },
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "SOS",
+        "artist": "SZA",
+        "year": 2022,
+        "kind": "ALBUM",
+        "catalogId": "1658650093",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "70781e85cf9d1cb71f653878a66568bc3bbb5dc0afef7a43f3eb8b3851eb8bbd",
+        "visualHash": "7453b552db6134d6:19,48,77"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "SOS",
+        "artist": "SZA",
+        "year": 2022,
+        "kind": "ALBUM",
+        "catalogId": "1658650093",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "70781e85cf9d1cb71f653878a66568bc3bbb5dc0afef7a43f3eb8b3851eb8bbd",
+        "visualHash": "7453b552db6134d6:19,48,77"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 13767,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "TheAudioDB",
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "FAILED",
+          "count": 0,
+          "error": "Provider response unavailable or malformed"
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 1,
+      "input": {
+        "category": "hiphop/local",
+        "query": {
+          "album": "IGOR",
+          "artist": "Tyler, The Creator",
+          "year": 2019,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "IGOR",
+        "expectedArtist": "Tyler, The Creator",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1463409338",
+        "expectedEdition": "standard original cover design",
+        "observedLocalTrackMetadata": {
+          "title": "A BOY IS A GUN*",
+          "artist": "Tyler/ The Creator",
+          "album": "IGOR",
+          "year": "2019"
+        },
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://r2.theaudiodb.com/images/media/album/thumb/xxptvx1558126330.jpg",
+        "source": "TheAudioDB",
+        "album": "IGOR",
+        "artist": "Tyler, the Creator",
+        "year": 2019,
+        "kind": "ALBUM",
+        "releaseGroupId": "c9f1125c-75fa-4ab2-a29b-2efaa51a937f",
+        "catalogId": "2320050",
+        "width": 700,
+        "height": 700,
+        "score": 1.0,
+        "reviewReasons": [
+          "Community artwork: confirm cover"
+        ],
+        "verifiedImage": true,
+        "contentHash": "c0b4d49d8ae346a990bd3268e2c82307d5408699cd382d3eb667f75f42d9e2c8",
+        "visualHash": "c4a8dacea70eca96:158,126,135"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 12496,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "Cover Art Archive release-group",
+        "TheAudioDB"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 5,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 2,
+      "input": {
+        "category": "hiphop",
+        "query": {
+          "album": "Flower Boy",
+          "artist": "Tyler, The Creator",
+          "year": 2017,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Flower Boy",
+        "expectedArtist": "Tyler, The Creator",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1254572564",
+        "expectedEdition": "standard original cover design",
+        "observedLocalTrackMetadata": {
+          "title": "Boredom",
+          "artist": "Tyler/ The Creator/Rex Orange County/Anna of the North",
+          "album": "Flower Boy",
+          "year": "2017"
+        },
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://coverartarchive.org/release/88aba80a-e240-4464-8dad-a32654ba1348/17352753022-1200.jpg",
+        "source": "Cover Art Archive release-group",
+        "album": "Flower Boy",
+        "artist": "Tyler, The Creator",
+        "edition": "Release-group artwork",
+        "kind": "ALBUM",
+        "releaseGroupId": "e248e931-c26c-4c94-aba2-2f89ce583901",
+        "width": 1200,
+        "height": 1200,
+        "score": 0.9700000000000001,
+        "reviewReasons": [
+          "Release-group cover: confirm edition"
+        ],
+        "verifiedImage": true,
+        "contentHash": "c175fac96ad5fc33fee32b16238c7b4b96c0668ad37629bf03299c2f6308b400",
+        "visualHash": "a85cd264d6b2a642:181,118,53"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 16681,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 1,
+      "sources": [
+        "Cover Art Archive release-group"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 5,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 3,
+      "input": {
+        "category": "hiphop/local",
+        "query": {
+          "album": "Her Loss",
+          "artist": "Drake & 21 Savage",
+          "year": 2022,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Her Loss",
+        "expectedArtist": "Drake & 21 Savage",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1653012564",
+        "expectedEdition": "standard original cover design",
+        "observedLocalTrackMetadata": {
+          "title": "3AM on Glenwood",
+          "artist": "21 Savage",
+          "album": "Her Loss",
+          "year": "2023"
+        },
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e1/6e/6a/e16e6a89-3e6d-1936-1a9c-b51680bcd4c1/22UM1IM29132.rgb.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Her Loss",
+        "artist": "Drake & 21 Savage",
+        "year": 2022,
+        "kind": "ALBUM",
+        "catalogId": "1653012564",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "a54d8e0c79d4ad6cd58a20c1713a540309316e65907e724198fe58da505c0bec",
+        "visualHash": "a5b3f35949f133c6:159,128,133"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/e1/6e/6a/e16e6a89-3e6d-1936-1a9c-b51680bcd4c1/22UM1IM29132.rgb.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Her Loss",
+        "artist": "Drake & 21 Savage",
+        "year": 2022,
+        "kind": "ALBUM",
+        "catalogId": "1653012564",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "a54d8e0c79d4ad6cd58a20c1713a540309316e65907e724198fe58da505c0bec",
+        "visualHash": "a5b3f35949f133c6:159,128,133"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 28511,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 1,
+      "sources": [
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 8,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": "InterruptedIOException: timeout"
+        }
+      ]
+    },
+    {
+      "case": 4,
+      "input": {
+        "category": "electronic",
+        "query": {
+          "album": "Discovery",
+          "artist": "Daft Punk",
+          "year": 2001,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Discovery",
+        "expectedArtist": "Daft Punk",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/697194953",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/fd/4a/77/fd4a77db-0ebc-d043-41a2-f32fa1bb0fb4/dj.qrikkdwj.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Discovery",
+        "artist": "Daft Punk",
+        "year": 2001,
+        "kind": "ALBUM",
+        "catalogId": "697194953",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "7ae89ba54c500d710ad4ff5f80ef2cb5fa9d950ca9cf11b67572dfe2c8ba5c7f",
+        "visualHash": "24f89adad2d4b000:28,30,30"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/fd/4a/77/fd4a77db-0ebc-d043-41a2-f32fa1bb0fb4/dj.qrikkdwj.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Discovery",
+        "artist": "Daft Punk",
+        "year": 2001,
+        "kind": "ALBUM",
+        "catalogId": "697194953",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "7ae89ba54c500d710ad4ff5f80ef2cb5fa9d950ca9cf11b67572dfe2c8ba5c7f",
+        "visualHash": "24f89adad2d4b000:28,30,30"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 16110,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "TheAudioDB",
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 5,
+      "input": {
+        "category": "less popular/hiphop",
+        "query": {
+          "album": "Madvillainy",
+          "artist": "Madvillain",
+          "year": 2004,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Madvillainy",
+        "expectedArtist": "Madvillain",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/887699504",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://r2.theaudiodb.com/images/media/album/thumb/madvillainy-55889af6af990.jpg",
+        "source": "TheAudioDB",
+        "album": "Madvillainy",
+        "artist": "Madvillain",
+        "year": 2004,
+        "kind": "ALBUM",
+        "releaseGroupId": "ab570ccb-b06b-3746-8147-4903163ba895",
+        "catalogId": "2274880",
+        "width": 700,
+        "height": 700,
+        "score": 1.0,
+        "reviewReasons": [
+          "Community artwork: confirm cover"
+        ],
+        "verifiedImage": true,
+        "contentHash": "7541c2b9e9feb85d363440cee74eee1f73d3da1121942312f9c59445b29f0296",
+        "visualHash": "828494a6a2a644b2:159,156,156"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 18683,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "Cover Art Archive release-group",
+        "TheAudioDB"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 12,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "FAILED",
+          "count": 0,
+          "error": "Provider response unavailable or malformed"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 6,
+      "input": {
+        "category": "mixtape",
+        "query": {
+          "album": "Acid Rap",
+          "artist": "Chance the Rapper",
+          "year": 2013,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Acid Rap",
+        "expectedArtist": "Chance the Rapper",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1470464025",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://r2.theaudiodb.com/images/media/album/thumb/acid-rap-526f3e16732ec.jpg",
+        "source": "TheAudioDB",
+        "album": "Acid Rap",
+        "artist": "Chance the Rapper",
+        "year": 2013,
+        "kind": "ALBUM",
+        "releaseGroupId": "02a9a0f7-8945-436f-8eca-144f94de1518",
+        "catalogId": "2206504",
+        "width": 700,
+        "height": 700,
+        "score": 1.0,
+        "reviewReasons": [
+          "Community artwork: confirm cover"
+        ],
+        "verifiedImage": true,
+        "contentHash": "fee9c1326e4d21b193c26ef2b07e7b6de47026a57b1756f5c67311ee8e4cbc8e",
+        "visualHash": "fab9d4dadcece460:125,63,99"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 13804,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "Cover Art Archive release-group",
+        "TheAudioDB"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 6,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "FAILED",
+          "count": 0,
+          "error": "Provider response unavailable or malformed"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 7,
+      "input": {
+        "category": "older",
+        "query": {
+          "album": "The Dark Side of the Moon",
+          "artist": "Pink Floyd",
+          "year": 1973,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "The Dark Side of the Moon",
+        "expectedArtist": "Pink Floyd",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1065973699",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://r2.theaudiodb.com/images/media/album/thumb/the-dark-side-of-the-moon-4decb408b6604.jpg",
+        "source": "TheAudioDB",
+        "album": "The Dark Side of the Moon",
+        "artist": "Pink Floyd",
+        "year": 1973,
+        "kind": "ALBUM",
+        "releaseGroupId": "f5093c06-23e3-404f-aeaa-40f72885ee3a",
+        "catalogId": "2109889",
+        "width": 700,
+        "height": 700,
+        "score": 1.0,
+        "reviewReasons": [
+          "Community artwork: confirm cover"
+        ],
+        "verifiedImage": true,
+        "contentHash": "df1688938e93acd081158d54b39e7d5d38e6410f9bb3e1320cd9e871b1cac19f",
+        "visualHash": "2a000000:8,11,7"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 10973,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "Cover Art Archive release-group",
+        "TheAudioDB"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "RATE_LIMITED",
+          "count": 0,
+          "error": "HTTP 503"
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 8,
+      "input": {
+        "category": "less popular/electronic",
+        "query": {
+          "album": "EARS",
+          "artist": "Kaitlyn Aurelia Smith",
+          "year": 2016,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "EARS",
+        "expectedArtist": "Kaitlyn Aurelia Smith",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1077883780",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music69/v4/67/52/28/675228d2-152d-719f-2099-59e028dd91bf/751937435525.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "EARS",
+        "artist": "Kaitlyn Aurelia Smith",
+        "year": 2016,
+        "kind": "ALBUM",
+        "catalogId": "1077883780",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "67508325a5a711fabe6db52d929bcb2a48c3c18b8ffa3125a9dca296cc2ad540",
+        "visualHash": "a8e1b1c8a6e9a3da:57,48,41"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music69/v4/67/52/28/675228d2-152d-719f-2099-59e028dd91bf/751937435525.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "EARS",
+        "artist": "Kaitlyn Aurelia Smith",
+        "year": 2016,
+        "kind": "ALBUM",
+        "catalogId": "1077883780",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "67508325a5a711fabe6db52d929bcb2a48c3c18b8ffa3125a9dca296cc2ad540",
+        "visualHash": "a8e1b1c8a6e9a3da:57,48,41"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 20024,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "TheAudioDB",
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 9,
+      "input": {
+        "category": "EP",
+        "query": {
+          "album": "Come to Daddy - EP",
+          "artist": "Aphex Twin",
+          "year": 1997,
+          "kind": "EP"
+        },
+        "expectedAlbum": "Come to Daddy - EP",
+        "expectedArtist": "Aphex Twin",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/282478739",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://coverartarchive.org/release/0a6972ee-0a86-3068-a835-f9035c968d99/8202703406-1200.jpg",
+        "source": "Cover Art Archive release-group",
+        "album": "Come to Daddy",
+        "artist": "Aphex Twin",
+        "edition": "Release-group artwork",
+        "kind": "EP",
+        "releaseGroupId": "557e1cd5-5b6a-46c1-8d5b-45a32767449d",
+        "width": 1000,
+        "height": 1000,
+        "score": 0.9700000000000001,
+        "reviewReasons": [
+          "Release-group cover: confirm edition"
+        ],
+        "verifiedImage": true,
+        "contentHash": "0ac1b9ff5f1636276f5e1f8917a2489426573f59d896262808750f17186a9905",
+        "visualHash": "dadcba48b37155eb:189,185,188"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 18755,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 1,
+      "sources": [
+        "Cover Art Archive release-group"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 12,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "FAILED",
+          "count": 0,
+          "error": "Provider response unavailable or malformed"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 10,
+      "input": {
+        "category": "single",
+        "query": {
+          "album": "Get Lucky - Single",
+          "artist": "Daft Punk",
+          "year": 2013,
+          "kind": "SINGLE"
+        },
+        "expectedAlbum": "Get Lucky - Single",
+        "expectedArtist": "Daft Punk",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://musicbrainz.org/release/12b86859-ac48-4b8a-850b-0755adc88d8a",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://coverartarchive.org/release/12b86859-ac48-4b8a-850b-0755adc88d8a/9495737456-500.jpg",
+        "source": "Cover Art Archive release",
+        "album": "Get Lucky",
+        "artist": "Daft Punk feat. Pharrell Williams",
+        "year": 2013,
+        "edition": "made in the EU",
+        "kind": "SINGLE",
+        "releaseId": "12b86859-ac48-4b8a-850b-0755adc88d8a",
+        "releaseGroupId": "9b7ce16c-8310-4cc5-aad5-09893a5a8297",
+        "width": 500,
+        "height": 435,
+        "score": 1.0,
+        "reviewReasons": [
+          "Low-resolution image"
+        ],
+        "verifiedImage": true,
+        "contentHash": "48c8a607d9af652d5e46bea1f1ac5804c57faa4ec0e35f52b8f0e105380d2fc7",
+        "visualHash": "9ad4b2f2d0f068fa:176,41,8"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 20484,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 2,
+      "sources": [
+        "Cover Art Archive release"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 3,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "TIMED_OUT",
+          "count": 0,
+          "error": "Provider timed out"
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 11,
+      "input": {
+        "category": "deluxe",
+        "query": {
+          "album": "Nevermind (Deluxe Edition)",
+          "artist": "Nirvana",
+          "year": 2011,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Nevermind (Deluxe Edition)",
+        "expectedArtist": "Nirvana",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1586895441",
+        "expectedEdition": "2011 deluxe edition",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://coverartarchive.org/release/c771f7fc-9e62-4349-a2e3-ceaf7122bf5b/30501372565-1200.jpg",
+        "source": "Cover Art Archive release-group",
+        "album": "Nevermind",
+        "artist": "Nirvana",
+        "edition": "Release-group artwork",
+        "kind": "ALBUM",
+        "releaseGroupId": "1b022e01-4da6-387b-8658-8678046e4cef",
+        "width": 1200,
+        "height": 1200,
+        "score": 0.79,
+        "reviewReasons": [
+          "Release-group cover: confirm edition",
+          "Alternate edition"
+        ],
+        "verifiedImage": true,
+        "contentHash": "c679a6711db0ae070ec86c00395e84ff5953350b66a58c89c9873349e8177819",
+        "visualHash": "322921fc4d4dab4d:17,123,169"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": false,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Wrong edition: requested deluxe cover not found",
+      "elapsedMs": 8671,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 1,
+      "sources": [
+        "Cover Art Archive release-group"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "RATE_LIMITED",
+          "count": 0,
+          "error": "HTTP 503"
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 12,
+      "input": {
+        "category": "remaster",
+        "query": {
+          "album": "OK Computer OKNOTOK 1997 2017",
+          "artist": "Radiohead",
+          "year": 2017,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "OK Computer OKNOTOK 1997 2017",
+        "expectedArtist": "Radiohead",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1239489060",
+        "expectedEdition": "2017 OKNOTOK remaster",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://coverartarchive.org/release/a1ed87aa-2079-4e42-bbeb-6309b3b68674/17082158667-500.jpg",
+        "source": "Cover Art Archive release",
+        "album": "OK Computer: OKNOTOK 1997 2017",
+        "artist": "Radiohead",
+        "year": 2017,
+        "kind": "ALBUM",
+        "releaseId": "a1ed87aa-2079-4e42-bbeb-6309b3b68674",
+        "releaseGroupId": "b1392450-e666-3926-a536-22c65f834433",
+        "width": 500,
+        "height": 500,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "617b5784fd4ea3563585b0e2d11e3c86eacf7080daceae7651815fb6775d58b6",
+        "visualHash": "335b33c8dc7c55d5:166,160,154"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://coverartarchive.org/release/a1ed87aa-2079-4e42-bbeb-6309b3b68674/17082158667-500.jpg",
+        "source": "Cover Art Archive release",
+        "album": "OK Computer: OKNOTOK 1997 2017",
+        "artist": "Radiohead",
+        "year": 2017,
+        "kind": "ALBUM",
+        "releaseId": "a1ed87aa-2079-4e42-bbeb-6309b3b68674",
+        "releaseGroupId": "b1392450-e666-3926-a536-22c65f834433",
+        "width": 500,
+        "height": 500,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "617b5784fd4ea3563585b0e2d11e3c86eacf7080daceae7651815fb6775d58b6",
+        "visualHash": "335b33c8dc7c55d5:166,160,154"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 19808,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 1,
+      "sources": [
+        "Cover Art Archive release"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 8,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": "InterruptedIOException: timeout"
+        }
+      ]
+    },
+    {
+      "case": 13,
+      "input": {
+        "category": "similar-name",
+        "query": {
+          "album": "Greatest Hits",
+          "artist": "Queen",
+          "year": 1981,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Greatest Hits",
+        "expectedArtist": "Queen",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/6781080300",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b0/ca/05/b0ca05aa-29c9-4e01-5a16-f6fa06bce05c/602527594347.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Greatest Hits",
+        "artist": "Queen",
+        "year": 1981,
+        "kind": "ALBUM",
+        "catalogId": "6781080300",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "5d908f3d676c69ceaeb084b859a0e620ab6a85c65e1d35f7a04aa0480c2e17e0",
+        "visualHash": "5431d756a474722b:48,42,38"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b0/ca/05/b0ca05aa-29c9-4e01-5a16-f6fa06bce05c/602527594347.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Greatest Hits",
+        "artist": "Queen",
+        "year": 1981,
+        "kind": "ALBUM",
+        "catalogId": "6781080300",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "5d908f3d676c69ceaeb084b859a0e620ab6a85c65e1d35f7a04aa0480c2e17e0",
+        "visualHash": "5431d756a474722b:48,42,38"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 16056,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 3,
+      "sources": [
+        "Cover Art Archive release",
+        "TheAudioDB",
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 12,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 3,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 14,
+      "input": {
+        "category": "similar-name",
+        "query": {
+          "album": "Greatest Hits",
+          "artist": "Fleetwood Mac",
+          "year": 1988,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Greatest Hits",
+        "expectedArtist": "Fleetwood Mac",
+        "expectAbstention": false,
+        "expectedArtworkReference": "https://music.apple.com/us/album/202271826",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/d2/48/f4/d248f4ae-a7e4-a48e-1588-6617de3e8d76/mzi.izeorbmm.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Greatest Hits",
+        "artist": "Fleetwood Mac",
+        "year": 1988,
+        "kind": "ALBUM",
+        "catalogId": "202271826",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "495830f4b20babd64e2538d65692193855542c60ae0f5253d200a8435b480113",
+        "visualHash": "c28b0288000:85,83,61"
+      },
+      "automaticRecommendation": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/d2/48/f4/d248f4ae-a7e4-a48e-1588-6617de3e8d76/mzi.izeorbmm.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "Greatest Hits",
+        "artist": "Fleetwood Mac",
+        "year": 1988,
+        "kind": "ALBUM",
+        "catalogId": "202271826",
+        "width": 1000,
+        "height": 1000,
+        "score": 1.0,
+        "verifiedImage": true,
+        "contentHash": "495830f4b20babd64e2538d65692193855542c60ae0f5253d200a8435b480113",
+        "visualHash": "c28b0288000:85,83,61"
+      },
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 17773,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 4,
+      "sources": [
+        "Cover Art Archive release",
+        "Cover Art Archive release-group",
+        "TheAudioDB",
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 12,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 4,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 15,
+      "input": {
+        "category": "missing artist",
+        "query": {
+          "album": "SOS",
+          "artist": "Unknown artist",
+          "year": 2022,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "SOS",
+        "expectedArtist": "SZA",
+        "expectAbstention": true,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1658650093",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/1000x1000bb.jpg",
+        "source": "iTunes / Apple Search",
+        "album": "SOS",
+        "artist": "SZA",
+        "year": 2022,
+        "kind": "ALBUM",
+        "catalogId": "1658650093",
+        "width": 1000,
+        "height": 1000,
+        "score": 0.6000000000000001,
+        "reviewReasons": [
+          "Artist needs review"
+        ],
+        "verifiedImage": true,
+        "contentHash": "70781e85cf9d1cb71f653878a66568bc3bbb5dc0afef7a43f3eb8b3851eb8bbd",
+        "visualHash": "7453b552db6134d6:19,48,77"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": true,
+      "editionAssessment": "Verified against catalogue/release identity and reference artwork",
+      "elapsedMs": 19643,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 9,
+      "sources": [
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 12,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "FAILED",
+          "count": 0,
+          "error": "Provider response unavailable or malformed"
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 40,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 9,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 16,
+      "input": {
+        "category": "incorrect embedded artist/local",
+        "query": {
+          "album": "Flower Boy",
+          "artist": "Various Artists",
+          "year": 2017,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Flower Boy",
+        "expectedArtist": "Tyler, The Creator",
+        "expectAbstention": true,
+        "expectedArtworkReference": "https://music.apple.com/us/album/1254572564",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": {
+        "imageUrl": "https://coverartarchive.org/release/7b19feb7-2c94-4f49-a887-868cde3c5941/24731013707-1200.jpg",
+        "source": "Cover Art Archive release",
+        "album": "Flower Boy",
+        "artist": "Tyler, The Creator",
+        "year": 2017,
+        "edition": "limited edition translucent yellow",
+        "kind": "ALBUM",
+        "releaseId": "7b19feb7-2c94-4f49-a887-868cde3c5941",
+        "releaseGroupId": "e248e931-c26c-4c94-aba2-2f89ce583901",
+        "width": 600,
+        "height": 600,
+        "score": 0.6000000000000001,
+        "reviewReasons": [
+          "Artist needs review"
+        ],
+        "verifiedImage": true,
+        "contentHash": "3afc40d4c4b9b7a3ea80c056f23f8b4c83c9f386e8fb7c002e25a573b0b11f6a",
+        "visualHash": "aa5c5264d6b2e7c7:180,117,52"
+      },
+      "automaticRecommendation": null,
+      "coverDesignCorrect": true,
+      "albumCorrect": true,
+      "artistCorrect": true,
+      "editionVerified": false,
+      "editionAssessment": "Unverified: release-group/community candidate; matching design does not establish exact edition",
+      "elapsedMs": 10960,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 10,
+      "sources": [
+        "Cover Art Archive release",
+        "Cover Art Archive release-group",
+        "iTunes / Apple Search"
+      ],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "SUCCESS",
+          "count": 10,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "SUCCESS",
+          "count": 2,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "SUCCESS",
+          "count": 1,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "SUCCESS",
+          "count": 22,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "SUCCESS",
+          "count": 10,
+          "error": null
+        }
+      ]
+    },
+    {
+      "case": 17,
+      "input": {
+        "category": "incorrect artist",
+        "query": {
+          "album": "Discovery",
+          "artist": "Queen",
+          "year": 2001,
+          "kind": "ALBUM"
+        },
+        "expectedAlbum": "Discovery",
+        "expectedArtist": "Daft Punk",
+        "expectAbstention": true,
+        "expectedArtworkReference": "https://music.apple.com/us/album/697194953",
+        "expectedEdition": "standard original cover design",
+        "queryScope": "Album-level catalogue lookup; track title is not a search parameter. Queries are curated/normalised; observed local file tags are retained separately where available."
+      },
+      "reviewedCandidate": null,
+      "automaticRecommendation": null,
+      "coverDesignCorrect": false,
+      "albumCorrect": false,
+      "artistCorrect": false,
+      "editionVerified": false,
+      "editionAssessment": "No candidate",
+      "elapsedMs": 5704,
+      "fromCache": false,
+      "imageCacheWarm": true,
+      "validCandidateCount": 0,
+      "sources": [],
+      "outcomes": [
+        {
+          "provider": "MusicBrainz release identification",
+          "status": "RATE_LIMITED",
+          "count": 0,
+          "error": "HTTP 503"
+        },
+        {
+          "provider": "Cover Art Archive exact release",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Cover Art Archive release-group fallback",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Deezer",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "iTunes / Apple Search",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "TheAudioDB",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        },
+        {
+          "provider": "Artwork image verification",
+          "status": "NO_RESULTS",
+          "count": 0,
+          "error": null
+        }
+      ]
+    }
+  ]
+}

@@ -182,6 +182,62 @@ class TrackCarouselStateTest {
         assertEquals(incomingPosition, state.position, 0f)
     }
 
+    @Test
+    fun fullWidthSwipeStopsAtTheIncomingPageInsteadOfPassingThroughIt() = runTest {
+        val state = TrackCarouselState(backgroundScope).apply { page = 100f }
+        state.startDrag()
+        state.dragBy(-250f, true, true)
+        assertEquals(0f, state.distance(1), 0f)
+        state.release(1, -5000f) {}
+        state.onTrackChanged(1)
+        assertEquals(0f, state.distance(0), 0f)
+    }
+
+    @Test
+    fun acknowledgementUsesTheReportedNeighbourRatherThanThePendingCommand() = runTest {
+        val state = TrackCarouselState(backgroundScope).apply { page = 100f }
+        state.skipFromButton(1) {}
+        val previousPosition = state.distance(-1)
+        state.onTrackChanged(-1)
+        assertEquals(previousPosition, state.distance(0), 0f)
+    }
+
+    @Test
+    fun repeatedSongOccurrencesRetainTheirKeysThroughBothDirections() = runTest {
+        val state = TrackCarouselState(backgroundScope).apply { page = 100f }
+        val incomingKey = state.anchor + 1
+        state.onTrackChanged(1)
+        assertEquals(incomingKey, state.anchor)
+        state.onTrackChanged(-1)
+        assertEquals(incomingKey, state.anchor + 1)
+    }
+
+    @Test
+    fun flingCannotReverseOrOvershootTheSettlingDestination() {
+        assertEquals(0f, settlingVelocity(0f, 0f, -5000f, 100f), 0f)
+        assertEquals(0f, settlingVelocity(-80f, -100f, 1000f, 100f), 0f)
+        assertEquals(-250f, settlingVelocity(-90f, -100f, -5000f, 100f), 0f)
+    }
+
+    @Test
+    fun releaseSettlesMonotonicallyAfterPlaybackHandoff() = runTest {
+        val clock = CountingFrameClock()
+        val state = TrackCarouselState(CoroutineScope(backgroundScope.coroutineContext + clock)).apply { page = 100f }
+        state.startDrag()
+        state.dragBy(-90f, true, true)
+        state.release(1, -5000f) {}
+        state.onTrackChanged(1)
+        state.settleAfterTrackChange()
+        var previous = state.position
+        repeat(45) {
+            advanceTimeBy(16)
+            runCurrent()
+            assertEquals(true, state.position >= -0.001f && state.position <= previous + 0.001f)
+            previous = state.position
+        }
+        assertEquals(0f, state.position, 0.01f)
+    }
+
     private class CountingFrameClock : MonotonicFrameClock {
         var requests = 0
         private var nanos = 0L

@@ -13,6 +13,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -94,6 +95,10 @@ internal class TrackCarouselState(
     var position by mutableFloatStateOf(0f)
         private set
 
+    /** Queue occurrences, rather than song ids, own the moving card compositions. */
+    var anchor by mutableLongStateOf(0L)
+        private set
+
     private var dragging = false
 
     /** Committed swipes whose track change has not arrived yet (+ = next, - = previous). */
@@ -114,7 +119,10 @@ internal class TrackCarouselState(
         canGoPrevious: Boolean,
     ) {
         val towardsMissing = (position + delta < 0f && !canGoNext) || (position + delta > 0f && !canGoPrevious)
-        position += if (towardsMissing) delta * EDGE_RESISTANCE else delta
+        val moved = position + if (towardsMissing) delta * EDGE_RESISTANCE else delta
+        // Only one neighbouring page belongs to a gesture. Long swipes must not pull it
+        // through the centre and then spring backwards after the playback handoff.
+        position = if (page > 0f) moved.coerceIn(-page, page) else moved
     }
 
     /** Ends a drag: [direction] +1 = skip to next, -1 = previous, 0 = spring back. */
@@ -165,12 +173,10 @@ internal class TrackCarouselState(
      * 0 an unrelated jump (e.g. a queue tap).
      */
     internal fun onTrackChanged(direction: Int) {
-        val shift =
-            if (pending != 0) {
-                sign(pending.toFloat()).toInt()
-            } else {
-                direction
-            }
+        // A request is not an acknowledgement: an external change, opposite command or
+        // coalesced update can report a different neighbour from the one requested.
+        val shift = direction
+        anchor += if (direction == 0) 3L else direction.toLong()
         base += shift * page
         // This handoff runs during composition. Do not subscribe that composition
         // to position, which otherwise changes on every drag/animation frame.
@@ -200,7 +206,7 @@ internal class TrackCarouselState(
         settle =
             scope.launch {
                 offset.snapTo(start)
-                offset.animateTo(absolute, Motion.trackSettle(), initialVelocity = velocity) {
+                offset.animateTo(absolute, Motion.trackSettle(), initialVelocity = settlingVelocity(start, absolute, velocity, page)) {
                     position = value + base
                 }
                 if (!dragging) Interactions.put(Interactions.TRACK, null)
@@ -291,7 +297,7 @@ internal fun TrackCarousel(
     modifier: Modifier = Modifier,
     reduceMotion: Boolean = false,
     stack: () -> Float = { 0f },
-    content: @Composable (song: Song, isCurrent: Boolean, distance: () -> Float) -> Unit,
+    content: @Composable (song: Song, isCurrent: Boolean, distance: () -> Float, slot: Int) -> Unit,
 ) {
     // Stacked, the card behind is the next song's; the previous one fades out (at the end of the
     // queue, with no next song, the previous one stays as the card behind instead).
@@ -312,9 +318,9 @@ internal fun TrackCarousel(
         ) {
             val pages = listOfNotNull(previous?.let { -1 to it }, 0 to current, next?.let { 1 to it })
             pages.forEach { (slot, song) ->
-                // A song can be its own neighbour (2-song repeat, single song): keep keys unique.
-                val duplicate = slot != 0 && (song.id == current.id || (slot == 1 && song.id == previous?.id))
-                key(if (duplicate) "${song.id}#$slot" else song.id) {
+                // The same song may occupy several queue entries. A slot-dependent duplicate
+                // key used to recreate its artwork exactly as it became the current card.
+                key(song.id, state.anchor + slot) {
                     val distance = { state.distance(slot) }
                     // The card nearest the centre is drawn on top. Flips once per swipe, not per frame.
                     val inFront by remember(slot, transition) {
@@ -335,7 +341,7 @@ internal fun TrackCarousel(
                                 .then(if (slot == 0) Modifier.onSizeChanged { state.page = it.width * SIDE_SPACING } else Modifier),
                         contentAlignment = Alignment.Center,
                     ) {
-                        content(song, slot == 0, distance)
+                        content(song, slot == 0, distance, slot)
                     }
                 }
             }
@@ -380,15 +386,16 @@ private fun GraphicsLayerScope.depthCard(
 ) {
     val away = abs(distance)
     val near = away.coerceAtMost(1f)
+    val depth = near * near * (3f - 2f * near)
     val sideScale = if (reduceMotion) REDUCED_SIDE_SCALE else SIDE_SCALE
     val spread = sign(distance) * size.width * SIDE_SPACING
     // Out to the side half way, back behind the centre at one place over.
     val stackedOut = 2f * minOf(near, 1f - near)
-    val scale = lerp(1f - (1f - sideScale) * near, 1f + (STACKED_BEHIND_SCALE - 1f) * near, stack)
+    val scale = lerp(1f - (1f - sideScale) * depth, 1f + (STACKED_BEHIND_SCALE - 1f) * depth, stack)
     scaleX = scale
     scaleY = scale
     translationX = lerp(distance * size.width * SIDE_SPACING, spread * stackedOut, stack)
-    rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * near * (1f - stack)
+    rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * depth * (1f - stack)
     cameraDistance = CAMERA_DISTANCE * density
     val vanish = (1f - (away - 1f).coerceAtLeast(0f) / (VANISH_DISTANCE - 1f)).coerceIn(0f, 1f)
     val gathered = if (hideLeft) (stack * (-distance).coerceIn(0f, 1f) * STACKED_HIDE_RATE).coerceAtMost(1f) else 0f
@@ -420,11 +427,16 @@ internal fun Modifier.trackCarouselSwipe(
             state.startDrag()
             var travelled = slop.x
             state.dragBy(slop.x, canGoNext(), canGoPrevious())
-            if (start.pressed) {
-                trackDrag(start.id, tracker) { delta ->
-                    travelled += delta.x
-                    state.dragBy(delta.x, canGoNext(), canGoPrevious())
+            try {
+                if (start.pressed) {
+                    trackDrag(start.id, tracker) { delta ->
+                        travelled += delta.x
+                        state.dragBy(delta.x, canGoNext(), canGoPrevious())
+                    }
                 }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                state.release(0, 0f, skip)
+                throw cancelled
             }
             val velocity = tracker.calculateVelocity().x
             val wanted =
@@ -471,4 +483,19 @@ internal fun completedHorizontalSwipe(
     val travel = up.position - down.position
     val distance = travel.getDistance()
     return if (distance > touchSlop && abs(travel.x) > abs(travel.y)) travel * (1f - touchSlop / distance) else null
+}
+
+/** Bound release energy to the remaining travel; never fling through the destination. */
+internal fun settlingVelocity(
+    start: Float,
+    target: Float,
+    velocity: Float,
+    page: Float,
+): Float {
+    val remaining = target - start
+    if (remaining == 0f || velocity * remaining <= 0f) return 0f
+    // For the critically damped spring (stiffness 650), v <= sqrt(k) * distance
+    // approaches the destination monotonically. Also cap anomalous batched-input velocities.
+    val limit = minOf(abs(remaining) * 25f, page * 4f)
+    return velocity.coerceIn(-limit, limit)
 }

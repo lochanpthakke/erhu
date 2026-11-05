@@ -32,6 +32,16 @@ interface ThemeRepository {
     val scanLocationConfigured: StateFlow<Boolean>
     val defaultStartSection: StateFlow<String>
 
+    /** Null until persisted navigation preferences have loaded; absent preference defaults to true. */
+    val vybeEnabled: StateFlow<Boolean?>
+
+    /** Null while loading; absent/false means the introduction has not been completed. */
+    val onboardingCompleted: StateFlow<Boolean?>
+
+    suspend fun completeOnboarding(): AppResult<Unit>
+
+    suspend fun setVybeEnabled(enabled: Boolean): AppResult<Unit>
+
     /** Metadata & Artwork provider choice as stored ("" until the user picks one). */
     val metadataProvider: StateFlow<String>
 
@@ -40,9 +50,6 @@ interface ThemeRepository {
 
     /** Auto-accept threshold for metadata matches as stored (0 until the user changes it). */
     val metadataConfidenceThreshold: StateFlow<Float>
-
-    /** Fanart.tv personal API key as stored ("" until the user enters one). */
-    val fanartTvApiKey: StateFlow<String>
 
     val sidebarGlassyness: StateFlow<Float>
     val uiGlassyness: StateFlow<Float>
@@ -69,8 +76,6 @@ interface ThemeRepository {
     suspend fun setMetadataFixAction(action: String): AppResult<Unit>
 
     suspend fun setMetadataConfidenceThreshold(threshold: Float): AppResult<Unit>
-
-    suspend fun setFanartTvApiKey(apiKey: String): AppResult<Unit>
 
     suspend fun setCustomScanLocation(
         uri: String,

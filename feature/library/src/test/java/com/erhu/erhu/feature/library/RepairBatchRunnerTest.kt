@@ -224,7 +224,7 @@ class RepairBatchRunnerTest {
         ) = providerStatusText(ProviderOutcome("Last.fm", status = status, errorMessage = reason))
         assertEquals("Not queried: Not selected (source: MusicBrainz)", line(ProviderStatus.SKIPPED, "Not selected (source: MusicBrainz)"))
         assertEquals("Not configured: No Last.fm API key configured", line(ProviderStatus.NOT_CONFIGURED, "No Last.fm API key configured"))
-        assertEquals("Credentials rejected: Last.fm error 10: Invalid API key", line(ProviderStatus.AUTH_FAILED, "Last.fm error 10: Invalid API key"))
+        assertEquals("Access refused: Access refused (HTTP 403)", line(ProviderStatus.AUTH_FAILED, "Access refused (HTTP 403)"))
         assertTrue(line(ProviderStatus.NETWORK_ERROR, "dns").startsWith("Network unavailable"))
         assertEquals("Searching…", providerStatusText(ProviderOutcome("Deezer", status = ProviderStatus.IN_PROGRESS)))
         for (status in ProviderStatus.entries) {
@@ -248,13 +248,16 @@ class RepairBatchRunnerTest {
     }
 
     @Test
-    fun lastFm_isOfferedWithItsRealConfiguration() {
-        val unconfigured = metadataSourceOptions(lastFmConfigured = false).single { it.key == MetadataSources.LAST_FM }
-        assertTrue(unconfigured.summary.startsWith("Not configured"))
-        val configured = metadataSourceOptions(lastFmConfigured = true).single { it.key == MetadataSources.LAST_FM }
-        assertFalse(configured.summary.startsWith("Not configured"))
-        assertEquals(MetadataSources.LAST_FM, offeredMetadataSource("LastFm"))
-        assertEquals(MetadataSources.ALL, offeredMetadataSource("Spotify"))
+    fun removedSourceSelectionsUseTheRemainingProviders() {
+        val options = metadataSourceOptions()
+        assertFalse(options.any { it.key in setOf("LastFm", "FanartTv") })
+        assertTrue(options.any { it.key == MetadataSources.ITUNES })
+        assertTrue(options.any { it.key == MetadataSources.MUSICBRAINZ })
+        assertTrue(options.any { it.key == MetadataSources.DEEZER })
+        for (saved in listOf("LastFm", "Last.fm", "FanartTv", "Fanart.tv", "Spotify")) {
+            assertEquals(MetadataSources.ALL, offeredMetadataSource(saved))
+        }
+        assertEquals(MetadataSources.ITUNES, offeredMetadataSource("iTunes / Apple Music"))
     }
 
     @Test

@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStream
 import javax.inject.Inject
@@ -69,6 +71,28 @@ class ThemeRepositoryImpl
         private val _defaultStartSection = MutableStateFlow("TRACKS")
         override val defaultStartSection: StateFlow<String> = _defaultStartSection.asStateFlow()
 
+        override val vybeEnabled: StateFlow<Boolean?> =
+            dataStore.data
+                .map { it.vybeEnabledOrDefault() }
+                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+
+        override val onboardingCompleted: StateFlow<Boolean?> =
+            dataStore.data
+                .map { it.onboardingCompleted }
+                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+
+        override suspend fun completeOnboarding(): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setOnboardingCompleted(true).build() }
+                Unit
+            }
+
+        override suspend fun setVybeEnabled(enabled: Boolean): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { it.toBuilder().setVybeEnabled(enabled).build() }
+                Unit
+            }
+
         private val _metadataProvider = MutableStateFlow("")
         override val metadataProvider: StateFlow<String> = _metadataProvider.asStateFlow()
 
@@ -77,9 +101,6 @@ class ThemeRepositoryImpl
 
         private val _metadataConfidenceThreshold = MutableStateFlow(0f)
         override val metadataConfidenceThreshold: StateFlow<Float> = _metadataConfidenceThreshold.asStateFlow()
-
-        private val _fanartTvApiKey = MutableStateFlow("")
-        override val fanartTvApiKey: StateFlow<String> = _fanartTvApiKey.asStateFlow()
 
         private val _sidebarGlassyness = MutableStateFlow(0.85f)
         override val sidebarGlassyness: StateFlow<Float> = _sidebarGlassyness.asStateFlow()
@@ -108,7 +129,6 @@ class ThemeRepositoryImpl
                 _metadataProvider.value = proto.metadataProvider
                 _metadataFixAction.value = proto.metadataFixAction
                 _metadataConfidenceThreshold.value = proto.metadataConfidenceThreshold
-                _fanartTvApiKey.value = proto.fanartTvApiKey
                 _sidebarGlassyness.value = if (proto.sidebarGlassyness > 0f) proto.sidebarGlassyness else 0.85f
                 _uiGlassyness.value = if (proto.uiGlassyness > 0f) proto.uiGlassyness else 0.35f
                 _popupGlassOpacity.value = proto.popupGlassOpacityOrDefault()
@@ -197,12 +217,6 @@ class ThemeRepositoryImpl
             appResultOf {
                 dataStore.updateData { it.toBuilder().setMetadataConfidenceThreshold(threshold).build() }
                 _metadataConfidenceThreshold.value = threshold
-            }
-
-        override suspend fun setFanartTvApiKey(apiKey: String): AppResult<Unit> =
-            appResultOf {
-                dataStore.updateData { it.toBuilder().setFanartTvApiKey(apiKey.trim()).build() }
-                _fanartTvApiKey.value = apiKey.trim()
             }
 
         override suspend fun setCustomScanLocation(

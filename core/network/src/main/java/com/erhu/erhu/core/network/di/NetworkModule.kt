@@ -4,7 +4,6 @@ package com.erhu.erhu.core.network.di
 
 import com.erhu.erhu.core.network.api.AcousticBrainzApi
 import com.erhu.erhu.core.network.api.DeezerApi
-import com.erhu.erhu.core.network.api.LastFmApi
 import com.erhu.erhu.core.network.api.LrclibApi
 import com.erhu.erhu.core.network.api.MusicBrainzApi
 import com.erhu.erhu.core.network.apple.AppleMusicCatalogApi
@@ -26,6 +25,28 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
+    @Provides
+    @Singleton
+    fun provideAlbumArtworkFinder(
+        @dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context,
+        client: OkHttpClient,
+        json: Json,
+        images: com.erhu.erhu.core.network.artwork.AndroidArtworkImageInspector,
+        musicBrainz: com.erhu.erhu.core.network.provider.MusicBrainzProvider,
+    ): com.erhu.erhu.core.network.artwork.AlbumArtworkFinder =
+        com.erhu.erhu.core.network.artwork.AlbumArtworkFinder(
+            client,
+            json,
+            com.erhu.erhu.core.network.artwork
+                .AlbumArtworkCache(java.io.File(context.filesDir, "album-artwork-v1")),
+            images,
+            audioDbKey =
+                com.erhu.erhu.core.network.BuildConfig.THEAUDIODB_API_KEY.ifBlank {
+                    if (com.erhu.erhu.core.network.BuildConfig.DEBUG) "123" else ""
+                },
+            musicBrainzRequest = { request -> musicBrainz.throttled(request) },
+        )
+
     @Provides
     @Singleton
     fun provideJson(): Json =
@@ -150,22 +171,6 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideLastFmApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): LastFmApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://ws.audioscrobbler.com/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(LastFmApi::class.java)
-    }
-
-    @Provides
-    @Singleton
     fun provideLrclibApi(
         okHttpClient: OkHttpClient,
         json: Json,
@@ -190,7 +195,7 @@ object NetworkModule {
         return Retrofit
             .Builder()
             .baseUrl("https://api.github.com/")
-            .client(okHttpClient)
+            .client(okHttpClient.newBuilder().callTimeout(20, TimeUnit.SECONDS).build())
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(com.erhu.erhu.core.network.api.GitHubUpdateApi::class.java)
@@ -211,108 +216,15 @@ object NetworkModule {
             .build()
             .create(com.erhu.erhu.core.network.api.ITunesApi::class.java)
     }
-
-    @Provides
-    @Singleton
-    fun provideWikipediaApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.erhu.erhu.core.network.api.WikipediaApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://en.wikipedia.org/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.erhu.erhu.core.network.api.WikipediaApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideDiscogsApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.erhu.erhu.core.network.api.DiscogsApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://api.discogs.com/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.erhu.erhu.core.network.api.DiscogsApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideWikidataApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.erhu.erhu.core.network.api.WikidataApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://www.wikidata.org/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.erhu.erhu.core.network.api.WikidataApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideGeniusApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.erhu.erhu.core.network.api.GeniusApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://genius.com/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.erhu.erhu.core.network.api.GeniusApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideDuckDuckGoApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.erhu.erhu.core.network.api.DuckDuckGoApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://duckduckgo.com/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.erhu.erhu.core.network.api.DuckDuckGoApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideFanartTvApi(
-        okHttpClient: OkHttpClient,
-        json: Json,
-    ): com.erhu.erhu.core.network.api.FanartTvApi {
-        val contentType = "application/json".toMediaType()
-        return Retrofit
-            .Builder()
-            .baseUrl("https://webservice.fanart.tv/")
-            .client(okHttpClient)
-            .addConverterFactory(json.asConverterFactory(contentType))
-            .build()
-            .create(com.erhu.erhu.core.network.api.FanartTvApi::class.java)
-    }
 }
 
 private val SECRET_QUERY = Regex("""(?i)\b(api_key|apikey|token|secret)=[^&\s]*""")
 
 /** [message] with the values of key-like query parameters replaced. */
-internal fun redactSecrets(message: String): String = message.replace(SECRET_QUERY) { "${it.groupValues[1]}=<redacted>" }
+internal fun redactSecrets(message: String): String =
+    message
+        .replace(SECRET_QUERY) { "${it.groupValues[1]}=<redacted>" }
+        .replace(Regex("(?i)(/api/v1/json/)[^/\\s?]+")) { "${it.groupValues[1]}<redacted>" }
 
 class ResilientDns : okhttp3.Dns {
     override fun lookup(hostname: String): List<java.net.InetAddress> {

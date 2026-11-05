@@ -31,12 +31,16 @@ class PlaybackStateProtoMapperTest {
                 .setWidgetThemeId("widget_y")
                 .setLibraryLayoutMode("LIST")
                 .setThemeRollbackFlag(true)
+                .setMetadataProvider("FanartTv")
+                .setFanartTvApiKey("legacy-unused-value")
                 .addAllQueueSongIds(listOf(1L, 2L))
                 .build()
 
         val merged = state.applyTo(existing)
 
         assertEquals("theme_x", merged.appThemeId)
+        assertEquals("FanartTv", merged.metadataProvider)
+        assertEquals("legacy-unused-value", merged.fanartTvApiKey)
         assertEquals("widget_y", merged.widgetThemeId)
         assertEquals("LIST", merged.libraryLayoutMode)
         assertTrue(merged.themeRollbackFlag)

@@ -87,6 +87,18 @@ class EmbeddedTagReader
                 .level = Level.OFF
         }
 
+        /** Read identifiers without decoding artwork or altering tags. Missing/inaccessible tags are optional. */
+        suspend fun artworkIdentity(filePath: String): Triple<String?, String?, String?> =
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val tag = AudioFileIO.read(File(filePath)).tag
+
+                    fun field(name: String): String? =
+                        FieldKey.values().firstOrNull { it.name == name }?.let { tag.getFirst(it).takeIf(String::isNotBlank) }
+                    Triple(field("MUSICBRAINZ_RELEASEID"), field("MUSICBRAINZ_RELEASE_GROUP_ID"), field("MUSICBRAINZ_TRACK_ID"))
+                }.getOrElse { Triple(null, null, null) }
+            }
+
         suspend fun readEmbeddedTags(filePath: String): EmbeddedTagData =
             withContext(Dispatchers.IO) {
                 val file = File(filePath)

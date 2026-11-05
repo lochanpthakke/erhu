@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -33,6 +32,7 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.action.actionRunCallback
+import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.color.ColorProvider
 import androidx.glance.layout.Alignment
@@ -45,11 +45,9 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
-import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.erhu.erhu.MainActivity
@@ -61,10 +59,45 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 private const val ALBUM_ART_SIZE_PX = 400
-private const val CONTROL_ICON_SIZE_DP = 24
-private const val CONTROL_ICON_SIZE_LARGE_DP = 32
 
 class VinylMusicWidget : GlanceAppWidget() {
+    override val sizeMode = androidx.glance.appwidget.SizeMode.Exact
+    override val previewSizeMode =
+        androidx.glance.appwidget.SizeMode.Responsive(
+            setOf(
+                androidx.compose.ui.unit
+                    .DpSize(180.dp, 180.dp),
+                androidx.compose.ui.unit
+                    .DpSize(260.dp, 260.dp),
+            ),
+        )
+
+    override suspend fun providePreview(
+        context: Context,
+        widgetCategory: Int,
+    ) {
+        provideContent {
+            WidgetContent(
+                title = "Nothing playing",
+                artist = "Choose music in erhu",
+                artwork = null,
+                rawArtwork = null,
+                isPlaying = false,
+                hasSong = false,
+            )
+        }
+    }
+
+    override fun onCompositionError(
+        context: Context,
+        glanceId: GlanceId,
+        appWidgetId: Int,
+        throwable: Throwable,
+    ) {
+        android.util.Log.e("ErhuWidget", "VinylMusicWidget rendering failed: $appWidgetId", throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
+    }
+
     override val stateDefinition: GlanceStateDefinition<Preferences> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(
@@ -72,14 +105,14 @@ class VinylMusicWidget : GlanceAppWidget() {
         id: GlanceId,
     ) {
         provideContent {
-            // Throttle position updates to 3-second buckets to eliminate high-frequency SystemUI re-inflation (flickering)
+            // Throttle position updates to 15-second buckets to eliminate high-frequency SystemUI re-inflation (flickering)
             val throttledPlaybackFlow =
                 remember(context) {
                     context
                         .playbackController()
                         .playbackState
                         .map { state ->
-                            val bucketedPosition = (state.positionMs / 3000) * 3000
+                            val bucketedPosition = (state.positionMs / 15000) * 15000
                             state.copy(positionMs = bucketedPosition)
                         }.distinctUntilChanged()
                 }
@@ -104,6 +137,7 @@ class VinylMusicWidget : GlanceAppWidget() {
                 artist = song?.artist.orEmpty(),
                 artwork = circularArtwork,
                 rawArtwork = rawArtwork,
+                hasSong = song != null,
                 isPlaying =
                     playbackState.status == PlaybackStatus.PLAYING ||
                         playbackState.status == PlaybackStatus.BUFFERING,
@@ -118,6 +152,7 @@ class VinylMusicWidget : GlanceAppWidget() {
         artwork: Bitmap?,
         rawArtwork: Bitmap?,
         isPlaying: Boolean,
+        hasSong: Boolean,
     ) {
         val context = LocalContext.current
         val isDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -127,7 +162,14 @@ class VinylMusicWidget : GlanceAppWidget() {
 
         // Extract dynamic dominant accent color from album artwork
         val extractedColors = remember(rawArtwork) { rawArtwork?.let { DominantColorExtractor.extractColors(it) } }
-        val rawAccent = extractedColors?.accentColor
+        val rawAccent =
+            extractedColors?.accentColor?.let {
+                androidx.compose.ui.graphics.lerp(
+                    it,
+                    if (isDark) Color.White else Color.Black,
+                    0.65f,
+                )
+            }
         val titleTextColor = rawAccent ?: defaultTitleColor
         val controlIconColor = if (rawAccent != null) ColorProvider(day = rawAccent, night = rawAccent) else adaptiveTextColor
 
@@ -170,6 +212,7 @@ class VinylMusicWidget : GlanceAppWidget() {
             modifier =
                 GlanceModifier
                     .fillMaxSize()
+                    .appWidgetBackground()
                     .clickable(actionStartActivity<MainActivity>()),
             contentAlignment = Alignment.Center,
         ) {
@@ -193,75 +236,33 @@ class VinylMusicWidget : GlanceAppWidget() {
                 modifier =
                     GlanceModifier
                         .fillMaxSize()
-                        .padding(start = 24.dp, top = 12.dp, end = 24.dp, bottom = 30.dp),
+                        .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 12.dp),
             ) {
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                // Lower Section: Artist & Song Title on Left, Playback Controls on Right
-                Row(
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom,
-                ) {
-                    // Lower Left Column: Artist Name above, Song Title below
-                    Column(
-                        modifier =
-                            GlanceModifier
-                                .defaultWeight()
-                                .padding(end = 12.dp),
-                    ) {
-                        Text(
-                            text = if (artist.isNotEmpty()) artist else "Unknown Artist",
-                            style = TextStyle(color = mutedTextColor, fontSize = 12.sp, fontWeight = FontWeight.Normal),
-                            maxLines = 1,
-                        )
-
-                        Spacer(modifier = GlanceModifier.height(2.dp))
-
-                        MarqueeTitle(
-                            title = title,
-                            textColor = titleTextColor,
-                            modifier = GlanceModifier.fillMaxWidth(),
-                        )
-                    }
-
-                    // Lower Right Row: 3 Playback Controls (Previous | Play/Pause | Next) with Dominant Accent Tint
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_widget_skip_previous),
-                            contentDescription = "Previous",
-                            modifier =
-                                GlanceModifier
-                                    .size(CONTROL_ICON_SIZE_DP.dp)
-                                    .clickable(actionRunCallback<VinylSkipPreviousAction>()),
-                            colorFilter = ColorFilter.tint(controlIconColor),
-                        )
-
-                        Spacer(modifier = GlanceModifier.width(18.dp))
-
-                        Image(
-                            provider = ImageProvider(if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play),
-                            contentDescription = "Play/Pause",
-                            modifier =
-                                GlanceModifier
-                                    .size(CONTROL_ICON_SIZE_LARGE_DP.dp)
-                                    .clickable(actionRunCallback<VinylPlayPauseAction>()),
-                            colorFilter = ColorFilter.tint(controlIconColor),
-                        )
-
-                        Spacer(modifier = GlanceModifier.width(18.dp))
-
-                        Image(
-                            provider = ImageProvider(R.drawable.ic_widget_skip_next),
-                            contentDescription = "Next",
-                            modifier =
-                                GlanceModifier
-                                    .size(CONTROL_ICON_SIZE_DP.dp)
-                                    .clickable(actionRunCallback<VinylSkipNextAction>()),
-                            colorFilter = ColorFilter.tint(controlIconColor),
-                        )
-                    }
+                // A 3x3 host may be only 180dp wide; do not squeeze labels and 3 controls into one row.
+                Text(artist.ifEmpty { "Choose music in erhu" }, style = TextStyle(color = mutedTextColor, fontSize = 12.sp), maxLines = 1)
+                MarqueeTitle(title, titleTextColor, GlanceModifier.fillMaxWidth())
+                Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    WidgetControl(
+                        R.drawable.ic_widget_skip_previous,
+                        "Previous",
+                        (if (hasSong) actionRunCallback<VinylSkipPreviousAction>() else actionStartActivity<MainActivity>()),
+                        controlIconColor,
+                    )
+                    WidgetControl(
+                        if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
+                        if (isPlaying) "Pause" else "Play",
+                        (if (hasSong) actionRunCallback<VinylPlayPauseAction>() else actionStartActivity<MainActivity>()),
+                        controlIconColor,
+                        iconSize = 32,
+                    )
+                    WidgetControl(
+                        R.drawable.ic_widget_skip_next,
+                        "Next",
+                        (if (hasSong) actionRunCallback<VinylSkipNextAction>() else actionStartActivity<MainActivity>()),
+                        controlIconColor,
+                    )
                 }
             }
         }
@@ -278,9 +279,10 @@ class VinylMusicWidget : GlanceAppWidget() {
             remoteViews =
                 RemoteViews(packageName, R.layout.widget_title_marquee).apply {
                     setTextViewText(R.id.widget_title_text, title)
+                    setInt(R.id.widget_title_text, "setMaxLines", 1)
                     setTextColor(R.id.widget_title_text, textColor.toArgb())
                 },
-            modifier = modifier,
+            modifier = modifier.height(24.dp),
         )
     }
 

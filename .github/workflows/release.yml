@@ -54,7 +54,7 @@ jobs:
             :core:database:testDebugUnitTest :core:datastore:testDebugUnitTest \
             :core:designsystem:testDebugUnitTest :core:network:testDebugUnitTest \
             :core:playback:testDebugUnitTest :core:sound:testDebugUnitTest :core:vybe:test \
-            :feature:library:testDebugUnitTest :feature:transfer:testDebugUnitTest :app:lintVitalRelease \
+            :feature:library:testDebugUnitTest :feature:settings:testDebugUnitTest :feature:transfer:testDebugUnitTest :app:lintVitalRelease \
             -PrequireReleaseSigning=true -PtargetAbi=arm64-v8a --no-configuration-cache \
             --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process \
             -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain

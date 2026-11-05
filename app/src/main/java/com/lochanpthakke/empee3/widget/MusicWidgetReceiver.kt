@@ -2,8 +2,8 @@
 package com.lochanpthakke.empee3.widget
 
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import com.erhu.erhu.widget.ErhuWidgetReceiver
 
-class MusicWidgetReceiver : GlanceAppWidgetReceiver() {
+class MusicWidgetReceiver : ErhuWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = MusicWidget()
 }

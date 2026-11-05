@@ -25,7 +25,8 @@ class MainActivity : ComponentActivity() {
         FrameDiagnostics.install(this)
         setContent {
             ErhuTheme {
-                MainScaffold()
+                com.erhu.erhu.onboarding
+                    .AppEntry()
             }
         }
     }

@@ -1,8 +1,8 @@
 package com.erhu.erhu.core.network.provider
 
 /**
- * The provider rejected the app's credentials (e.g. Last.fm error 10 "Invalid API key"). Never
- * retried: the same key gets the same answer.
+ * A provider rejected authorization. Kept for shared failure classification;
+ * these failures are never retried automatically.
  */
 class ProviderAuthException(
     message: String,

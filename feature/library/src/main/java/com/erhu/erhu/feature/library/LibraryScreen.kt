@@ -111,6 +111,8 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     chromeScroll: NestedScrollConnection? = null,
 ) {
+    val vybeEnabled = LocalVybeEnabled.current
+    val visibleSection = section.visibleWithVybe(vybeEnabled)
     val songs = viewModel.songsPaged.collectAsLazyPagingItems()
     // The library is usable once its first tracks are on screen (reported to the system as "fully drawn").
     ReportDrawnWhen { songs.itemCount > 0 }
@@ -132,7 +134,7 @@ fun LibraryScreen(
     // The Library tab is an overview; "More" opens one full shelf (null = the overview).
     var openShelf by rememberSaveable { mutableStateOf<LibraryShelf?>(null) }
     val sectionStates = rememberSaveableStateHolder()
-    val shownShelf = openShelf.takeIf { section == LibrarySection.LIBRARY && !isSearchActive }
+    val shownShelf = openShelf.takeIf { visibleSection == LibrarySection.LIBRARY && !isSearchActive }
     var showNewPlaylist by remember { mutableStateOf(false) }
     // Only the playing song's id: position ticks must not recompose the library.
     val currentSongId by viewModel.currentSongId.collectAsState()
@@ -179,10 +181,10 @@ fun LibraryScreen(
         }
 
     // Picking a section in the bottom navigation while searching leaves search.
-    var lastSection by rememberSaveable { mutableStateOf(section) }
-    LaunchedEffect(section) {
-        if (section != lastSection) {
-            lastSection = section
+    var lastSection by rememberSaveable { mutableStateOf(visibleSection) }
+    LaunchedEffect(visibleSection) {
+        if (visibleSection != lastSection) {
+            lastSection = visibleSection
             openShelf = null
             if (isSearchActive) closeSearch()
         }
@@ -207,7 +209,7 @@ fun LibraryScreen(
             } else {
                 OverlayHeader(
                     navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                    title = section.pageTitle,
+                    title = visibleSection.pageTitle,
                     collapsingTitle = collapsingTitle,
                 )
             }
@@ -274,7 +276,7 @@ fun LibraryScreen(
             ) {
                 // Sections are switched by LibraryNavigationBar in the shell's bottom chrome.
                 CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) {
-                    LibraryContentMotion(section, shownShelf, sectionStates) { activeSection, activeShelf ->
+                    LibraryContentMotion(visibleSection, shownShelf, sectionStates) { activeSection, activeShelf ->
                         when (activeSection) {
                             LibrarySection.TRACKS -> {
                                 // Collected only on the Tracks section, which shows the smart mix cards.
@@ -347,12 +349,15 @@ fun LibraryScreen(
                                         bottomInset = scroll.contentBottom,
                                     )
                                 }
-                            LibrarySection.VYBE ->
-                                com.erhu.erhu.feature.library.vybe.VybeScreen(
-                                    topInset = scroll.contentTop,
-                                    bottomInset = scroll.contentBottom,
-                                    currentSongId = currentSongId,
-                                )
+                            LibrarySection.VYBE -> {
+                                if (vybeEnabled) {
+                                    com.erhu.erhu.feature.library.vybe.VybeScreen(
+                                        topInset = scroll.contentTop,
+                                        bottomInset = scroll.contentBottom,
+                                        currentSongId = currentSongId,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -502,14 +507,16 @@ internal fun LibrarySongRow(
                         actions.onAddToQueue(song)
                     },
                 )
-                GlassMenuItem(
-                    icon = Icons.Default.Radio,
-                    text = { Text("Start radio") },
-                    onClick = {
-                        menuExpanded = false
-                        actions.onStartRadio(song)
-                    },
-                )
+                if (LocalVybeEnabled.current) {
+                    GlassMenuItem(
+                        icon = Icons.Default.Radio,
+                        text = { Text("Start radio") },
+                        onClick = {
+                            menuExpanded = false
+                            actions.onStartRadio(song)
+                        },
+                    )
+                }
                 GlassMenuDivider()
                 GlassMenuSection("Library")
                 GlassMenuItem(

@@ -29,8 +29,16 @@ class ThemeViewModel
         val widgetSkin: StateFlow<SkinManifest?> = themeRepository.widgetSkinState
         val libraryLayout: StateFlow<String> = themeRepository.libraryLayoutMode
         val isRollbackActive: StateFlow<Boolean> = themeRepository.isRollbackFlagActive
+        val vybeEnabled = themeRepository.vybeEnabled
+        val onboardingCompleted = themeRepository.onboardingCompleted
+
+        suspend fun completeOnboarding(): AppResult<Unit> = themeRepository.completeOnboarding()
+
+        fun setVybeEnabled(enabled: Boolean) {
+            viewModelScope.launch { themeRepository.setVybeEnabled(enabled) }
+        }
+
         val defaultStartSection: StateFlow<String> = themeRepository.defaultStartSection
-        val fanartTvApiKey: StateFlow<String> = themeRepository.fanartTvApiKey
         val sidebarGlassyness: StateFlow<Float> = themeRepository.sidebarGlassyness
         val uiGlassyness: StateFlow<Float> = themeRepository.uiGlassyness
         val popupGlassOpacity: StateFlow<Float> = themeRepository.popupGlassOpacity
@@ -84,12 +92,6 @@ class ThemeViewModel
         fun setDefaultStartSection(section: String) {
             viewModelScope.launch {
                 themeRepository.setDefaultStartSection(section)
-            }
-        }
-
-        fun setFanartTvApiKey(key: String) {
-            viewModelScope.launch {
-                themeRepository.setFanartTvApiKey(key)
             }
         }
 

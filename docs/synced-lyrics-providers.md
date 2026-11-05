@@ -10,7 +10,7 @@ Successful automatic matches use the existing JSON cache implementation in `cach
 
 Set `musixmatch.apiKey` in ignored `local.properties`, or `MUSIXMATCH_API_KEY` in the build environment. Blank disables the provider without requests. The key must have official subtitle endpoint access and a licence permitting this application's display and caching/offline use; a generic metadata/free API key may not provide that access. Confirm applicable attribution/reporting requirements with Musixmatch before distributing a configured build. No credentials were supplied, so live authenticated availability and account entitlements have not been validated. The integration does not use consumer tokens, scrape pages or bypass restrictions.
 
-The build-time credential follows the project's existing Last.fm provisioning approach. It is not committed or logged (the shared client redacts `apikey`), but a key packaged in an APK is extractable; production distribution should use provider-approved mobile credentials or a controlled backend. Do not publish private account secrets in an APK.
+The build-time credential follows the existing build-time provider configuration pattern. It is not committed or logged (the shared client redacts `apikey`), but a key packaged in an APK is extractable; production distribution should use provider-approved mobile credentials or a controlled backend. Do not publish private account secrets in an APK.
 
 Official API references:
 - [Musixmatch OpenAPI](https://github.com/musixmatch/musixmatch-sdk/blob/master/swagger/swagger.json): HTTPS API root, `track.search`, response metadata and subtitle model.
