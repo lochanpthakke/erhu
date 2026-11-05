@@ -148,7 +148,6 @@ fun MetadataEditorScreen(
         wasFixing = isFixingQueue
     }
 
-    var reviewBeforeApplying by remember { mutableStateOf(false) }
     var providerExpanded by remember { mutableStateOf(false) }
     var actionExpanded by remember { mutableStateOf(false) }
     var modeExpanded by remember { mutableStateOf(false) }
@@ -388,12 +387,6 @@ fun MetadataEditorScreen(
                             checked = forceFixTags,
                             onCheckedChange = { viewModel.setForceFixTags(it) },
                         )
-                        GroupDivider()
-                        GroupToggleRow(
-                            title = "Review changes before applying",
-                            checked = reviewBeforeApplying,
-                            onCheckedChange = { reviewBeforeApplying = it },
-                        )
                     }
                 }
             }
@@ -437,7 +430,6 @@ fun MetadataEditorScreen(
                                             },
                                         onClick = {
                                             viewModel.revertSelectedChanges(selectedRevertIds)
-                                            selectedRevertIds = emptySet()
                                         },
                                         icon = Icons.Default.Refresh,
                                         enabled = selectedRevertIds.isNotEmpty() && !isReverting && !isFixingQueue,
@@ -453,7 +445,8 @@ fun MetadataEditorScreen(
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
-                                val isAllSelected = repairQueue.isNotEmpty() && selectedRevertIds.size == repairQueue.size
+                                val revertableQueue = repairQueue.filter { it.successDetails != null }
+                                val isAllSelected = revertableQueue.isNotEmpty() && selectedRevertIds.size == revertableQueue.size
                                 ActionButton(
                                     text = if (isAllSelected) "Deselect All Tracks" else "Select All Tracks",
                                     onClick = {
@@ -461,11 +454,11 @@ fun MetadataEditorScreen(
                                             if (isAllSelected) {
                                                 emptySet()
                                             } else {
-                                                repairQueue.map { it.song.id }.toSet()
+                                                revertableQueue.map { it.song.id }.toSet()
                                             }
                                     },
                                     icon = Icons.Default.DoneAll,
-                                    enabled = !isReverting && !isFixingQueue && repairQueue.isNotEmpty(),
+                                    enabled = !isReverting && !isFixingQueue && revertableQueue.isNotEmpty(),
                                 )
                             }
                         } else if (isFixingQueue) {
@@ -550,13 +543,17 @@ fun MetadataEditorScreen(
 
     revertCompletionMessage?.let { msg ->
         GlassAlertDialog(
-            onDismissRequest = { viewModel.dismissRevertCompletionMessage() },
+            onDismissRequest = {
+                viewModel.dismissRevertCompletionMessage()
+                selectedRevertIds = emptySet()
+            },
             title = { Text("Revert Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
             text = { Text(msg, style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
                 Button(
                     onClick = {
                         viewModel.dismissRevertCompletionMessage()
+                        selectedRevertIds = emptySet()
                         viewModel.clearRepairQueue()
                         onNavigateToLibrary()
                     },
@@ -565,7 +562,12 @@ fun MetadataEditorScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissRevertCompletionMessage() }) {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissRevertCompletionMessage()
+                        selectedRevertIds = emptySet()
+                    },
+                ) {
                     Text("Keep Inspecting Queue")
                 }
             },
@@ -685,6 +687,7 @@ private fun RepairQueueCard(
                     Checkbox(
                         checked = selectedForRevert,
                         onCheckedChange = onSelectForRevert,
+                        enabled = queueItem.successDetails != null,
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs))
                 }

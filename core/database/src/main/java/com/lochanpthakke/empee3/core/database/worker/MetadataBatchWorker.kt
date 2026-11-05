@@ -15,6 +15,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.erhu.erhu.core.common.logging.Logger
+import com.erhu.erhu.core.database.dao.MetadataProcessingDao
 import com.erhu.erhu.core.database.dao.SongDao
 import com.erhu.erhu.core.database.entity.ProcessingStatus
 import com.erhu.erhu.core.database.mapper.toDomainModel
@@ -30,6 +31,7 @@ class MetadataBatchWorker
         @Assisted private val appContext: Context,
         @Assisted workerParams: WorkerParameters,
         private val songDao: SongDao,
+        private val metadataProcessingDao: MetadataProcessingDao,
         private val processSingleTrackUseCase: ProcessSingleTrackUseCase,
         private val logger: Logger,
     ) : CoroutineWorker(appContext, workerParams) {
@@ -37,12 +39,21 @@ class MetadataBatchWorker
             createNotificationChannel()
 
             val forceScan = inputData.getBoolean(KEY_FORCE_SCAN, false)
+            val pendingRecords = metadataProcessingDao.getRecordsByStatus(ProcessingStatus.PENDING.name).first()
+            val pendingPaths = pendingRecords.map { it.filePath }.toSet()
+
             val allSongEntities = songDao.getAllSongs().first()
-            val allSongs = allSongEntities.map { it.toDomainModel() }
+            val songsToProcess =
+                if (pendingPaths.isNotEmpty()) {
+                    allSongEntities.filter { it.filePath in pendingPaths }.map { it.toDomainModel() }
+                } else {
+                    allSongEntities.map { it.toDomainModel() }
+                }
+
             // Song.uri is a content:// URI; tag I/O needs the real file path.
             val filePathById = allSongEntities.associate { it.id to it.filePath }
 
-            if (allSongs.isEmpty()) {
+            if (songsToProcess.isEmpty()) {
                 return Result.success()
             }
 
@@ -55,7 +66,7 @@ class MetadataBatchWorker
                 setForeground(
                     createForegroundInfo(
                         processedCount = 0,
-                        totalCount = allSongs.size,
+                        totalCount = songsToProcess.size,
                         title = "Starting metadata repair...",
                     ),
                 )
@@ -65,7 +76,7 @@ class MetadataBatchWorker
 
             val failedForRetry = mutableListOf<com.erhu.erhu.core.model.Song>()
 
-            for (song in allSongs) {
+            for (song in songsToProcess) {
                 if (isStopped) break
 
                 try {
@@ -91,14 +102,14 @@ class MetadataBatchWorker
                         setProgress(
                             androidx.work.workDataOf(
                                 KEY_PROCESSED_COUNT to processedCount,
-                                KEY_TOTAL_COUNT to allSongs.size,
+                                KEY_TOTAL_COUNT to songsToProcess.size,
                                 KEY_CURRENT_TITLE to song.title,
                             ),
                         )
                         setForeground(
                             createForegroundInfo(
                                 processedCount = processedCount,
-                                totalCount = allSongs.size,
+                                totalCount = songsToProcess.size,
                                 title = "Processing: ${song.title}",
                             ),
                         )
@@ -132,7 +143,51 @@ class MetadataBatchWorker
                 }
             }
 
+            try {
+                showCompletionNotification(successCount = successCount, totalCount = songsToProcess.size)
+            } catch (e: Exception) {
+                logger.w(TAG, "Completion notification failed: ${e.message}", e)
+            }
+
             return Result.success()
+        }
+
+        private fun showCompletionNotification(
+            successCount: Int,
+            totalCount: Int,
+        ) {
+            val intent =
+                appContext.packageManager.getLaunchIntentForPackage(appContext.packageName)?.apply {
+                    flags =
+                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            val pendingIntent =
+                intent?.let {
+                    android.app.PendingIntent.getActivity(
+                        appContext,
+                        0,
+                        it,
+                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+                    )
+                }
+            val text = "Metadata repair finished ($successCount of $totalCount fixed). Tap to view and apply."
+            val notification =
+                NotificationCompat
+                    .Builder(appContext, CHANNEL_ID)
+                    .setContentTitle("Metadata Repair Complete")
+                    .setContentText(text)
+                    .setSmallIcon(android.R.drawable.ic_popup_sync)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setDefaults(NotificationCompat.DEFAULT_ALL)
+                    .setAutoCancel(true)
+                    .apply {
+                        if (pendingIntent != null) setContentIntent(pendingIntent)
+                    }.build()
+
+            val notificationManager =
+                appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.notify(COMPLETION_NOTIFICATION_ID, notification)
         }
 
         private fun createForegroundInfo(
@@ -150,6 +205,7 @@ class MetadataBatchWorker
                     .setSubText(title)
                     .setSmallIcon(android.R.drawable.ic_popup_sync)
                     .setOngoing(true)
+                    .setOnlyAlertOnce(true)
                     .setProgress(totalCount, processedCount, totalCount == 0)
                     .addAction(android.R.drawable.ic_delete, "Cancel", cancelIntent)
                     .build()
@@ -192,5 +248,8 @@ class MetadataBatchWorker
 
             @Suppress("MagicNumber")
             private const val NOTIFICATION_ID = 2002
+
+            @Suppress("MagicNumber")
+            private const val COMPLETION_NOTIFICATION_ID = 2003
         }
     }
