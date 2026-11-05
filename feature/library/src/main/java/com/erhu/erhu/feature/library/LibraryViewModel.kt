@@ -1695,13 +1695,13 @@ class LibraryViewModel
             pauseRequested = false
             autoResumeArmed = false
             _batchPause.value = null
-            
+
             // Start the foreground service orchestration
             val intent = android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java).apply {
                 action = com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_START
             }
             androidx.core.content.ContextCompat.startForegroundService(appContext, intent)
-            
+
             val plans = mutableMapOf<Long, FieldFixPlan>()
             val runner =
                 RepairBatchRunner(

@@ -926,7 +926,7 @@ private fun RepairQueueCard(
 
         var expanded by remember { mutableStateOf(false) }
         val diag = queueItem.diagnostics
-        
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, end = Spacing.md, bottom = if (expanded) 0.dp else Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,

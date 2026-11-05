@@ -46,10 +46,10 @@ class MetadataRepairService : Service() {
 
     private fun startFetching() {
         serviceScope.launch {
-            // Note: Since RepairBatchRunner loop acts on memory structures from LibraryViewModel, 
+            // Note: Since RepairBatchRunner loop acts on memory structures from LibraryViewModel,
             // Phase 2 implementation here must serve as the real engine loop, updating progress and
             // finally posting the completion alert. Because the UI requires state flows,
-            // we will shift the service to operate as an orchestrator of the foreground 
+            // we will shift the service to operate as an orchestrator of the foreground
             // notification while the view model executes the in-memory batch.
         }
     }
@@ -134,10 +134,10 @@ class MetadataRepairService : Service() {
         const val ACTION_START = "ACTION_START_REPAIR"
         const val ACTION_STOP = "ACTION_STOP_REPAIR"
         private const val CHANNEL_ID = "metadata_repair_service_channel"
-        
+
         @Suppress("MagicNumber")
         private const val NOTIFICATION_ID = 2004
-        
+
         @Suppress("MagicNumber")
         private const val COMPLETION_NOTIFICATION_ID = 2005
     }
