@@ -88,6 +88,13 @@ class MetadataBatchWorker
                     }
 
                     try {
+                        setProgress(
+                            androidx.work.workDataOf(
+                                KEY_PROCESSED_COUNT to processedCount,
+                                KEY_TOTAL_COUNT to allSongs.size,
+                                KEY_CURRENT_TITLE to song.title,
+                            ),
+                        )
                         setForeground(
                             createForegroundInfo(
                                 processedCount = processedCount,
@@ -133,6 +140,7 @@ class MetadataBatchWorker
             totalCount: Int,
             title: String,
         ): ForegroundInfo {
+            val cancelIntent = androidx.work.WorkManager.getInstance(appContext).createCancelPendingIntent(id)
             val text = "Processed $processedCount of $totalCount tracks"
             val notification =
                 NotificationCompat
@@ -143,6 +151,7 @@ class MetadataBatchWorker
                     .setSmallIcon(android.R.drawable.ic_popup_sync)
                     .setOngoing(true)
                     .setProgress(totalCount, processedCount, totalCount == 0)
+                    .addAction(android.R.drawable.ic_delete, "Cancel", cancelIntent)
                     .build()
 
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -175,6 +184,9 @@ class MetadataBatchWorker
         companion object {
             const val WORK_NAME = "MetadataBatchWorker"
             const val KEY_FORCE_SCAN = "key_force_scan"
+            const val KEY_PROCESSED_COUNT = "key_processed_count"
+            const val KEY_TOTAL_COUNT = "key_total_count"
+            const val KEY_CURRENT_TITLE = "key_current_title"
             private const val TAG = "MetadataBatchWorker"
             private const val CHANNEL_ID = "metadata_batch_channel"
 

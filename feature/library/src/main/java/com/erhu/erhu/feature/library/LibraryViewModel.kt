@@ -1845,6 +1845,7 @@ class LibraryViewModel
             pauseRequested = false
             autoResumeArmed = false
             _batchPause.value = null
+            libraryRepository.enqueueMetadataRepair(forceScan = _forceFixTags.value)
             val plans = mutableMapOf<Long, FieldFixPlan>()
             val runner =
                 RepairBatchRunner(

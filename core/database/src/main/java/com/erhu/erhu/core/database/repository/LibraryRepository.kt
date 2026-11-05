@@ -99,4 +99,13 @@ interface LibraryRepository {
 
     /** True while a library scan is queued or running. */
     fun observeIsScanning(): Flow<Boolean>
+
+    /** Queues or starts background metadata repair processing via WorkManager. */
+    suspend fun enqueueMetadataRepair(forceScan: Boolean = false): AppResult<Unit>
+
+    /** Cancels any running background metadata repair worker. */
+    suspend fun cancelMetadataRepair(): AppResult<Unit>
+
+    /** Live stream of WorkInfo for the background metadata repair task. */
+    fun observeMetadataRepairWorkInfo(): Flow<androidx.work.WorkInfo?>
 }

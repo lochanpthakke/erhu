@@ -20,6 +20,7 @@ import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Song
 import com.lochanpthakke.empee3.core.database.scanner.LibraryScanWorker
+import com.lochanpthakke.empee3.core.database.worker.MetadataBatchWorker
 import dagger.Lazy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -248,6 +249,35 @@ class LibraryRepositoryImpl
                 .get()
                 .getWorkInfosForUniqueWorkFlow(LibraryScanWorker.WORK_NAME)
                 .map { infos -> infos.any { it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED } }
+                .distinctUntilChanged()
+
+        override suspend fun enqueueMetadataRepair(forceScan: Boolean): AppResult<Unit> =
+            appResultOf {
+                val inputData =
+                    androidx.work.Data.Builder()
+                        .putBoolean(MetadataBatchWorker.KEY_FORCE_SCAN, forceScan)
+                        .build()
+                val workRequest =
+                    OneTimeWorkRequestBuilder<MetadataBatchWorker>()
+                        .setInputData(inputData)
+                        .build()
+                workManager.get().enqueueUniqueWork(
+                    MetadataBatchWorker.WORK_NAME,
+                    ExistingWorkPolicy.REPLACE,
+                    workRequest,
+                )
+            }
+
+        override suspend fun cancelMetadataRepair(): AppResult<Unit> =
+            appResultOf {
+                workManager.get().cancelUniqueWork(MetadataBatchWorker.WORK_NAME)
+            }
+
+        override fun observeMetadataRepairWorkInfo(): Flow<WorkInfo?> =
+            workManager
+                .get()
+                .getWorkInfosForUniqueWorkFlow(MetadataBatchWorker.WORK_NAME)
+                .map { infos -> infos.firstOrNull() }
                 .distinctUntilChanged()
 
         companion object {
