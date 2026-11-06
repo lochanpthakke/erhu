@@ -15,6 +15,7 @@ class ITunesProvider
     @Inject
     constructor(
         private val iTunesApi: ITunesApi,
+        private val okHttpClient: okhttp3.OkHttpClient,
         private val logger: Logger,
     ) : MetadataProvider {
         override val providerName: String = "iTunes"
@@ -123,13 +124,41 @@ class ITunesProvider
             if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return emptyList()
 
             return try {
-                val response = iTunesApi.search(term = trimmed, entity = "album", limit = 5)
-                val exactMatches = response.results.filter { it.artistName?.trim()?.equals(trimmed, ignoreCase = true) == true }
-                val targetResults = if (exactMatches.isNotEmpty()) exactMatches else response.results
-                targetResults
-                    .mapNotNull { it.artworkUrl100 ?: it.artworkUrl60 }
-                    .map { upgradeArtworkUrl(it) }
-                    .distinct()
+                val urls = mutableListOf<String>()
+                val artistResponse = iTunesApi.search(term = trimmed, entity = "musicArtist", limit = 5)
+                artistResponse.results.forEach { result ->
+                    val art = result.artworkUrl100 ?: result.artworkUrl60
+                    if (!art.isNullOrBlank()) {
+                        urls.add(upgradeArtworkUrl(art))
+                    }
+                }
+                if (urls.isEmpty()) {
+                    val encodedName = java.net.URLEncoder.encode(trimmed, "UTF-8")
+                    val searchUrl = "https://music.apple.com/us/search?term=$encodedName"
+                    val req = okhttp3.Request.Builder()
+                        .url(searchUrl)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .build()
+                    okHttpClient.newCall(req).execute().use { res ->
+                        if (res.isSuccessful) {
+                            val html = res.body?.string().orEmpty()
+                            val metaRegex = Regex("""<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                            metaRegex.find(html)?.groupValues?.get(1)?.let { metaUrl ->
+                                if (metaUrl.contains("mzstatic.com")) {
+                                    urls.add(upgradeArtworkUrl(metaUrl))
+                                }
+                            }
+                            if (urls.isEmpty()) {
+                                val imgRegex = Regex("""https://is[0-9]-ssl\.mzstatic\.com/image/thumb/Artist[^"'\s>?<]+\.jpg""", RegexOption.IGNORE_CASE)
+                                imgRegex.findAll(html).forEach { match ->
+                                    val imgSrc = upgradeArtworkUrl(match.value)
+                                    if (!urls.contains(imgSrc)) urls.add(imgSrc)
+                                }
+                            }
+                        }
+                    }
+                }
+                urls.distinct().take(3)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

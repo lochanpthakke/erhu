@@ -129,8 +129,7 @@ class DeezerProvider
                 val candidates = response.data.orEmpty()
                 // 1. Filter to exact case-insensitive normalized name equality
                 val exactMatches = candidates.filter { it.name.trim().equals(trimmed, ignoreCase = true) }
-                // 2. Sort by fan count descending
-                val sorted = (if (exactMatches.isNotEmpty()) exactMatches else candidates).sortedByDescending { it.nbFan }
+                val sorted = exactMatches.sortedByDescending { it.nbFan }
                 // 3. Extract pictureXl / pictureBig, requiring a valid 32-hex character hash segment
                 sorted
                     .mapNotNull { it.pictureXl ?: it.pictureBig ?: it.pictureMedium }

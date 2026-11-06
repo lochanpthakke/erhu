@@ -1105,30 +1105,51 @@ class LibraryViewModel
                         if (requestSequence != artworkRequestSequence) return@launch
                         val urls = data?.candidates.orEmpty()
                         _artworkCandidates.value = urls
+
+                        val resolvedLabel =
+                            if (!data?.resolvedMbid.isNullOrEmpty()) {
+                                "Resolved: ${artist.name} (MBID: ${data?.resolvedMbid})"
+                            } else {
+                                "Resolved: ${artist.name}"
+                            }
+
+                        val providerOutcomes =
+                            data?.providerCandidates?.map { (providerName, candidateList) ->
+                                com.erhu.erhu.core.model.ProviderOutcome(
+                                    providerName,
+                                    candidateList.size,
+                                    if (candidateList.isNotEmpty()) {
+                                        com.erhu.erhu.core.model.ProviderStatus.SUCCESS
+                                    } else {
+                                        com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
+                                    },
+                                )
+                            } ?: listOf(
+                                com.erhu.erhu.core.model.ProviderOutcome(
+                                    "Deezer",
+                                    urls.size,
+                                    if (urls.isEmpty()) {
+                                        com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
+                                    } else {
+                                        com.erhu.erhu.core.model.ProviderStatus.SUCCESS
+                                    },
+                                ),
+                            )
+
+                        val candidatesDetailed =
+                            data?.providerCandidates?.flatMap { (providerName, candidateList) ->
+                                candidateList.map { url ->
+                                    ArtworkCandidateDetail(url, providerName, matchedArtist = artist.name)
+                                }
+                            } ?: urls.map { ArtworkCandidateDetail(it, "Deezer", matchedArtist = artist.name) }
+
                         _artworkSearchDiagnostics.value =
                             ArtworkSearchDiagnostics(
-                                artist.name,
-                                artist.name,
-                                providerOutcomes =
-                                    listOf(
-                                        com.erhu.erhu.core.model.ProviderOutcome(
-                                            "Deezer artist catalogue",
-                                            urls.size,
-                                            if (urls.isEmpty()) {
-                                                com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                            } else {
-                                                com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                            },
-                                        ),
-                                    ),
-                                candidates =
-                                    urls.map {
-                                        ArtworkCandidateDetail(
-                                            it,
-                                            "Deezer artist catalogue",
-                                            matchedArtist = artist.name,
-                                        )
-                                    },
+                                targetName = artist.name,
+                                searchQuery = artist.name,
+                                resolvedArtistInfo = resolvedLabel,
+                                providerOutcomes = providerOutcomes,
+                                candidates = candidatesDetailed,
                             )
                     } finally {
                         if (requestSequence == artworkRequestSequence) _isSearchingArtwork.value = false

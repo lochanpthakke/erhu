@@ -172,7 +172,9 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<List<String>> =
             appResultOf {
-                deezerProvider.fetchArtistPortraitList(artistName)
+                fetchArtistArtworkCandidatesDetailed(artistName, sourceProvider)
+                    .getOrDefault(ArtistArtworkSearchResponse(emptyList()))
+                    .candidates
             }
 
         override suspend fun fetchArtistArtworkCandidatesDetailed(
@@ -180,9 +182,321 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<ArtistArtworkSearchResponse> =
             appResultOf {
-                val urls = deezerProvider.fetchArtistPortraitList(artistName)
-                ArtistArtworkSearchResponse(urls, mapOf("Deezer" to urls))
+                val trimmed = artistName.trim()
+                if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) {
+                    return@appResultOf ArtistArtworkSearchResponse(emptyList())
+                }
+
+                withContext(Dispatchers.IO) {
+                    val deezerDeferred = async {
+                        try { deezerProvider.fetchArtistPortraitList(trimmed) } catch (e: Exception) { emptyList() }
+                    }
+                    val iTunesDeferred = async {
+                        try { iTunesProvider.fetchArtistArtworkList(trimmed) } catch (e: Exception) { emptyList() }
+                    }
+                    val mbidDeferred = async {
+                        try { musicBrainzProvider.resolveArtistMbid(trimmed) } catch (e: Exception) { null }
+                    }
+                    val geniusDeferred = async {
+                        try { fetchGeniusArtistArtwork(trimmed) } catch (e: Exception) { emptyList() }
+                    }
+                    val discogsDeferred = async {
+                        try { fetchDiscogsArtistArtwork(trimmed) } catch (e: Exception) { emptyList() }
+                    }
+                    val wikipediaDeferred = async {
+                        try { fetchWikipediaArtistArtwork(trimmed) } catch (e: Exception) { emptyList() }
+                    }
+                    val duckDuckGoDeferred = async {
+                        try { fetchDuckDuckGoArtistArtwork(trimmed) } catch (e: Exception) { emptyList() }
+                    }
+
+                    val deezerUrls = deezerDeferred.await()
+                    val iTunesUrls = iTunesDeferred.await()
+                    val mbid = mbidDeferred.await()
+                    val geniusUrls = geniusDeferred.await()
+                    val discogsUrls = discogsDeferred.await()
+                    val duckDuckGoUrls = duckDuckGoDeferred.await()
+
+                    val mbWikiUrls =
+                        if (mbid != null) {
+                            fetchMusicBrainzWikidataArtwork(mbid)
+                        } else {
+                            emptyList()
+                        }
+                    val wikipediaUrls = (wikipediaDeferred.await() + mbWikiUrls).distinct()
+
+                    val providerMap = linkedMapOf<String, List<String>>()
+                    providerMap["DuckDuckGo Web Search"] = duckDuckGoUrls
+                    providerMap["iTunes / Apple Music"] = iTunesUrls
+                    providerMap["Discogs"] = discogsUrls
+                    providerMap["Wikipedia / Wikimedia"] = wikipediaUrls
+                    providerMap["Genius"] = geniusUrls
+                    providerMap["Deezer"] = deezerUrls
+
+                    val allCandidates = (duckDuckGoUrls + iTunesUrls + discogsUrls + wikipediaUrls + geniusUrls + deezerUrls).distinct()
+                    ArtistArtworkSearchResponse(
+                        candidates = allCandidates,
+                        providerCandidates = providerMap,
+                        resolvedMbid = mbid,
+                    )
+                }
             }
+
+        private fun fetchMusicBrainzWikidataArtwork(mbid: String): List<String> {
+            val urls = mutableListOf<String>()
+            try {
+                val dto = kotlinx.coroutines.runBlocking { musicBrainzProvider.lookupArtistUrlRels(mbid) }
+                dto?.relations?.forEach { rel ->
+                    val res = rel.url?.resource.orEmpty()
+                    if (res.contains("commons.wikimedia.org", ignoreCase = true) || res.contains("upload.wikimedia.org", ignoreCase = true)) {
+                        val fileName = res.substringAfterLast("/")
+                        if (fileName.isNotBlank()) {
+                            val directUrl = fetchWikimediaDirectUrl("File:$fileName")
+                            if (!directUrl.isNullOrBlank()) urls.add(directUrl)
+                        }
+                    } else if (res.contains("wikidata.org/wiki/Q", ignoreCase = true)) {
+                        val qId = res.substringAfterLast("/").trim()
+                        val wikiImage = fetchWikidataImage(qId)
+                        if (!wikiImage.isNullOrBlank()) {
+                            urls.add(wikiImage)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                logger.w("MetadataRepository", "MusicBrainz Wikidata lookup failed for $mbid: ${e.message}", e)
+            }
+            return urls.distinct()
+        }
+
+        private fun fetchWikidataImage(wikidataId: String): String? {
+            val url = "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=$wikidataId&props=claims&format=json"
+            val request = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) empee3/1.0.0").build()
+            return try {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return null
+                    val bodyString = response.body?.string() ?: return null
+                    val json = org.json.JSONObject(bodyString)
+                    val entity = json.optJSONObject("entities")?.optJSONObject(wikidataId) ?: return null
+                    val claims = entity.optJSONObject("claims") ?: return null
+                    val p18Array = claims.optJSONArray("P18") ?: return null
+                    if (p18Array.length() > 0) {
+                        val mainSnak = p18Array.getJSONObject(0).optJSONObject("mainsnak")
+                        val imageName = mainSnak?.optJSONObject("datavalue")?.optString("value")
+                        if (!imageName.isNullOrBlank()) {
+                            return fetchWikimediaDirectUrl("File:$imageName")
+                        }
+                    }
+                    null
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        private fun fetchWikimediaDirectUrl(fileTitle: String): String? {
+            val commUrl = "https://commons.wikimedia.org/w/api.php?action=query&titles=${java.net.URLEncoder.encode(fileTitle, "UTF-8")}&prop=imageinfo&iiprop=url&iiurlwidth=1000&format=json"
+            val commReq = Request.Builder().url(commUrl).header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) empee3/1.0.0").build()
+            return try {
+                okHttpClient.newCall(commReq).execute().use { response ->
+                    if (!response.isSuccessful) return null
+                    val json = org.json.JSONObject(response.body?.string().orEmpty())
+                    val pages = json.optJSONObject("query")?.optJSONObject("pages")
+                    val firstKey = pages?.keys()?.next() ?: return null
+                    val imgInfo = pages.optJSONObject(firstKey)?.optJSONArray("imageinfo")?.optJSONObject(0)
+                    imgInfo?.optString("thumburl", "")?.ifBlank { imgInfo.optString("url", "") }?.takeIf { it.isNotBlank() }
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+        private fun fetchDiscogsArtistArtwork(artistName: String): List<String> {
+            val encodedName = java.net.URLEncoder.encode(artistName, "UTF-8")
+            val url = "https://www.discogs.com/search/?q=$encodedName&type=artist"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .header("Accept", "text/html")
+                .build()
+            return try {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return emptyList()
+                    val html = response.body?.string().orEmpty()
+                    val urls = mutableListOf<String>()
+                    val imgRegex = Regex("""https://i\.discogs\.com/[^"'\s>?<]+\.(?:jpg|jpeg|png)""", RegexOption.IGNORE_CASE)
+                    imgRegex.findAll(html).forEach { match ->
+                        val imgSrc = match.value
+                        if (!imgSrc.contains("spacer.gif") && !imgSrc.contains("default-artist")) {
+                            urls.add(imgSrc)
+                        }
+                    }
+                    if (urls.isEmpty()) {
+                        val imgRegex2 = Regex("""data-src=["'](https://[^"'\s>]+)["']""")
+                        imgRegex2.findAll(html).forEach { match ->
+                            val src = match.groupValues[1]
+                            if (src.contains("discogs") && (src.endsWith(".jpg") || src.endsWith(".jpeg") || src.endsWith(".png"))) {
+                                urls.add(src)
+                            }
+                        }
+                    }
+                    urls.distinct().take(3)
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
+        private fun fetchGeniusArtistArtwork(artistName: String): List<String> {
+            val url = "https://genius.com/api/search/multi?q=${java.net.URLEncoder.encode(artistName, "UTF-8")}"
+            val request = Request.Builder().url(url).header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) empee3/1.0.0").build()
+            return try {
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return emptyList()
+                    val bodyString = response.body?.string() ?: return emptyList()
+                    val json = org.json.JSONObject(bodyString)
+                    val sections = json.optJSONObject("response")?.optJSONArray("sections") ?: return emptyList()
+                    val urls = mutableListOf<String>()
+                    for (i in 0 until sections.length()) {
+                        val sec = sections.getJSONObject(i)
+                        val secType = sec.optString("type", "")
+                        if (secType.equals("artist", ignoreCase = true)) {
+                            val hits = sec.optJSONArray("hits") ?: continue
+                            for (j in 0 until hits.length()) {
+                                val hit = hits.getJSONObject(j)
+                                val result = hit.optJSONObject("result") ?: continue
+                                val hitName = result.optString("name", "").trim()
+                                if (hitName.equals(artistName, ignoreCase = true)) {
+                                    val avatar = result.optString("image_url", "")
+                                    val header = result.optString("header_image_url", "")
+                                    val customHeader = result.optString("custom_header_image_url", "")
+                                    listOf(avatar, header, customHeader).forEach { img ->
+                                        if (img.isNotBlank() && !img.contains("default_avatar") && !img.contains("avatars.genius.com/default")) {
+                                            urls.add(img)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    urls.distinct()
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+
+        private fun fetchWikipediaArtistArtwork(artistName: String): List<String> {
+            val formattedArtist = artistName.replace(" ", "_")
+            val urls = mutableListOf<String>()
+            val categoryNames = listOf("Category:${formattedArtist}_(musician)", "Category:${formattedArtist}", "Category:${formattedArtist}_(singer)")
+            for (catName in categoryNames) {
+                try {
+                    val encodedCat = java.net.URLEncoder.encode(catName, "UTF-8")
+                    val commonsUrl = "https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers&gcmtitle=$encodedCat&gcmtype=file&gcmlimit=50&prop=imageinfo&iiprop=url&iiurlwidth=1000&format=json"
+                    val commonsReq = Request.Builder().url(commonsUrl).header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) empee3/1.0.0").build()
+                    okHttpClient.newCall(commonsReq).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val bodyString = response.body?.string() ?: ""
+                            val json = org.json.JSONObject(bodyString)
+                            val pages = json.optJSONObject("query")?.optJSONObject("pages")
+                            if (pages != null) {
+                                val keys = pages.keys()
+                                while (keys.hasNext()) {
+                                    val page = pages.optJSONObject(keys.next())
+                                    val imageInfo = page?.optJSONArray("imageinfo")
+                                    if (imageInfo != null && imageInfo.length() > 0) {
+                                        val imgObj = imageInfo.getJSONObject(0)
+                                        val imgUrl = imgObj.optString("thumburl", "").ifBlank { imgObj.optString("url", "") }
+                                        if (imgUrl.isNotBlank() && (imgUrl.endsWith(".jpg", ignoreCase = true) || imgUrl.endsWith(".png", ignoreCase = true) || imgUrl.endsWith(".jpeg", ignoreCase = true))) {
+                                            urls.add(imgUrl)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
+                if (urls.size >= 10) break
+            }
+
+            if (urls.size < 5) {
+                try {
+                    val searchUrl = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${java.net.URLEncoder.encode(artistName, "UTF-8")}&gsrnamespace=6&gsrlimit=25&prop=imageinfo&iiprop=url&iiurlwidth=1000&format=json"
+                    val searchReq = Request.Builder().url(searchUrl).header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) empee3/1.0.0").build()
+                    okHttpClient.newCall(searchReq).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val json = org.json.JSONObject(response.body?.string().orEmpty())
+                            val pages = json.optJSONObject("query")?.optJSONObject("pages")
+                            if (pages != null) {
+                                val keys = pages.keys()
+                                while (keys.hasNext()) {
+                                    val page = pages.optJSONObject(keys.next())
+                                    val imageInfo = page?.optJSONArray("imageinfo")
+                                    if (imageInfo != null && imageInfo.length() > 0) {
+                                        val imgObj = imageInfo.getJSONObject(0)
+                                        val imgUrl = imgObj.optString("thumburl", "").ifBlank { imgObj.optString("url", "") }
+                                        if (imgUrl.isNotBlank() && (imgUrl.endsWith(".jpg", ignoreCase = true) || imgUrl.endsWith(".png", ignoreCase = true) || imgUrl.endsWith(".jpeg", ignoreCase = true))) {
+                                            urls.add(imgUrl)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
+            }
+
+            return urls.distinct()
+        }
+
+        private fun fetchDuckDuckGoArtistArtwork(artistName: String): List<String> {
+            val encodedName = java.net.URLEncoder.encode(artistName, "UTF-8")
+            val urls = mutableListOf<String>()
+            try {
+                val initUrl = "https://duckduckgo.com/?q=$encodedName"
+                val initReq = Request.Builder()
+                    .url(initUrl)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .build()
+                var vqd: String? = null
+                okHttpClient.newCall(initReq).execute().use { response ->
+                    val body = response.body?.string().orEmpty()
+                    vqd = response.header("x-vqd-4")
+                        ?: Regex("vqd=[\"']?([^\"'&]+)").find(body)?.groupValues?.get(1)
+                }
+
+                if (!vqd.isNullOrBlank()) {
+                    val imgUrl = "https://duckduckgo.com/i.js?q=$encodedName&o=json&vqd=$vqd"
+                    val imgReq = Request.Builder()
+                        .url(imgUrl)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        .header("Referer", "https://duckduckgo.com/")
+                        .build()
+                    okHttpClient.newCall(imgReq).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val json = org.json.JSONObject(response.body?.string().orEmpty())
+                            val results = json.optJSONArray("results")
+                            if (results != null) {
+                                for (i in 0 until results.length()) {
+                                    val item = results.getJSONObject(i)
+                                    val image = item.optString("image", "").ifBlank { item.optString("thumbnail", "") }
+                                    if (image.isNotBlank() && image.startsWith("http")) {
+                                        urls.add(image)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+            return urls.distinct().take(15)
+        }
 
         override suspend fun lookupGenre(
             match: MetadataCandidate,
