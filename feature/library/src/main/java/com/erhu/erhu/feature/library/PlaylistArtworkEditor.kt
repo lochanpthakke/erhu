@@ -7,7 +7,6 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -100,7 +99,7 @@ fun EditPlaylistDialog(
     var cover by remember(playlist.id) { mutableStateOf<CoverChange>(CoverChange.None) }
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             if (uri != null) pickedUri = uri
         }
 
@@ -123,7 +122,7 @@ fun EditPlaylistDialog(
                 }
                 Spacer(modifier = Modifier.height(Spacing.md))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    OutlinedButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                    OutlinedButton(onClick = { picker.launch("image/*") }) {
                         Text("Choose image")
                     }
                     val hasCover = cover is CoverChange.Replace || (cover == CoverChange.None && playlist.artworkUri != null)
