@@ -154,6 +154,7 @@ fun AlbumDetailScreen(
     val albumRef = remember(albumId) { CollectionRef.album(albumId) }
     var showStudio by remember { mutableStateOf(false) }
     // Only the playing song's id: position ticks must not recompose this page.
+    val openArtworkSearch = rememberArtworkWebSearchLauncher()
     val currentSongId by viewModel.currentSongId.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
 
@@ -278,6 +279,16 @@ fun AlbumDetailScreen(
                                             viewModel.enqueueAlbumForArtwork(album)
                                         },
                                     )
+                                    albumArtworkSearchUrl(album.title, album.artist)?.let { searchUrl ->
+                                        GlassMenuItem(
+                                            icon = Icons.Default.ImageSearch,
+                                            text = { Text("Search images in browser") },
+                                            onClick = {
+                                                menuExpanded = false
+                                                openArtworkSearch(searchUrl)
+                                            },
+                                        )
+                                    }
                                     GlassMenuItem(
                                         icon = Icons.Default.PhotoLibrary,
                                         text = { Text("Set Custom Cover (Local File)") },

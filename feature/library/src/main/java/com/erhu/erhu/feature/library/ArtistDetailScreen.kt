@@ -132,6 +132,7 @@ fun ArtistDetailScreen(
         )
     }.collectAsState(initial = null)
 
+    val openArtworkSearch = rememberArtworkWebSearchLauncher()
     val currentSongId by viewModel.currentSongId.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
 
@@ -238,6 +239,16 @@ fun ArtistDetailScreen(
                                         viewModel.enqueueArtistForArtwork(artist)
                                     },
                                 )
+                                artistArtworkSearchUrl(artist.name)?.let { searchUrl ->
+                                    GlassMenuItem(
+                                        icon = Icons.Default.ImageSearch,
+                                        text = { Text("Search images in browser") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            openArtworkSearch(searchUrl)
+                                        },
+                                    )
+                                }
                                 GlassMenuItem(
                                     icon = Icons.Default.PhotoLibrary,
                                     text = { Text("Set Custom Photo (Local File)") },

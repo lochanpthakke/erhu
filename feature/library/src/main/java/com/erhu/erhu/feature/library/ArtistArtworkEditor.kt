@@ -93,6 +93,7 @@ internal fun ArtistImageDialog(
                     textAlign = TextAlign.Center,
                 )
                 Spacer(modifier = Modifier.height(Spacing.md))
+                ArtworkWebSearchButton(artistArtworkSearchUrl(artist.name), artist.name)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     OutlinedButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                         Text("Choose image")

@@ -318,6 +318,15 @@ fun ArtworkManagerScreen(
             if (currentContextTitle != null) {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     SectionHeading(title = "Artwork candidates")
+                    ArtworkWebSearchButton(
+                        url =
+                            if (selectedTab == 0) {
+                                currentProcessingAlbum?.let { albumArtworkSearchUrl(it.title, it.artist) }
+                            } else {
+                                currentProcessingArtist?.let { artistArtworkSearchUrl(it.name) }
+                            },
+                        targetName = currentContextTitle,
+                    )
 
                     if (diagnostics != null) {
                         Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
@@ -535,6 +544,7 @@ fun ArtworkManagerScreen(
                                         status = queueItem.status,
                                         icon = Icons.Default.MusicNote,
                                         onRemove = { viewModel.removeFromArtworkQueue(queueItem.album) },
+                                        webSearchUrl = albumArtworkSearchUrl(queueItem.album.title, queueItem.album.artist),
                                     )
                                 }
                             }
@@ -551,6 +561,7 @@ fun ArtworkManagerScreen(
                                         status = queueItem.status,
                                         icon = Icons.Default.Person,
                                         onRemove = { viewModel.removeFromArtistArtworkQueue(queueItem.artist) },
+                                        webSearchUrl = artistArtworkSearchUrl(queueItem.artist.name),
                                     )
                                 }
                             }
@@ -808,6 +819,7 @@ private fun AlbumQueueCard(
     status: String,
     icon: ImageVector,
     onRemove: () -> Unit,
+    webSearchUrl: String?,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -871,6 +883,7 @@ private fun AlbumQueueCard(
                 )
             }
         }
+        ArtworkWebSearchButton(webSearchUrl, title, Modifier.padding(start = Spacing.lg))
         if (status == "SEARCHING" || status == "WRITING") {
             ProgressBar(modifier = Modifier.padding(horizontal = Spacing.lg).padding(bottom = Spacing.sm))
         }
