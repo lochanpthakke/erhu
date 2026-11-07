@@ -15,6 +15,7 @@ import com.erhu.erhu.core.vybe.VybeAnswer
 import com.erhu.erhu.core.vybe.VybeDiscovery
 import com.erhu.erhu.core.vybe.VybeIndexFile
 import com.erhu.erhu.core.vybe.VybeMatch
+import com.erhu.erhu.core.vybe.VybeNameIndex
 import com.erhu.erhu.core.vybe.VybeText
 import com.erhu.erhu.core.vybe.mediapipe.MediaPipeTextEmbedder
 import com.erhu.erhu.core.vybe.mediapipe.VybeEmbedderException
@@ -32,6 +33,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -107,6 +109,9 @@ class VybeEngine
         private var embedder: MediaPipeTextEmbedder? = null
         private var index: VybeIndexFile? = null
         private var library: List<SongText> = emptyList()
+        private var names = VybeNameIndex(emptyList())
+        private val _catalogVersion = MutableStateFlow(0L)
+        val catalogVersion: StateFlow<Long> = _catalogVersion.asStateFlow()
         private var started: Job? = null
         private var release: Job? = null
 
@@ -132,11 +137,16 @@ class VybeEngine
             started =
                 scope.launch {
                     if (!loadModel()) return@launch
-                    libraryRepository
-                        .observeSongTags()
-                        .distinctUntilChanged()
-                        .debounceLibraryChanges()
-                        .collect { tags -> reindex(tags.map(VybeText::fromTags)) }
+                    combine(
+                        libraryRepository.observeSongTags().distinctUntilChanged(),
+                        libraryRepository.observeVybeAliases(),
+                    ) { tags, aliases ->
+                        tags.map(VybeText::fromTags) to aliases
+                    }.debounceLibraryChanges().collect { (songs, aliases) ->
+                        names = VybeNameIndex(songs, aliases)
+                        reindex(songs)
+                        _catalogVersion.value += 1
+                    }
                 }
         }
 
@@ -158,13 +168,14 @@ class VybeEngine
         suspend fun search(
             query: String,
             limit: Int,
+            selections: Map<Int, String> = emptyMap(),
         ): VybeAnswer? =
             withContext(dispatcher) {
                 val start = SystemClock.elapsedRealtime()
                 Interactions.put(Interactions.VYBE_SEARCH, "searching")
                 try {
                     val discovery = discovery() ?: return@withContext null
-                    traced("VYBE search") { discovery.search(query, library, limit) }.also {
+                    traced("VYBE search") { discovery.search(query, library, limit, names, selections) }.also {
                         _timings.value = _timings.value.copy(lastQueryMs = SystemClock.elapsedRealtime() - start)
                     }
                 } finally {

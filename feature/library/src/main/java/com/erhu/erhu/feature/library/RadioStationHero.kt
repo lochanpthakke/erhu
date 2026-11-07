@@ -9,11 +9,13 @@ import android.util.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -129,12 +131,6 @@ internal fun radioColorScheme(
         base
     } else {
         base.copy(
-            background = Color(palette.surface),
-            surface = Color(palette.surface),
-            surfaceVariant = Color(palette.gradient.first()),
-            onBackground = Color(palette.content),
-            onSurface = Color(palette.content),
-            onSurfaceVariant = Color(palette.secondary),
             primary = Color(palette.accent),
             onPrimary = Color(palette.surface),
             primaryContainer = Color(palette.gradient.first()),
@@ -155,23 +151,35 @@ internal fun RadioStationHero(
     val colors = MaterialTheme.colorScheme
     val gradient = listOf(colors.background, palette?.gradient?.first()?.let(::Color) ?: colors.surfaceVariant, colors.background)
     Column(modifier.fillMaxWidth().background(Brush.verticalGradient(gradient))) {
-        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1.3f).clipToBounds()) {
+        BoxWithConstraints(Modifier.fillMaxWidth().aspectRatio(1.42f).clipToBounds()) {
             val width = maxWidth
             portraits.drop(1).take(2).forEachIndexed { index, portrait ->
                 RadioPortraitImage(
                     portrait,
                     Modifier
                         .align(if (index == 0) Alignment.TopStart else Alignment.TopEnd)
-                        .offset(x = width * if (index == 0) -0.10f else 0.10f, y = width * 0.17f)
+                        .offset(x = width * if (index == 0) -0.10f else 0.10f, y = width * 0.13f)
                         .size(width * 0.46f),
                 )
             }
             portraits.firstOrNull()?.let { main ->
-                RadioPortraitImage(main, Modifier.align(Alignment.TopCenter).offset(y = width * 0.06f).size(width * 0.66f))
+                RadioPortraitImage(main, Modifier.align(Alignment.TopCenter).offset(y = width * 0.02f).size(width * 0.66f))
             }
+            // Like the album hero, the lower artwork blends into the page, including its edges.
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, colors.background))),
+            )
         }
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter).padding(bottom = Spacing.lg),
+            Modifier
+                .fillMaxWidth()
+                .background(colors.background)
+                .padding(horizontal = Spacing.screenGutter)
+                .padding(bottom = Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             Text(title, style = TextStyles.pageTitle, color = colors.onBackground)

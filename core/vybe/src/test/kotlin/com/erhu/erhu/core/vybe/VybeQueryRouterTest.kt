@@ -51,7 +51,8 @@ class VybeQueryRouterTest {
     }
 
     @Test
-    fun veryShortNames_areNotMatchedInsideCredits() {
-        assertTrue(route("songs by Ye") is VybeRoute.UnknownName)
+    fun knownArtistAliases_areSearchOnly_andOtherShortNamesAreNotGuessed() {
+        assertEquals(listOf(4L, 6L), (route("songs by Ye") as VybeRoute.Named).songIds)
+        assertTrue(route("songs by Li") is VybeRoute.UnknownName)
     }
 }

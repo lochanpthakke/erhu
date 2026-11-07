@@ -120,6 +120,7 @@ fun ArtistDetailScreen(
     onBack: () -> Unit,
     onOpenAlbum: (Album) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToArtworkFetcher: () -> Unit = {},
 ) {
     val detail by remember(artistId) {
         combine(
@@ -237,6 +238,7 @@ fun ArtistDetailScreen(
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.enqueueArtistForArtwork(artist)
+                                        onNavigateToArtworkFetcher()
                                     },
                                 )
                                 artistArtworkSearchUrl(artist.name)?.let { searchUrl ->

@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Suppress("TooManyFunctions")
 interface LibraryRepository {
+    /** Approved search aliases; never rewrite tags or merge library identities. */
+    fun observeVybeAliases(): Flow<Map<String, String>> = kotlinx.coroutines.flow.flowOf(emptyMap())
+
     fun getSongsPaged(): Flow<PagingData<Song>>
 
     fun getFavoriteSongsPaged(): Flow<PagingData<Song>>

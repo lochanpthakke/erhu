@@ -32,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -73,6 +74,7 @@ internal fun TransitionEditorScreen(
     val preview by viewModel.previewState.collectAsState()
     var sheet by remember { mutableStateOf<EditorSection?>(null) }
     var durationSheet by remember { mutableStateOf(false) }
+    var precisionEditor by remember(draft.target) { mutableStateOf(false) }
     val pair = (draft.target as? EditorTarget.Pair)?.pair
     val shown = draft.shown
     val base = shown ?: draft.editBase()
@@ -108,18 +110,33 @@ internal fun TransitionEditorScreen(
             item(key = "more") { SectionRowUnavailable() }
             if (draft.mode == EditorMode.CUSTOM && draft.spec.curve == TransitionCurve.CUSTOM) {
                 item(key = "hint") {
-                    Text(
-                        "Drag the blue points · tap a lane to add one · hold a point to remove it",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                    )
+                    Column {
+                        Text(
+                            "Drag the blue points · tap a lane to add one · hold a point to remove it",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        )
+                        TextButton(
+                            onClick = { precisionEditor = true },
+                            enabled = effectiveMs > 0,
+                            modifier = Modifier.padding(horizontal = Spacing.lg),
+                        ) {
+                            Text("Edit exact time & gain")
+                        }
+                    }
                 }
             }
         }
     }
     sheet?.let { start -> TransitionOptionsSheet(viewModel, draft, start, onDismiss = { sheet = null }) }
     if (durationSheet) DurationSheet(draft.editBase().durationMs, viewModel::setDuration, onDismiss = { durationSheet = false })
+    if (precisionEditor) {
+        TransitionPointEditor(draft.spec, effectiveMs, onApply = { edit ->
+            viewModel.edit { current -> TransitionPointPrecision.updated(current, edit, effectiveMs) }
+            precisionEditor = false
+        }, onDismiss = { precisionEditor = false })
+    }
 }
 
 /** The timeline with the preview button between its lanes. */

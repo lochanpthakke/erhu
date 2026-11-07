@@ -18,6 +18,17 @@ sealed interface VybeRoute {
         val wantsSimilar: Boolean,
     ) : VybeRoute
 
+    data class Ambiguous(
+        val name: String,
+        val matches: List<VybeNameMatch>,
+        val wantsSimilar: Boolean,
+    ) : VybeRoute
+
+    data class References(
+        val references: List<VybeReference>,
+        val wantsSimilar: Boolean,
+    ) : VybeRoute
+
     /**
      * A "like …" / "from …" query whose name matches nothing in the library (e.g. an album the user
      * doesn't have, or "songs like rain"). It may still be searched as a description, labelled as such.
@@ -33,71 +44,125 @@ sealed interface VybeRoute {
     ) : VybeRoute
 }
 
-/**
- * Sends explicit artist / album / title queries to exact metadata matching instead of embeddings,
- * which matched "songs like Blonde" to unrelated songs (Experiment 3, 2026-10-09). Names are
- * compared as word sequences, so "Tyler, the Creator" finds the credit "Tyler/ The Creator", and
- * an artist inside a credit ("A feat. B") counts. No similarity is inferred from metadata.
- */
+/** Catalog matching runs before embeddings. A typo never turns an ambiguous title into a guess. */
 object VybeQueryRouter {
-    private val PATTERNS =
+    private data class Pattern(
+        val regex: Regex,
+        val similar: Boolean,
+        val kind: EntityKind?,
+    )
+
+    private val patterns =
         listOf(
-            Regex("""^(?:play\s+)?(?:some\s+)?(?:songs?|music|tracks?|stuff|albums?)\s+(?:like|similar to)\s+(.+)$""") to true,
-            Regex("""^(?:more\s+)?(?:like|similar to)\s+(.+)$""") to true,
-            Regex("""^(?:play\s+)?(?:more\s+)?(?:songs?|music|tracks?)?\s*(?:from|by)\s+(.+)$""") to false,
+            Pattern(
+                Regex("""^(?:play\s+)?(?:some\s+)?albums?\s+(?:like|similar to)\s+(.+)$""", RegexOption.IGNORE_CASE),
+                true,
+                EntityKind.ALBUM,
+            ),
+            Pattern(
+                Regex("""^(?:play\s+)?(?:some\s+)?artists?\s+(?:like|similar to)\s+(.+)$""", RegexOption.IGNORE_CASE),
+                true,
+                EntityKind.ARTIST,
+            ),
+            Pattern(
+                Regex("""^(?:play\s+)?(?:some\s+)?(?:songs?|music|tracks?|stuff)\s+(?:like|similar to)\s+(.+)$""", RegexOption.IGNORE_CASE),
+                true,
+                EntityKind.TITLE,
+            ),
+            Pattern(Regex("""^(?:more\s+)?(?:like|similar to)\s+(.+)$""", RegexOption.IGNORE_CASE), true, null),
+            Pattern(
+                Regex("""^(?:play\s+)?(?:more\s+)?(?:songs?|music|tracks?)?\s*(?:from|by|in)\s+(.+)$""", RegexOption.IGNORE_CASE),
+                false,
+                EntityKind.ARTIST,
+            ),
         )
-    private val NON_WORD = Regex("""[^\p{L}\p{N}$]+""")
+    private val moods =
+        setOf(
+            "sad",
+            "happy",
+            "chill",
+            "dark",
+            "calm",
+            "fast",
+            "slow",
+            "relax",
+            "workout",
+            "gym",
+            "sleep",
+            "energetic",
+            "mellow",
+            "music",
+            "songs",
+            "vibes",
+            "rap",
+            "rock",
+            "jazz",
+            "pop",
+            "soul",
+            "ambient",
+        )
 
-    /** Names shorter than this (in letters and digits) are too ambiguous to match inside credits. */
-    private const val MIN_NAME_CHARS = 3
-
+    /** Keep known reference titles out of filter parsing, including titles beginning with No/Without. */
     @Suppress("ReturnCount")
-    fun route(
+    internal fun catalogRanges(
         query: String,
-        songs: List<SongText>,
-    ): VybeRoute {
-        val original = query.trim()
-        val text = original.lowercase()
-        val (name, wantsSimilar) =
-            PATTERNS.firstNotNullOfOrNull { (regex, similar) ->
-                regex.find(text)?.let { match ->
-                    // The name as the user typed it ("Drake", not "drake"), when lower-casing kept the length.
-                    val range = match.groups[1]!!.range
-                    val typed =
-                        if (original.length ==
-                            text.length
-                        ) {
-                            original.substring(range.first, range.last + 1)
-                        } else {
-                            match.groupValues[1]
-                        }
-                    typed.trim() to similar
+        index: VybeNameIndex,
+    ): List<IntRange> {
+        if (index.find(query, partial = false).isNotEmpty()) return listOf(query.indices)
+        val group =
+            patterns.firstNotNullOfOrNull {
+                it.regex
+                    .matchEntire(query)
+                    ?.groups
+                    ?.get(1)
+            } ?: return emptyList()
+        val text = group.value
+        val starts =
+            listOf(0) +
+                Regex("""\s+(?:and|plus|&)\s+|[,;]""", RegexOption.IGNORE_CASE)
+                    .findAll(text)
+                    .map { it.range.last + 1 }
+                    .toList()
+        val ends = Regex("""\s+|[,;]""").findAll(text).map { it.range.first }.toList() + text.length
+        return starts.mapNotNull { start ->
+            val end =
+                ends.asReversed().firstOrNull { end ->
+                    end > start && index.find(text.substring(start, end).trim(), partial = false).isNotEmpty()
                 }
-            } ?: return VybeRoute.Describe(original)
-        val words = words(name)
-        if (words.joinToString("").length < MIN_NAME_CHARS) return VybeRoute.UnknownName(name, query.trim())
-
-        val byArtist = songs.filter { containsSequence(words(it.artist), words) }
-        val byAlbum = songs.filter { words(it.album) == words }
-        val byTitle = songs.filter { words(it.title) == words }
-        // An album named like its artist ("Drake" …) is rare; artist wins, then album, then title.
-        return when {
-            byArtist.isNotEmpty() -> VybeRoute.Named(EntityKind.ARTIST, name, byArtist.ids(), wantsSimilar)
-            byAlbum.isNotEmpty() -> VybeRoute.Named(EntityKind.ALBUM, name, byAlbum.ids(), wantsSimilar)
-            byTitle.isNotEmpty() -> VybeRoute.Named(EntityKind.TITLE, name, byTitle.ids(), wantsSimilar)
-            else -> VybeRoute.UnknownName(name, query.trim())
+            end?.let { (group.range.first + start)..(group.range.first + it - 1) }
         }
     }
 
-    private fun List<SongText>.ids(): List<Long> = map { it.songId }.sorted()
+    fun route(
+        query: String,
+        songs: List<SongText>,
+    ): VybeRoute = route(query, VybeNameIndex(songs))
 
-    private fun words(text: String): List<String> = text.lowercase().split(NON_WORD).filter { it.isNotEmpty() }
-
-    private fun containsSequence(
-        haystack: List<String>,
-        needle: List<String>,
-    ): Boolean =
-        needle.isNotEmpty() &&
-            needle.size <= haystack.size &&
-            (0..haystack.size - needle.size).any { start -> haystack.subList(start, start + needle.size) == needle }
+    @Suppress("ReturnCount") // Exact, ambiguous and missing references are distinct outcomes.
+    fun route(
+        query: String,
+        index: VybeNameIndex,
+    ): VybeRoute {
+        val text = query.trim()
+        val pattern =
+            patterns.firstNotNullOfOrNull { p ->
+                p.regex.matchEntire(text)?.let { Triple(it.groupValues[1].trim(), p.similar, p.kind) }
+            }
+        val name = pattern?.first ?: text
+        val similar = pattern?.second ?: false
+        if (pattern == null &&
+            nameWords(name).any { it in moods } &&
+            index.find(name, partial = false).isEmpty()
+        ) {
+            return VybeRoute.Describe(text)
+        }
+        val matches = index.find(name, pattern?.third)
+        if (matches.size == 1) {
+            val match = matches.single()
+            return VybeRoute.Named(match.kind, match.name, match.songIds, similar)
+        }
+        if (matches.isNotEmpty()) return VybeRoute.Ambiguous(name, matches, similar)
+        VybeReferences.parse(name, index, pattern?.third)?.let { return VybeRoute.References(it, similar) }
+        return if (pattern == null) VybeRoute.Describe(text) else VybeRoute.UnknownName(name, text)
+    }
 }

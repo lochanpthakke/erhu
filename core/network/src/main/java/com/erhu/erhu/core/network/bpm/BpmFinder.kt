@@ -19,8 +19,8 @@ import kotlin.math.roundToInt
 /** Outcome of looking for a track's tempo. */
 sealed interface BpmLookup {
     /**
-     * [estimated] values are never written over a BPM the file already has. Every source is one
-     * today: tempo detection can land on half or double time, and AcousticBrainz's analyses do
+     * [estimated] values never overwrite a BPM the file already has. Provider BPM tags are facts;
+     * AcousticBrainz and on-device values are estimates and can land on half or double time
      * (EARFQUAKE 155.7, See You Again 155.4 where the songs are about 78-80 BPM).
      */
     data class Found(
@@ -101,11 +101,13 @@ class BpmFinder
     ) {
         private val byRecording = ConcurrentHashMap<String, AcousticBrainzBpm>()
 
-        @Suppress("TooGenericExceptionCaught", "ReturnCount")
+        @Suppress("TooGenericExceptionCaught", "ReturnCount", "CyclomaticComplexMethod")
         suspend fun find(
             match: MetadataCandidate,
             filePath: String,
+            candidates: List<MetadataCandidate> = emptyList(),
         ): BpmLookup {
+            candidateTempo(match, candidates)?.let { return it }
             val reasons = mutableListOf<String>()
             var failures = 0
             val recordingId = match.id.takeIf { it.startsWith(MUSICBRAINZ_PREFIX) }?.removePrefix(MUSICBRAINZ_PREFIX)
@@ -159,3 +161,18 @@ class BpmFinder
             const val MUSICBRAINZ_PREFIX = "mb_"
         }
     }
+
+/** Candidate BPM remains a provider fact; conflicting siblings do not become a guessed tempo. */
+@Suppress("ReturnCount")
+internal fun candidateTempo(
+    match: MetadataCandidate,
+    candidates: List<MetadataCandidate>,
+): BpmLookup.Found? {
+    match.bpm?.takeIf { it in PLAUSIBLE_BPM }?.let { return BpmLookup.Found(it, match.sourceName, estimated = false) }
+    val siblings =
+        com.erhu.erhu.core.network.scorer
+            .metadataSiblings(match, candidates)
+            .filter { it.bpm != null && it.bpm in PLAUSIBLE_BPM }
+    val value = siblings.mapNotNull { it.bpm }.distinct().singleOrNull() ?: return null
+    return BpmLookup.Found(value, siblings.first().sourceName, estimated = false)
+}

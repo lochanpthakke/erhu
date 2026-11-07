@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Embedded
 import androidx.room.Query
 import androidx.room.Upsert
+import com.erhu.erhu.core.database.entity.ArtistAliasEntity
 import com.erhu.erhu.core.database.entity.ArtistEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -15,6 +16,9 @@ data class ArtistForSongs(
 
 @Dao
 interface ArtistDao {
+    @Query("SELECT * FROM artist_alias")
+    fun observeAliases(): Flow<List<ArtistAliasEntity>>
+
     /** Only verified credits from this station, ranked by seed and number of represented tracks. */
     @Query(
         "SELECT a.*, CASE WHEN MAX(CASE WHEN ref.song_id = :seedSongId THEN 1 ELSE 0 END) = 1 " +

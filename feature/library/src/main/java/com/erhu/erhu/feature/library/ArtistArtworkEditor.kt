@@ -2,7 +2,6 @@ package com.erhu.erhu.feature.library
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +52,7 @@ internal fun ArtistImageDialog(
     var change by remember(artist.id) { mutableStateOf<CoverChange>(CoverChange.None) }
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     val picker =
-        rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             if (uri != null) pickedUri = uri
         }
 
@@ -95,7 +94,7 @@ internal fun ArtistImageDialog(
                 Spacer(modifier = Modifier.height(Spacing.md))
                 ArtworkWebSearchButton(artistArtworkSearchUrl(artist.name), artist.name)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                    OutlinedButton(onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                    OutlinedButton(onClick = { picker.launch("image/*") }) {
                         Text("Choose image")
                     }
                     if (hasCustomImage && change == CoverChange.None) {

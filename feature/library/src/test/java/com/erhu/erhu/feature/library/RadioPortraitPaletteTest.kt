@@ -32,6 +32,20 @@ class RadioPortraitPaletteTest {
         }
     }
 
+    @Test fun artworkColourIsScopedToTheHeaderAndControlsRatherThanTheEntireTrackList() {
+        val image = Bitmap.createBitmap(40,40,Bitmap.Config.ARGB_8888).apply { eraseColor(Color.BLUE) }
+        val palette = radioPalette(image)
+        image.recycle()
+        listOf(androidx.compose.material3.darkColorScheme(), androidx.compose.material3.lightColorScheme()).forEach { base ->
+            val station = radioColorScheme(base,palette)
+            assertEquals(base.background,station.background)
+            assertEquals(base.surface,station.surface)
+            assertEquals(base.onBackground,station.onBackground)
+            assertEquals(base.onSurface,station.onSurface)
+            assertEquals(androidx.compose.ui.graphics.Color(palette.accent),station.primary)
+        }
+    }
+
     @Test fun missingImageUsesTheExistingScreenTheme() {
         val theme = androidx.compose.material3.darkColorScheme()
         assertSame(theme, radioColorScheme(theme, null))

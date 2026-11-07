@@ -153,6 +153,7 @@ fun AlbumDetailScreen(
     transitionsViewModel: TransitionStudioViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToArtworkFetcher: () -> Unit = {},
 ) {
     val detail = rememberAlbumDetail(albumId, viewModel)
     val albumRef = remember(albumId) { CollectionRef.album(albumId) }
@@ -282,6 +283,7 @@ fun AlbumDetailScreen(
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.enqueueAlbumForArtwork(album)
+                                            onNavigateToArtworkFetcher()
                                         },
                                     )
                                     albumArtworkSearchUrl(album.title, album.artist)?.let { searchUrl ->

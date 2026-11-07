@@ -40,6 +40,14 @@ class LibraryRepositoryImpl
         // updater), before HiltWorkerFactory is ready for WorkManager's config.
         private val workManager: Lazy<WorkManager>,
     ) : LibraryRepository {
+        override fun observeVybeAliases(): Flow<Map<String, String>> =
+            artistDao
+                .observeAliases()
+                .map { rows ->
+                    com.erhu.erhu.core.database.library.ManualArtistAliases.aliasKeys +
+                        rows.associate { it.aliasKey to it.canonicalKey }
+                }.distinctUntilChanged()
+
         override fun observeArtistsForSongs(
             songIds: List<Long>,
             seedSongId: Long,

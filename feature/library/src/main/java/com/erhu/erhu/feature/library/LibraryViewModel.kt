@@ -92,6 +92,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -1285,14 +1286,15 @@ class LibraryViewModel
             album: Album,
             artworkUrl: String,
         ) {
+            fun updateStatus(status: String, reason: String? = null) {
+                _artworkQueue.update { latest ->
+                    latest.map { item -> if (item.album.id == album.id) item.copy(status = status, failureReason = reason) else item }
+                }
+            }
+
             viewModelScope.launch {
                 _isSearchingArtwork.value = true
-                val queue = _artworkQueue.value.toMutableList()
-                val queueIndex = queue.indexOfFirst { it.album.id == album.id }
-                if (queueIndex != -1) {
-                    queue[queueIndex] = queue[queueIndex].copy(status = "WRITING")
-                    _artworkQueue.value = queue.toList()
-                }
+                updateStatus("WRITING")
 
                 try {
                     val downloadResult = metadataRepository.downloadArtwork(artworkUrl)
@@ -1301,34 +1303,39 @@ class LibraryViewModel
                             ?: throw IllegalStateException("Could not download artwork image")
 
                     val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
-                    for (song in albumSongs) {
-                        val req =
-                            TagWriteRequest(
-                                contentUri = song.uri,
-                                filePath = song.uri.removePrefix("file://"),
-                                title = song.title,
-                                artist = song.artist,
-                                album = song.album,
-                                artworkBytes = imageBytes,
-                            )
-                        metadataRepository.writeTagsToFile(req)
-                        ArtworkLoader.invalidate(song.uri)
-                    }
-
-                    if (queueIndex != -1) {
-                        queue[queueIndex] = queue[queueIndex].copy(status = "COMPLETED")
-                        _artworkQueue.value = queue.toList()
-                    }
-                    libraryRepository.triggerLibraryScan()
-                } catch (e: Throwable) {
-                    if (queueIndex != -1) {
-                        queue[queueIndex] =
-                            queue[queueIndex].copy(
-                                status = "FAILED",
-                                failureReason = e.message ?: "WRITE_ERROR",
-                            )
-                        _artworkQueue.value = queue.toList()
-                    }
+                    val uris = albumSongs.map { it.uri }
+                    withWriteAccess(
+                        contentUris = uris,
+                        onGranted = {
+                            var writeFailed = false
+                            for (song in albumSongs) {
+                                val filePath = libraryRepository.getSongFilePath(song.id) ?: song.filePath.orEmpty()
+                                val req =
+                                    TagWriteRequest(
+                                        contentUri = song.uri,
+                                        filePath = filePath,
+                                        artworkBytes = imageBytes,
+                                    )
+                                val writeRes = metadataRepository.writeTagsToFile(req)
+                                if (writeRes is AppResult.Error) {
+                                    writeFailed = true
+                                    _userMessage.value = tagWriteFailureMessage(writeRes.error)
+                                } else {
+                                    ArtworkLoader.invalidate(song.uri)
+                                }
+                            }
+                            updateStatus(if (writeFailed) "FAILED" else "COMPLETED", if (writeFailed) "WRITE_ERROR" else null)
+                            libraryRepository.triggerLibraryScan()
+                        },
+                        onDenied = {
+                            updateStatus("FAILED", "WRITE_PERMISSION_DENIED")
+                            _userMessage.value = "Artwork not saved: erhu wasn't allowed to modify the file."
+                        },
+                    )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    updateStatus("FAILED", e.message ?: "WRITE_ERROR")
                 } finally {
                     _selectedEnlargedArtworkUrl.value = null
                     _artworkCandidates.value = emptyList()
@@ -1343,23 +1350,36 @@ class LibraryViewModel
             album: Album,
             imageBytes: ByteArray,
         ) {
-            viewModelScope.launch(Dispatchers.IO) {
+            viewModelScope.launch {
                 try {
                     val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
-                    for (song in albumSongs) {
-                        val req =
-                            TagWriteRequest(
-                                contentUri = song.uri,
-                                filePath = song.uri.removePrefix("file://"),
-                                title = song.title,
-                                artist = song.artist,
-                                album = song.album,
-                                artworkBytes = imageBytes,
-                            )
-                        metadataRepository.writeTagsToFile(req)
-                        ArtworkLoader.invalidate(song.uri)
-                    }
-                    libraryRepository.triggerLibraryScan()
+                    val uris = albumSongs.map { it.uri }
+                    withWriteAccess(
+                        contentUris = uris,
+                        onGranted = {
+                            for (song in albumSongs) {
+                                val filePath = libraryRepository.getSongFilePath(song.id) ?: song.filePath.orEmpty()
+                                val req =
+                                    TagWriteRequest(
+                                        contentUri = song.uri,
+                                        filePath = filePath,
+                                        artworkBytes = imageBytes,
+                                    )
+                                val writeRes = metadataRepository.writeTagsToFile(req)
+                                if (writeRes is AppResult.Error) {
+                                    _userMessage.value = tagWriteFailureMessage(writeRes.error)
+                                } else {
+                                    ArtworkLoader.invalidate(song.uri)
+                                }
+                            }
+                            libraryRepository.triggerLibraryScan()
+                        },
+                        onDenied = {
+                            _userMessage.value = "Album cover not saved: erhu wasn't allowed to modify the file."
+                        },
+                    )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     _userMessage.value = "Failed to write album cover: ${e.message}"
                 }
@@ -2304,14 +2324,14 @@ class LibraryViewModel
             // Specific reasons found here replace the plan's generic "not found" notes.
             val notes = mutableMapOf<String, String>()
             val wantsGenre = FixField.GENRE in fields && (!fillOnly || (local.tagsReadable && !isUsableTag(local.genre)))
-            val genre = if (wantsGenre) onlineGenre(match, notes) else null
+            val genre = if (wantsGenre) onlineGenre(match, candidates, notes) else null
             val wantsArtwork = FixField.ARTWORK in fields && (!fillOnly || (local.tagsReadable && !local.hasArtwork))
             val artwork = if (wantsArtwork) onlineCover(match, notes) else null
             val wantsYear = FixField.YEAR in fields && (!fillOnly || (local.tagsReadable && !isUsableYearTag(local.year)))
             val releaseDate = if (wantsYear) onlineReleaseDate(match, candidates, acceptAt, notes) else null
             // The file's own plausible BPM is kept by All Fields: no lookup or audio analysis then.
             val wantsBpm = FixField.BPM in fields && (!fillOnly || (local.tagsReadable && usableBpm(local.bpm) == null))
-            val bpm = if (wantsBpm) foundBpm(match, filePath, notes) else null
+            val bpm = if (wantsBpm) foundBpm(match, candidates, filePath, notes) else null
 
             val plan = planFieldFix(song.uri, filePath, fields, fillOnly, local, match, genre, artwork, releaseDate, bpm)
             return plan.copy(notes = plan.notes.map { notes[it] ?: it }, unfilled = notes.values.toList())
@@ -2354,9 +2374,10 @@ class LibraryViewModel
         /** The match's genre, or null with the reason in [notes]. */
         private suspend fun onlineGenre(
             match: MetadataCandidate,
+            candidates: List<MetadataCandidate>,
             notes: MutableMap<String, String>,
         ): String? =
-            when (val lookup = metadataRepository.lookupGenre(match)) {
+            when (val lookup = metadataRepository.lookupGenre(match, candidates)) {
                 is GenreLookup.Found -> lookup.genre
                 is GenreLookup.NotFound -> null.also { notes[NO_GENRE_NOTE] = "No genre: ${lookup.reason}" }
                 is GenreLookup.Failed -> null.also { notes[NO_GENRE_NOTE] = "Genre lookup failed: ${lookup.reason}" }
@@ -2365,10 +2386,11 @@ class LibraryViewModel
         /** The track's tempo (AcousticBrainz, else estimated on this device), or null with the reason in [notes]. */
         private suspend fun foundBpm(
             match: MetadataCandidate,
+            candidates: List<MetadataCandidate>,
             filePath: String,
             notes: MutableMap<String, String>,
         ): BpmLookup.Found? =
-            when (val lookup = bpmFinder.find(match, filePath)) {
+            when (val lookup = bpmFinder.find(match, filePath, candidates)) {
                 is BpmLookup.Found -> lookup
                 is BpmLookup.NotFound -> null.also { notes[NO_BPM_NOTE] = "No BPM: ${lookup.reason}" }
                 is BpmLookup.Failed -> null.also { notes[NO_BPM_NOTE] = "BPM lookup failed: ${lookup.reason}" }

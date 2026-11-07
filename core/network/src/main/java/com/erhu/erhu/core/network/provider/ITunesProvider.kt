@@ -24,9 +24,15 @@ class ITunesProvider
             artist: String?,
             album: String?,
         ): List<MetadataCandidate> {
+            val cleanArtist =
+                artist
+                    ?.takeIf { it.isNotBlank() && it != "Unknown Artist" }
+                    ?.substringBefore('/')
+                    ?.substringBefore(';')
+                    ?.trim()
             val query =
                 listOfNotNull(
-                    artist?.takeIf { it.isNotBlank() && it != "Unknown Artist" },
+                    cleanArtist,
                     title.takeIf { it.isNotBlank() },
                 ).joinToString(" ").trim()
             if (query.isBlank()) return emptyList()
@@ -53,6 +59,7 @@ class ITunesProvider
                             durationMs = dto.trackTimeMillis,
                             coverArtUrl = (dto.artworkUrl100 ?: dto.artworkUrl60)?.let { upgradeArtworkUrl(it) },
                             sourceName = "iTunes",
+                            genre = dto.primaryGenreName?.trim()?.takeIf { it.isNotEmpty() },
                             year = date?.year ?: 0,
                             releaseDate = date?.tagValue,
                         )

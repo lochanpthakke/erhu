@@ -27,6 +27,8 @@ sealed interface VybeAnswer {
         val songIds: List<Long>,
         /** For "like …" queries: the songs nearest to the named ones by genre and tempo. */
         val similar: List<VybeHit>,
+        val filters: List<String> = emptyList(),
+        val waitingForIndex: Boolean = false,
     ) : VybeAnswer
 
     /**
@@ -40,6 +42,17 @@ sealed interface VybeAnswer {
         val weak: Boolean,
         /** Set when the query named something the library doesn't have ("songs like Blonde"). */
         val unknownName: String? = null,
+        val filters: List<String> = emptyList(),
+        val error: String? = null,
+    ) : VybeAnswer
+
+    data class References(
+        val query: String,
+        val references: List<VybeReference>,
+        val wantsSimilar: Boolean,
+        val hits: List<VybeHit>,
+        val waitingForIndex: Boolean = false,
+        val filters: List<String> = emptyList(),
     ) : VybeAnswer
 
     /** Songs nearest to [seedSongId] by their genre / tempo description. */
@@ -65,20 +78,116 @@ class VybeDiscovery(
     private val embedder: TextEmbedder,
     private val vectors: SongVectors,
 ) {
+    @Suppress("ReturnCount", "LongMethod") // Each catalog route preserves the same explicit constraints.
     fun search(
         query: String,
         songs: List<SongText>,
         limit: Int,
+        names: VybeNameIndex = VybeNameIndex(songs),
+        selections: Map<Int, String> = emptyMap(),
     ): VybeAnswer {
-        val text = query.trim()
-        return when (val route = VybeQueryRouter.route(text, songs)) {
-            is VybeRoute.Named -> {
-                val similar = if (route.wantsSimilar) similarTo(route.songIds.toSet(), limit) else emptyList()
-                VybeAnswer.Named(route.kind, route.name, route.songIds, similar)
-            }
-            is VybeRoute.UnknownName -> describe(text, songs, limit).copy(unknownName = route.name)
-            is VybeRoute.Describe -> describe(text, songs, limit)
+        if (query.length >
+            MAX_QUERY_CHARS
+        ) {
+            return VybeAnswer.Described(query, emptyList(), false, error = "Use a shorter query (up to 1024 characters).")
         }
+        val intent = VybeQueryIntentParser.parse(query, names)
+        val constraints = intent.constraints
+        val eligible = songs.filter { constraints.allows(it, names) }
+        val allowed = eligible.map { it.songId }.toSet()
+        constraints.error?.let {
+            return VybeAnswer.Described(query, emptyList(), false, filters = constraints.descriptions, error = it)
+        }
+        return when (val route = VybeQueryRouter.route(intent.text, names)) {
+            is VybeRoute.Named -> {
+                val seeds = route.songIds.filter { it in allowed }
+                if (seeds.isEmpty()) {
+                    VybeAnswer.References(
+                        query,
+                        listOf(VybeReference(0, route.name, emptyList(), filteredOut = true)),
+                        route.wantsSimilar,
+                        emptyList(),
+                        filters = constraints.descriptions,
+                    )
+                } else {
+                    val (hits, waiting) =
+                        if (route.wantsSimilar) {
+                            rankReferences(listOf(seeds.toSet()), allowed, vectors, limit)
+                        } else {
+                            emptyList<VybeHit>() to false
+                        }
+                    VybeAnswer.Named(route.kind, route.name, seeds, hits, constraints.descriptions, waiting)
+                }
+            }
+            is VybeRoute.Ambiguous ->
+                references(
+                    query,
+                    listOf(VybeReference(0, route.name, route.matches)),
+                    route.wantsSimilar,
+                    allowed,
+                    limit,
+                    selections,
+                    constraints.descriptions,
+                )
+            is VybeRoute.References ->
+                references(
+                    query,
+                    route.references,
+                    route.wantsSimilar,
+                    allowed,
+                    limit,
+                    selections,
+                    constraints.descriptions,
+                )
+            is VybeRoute.UnknownName ->
+                describe(
+                    names.expandArtistAliases(intent.text),
+                    eligible,
+                    limit,
+                ).copy(unknownName = route.name, filters = constraints.descriptions)
+            is VybeRoute.Describe -> {
+                if (intent.text.isBlank() || intent.text.lowercase() in setOf("music", "songs", "tracks", "play")) {
+                    VybeAnswer.Described(
+                        query,
+                        eligible.take(limit.coerceAtLeast(0)).map { VybeHit(it.songId, 1f, constraints.descriptions) },
+                        false,
+                        filters = constraints.descriptions,
+                    )
+                } else {
+                    describe(names.expandArtistAliases(intent.text), eligible, limit).copy(filters = constraints.descriptions)
+                }
+            }
+        }
+    }
+
+    private fun references(
+        query: String,
+        references: List<VybeReference>,
+        similar: Boolean,
+        allowed: Set<Long>,
+        limit: Int,
+        selections: Map<Int, String>,
+        filters: List<String>,
+    ): VybeAnswer.References {
+        val resolved =
+            references.map { reference ->
+                val selected = reference.matches.singleOrNull() ?: reference.matches.firstOrNull { it.id == selections[reference.id] }
+                val filtered = selected?.copy(songIds = selected.songIds.filter { it in allowed })
+                reference.copy(selected = filtered, filteredOut = selected != null && filtered?.songIds?.isEmpty() == true)
+            }
+        val ready = resolved.all { it.selected != null && !it.filteredOut }
+        val (hits, waiting) =
+            when {
+                !ready -> emptyList<VybeHit>() to false
+                similar -> rankReferences(resolved.map { it.selected!!.songIds.toSet() }, allowed, vectors, limit)
+                else ->
+                    resolved
+                        .flatMap { it.selected!!.songIds }
+                        .distinct()
+                        .take(limit.coerceAtLeast(0))
+                        .map { VybeHit(it, 1f, listOf("Selected catalog reference")) } to false
+            }
+        return VybeAnswer.References(query, resolved, similar, hits, waiting, filters)
     }
 
     /** Songs nearest to [songId]'s own description (the current track, say), itself excluded. */
@@ -108,7 +217,8 @@ class VybeDiscovery(
         val queryVector = embedder.embed(query, EmbeddingRole.QUERY)
         val boosts = metadataBoosts(query, songs)
         // Scores of all songs (cheap: a dot product each) to judge whether the query separates them.
-        val all = vectors.rank(songs.size.coerceAtLeast(1)) { _, v -> cosineSimilarity(queryVector, v) }
+        val allowed = songs.map { it.songId }.toSet()
+        val all = vectors.rank(songs.size.coerceAtLeast(1)) { id, v -> if (id in allowed) cosineSimilarity(queryVector, v) else null }
         val weak = isWeak(all.map { it.score })
         val ranked =
             all
@@ -134,6 +244,7 @@ class VybeDiscovery(
     }
 
     companion object {
+        private const val MAX_QUERY_CHARS = 1024
         const val SIMILAR_REASON = "Similar genre and tempo"
 
         /** A library artist named in a mood query: its songs are ranked first (and scored up). */

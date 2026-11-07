@@ -117,7 +117,9 @@ fun ArtworkManagerScreen(
     onNavigateToLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    val artworkQueue by viewModel.artworkQueue.collectAsState()
+    val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
+    var selectedTab by rememberSaveable { mutableStateOf(if (artworkQueue.isEmpty() && artistArtworkQueue.isNotEmpty()) 1 else 0) }
     var upgradeTab by rememberSaveable { mutableStateOf<Int?>(null) }
     if (upgradeTab != null) {
         ArtworkUpgradeScreen(
@@ -137,8 +139,6 @@ fun ArtworkManagerScreen(
         }
     }
 
-    val artworkQueue by viewModel.artworkQueue.collectAsState()
-    val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
     val searchAlbums by viewModel.searchAlbums.collectAsState()
     val searchArtists by viewModel.searchArtists.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()

@@ -21,5 +21,6 @@ fun SongEntity.toDomainModel(): Song =
         trackNumber = trackNumber,
         discNumber = discNumber,
         filePath = filePath,
+        genre = genre,
         bpm = bpm,
     )

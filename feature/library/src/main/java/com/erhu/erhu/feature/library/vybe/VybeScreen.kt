@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
@@ -79,7 +80,7 @@ private val SUGGESTIONS =
  * runs on the phone; results say what they were matched on.
  */
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun VybeScreen(
     topInset: Dp,
     bottomInset: Dp,
@@ -200,10 +201,30 @@ fun VybeScreen(
                     onQueue = { viewModel.addAllToQueue(results.songs) },
                 )
             }
+            results.references.filter { it.matches.size > 1 }.forEach { reference ->
+                item(key = "reference-title-" + reference.id) {
+                    Text(
+                        "Choose a match for " + reference.text,
+                        style = TextStyles.itemTitle,
+                        modifier = Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
+                    )
+                }
+                items(reference.matches, key = { "reference-" + reference.id + "-" + it.id }) { match ->
+                    VybeReferenceChoice(match, match.id == reference.selected?.id) {
+                        viewModel.chooseReference(reference.id, match.id)
+                    }
+                }
+            }
             if (results.songs.isEmpty()) {
                 item(key = "empty") {
                     Text(
-                        "Nothing in your library matched.",
+                        when {
+                            results.waitingForIndex -> "Waiting for reference indexing to finish."
+                            results.references.any {
+                                it.selected == null && !it.filteredOut
+                            } -> "Resolve the references above or edit your query."
+                            else -> "Nothing in your library matched these filters."
+                        },
                         style = TextStyles.supporting,
                         modifier = Modifier.padding(Spacing.screenGutter),
                     )

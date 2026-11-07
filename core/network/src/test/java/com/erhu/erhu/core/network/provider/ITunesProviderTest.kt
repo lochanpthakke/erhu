@@ -38,6 +38,13 @@ class ITunesProviderTest {
 
     @After fun tearDown() = server.shutdown()
 
+    @Test fun searchRetainsOfficialGenreAndCleansBrokenArtistSeparators() = runBlocking {
+        server.enqueue(MockResponse().setBody("""{"resultCount":1,"results":[{"trackId":7,"trackName":"Track","artistName":"Artist","collectionName":"Album","primaryGenreName":" R&B "}]}"""))
+        val result = provider.searchTrack("Track","Artist/ Guest",null).single()
+        assertEquals("R&B",result.genre)
+        assertEquals("Artist Track",server.takeRequest().requestUrl!!.queryParameter("term"))
+    }
+
     @Test fun trackSearchReturnsUsableMetadataWithoutCredentials() = runBlocking {
         server.enqueue(MockResponse().setBody("""{"resultCount":1,"results":[{"trackId":1,"trackName":"Get Lucky","artistName":"Daft Punk","collectionName":"Random Access Memories","trackTimeMillis":369000,"releaseDate":"2013-05-17T00:00:00Z","artworkUrl100":"https://example.test/100x100bb.jpg"}]}"""))
         val result = provider.searchTrack("Get Lucky", "Daft Punk", "Random Access Memories").single()

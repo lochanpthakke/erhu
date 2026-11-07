@@ -122,11 +122,11 @@ fun RadioStationDetailScreen(
                         }
                     RadioStationHero(portraits, "${radio.identity} Radio", "Based on ${content.album.title}", palette)
                     Column(
-                        Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.lg),
+                        Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(countLabel(songs.size, "song"), style = TextStyles.metadata)
-                        Spacer(Modifier.height(Spacing.lg))
+                        Spacer(Modifier.height(Spacing.sm))
                         Button(
                             enabled = songs.isNotEmpty() && content.plan != null,
                             onClick = { content.plan?.let { libraryViewModel.playRadioPlan(it, songs) } },

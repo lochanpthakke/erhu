@@ -184,28 +184,54 @@ class MetadataRepositoryImpl
                 ArtistArtworkSearchResponse(urls, mapOf("Deezer" to urls))
             }
 
-        override suspend fun lookupGenre(match: MetadataCandidate): GenreLookup =
+        override suspend fun lookupGenre(match: MetadataCandidate): GenreLookup = lookupGenre(match, emptyList())
+
+        override suspend fun lookupGenre(
+            match: MetadataCandidate,
+            candidates: List<MetadataCandidate>,
+        ): GenreLookup =
             withContext(Dispatchers.IO) {
-                try {
-                    val releaseGroupId = match.releaseGroupId
-                    val deezerAlbumId = match.deezerAlbumId
-                    when {
-                        releaseGroupId != null ->
-                            genreFromMusicBrainz(musicBrainzProvider.fetchReleaseGroupGenres(releaseGroupId))
-                        deezerAlbumId != null ->
+                var failure: String? = null
+
+                suspend fun attempt(load: suspend () -> GenreLookup): GenreLookup? =
+                    try {
+                        load()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        failure = e.message ?: "Genre lookup failed"
+                        logger.w(TAG, failure.orEmpty(), e)
+                        null
+                    }
+                val mb =
+                    match.releaseGroupId?.let { id ->
+                        attempt { genreFromMusicBrainz(musicBrainzProvider.fetchReleaseGroupGenres(id)) }
+                    }
+                if (mb is GenreLookup.Found) return@withContext mb
+                val deezer =
+                    match.deezerAlbumId?.let { id ->
+                        attempt {
                             Genres
-                                .normalize(deezerProvider.fetchAlbumGenres(deezerAlbumId))
+                                .normalize(deezerProvider.fetchAlbumGenres(id))
                                 .takeIf { it.isNotEmpty() }
                                 ?.let { GenreLookup.Found(it, "Deezer album") }
                                 ?: GenreLookup.NotFound("Deezer lists no genre for this album")
-                        else -> GenreLookup.NotFound("${match.sourceName} doesn't provide genres")
+                        }
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    logger.w(TAG, "Genre lookup failed: ${e.message}", e)
-                    GenreLookup.Failed(e.message ?: "Genre lookup failed")
-                }
+                if (deezer is GenreLookup.Found) return@withContext deezer
+                val known =
+                    (
+                        listOf(match) +
+                            com.erhu.erhu.core.network.scorer
+                                .metadataSiblings(match, candidates)
+                    ).firstNotNullOfOrNull { candidate ->
+                        Genres
+                            .parse(candidate.genre)
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { GenreLookup.Found(it, candidate.sourceName + " genre") }
+                    }
+                known ?: failure?.let { GenreLookup.Failed(it) }
+                    ?: GenreLookup.NotFound("No genre found for " + match.sourceName + " candidate")
             }
 
         override suspend fun downloadArtwork(url: String): AppResult<ByteArray> =

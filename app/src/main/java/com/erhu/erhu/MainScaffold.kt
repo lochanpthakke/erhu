@@ -592,6 +592,9 @@ fun MainScaffold(
                                                         playlistsViewModel = playlistsViewModel,
                                                         transitionsViewModel = hiltViewModel(),
                                                         onBack = { navController.popBackStack() },
+                                                        onNavigateToArtworkFetcher = {
+                                                            navController.navigate(com.erhu.erhu.navigation.ArtworkManager)
+                                                        },
                                                     )
                                                 }
                                             }
@@ -627,6 +630,9 @@ fun MainScaffold(
                                                         playlistsViewModel = playlistsViewModel,
                                                         onBack = { navController.popBackStack() },
                                                         onOpenAlbum = { openAlbum(it) },
+                                                        onNavigateToArtworkFetcher = {
+                                                            navController.navigate(com.erhu.erhu.navigation.ArtworkManager)
+                                                        },
                                                     )
                                                 }
                                             }
@@ -867,10 +873,14 @@ private const val DRAWER_DIVIDER_ALPHA = 0.2f
 private fun routeName(route: String): String = route.substringBefore('/').substringBefore('?').substringAfterLast('.')
 
 private fun NavHostController.navigateTopLevel(route: Any) {
-    navigate(route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+    if (route == Library) {
+        popBackStack(graph.findStartDestination().id, inclusive = false)
+    } else {
+        navigate(route) {
+            popUpTo(graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
     }
 }
 

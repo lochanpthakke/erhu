@@ -9,12 +9,14 @@ import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.core.vybe.EntityKind
 import com.erhu.erhu.core.vybe.VybeAnswer
 import com.erhu.erhu.core.vybe.VybeHit
+import com.erhu.erhu.core.vybe.VybeReference
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -31,6 +33,8 @@ data class VybeResults(
     val title: String,
     val note: String?,
     val songs: List<VybeResult>,
+    val references: List<VybeReference> = emptyList(),
+    val waitingForIndex: Boolean = false,
 )
 
 /** The screen's query state. */
@@ -76,6 +80,32 @@ class VybeViewModel
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
         private var running: Job? = null
+        private var submitted: String? = null
+        private var selections: Map<Int, String> = emptyMap()
+
+        init {
+            viewModelScope.launch {
+                engine.catalogVersion.drop(1).collect {
+                    if (_query.value is VybeQueryState.Done) submitted?.let(::searchSubmitted)
+                }
+            }
+        }
+
+        private fun searchSubmitted(text: String) {
+            val selected = selections
+            run(text) { engine.search(text, RESULT_LIMIT, selected) }
+        }
+
+        fun chooseReference(
+            referenceId: Int,
+            matchId: String,
+        ) {
+            val done = _query.value as? VybeQueryState.Done ?: return
+            if (done.results.references.any { it.id == referenceId && it.matches.any { match -> match.id == matchId } }) {
+                selections = selections + (referenceId to matchId)
+                searchSubmitted(done.query)
+            }
+        }
 
         /** Loads the model and indexes, if not already (VYBE was opened). */
         fun start() = engine.start()
@@ -92,17 +122,23 @@ class VybeViewModel
         fun submit(text: String) {
             val query = text.trim()
             if (query.isEmpty()) return
-            run(query) { engine.search(query, RESULT_LIMIT) }
+            submitted = query
+            selections = emptyMap()
+            searchSubmitted(query)
         }
 
         /** Songs like the playing one. */
         fun similarToCurrent() {
             val song = currentSong.value ?: return
+            submitted = null
+            selections = emptyMap()
             run("Like \"${song.title}\"") { engine.similarTo(song.id, RESULT_LIMIT) }
         }
 
         fun clear() {
             running?.cancel()
+            submitted = null
+            selections = emptyMap()
             _query.value = VybeQueryState.Idle
         }
 
@@ -145,6 +181,8 @@ class VybeViewModel
                             val result = answer()
                             if (result == null) {
                                 VybeQueryState.Error(label, "VYBE isn't ready yet")
+                            } else if (result is VybeAnswer.Described && result.error != null) {
+                                VybeQueryState.Error(label, result.error!!)
                             } else {
                                 VybeQueryState.Done(label, present(result))
                             }
@@ -167,12 +205,13 @@ class VybeViewModel
                     VybeResults(
                         title = "${kindLabel(answer.kind)}: ${answer.name}",
                         note =
-                            if (answer.similar.isEmpty()) {
-                                "Found by name in your library."
-                            } else {
-                                "Found by name, then the closest songs by genre and tempo (your tags carry no mood, so \"like\" means that)."
-                            },
+                            listOfNotNull(
+                                "Found by name in your library.",
+                                "Waiting for the selected reference to finish indexing.".takeIf { answer.waitingForIndex },
+                                answer.filters.takeIf { it.isNotEmpty() }?.joinToString(" · "),
+                            ).joinToString(" "),
                         songs = named + similar,
+                        waitingForIndex = answer.waitingForIndex,
                     )
                 }
                 is VybeAnswer.Described ->
@@ -183,8 +222,30 @@ class VybeViewModel
                                 answer.unknownName?.let { "\"$it\" isn't in your library, so this is matched as a description." },
                                 "Matched against each song's genres, tempo and artist; there is no mood or audio analysis.",
                                 WEAK_NOTE.takeIf { answer.weak },
+                                answer.filters.takeIf { it.isNotEmpty() }?.joinToString(" · "),
                             ).joinToString(" "),
                         songs = songs(answer.hits),
+                    )
+                is VybeAnswer.References ->
+                    VybeResults(
+                        title = if (answer.wantsSimilar) "Like your references" else "Your matches",
+                        note =
+                            (
+                                answer.references.map { reference ->
+                                    when {
+                                        reference.filteredOut -> reference.text + ": excluded by your filters."
+                                        reference.selected != null -> "Matched: " + reference.selected!!.label
+                                        reference.matches.isEmpty() -> "Not found: " + reference.text
+                                        else -> "Choose a match for " + reference.text
+                                    }
+                                } + answer.filters +
+                                    listOfNotNull(
+                                        "Waiting for all selected references to finish indexing.".takeIf { answer.waitingForIndex },
+                                    )
+                            ).joinToString("\n"),
+                        songs = songs(answer.hits),
+                        references = answer.references,
+                        waitingForIndex = answer.waitingForIndex,
                     )
                 is VybeAnswer.SimilarTo ->
                     VybeResults(
