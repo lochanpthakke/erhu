@@ -11,3 +11,9 @@ data class Artist(
     /** The credit text could not be split or confirmed (e.g. "Tyler/ The Creator"); shown as written. */
     val isUnresolved: Boolean = false,
 )
+
+/** An artist verified on a bounded set of songs, with one of those songs for artwork fallback. */
+data class ArtistOnSongs(
+    val artist: Artist,
+    val representativeSongId: Long,
+)

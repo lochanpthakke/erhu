@@ -18,6 +18,7 @@ import com.erhu.erhu.core.database.dao.SongDao
 import com.erhu.erhu.core.database.mapper.toDomainModel
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.model.ArtistOnSongs
 import com.erhu.erhu.core.model.Song
 import com.lochanpthakke.empee3.core.database.scanner.LibraryScanWorker
 import dagger.Lazy
@@ -39,6 +40,14 @@ class LibraryRepositoryImpl
         // updater), before HiltWorkerFactory is ready for WorkManager's config.
         private val workManager: Lazy<WorkManager>,
     ) : LibraryRepository {
+        override fun observeArtistsForSongs(
+            songIds: List<Long>,
+            seedSongId: Long,
+        ): Flow<List<ArtistOnSongs>> =
+            artistDao.observeArtistsForSongs(songIds, seedSongId).map { rows ->
+                rows.map { ArtistOnSongs(it.artist.toDomainModel(), it.representativeSongId) }
+            }
+
         override fun getSongsPaged(): Flow<PagingData<Song>> =
             Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE)) {
                 songDao.getSongsPaged()

@@ -2,6 +2,8 @@ package com.erhu.erhu.feature.library
 
 import androidx.lifecycle.ViewModelStore
 import com.erhu.erhu.core.model.Album
+import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.model.ArtistOnSongs
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.RadioPlan
 import com.erhu.erhu.feature.library.mix.RadioSeed
@@ -19,6 +21,27 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RadioStationViewModelTest {
+    @Test fun `artist updates preserve generated station and displayed song ordering`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val store = ViewModelStore()
+        try {
+            var builds = 0
+            val artists = MutableStateFlow(listOf(ArtistOnSongs(Artist(7, "Lead", 1, 1, "file:///before.jpg"), 9)))
+            val loader = RadioStationLoader({ album }, { builds++; plan })
+            val model = RadioStationViewModel(loader, { ids, start ->
+                assertEquals(listOf(9L, 11L, 12L), ids)
+                assertEquals(9L, start)
+                artists
+            }) { MutableStateFlow(listOf(song(9), song(11), song(12))) }
+            store.put("station", model)
+            model.open(5)
+            artists.value = artists.value.map { it.copy(artist = it.artist.copy(artworkUri = "file:///after.jpg")) }
+            assertEquals("file:///after.jpg", model.content.value?.artists?.first()?.artist?.artworkUri)
+            assertEquals(listOf(9L, 11L, 12L), model.content.value?.songs?.map { it.id })
+            assertEquals(1, builds)
+        } finally { store.clear(); Dispatchers.resetMain() }
+    }
+
     private val album = Album(5, "Her Loss", "Drake", 7, 10, 2022, "content://covers/5")
     private val seed = RadioSeed.Album(5)
     private val plan = RadioPlan(seed, "Her Loss", 9, listOf(11, 12, 9), emptyList())

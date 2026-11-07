@@ -2,13 +2,33 @@ package com.erhu.erhu.core.database.dao
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Query
 import androidx.room.Upsert
 import com.erhu.erhu.core.database.entity.ArtistEntity
 import kotlinx.coroutines.flow.Flow
 
+data class ArtistForSongs(
+    @Embedded val artist: ArtistEntity,
+    val representativeSongId: Long,
+)
+
 @Dao
 interface ArtistDao {
+    /** Only verified credits from this station, ranked by seed and number of represented tracks. */
+    @Query(
+        "SELECT a.*, CASE WHEN MAX(CASE WHEN ref.song_id = :seedSongId THEN 1 ELSE 0 END) = 1 " +
+            "THEN :seedSongId ELSE MIN(ref.song_id) END AS representativeSongId " +
+            "FROM artists a INNER JOIN song_artist_cross_ref ref ON a.id = ref.artist_id " +
+            "WHERE ref.song_id IN (:songIds) AND ref.is_unresolved = 0 AND a.is_unresolved = 0 " +
+            "GROUP BY a.id ORDER BY MAX(CASE WHEN ref.song_id = :seedSongId AND ref.role = 'PRIMARY' THEN 1 ELSE 0 END) DESC, " +
+            "COUNT(DISTINCT ref.song_id) DESC, MIN(ref.position), a.id",
+    )
+    fun observeArtistsForSongs(
+        songIds: List<Long>,
+        seedSongId: Long,
+    ): Flow<List<ArtistForSongs>>
+
     @Upsert
     suspend fun upsertAll(artists: List<ArtistEntity>)
 
