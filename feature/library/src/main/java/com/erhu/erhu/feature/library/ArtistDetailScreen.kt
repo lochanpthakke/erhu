@@ -192,6 +192,7 @@ fun ArtistDetailScreen(
                             }
                             GlassMenu(
                                 label = "Artist options",
+                                albumMotionPilot = true,
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {

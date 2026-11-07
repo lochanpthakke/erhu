@@ -46,15 +46,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +67,7 @@ import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.designsystem.component.EmptyState
 import com.erhu.erhu.core.designsystem.component.PressIconButton
 import com.erhu.erhu.core.designsystem.foundation.IconSize
+import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.AbLoopEdit
@@ -285,18 +289,18 @@ private fun QueuePage(
 ) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    val queue = playbackState.queue
+    val latestQueue by rememberUpdatedState(playbackState.queue)
+    val density = LocalDensity.current
+    var rowHeightPx by remember(density) { mutableFloatStateOf(with(density) { 68.dp.toPx() }) }
+    val drag = remember(rowHeightPx) { QueueDragMotion(rowHeightPx) }
+    val queue = drag.rows ?: playbackState.queue
+    LaunchedEffect(drag, playbackState.queue) { drag.queueChanged(playbackState.queue) }
 
     LaunchedEffect(Unit) {
         if (playbackState.currentIndex > 0) {
             listState.scrollToItem(playbackState.currentIndex)
         }
     }
-
-    var draggingIndex by remember { mutableStateOf<Int?>(null) }
-    var draggingOffset by remember { mutableFloatStateOf(0f) }
-    val density = LocalDensity.current
-    val rowHeightPx = with(density) { 68.dp.toPx() }
 
     if (queue.isEmpty()) {
         EmptyState(message = "The queue is empty.", icon = Icons.AutoMirrored.Filled.QueueMusic)
@@ -317,74 +321,66 @@ private fun QueuePage(
                 items = queue,
                 key = { index, song -> "${song.id}_$index" },
             ) { index, queuedSong ->
-                val isDragging = draggingIndex == index
-                val activeDragIndex = draggingIndex
+                val isDragging = drag.index == index
+                val activeDragIndex = drag.index
 
                 val displacement =
                     if (activeDragIndex != null && !isDragging) {
-                        dragDisplacement(index, activeDragIndex, draggingOffset, rowHeightPx, queue.lastIndex)
+                        dragDisplacement(index, activeDragIndex, drag.offset, rowHeightPx, queue.lastIndex)
                     } else {
                         0f
                     }
 
-                val animatedDisplacement by animateFloatAsState(
-                    targetValue = displacement,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "queueItemDisplacement",
-                )
+                val animatedDisplacement by key(drag.handoff) {
+                    animateFloatAsState(
+                        targetValue = displacement,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "queueItemDisplacement",
+                    )
+                }
 
+                val lift by animateFloatAsState(
+                    targetValue = if (isDragging && !drag.settling) 1f else 0f,
+                    animationSpec = Motion.responsive(),
+                    label = "queuePickup",
+                )
                 val itemModifier =
-                    if (isDragging) {
-                        Modifier
-                            .zIndex(2f)
-                            .graphicsLayer {
-                                translationY = draggingOffset
-                                scaleX = 1.04f
-                                scaleY = 1.04f
-                                shadowElevation = 8.dp.toPx()
-                            }
-                    } else {
-                        Modifier
-                            .zIndex(1f)
-                            .graphicsLayer {
-                                translationY = animatedDisplacement
-                            }
+                    Modifier.zIndex(if (isDragging) 2f else 1f).graphicsLayer {
+                        translationY = if (isDragging) drag.offset else animatedDisplacement
+                        scaleX = 1f + 0.025f * lift
+                        scaleY = scaleX
+                        shadowElevation = 8.dp.toPx() * lift
                     }
 
                 val played = index < playbackState.currentIndex
                 SongRow(
                     song = queuedSong,
                     isHighlighted = index == playbackState.currentIndex,
-                    onClick = { playbackRepository.skipToQueueItem(index) },
-                    modifier = itemModifier.graphicsLayer { alpha = if (played) PLAYED_ENTRY_ALPHA else 1f },
+                    onClick = { if (!drag.settling) playbackRepository.skipToQueueItem(index) },
+                    modifier =
+                        itemModifier.onSizeChanged {
+                            if (drag.index == null && it.height > 0) rowHeightPx = it.height.toFloat()
+                        }.graphicsLayer { alpha = if (played) PLAYED_ENTRY_ALPHA else 1f },
                 ) {
                     IconButton(
                         onClick = {},
                         modifier =
-                            Modifier.pointerInput(queue) {
+                            Modifier.pointerInput(queue, drag) {
                                 detectVerticalDragGestures(
-                                    onDragStart = {
-                                        draggingIndex = index
-                                        draggingOffset = 0f
-                                    },
+                                    onDragStart = { drag.begin(latestQueue, index) },
                                     onDragEnd = {
-                                        val from = draggingIndex
-                                        if (from != null) {
-                                            val to = (from + (draggingOffset / rowHeightPx).roundToInt()).coerceIn(0, queue.lastIndex)
-                                            if (from != to) {
-                                                scope.launch { playbackRepository.reorder(from, to) }
+                                        scope.launch {
+                                            drag.finish(true, { latestQueue }) { from, to ->
+                                                playbackRepository.reorder(from, to) is AppResult.Success
                                             }
                                         }
-                                        draggingIndex = null
-                                        draggingOffset = 0f
                                     },
                                     onDragCancel = {
-                                        draggingIndex = null
-                                        draggingOffset = 0f
+                                        scope.launch { drag.finish(false, { latestQueue }) { _, _ -> false } }
                                     },
                                     onVerticalDrag = { change, dragAmount ->
                                         change.consume()
-                                        draggingOffset += dragAmount
+                                        drag.drag(index, dragAmount)
                                     },
                                 )
                             },
@@ -395,7 +391,7 @@ private fun QueuePage(
                             tint = if (isDragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    PressIconButton(onClick = { onRemove(index, queuedSong) }) {
+                    PressIconButton(onClick = { onRemove(index, queuedSong) }, enabled = !drag.settling) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from queue")
                     }
                 }

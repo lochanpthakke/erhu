@@ -1,6 +1,9 @@
 package com.erhu.erhu.feature.library
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.MonotonicFrameClock
+import androidx.compose.ui.MotionDurationScale
+import com.erhu.erhu.core.designsystem.foundation.Motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -151,6 +154,35 @@ class PlayerTransitionStateTest {
         }
         assertEquals(1f, state.fraction, 0f)
         assertFalse(state.progress.isRunning)
+    }
+
+    @Test
+    fun shortCancelledPullReturnsBrisklyWithoutBounceOrHandoffSnap() = runTest {
+        val state = PlayerTransitionState()
+        state.progress.snapTo(1f)
+        state.dragBy(-0.025f)
+        val improved = mutableListOf<Float>()
+        withContext(RecordingFrameClock { improved += state.fraction }) { state.release(0f) }
+        val old = Animatable(0.975f, visibilityThreshold = 0.0001f)
+        val baseline = mutableListOf<Float>()
+        withContext(RecordingFrameClock { baseline += old.value }) {
+            old.animateTo(1f, Motion.gestureSettle(0.0001f))
+        }
+        assertTrue(improved.size < baseline.size)
+        assertTrue(improved.all { it in 0.975f..1f })
+        assertSubpixelHandoff(improved, 1f)
+    }
+
+    @Test
+    fun reducedMotionReleaseHasNoIntermediateFrames() = runTest {
+        val state = PlayerTransitionState()
+        state.progress.snapTo(1f)
+        state.dragBy(-0.1f)
+        val reduced = object : MotionDurationScale { override val scaleFactor = 0f }
+        val frames = mutableListOf<Float>()
+        withContext(RecordingFrameClock { frames += state.fraction } + reduced) { state.release(0f) }
+        assertTrue(frames.all { it == 1f })
+        assertEquals(1f, state.fraction, 0f)
     }
 
     private fun assertSubpixelHandoff(frames: List<Float>, endpoint: Float) {

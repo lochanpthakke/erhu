@@ -340,7 +340,7 @@ private fun PlaylistMenu(
         IconButton(modifier = Modifier.glassMenuTrigger(), onClick = { expanded = true }) {
             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Playlist options")
         }
-        GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }) {
+        GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }, albumMotionPilot = true) {
             GlassMenuItem(
                 icon = Icons.Default.Edit,
                 text = { Text("Edit playlist") },

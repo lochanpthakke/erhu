@@ -124,7 +124,9 @@ class PlayerTransitionState {
                 velocity < -FLING_FRACTION_PER_SECOND -> false
                 else -> fraction > SETTLE_THRESHOLD
             }
-        moveTo(if (expand) 1f else 0f, Motion.gestureSettle(PROGRESS_VISIBILITY_THRESHOLD), velocity)
+        val target = if (expand) 1f else 0f
+        val distance = kotlin.math.abs(target - fraction)
+        moveTo(target, Motion.playerRelease(distance, velocity, PROGRESS_VISIBILITY_THRESHOLD), velocity)
     }
 }
 
