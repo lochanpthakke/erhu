@@ -54,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -116,7 +117,17 @@ fun ArtworkManagerScreen(
     onNavigateToLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    var upgradeTab by rememberSaveable { mutableStateOf<Int?>(null) }
+    if (upgradeTab != null) {
+        ArtworkUpgradeScreen(
+            controller = viewModel.artworkUpgrades,
+            kind = if (upgradeTab == 0) ArtworkUpgradeKind.ALBUMS else ArtworkUpgradeKind.ARTISTS,
+            onBack = { upgradeTab = null },
+            modifier = modifier,
+        )
+        return
+    }
     var searchQuery by remember { mutableStateOf("") }
     var appliedItemSuccessTitle by remember { mutableStateOf<String?>(null) }
 
@@ -292,6 +303,17 @@ fun ArtworkManagerScreen(
             }
 
             // ---- Resolution target.
+            Column(modifier = Modifier.fillMaxWidth()) {
+                SectionHeading(title = "Improve existing artwork")
+                Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
+                    GroupRow(
+                        title = if (selectedTab == 0) "Upgrade album covers" else "Upgrade artist photos",
+                        summary = "Find a larger version of the same image; review before replacing.",
+                        onClick = { upgradeTab = selectedTab },
+                    )
+                }
+            }
+
             Column(modifier = Modifier.fillMaxWidth()) {
                 SectionHeading(title = "Resolution target", trailing = "$minResolution×$minResolution px")
                 SegmentedSelector(

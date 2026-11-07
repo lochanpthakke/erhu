@@ -212,6 +212,21 @@ class LibraryViewModel
         private val bpmFinder: BpmFinder,
         private val radioRepository: RadioRepository,
     ) : ViewModel() {
+        internal val artworkUpgrades =
+            ArtworkUpgradeController(
+                appContext,
+                viewModelScope,
+                libraryRepository,
+                metadataRepository,
+                artistArtworkRepository,
+                writeAccess = { uris, granted, denied ->
+                    check(
+                        pendingWrite == null && !_isFixingQueue.value,
+                    ) { "Another tag write is in progress. Wait for it to finish and try again." }
+                    withWriteAccess(uris, granted, denied)
+                },
+            )
+
         /**
          * The smart mixes on the Tracks page: built from local listening history and tags, cached
          * app-wide and rebuilt only when that data changes (null until the first build).
