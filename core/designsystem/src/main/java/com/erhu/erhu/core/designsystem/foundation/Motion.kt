@@ -75,6 +75,10 @@ object Motion {
     fun <T> responsive(visibilityThreshold: T? = null): SpringSpec<T> =
         spring(dampingRatio = 0.9f, stiffness = 1000f, visibilityThreshold = visibilityThreshold)
 
+    /** Album-menu pilot: a restrained reveal with one small, quick spring-back. */
+    fun <T> albumMenuReveal(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 0.78f, stiffness = 650f, visibilityThreshold = visibilityThreshold)
+
     /** A brief, damped jiggle for a confirmed selection, never for continuous content. */
     fun <T> playful(visibilityThreshold: T? = null): SpringSpec<T> =
         spring(dampingRatio = 0.45f, stiffness = 550f, visibilityThreshold = visibilityThreshold)

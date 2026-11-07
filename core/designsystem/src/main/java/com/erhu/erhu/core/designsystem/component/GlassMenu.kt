@@ -55,6 +55,7 @@ fun GlassMenu(
     modifier: Modifier = Modifier,
     label: String = "Options",
     dismissOnSelection: Boolean = true,
+    albumMotionPilot: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val fallbackBounds = rememberMenuAnchorBounds()
@@ -78,7 +79,7 @@ fun GlassMenu(
             }
         }
     if (visible.currentState || visible.targetState || !visible.isIdle) {
-        GlassMenuPopup(visible, { if (expanded) dismiss() }, modifier, label, interaction, fallbackBounds, content)
+        GlassMenuPopup(visible, { if (expanded) dismiss() }, modifier, label, interaction, fallbackBounds, albumMotionPilot, content)
     }
     confirmation?.let { pending ->
         GlassAlertDialog(
@@ -137,6 +138,7 @@ private fun GlassMenuPopup(
     label: String,
     interaction: GlassMenuInteraction,
     fallbackBounds: androidx.compose.ui.geometry.Rect,
+    albumMotionPilot: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val anchor = LocalGlassMenuAnchor.current
@@ -147,7 +149,13 @@ private fun GlassMenuPopup(
     val transition = rememberTransition(visible, label = "Glass menu")
     val progress =
         transition.animateFloat(
-            transitionSpec = { if (targetState) Motion.responsive(visibilityThreshold = 0.001f) else Motion.fade(150) },
+            transitionSpec = {
+                when {
+                    !targetState -> Motion.fade(150)
+                    albumMotionPilot -> Motion.albumMenuReveal(visibilityThreshold = 0.001f)
+                    else -> Motion.responsive(visibilityThreshold = 0.001f)
+                }
+            },
             label = "Trigger to menu",
         ) { if (it) 1f else 0f }
     var windowOffset by remember { mutableStateOf(IntOffset.Zero) }
@@ -173,6 +181,7 @@ private fun GlassMenuPopup(
                 AnchoredMenuLayout(
                     anchor = anchor?.bounds ?: fallbackBounds,
                     progress = progress,
+                    albumMotionPilot = albumMotionPilot,
                     onWindowPosition = { windowOffset = it },
                     drawTrigger = anchor != null,
                     dismiss = dismiss,

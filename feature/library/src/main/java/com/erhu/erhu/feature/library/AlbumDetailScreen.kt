@@ -236,6 +236,7 @@ fun AlbumDetailScreen(
                                     Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Album options")
                                 }
                                 GlassMenu(
+                                    albumMotionPilot = true,
                                     label = "Album options",
                                     expanded = menuExpanded,
                                     onDismissRequest = { menuExpanded = false },

@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
@@ -56,6 +57,9 @@ internal fun menuMorphRect(
     fraction: Float,
 ): Rect = lerp(trigger, panel, fraction.coerceIn(0f, 1f))
 
+/** Only the spring's excess scales the complete surface; the aperture and rows keep stable bounds. */
+internal fun albumMenuSurfaceScale(progress: Float): Float = 1f + ((progress - 1f) * 0.5f).coerceIn(0f, 0.012f)
+
 private class AnchoredMenuShape(
     private val geometry: MenuGeometry,
     private val progress: State<Float>,
@@ -80,6 +84,7 @@ private class AnchoredMenuShape(
 internal fun AnchoredMenuLayout(
     anchor: Rect,
     progress: State<Float>,
+    albumMotionPilot: Boolean = false,
     onWindowPosition: (IntOffset) -> Unit,
     drawTrigger: Boolean,
     dismiss: () -> Unit,
@@ -90,6 +95,22 @@ internal fun AnchoredMenuLayout(
     val materialShape = remember { AnchoredMenuShape(geometry, progress, false) }
     val contentShape = remember { AnchoredMenuShape(geometry, progress, true) }
     Layout(
+        modifier =
+            if (albumMotionPilot) {
+                Modifier.graphicsLayer {
+                    val viewport = geometry.viewport
+                    transformOrigin =
+                        TransformOrigin(
+                            ((geometry.trigger.center.x - viewport.left) / viewport.width.coerceAtLeast(1f)).coerceIn(0f, 1f),
+                            ((geometry.trigger.center.y - viewport.top) / viewport.height.coerceAtLeast(1f)).coerceIn(0f, 1f),
+                        )
+                    // Compose's duration scale also governs the spring: no separate decorative loop.
+                    scaleX = albumMenuSurfaceScale(progress.value)
+                    scaleY = scaleX
+                }
+            } else {
+                Modifier
+            },
         content = {
             PopupGlassSurface(
                 Modifier.pointerInput(Unit) {
