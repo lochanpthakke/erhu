@@ -1,11 +1,45 @@
 # erhu — Claude working instructions, progress and pending work
 
-_Last updated: 2026-11-06. Current public release is erhu 1.0.6 (7), source `4670c40`, built and verified by Actions run 42074317364, then promoted to master. Only Lochan's missing application-source updates through `5c18a91` were imported. Last verified S23 installation is 1.0.6 (7), installed on 5 November at 23:55 IST. The local onboarding redesign is not yet installed. Free Firebase Hosting/FCM and the prior device-only hello test remain configured. Older notes are historical where superseded._
+_Last updated: 2026-11-07. Current public release is erhu 1.0.6 (7), source `4670c40`, built and verified by Actions run 42074317364, then promoted to master. Only Lochan's missing application-source updates through `5c18a91` were imported. Last verified S23 installation is 1.0.9 (10) with the station artist-portrait header and artwork-derived radio colours, installed on 7 November at 16:29 IST. See the current build record below. Free Firebase Hosting/FCM and the prior device-only hello test remain configured. Older notes are historical where superseded._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
 
 ---
+
+### Latest verified build/install: radio artist header (2026-11-07)
+- User requested installation; reused the approved temporary GitHub branch/direct remote-commit workflow. No local commit was created, local HEAD remains `e38a2e3`, and intended work remains uncommitted locally. Master/public release assets are unchanged.
+- Source `c1cbea2c7678bb1543d185120ea96f0ae2be9077`, branch `build/radio-artist-header-20261107-160357`, parent verified artwork-upgrade source `07105c2de1eb100ad6b9fd1ba59ae9b9aff8064e`. Uploaded only 12 intended radio/model/query/test/version files. Private work/, instruction notes and unrelated JAudioTaggerWriterTest changes were excluded. Version is **1.0.9 (10)**.
+- Actions https://github.com/lochanpthakke/erhu/actions/runs/42364495952 succeeded: full unit tests, release lint, optimized signed ARM64 release, identity/signature verification. Publication was disabled. No APK was compiled locally.
+- Installed on S23 `RZCXA1H43GW` using `adb install -r` at 2026-11-07 16:29:46 IST. Playback was paused before installation; no UI taps or navigation were performed. Installed APK hash exactly matches CI: `6e08acb0e470340e0d3e93998db380db7b170cd8ccf1ece57d527897d69e589d`; original signing certificate retained. The new artist-credit query is verified in installed APK DEX.
+- APK/checksum/verification/installed.json: desktop chat `outputs/erhu-radio-header-ci-42364495952`. Previous 1.0.8 APK remains in `outputs/erhu-artwork-upgrades-ci-42360496640`; its source branch is retained. App data preserved; actual phone radio-page visual validation remains pending.
+
+### Previous verified build/install: artwork upgrades (2026-11-07)
+- User requested installation after implementation; reused the already approved temporary-branch / GitHub-only commit approach. No local Git commit was created. Local HEAD remains `e38a2e3`, with intended changes uncommitted; master and public release assets are unchanged.
+- Remote branch `build/artwork-upgrades-20261107-150702`, source `07105c2de1eb100ad6b9fd1ba59ae9b9aff8064e`, parent `e03733f2a00dcace5b78676833a43ddc5d3bb57f` (verified Google-search source). Uploaded only ten intended feature/test/build files; excluded private work/, unrelated JAudioTaggerWriterTest changes and local instruction notes. Version incremented to **1.0.8 (9)**.
+- Actions https://github.com/lochanpthakke/erhu/actions/runs/42360496640 succeeded: full unit tests (including native artwork tests), release lint, optimized ARM64 APK, identity and original-certificate verification. Public release publication was disabled. No APK was compiled locally.
+- Installed on S23 `RZCXA1H43GW` with `adb install -r` at 2026-11-07 15:31:13 IST. Actual installed APK SHA-256 matches CI artifact: `1fa4af9e504b3c47f2098aa25e136e43f40d64d2a6c2e161308fb95f94819d83`. Existing signing certificate retained; installed APK DEX contains both upgrade tools, review dialog and Google search action.
+- Saved APK/checksum/verification/installed.json in desktop chat `outputs/erhu-artwork-upgrades-ci-42360496640`. Previous Google-search APK remains in `outputs/erhu-google-search-ci-42356466313`, and its source branch is retained for rollback. App data was preserved. No UI navigation or changes to music/artwork were performed on the user's phone; live upgrade-flow validation remains pending.
+
+### Previous verified build/install: Google search (2026-11-07)
+- User explicitly approved a temporary GitHub build branch and a commit created directly on GitHub, with no local Git commit and no changes to master or previous release assets.
+- Branch `build/google-images-20261107-141016`, source `e03733f2a00dcace5b78676833a43ddc5d3bb57f`; only the six album/artist Google Images link implementation/test files were uploaded over base `e38a2e3`. Local HEAD remains `e38a2e3`; source changes are intentionally still uncommitted locally. Do not duplicate this remote change or assume it has been merged.
+- Actions run https://github.com/lochanpthakke/erhu/actions/runs/42356466313 succeeded: full unit tests, release lint, optimized signed ARM64 APK and verification. Publication was disabled; master/public release remain unchanged.
+- Installed compatible erhu 1.0.7 (8) on S23 `RZCXA1H43GW` with `adb install -r`, preserving app data. Actual installed APK hash matches CI artifact: `775aec8feba0640a5633e0b349910d97746ec25745824a8e452d414916631b87`. Original certificate verified. Artifacts and `installed.json` are in desktop chat `outputs/erhu-google-search-ci-42356466313`; previous onboarding APK in `outputs/erhu-onboarding-ci-42095225371` is retained for rollback.
+- Manual action "Search images in browser" opens Google Images with album title + artist + "album cover image", or artist name + "artist photo". Available in detail menus, artist image dialog and Artwork Fetcher queues/results. It is not a scraper/provider and does not automatically import images. Existing keyless providers and local selection remain unchanged. Four targeted URL tests and scoped ktlint/detekt passed; device browser interaction has not been tested.
+
+## Radio station portrait header implementation (2026-11-07)
+- Radio station detail pages now show the main artist in a large centre circle and up to two distinct supporting artists actually credited on the station's generated tracks. Reuses the iOS RadioHero reference at `e56f29ef801e2a1ea7443c60dd3a56ec026d9577`. Home carousel cards and radio generation/playback algorithms are unchanged.
+- Added a bounded Room artist-credit projection through ArtistDao/LibraryRepository: seed primary credits first, then number of distinct station tracks. Unresolved credits/artists and unrelated tracks are excluded; each artist carries one station track as an artwork fallback. No schema/migration change or parsing guessed artist names. Portrait changes update the existing immutable station snapshot without regenerating its plan.
+- New RadioStationHero reuses LyricsPalette's artwork colour/contrast logic, cached by the lead portrait/station-track URI. One 64px software image sample is loaded off the main thread, reduced to 32px for colour extraction; derived palette cache is bounded. The station theme/gradient follows its artist image, independent of Now Playing; header fades into the same page background. Missing portraits use that artist's own track artwork; fewer artists leave fewer circles. No random/fixed peach colour or extra artist lookup was added.
+- Validation: 11 targeted tests passed across verified-credit queries (2), station selection/fallbacks (3), existing/new station ViewModel regression cases (3), native bitmap palette/contrast (2) and a native Compose header rendering check (1). Visually inspected blue, orange and light test-artwork previews in untracked `work/radio-artist-header-20261107/rendered`. Scoped ktlint/Detekt and module compilation passed. Temporary Compose render dependencies/source were injected only via work/ init scripts, with no new production/test Gradle dependency changes for this task.
+- The subsequent GitHub build and installation are verified in the latest build record above. No local commit was made, and live radio-page validation remains pending. Preserve the earlier uncommitted Google-search/artwork-upgrade work and unrelated JAudioTaggerWriterTest working-tree state.
+
+## Artwork resolution upgrade implementation (2026-11-07)
+- New Artwork Fetcher → Improve existing artwork actions: Upgrade album covers / Upgrade artist photos. Search is explicit, sequential and cancellable; previews are bounded to 100 matches / 64 MiB per search. Existing Google Images links and automatic/manual artwork workflows are preserved.
+- Reuses MetadataRepository catalogues, artist artwork storage and LibraryViewModel's existing Android write-consent flow. Only actual larger, visually similar whole images are offered, with a 25% gain in both dimensions, close aspect ratio, spatial-colour/edge checks and a 1,440-pixel save cap. This follows the supplied video and MeezaUni/Erhu-iOS ArtworkUpgradeStore/ArtworkUpgradeMatch reference at `e56f29ef801e2a1ea7443c60dd3a56ec026d9577`; no reverse-image upload, scraping or new provider/key was added.
+- Review current/replacement images before explicit apply. Revalidate original and replacement hashes at save, including after Android consent. Album saves change artwork only and skip different/unreadable/unwritable track covers, reporting partial counts. Artist upgrades use custom artwork storage. Album preview preparation respects the existing writer's JPEG output; artist PNG transparency is retained. Saving reports completion after preview cleanup.
+- Code: new core/network ArtworkUpgradeMatch/ArtworkUpgradeImages and feature/library ArtworkUpgradeController/ArtworkUpgradeScreen; small wiring in ArtworkManagerScreen and LibraryViewModel. Added Robolectric as a feature/library test-only dependency. Changed-file ktlint and new-code Detekt passed. Thirteen targeted tests passed (3 matcher + 10 native-image/workflow), covering incorrect matches, decoding, save cap, transparency, cancellation/single-flight, provider/save failures, stale images, kind switching and album consent/artwork-only writes. Subsequent GitHub build and installation are verified in the latest build record above. Actual upgrade UI/provider/device validation remains pending; no APK was compiled locally and no local commit was made.
 
 ## 1. Project and environment
 
@@ -15,12 +49,18 @@ is still open. Verify anything specific (file names, functions) against the code
   datastore, datastore-proto, database, sound, network, vybe, vybe-mediapipe}`,
   `feature:{library, settings, transfer}`.
 - No Android Studio. Portable toolchain in `D:\android-toolchain`:
-  - Build: `JAVA_HOME=/d/android-toolchain/jdk21/ ./gradlew …` (Git Bash).
+  - Local JDK/SDK are available for inspection and targeted checks only; compile application APKs through GitHub Actions (see build policy below).
   - adb: `/d/android-toolchain/sdk/platform-tools/adb.exe`, device **Galaxy S23** `RZCXA1H43GW`, model **SM-S911B** (last verified Android 17).
-- Checks normally run: `ktlintFormat`, `ktlintCheck`, `detekt`, `testDebugUnitTest` for touched
-  modules, then `:app:assembleDebug`.
+- Run targeted checks for touched modules as appropriate. Application compilation and APK assembly run through GitHub Actions, not locally.
 
 ## 2. Rules the user has set (follow them)
+
+### Build and rollback policy (user instruction, 2026-11-07)
+- Build application APKs only through GitHub Actions. Do not compile APKs on this PC.
+- Do not create local Git commits or automatically commit/push working-tree changes for a build. A build request alone does not authorize a local commit.
+- Keep the previous verified version available for rollback; do not rewrite history or overwrite its release artifact without explicit authorization.
+- GitHub Actions needs a source revision available on GitHub. If requested changes exist only locally, explain the required source publication step and obtain explicit direction rather than silently committing them.
+- These instructions supersede older local-build commands and task-specific assumptions that a GitHub build request implicitly authorizes committing locally.
 
 ### Git
 - Work on branch **`kshitij`** (tracks `origin/kshitij`). Push only `refs/heads/kshitij`
@@ -72,7 +112,7 @@ is still open. Verify anything specific (file names, functions) against the code
 - Public Firebase client IDs/API URL are external Actions variables consumed by release.yml. Private OAuth/admin credentials and device registration tokens stay outside Git/APK/Hosting/logs. Never read or modify `jwt.txt`. Private local publisher state and setup records are under untracked `work/firebase-setup`; preserve them, never stage that directory. Publisher defaults to a single test token; broadcast additionally requires explicit --all and user authorization.
 - Test notice `63cfb1e9-1d54-4dc4-934c-81d650bebd10` (body hello, versionCode 6 only) was accepted by FCM and visually verified in the actual erhu popup after owner unlock. It is excluded from the public feed. Temporary same-certificate read-only registration probe was removed. No broadcast, billing upgrade or user-data clearing occurred.
 - Validation: 11 backend tests passed; Actions Android unit tests, release lint, optimized ARM64 build, identity and signature checks passed. All five actual configuration values were verified in APK DEX. Actual installed APK hash was checked. Earlier isolated persistence/permission-denied startup tests remain valid; background push/notification taps, cloud scheduling and remote deactivation were not end-to-end tested in this delivery session. Local sync must run when scheduled notices become due; Spark has no cloud scheduler here.
-- Full implementation/deployment details: [docs/updates-and-announcements.md](docs/updates-and-announcements.md). Preserve unrelated JAudioTaggerWriterTest changes and scratch work. Future APK versions must increment code beyond 8. Reuse verified CI artifacts; no repeat local release compilation.
+- Full implementation/deployment details: [docs/updates-and-announcements.md](docs/updates-and-announcements.md). Preserve unrelated JAudioTaggerWriterTest changes and scratch work. Future APK versions must increment code beyond 10. Reuse verified CI artifacts; no repeat local release compilation.
 
 ## Selective Lochan import (2026-11-05)
 
@@ -1045,3 +1085,61 @@ running for 11 h. **Rule now: run benchmarks ONLY via `benchmark/scripts/run-ben
 `.bench` was re-seeded from `.perf` (backup `dbbackup\bench-seed-from-perf-20261017-122241`).
 The real app and `.perf` were not touched. The user's `.perf` copy and real app are debug builds; the debug-vs-release
 gap is still unmeasured.
+
+
+## 2026-11-07 — Lyrics timing, album hero and collection transition switches (GitHub build ready)
+
+- Completed in the requested order: lyrics timing editor, album artwork fade, then collection transition controls. Local changes remain uncommitted. GitHub Actions built the signed APK on the temporary branch below; it has not been installed.
+- Lyrics timing uses the existing PlaybackState DataStore, proto field 39, per-song/per-source-text identity. Negative offsets show lyrics earlier, positive later. Save/Cancel/Reset, numeric/slider/50 ms steps, preview, line/word seeking and prior-source offsets are covered. Source lyrics/media files are never rewritten.
+- AlbumHero keeps the existing image dimensions, layout, controls, scrolling and live-cover playback. Its fade follows the measured metadata plus a 48 dp lead instead of darkening from 35% of image height.
+- Album/playlist Transition Studio rows have an independent collection switch. Proto field 40 stores disabled collections; switching off gates exact-pair overrides too, without deleting them. Re-enabling an unconfigured collection starts the existing Fade preset. Global master stays independent and authoritative.
+- Enabled collections show between-track shortcuts into the existing pair editor. Playlist occurrence slots remain authoritative, including duplicate songs; missing/stale pairs cannot open a different pair. Studio controls and DSP choreography were preserved.
+- Validation: 95 targeted tests passed across lyrics, disk restart/merge, header collapse, transition resolver/planner/coordinator/shapes/editing, and native Compose interaction/render checks. Scoped main-source ktlint/detekt and library compilation passed; existing album/playlist page-wide static-analysis debt was excluded. Evidence is in work/lyrics-timing-20261107, work/album-hero-20261107 and work/collection-transitions-20261107.
+- S23 remains on the previously verified erhu 1.0.9 (10), CI 42364495952 / source c1cbea2c7678bb1543d185120ea96f0ae2be9077. The new build is ready for requested installation and on-device checks. Next compatible release must use versionCode greater than 11. Keep GitHub-only APK builds and no local commits.
+
+- GitHub build complete: erhu 1.0.10 (11), source `660e88d895f115baf073400ac8deaeb5945f5b76`, branch `build/lyrics-transitions-20261107-183902`, run https://github.com/lochanpthakke/erhu/actions/runs/42375630351. Full CI tests, release lint, optimized compilation and original-certificate signing verification passed. APK/checksum/verification/provenance saved in workspace `outputs/erhu-lyrics-transitions-ci-42375630351`. Master/public releases and local Git history are unchanged.
+
+- Installation update (2026-11-07): verified GitHub APK erhu 1.0.10 (11), CI 42375630351, installed successfully on S23 RZCXA1H43GW using `adb install -r`; data preserved. This supersedes the earlier 1.0.9 installed-version note. No launch or playback interaction was performed.
+
+
+## 2026-11-07 — Advanced VYBE queries and precise transition points (local, pending build)
+
+- Added multiple independently resolved song/album/artist references, balanced normalized reference ranking and seed exclusion. Missing/ambiguous/filtered references remain visible; recommendations wait for all selected reference vectors. Choices retain other selections and BPM/year/exclusion constraints; stale choices are rejected.
+- VYBE now supports explicit BPM ranges/around/under/over, release-year/decade constraints and known artist/genre exclusions. Unknown numeric tags never satisfy active filters. Quoted and recognized catalog names (including Without Me / No Role Modelz) are protected from filter parsing.
+- Added cached catalog matching with artist-qualified titles, partial names, conservative spelling correction, ambiguity choices, search-only Ye/Kanye aliases and existing approved database/manual aliases. No tag writes or artist-identity merges. Name/alias changes refresh searches without re-embedding unchanged descriptions. The existing EmbeddingGemma setup/model is unchanged.
+- Transition Studio: Volume → Customize exposes Edit exact time & gain. The existing floating surface lets users select outgoing/incoming points, enter actual-overlap milliseconds and signed dB, or set exact silence. Apply records one existing undoable edit; Cancel changes nothing. Fixed endpoints/point ordering and the other curve/settings are preserved. No canvas gesture, playback engine or persistence redesign.
+- Source reference: MeezaUni/Erhu-iOS default branch at e56f29ef801e2a1ea7443c60dd3a56ec026d9577. Validation evidence: work/vybe-advanced-20261107 and work/transition-precision-20261107. 61 unique targeted tests passed, including native pointer interactions and Room alias reads; scoped code checks/library compilation passed.
+- These new changes have NOT been built into an APK or installed. S23 remains on GitHub-built erhu 1.0.10 (11), CI 42375630351. Next requested GitHub build must base on source 660e88d895f115baf073400ac8deaeb5945f5b76 and use versionCode >11. Preserve the no-local-commit/GitHub-only-APK policy; no commit or push was performed for this implementation.
+
+## 2026-11-07 — Compact radio header and selective Lochan integration (local, pending build)
+
+- Radio header task completed first: portraits/title are closer, spacing before count/Play is reduced, lower artwork edges fade into the page, and the track list retains the base theme instead of inheriting the entire artwork colour. Portrait selection and radio generation/playback are unchanged. Palette checks and native renders passed (work/radio-header-spacing-20261107).
+- Then selectively integrated source fixes from lochan at 92fe6aa2f0f019d24821e6a9e9d0d0ceea16df06. This is a local file integration, not a Git-history merge/commit. Kept the pending VYBE, precision editor, lyrics and artwork improvements.
+- Included local artist/playlist picking, bounded ImageDecoder plus stream crop fallback (including the old bounds-decode null-return bug), album/artist Artwork Fetcher redirects, utility-to-Library navigation cleanup, cover-write permission handling/resolved file paths/artwork-only writes, embedded-cover priority, genre propagation, iTunes genre data and guarded metadata fallbacks. Queue status updates use current album identity across permission callbacks.
+- No new source/provider was added. Existing artist fetch methods and repository URL set were verified against build source 660e88d. Excluded the branch's Genius/Discogs/DuckDuckGo/Apple-page scraping and expanded artwork-source pipeline, .idea files, recovery-code file, unused BPM diagnostic fields, force-overwrite change and forced uncertain-tempo guesses. jwt.txt was untouched.
+- Metadata fallback borrowing is restricted to confident same-track/same-edition candidates; conflicting years/BPM and missing/invalid facts remain guarded. Existing MusicBrainz/Deezer/iTunes/AcousticBrainz/on-device paths were retained.
+- Evidence: work/lochan-selective-20261107/completion.json. 23 network tests and 26 feature tests passed across the targeted runs, plus 4 radio-header checks. Scoped code checks and library compilation passed. Large unrelated screen/common static-analysis debt was excluded. No local APK build or on-phone validation of these changes.
+- Phone stays on erhu 1.0.10 (11), CI 42375630351. Next requested GitHub build should use base source 660e88d895f115baf073400ac8deaeb5945f5b76, include the pending VYBE/precision/radio changes plus this selective integration, and bump versionCode above 11. Do not create local commits, push master or publish a release without the user's request.
+
+
+## 2026-11-07 — Requested GitHub beta build/publication in progress
+
+- User requested current APK build/install, then explicitly authorized uploading the APK to Releases. Version bumped to erhu 1.0.11 (12). GitHub-only source upload on temporary branch `build/vybe-metadata-radio-20261107-220442`, source `a4d733436d140564461ce9591134edaec87d0c44`, based on previous installed source 660e88d. Includes advanced VYBE, precision points, radio spacing and guarded Lochan source fixes. No added metadata/artwork providers.
+- Run https://github.com/lochanpthakke/erhu/actions/runs/42391998583 executes full tests, release lint, optimized signed build and verification, then beta publication if successful. Release/install are not yet confirmed. Build state and exact 45-file allowlist: work/vybe-metadata-release-20261107/github-build.json.
+- Local HEAD remains e38a2e359bd50421dc23c0482aee6111c411b865; no local commits or master push. Phone disconnected at build start; installation pending connection.
+
+- Build/publication confirmed: GitHub run 42391998583 succeeded, including full unit tests/release lint, optimized APK, original-certificate verification and publish job. Published beta: https://github.com/lochanpthakke/erhu/releases/tag/erhu-v1.0.11-beta.20 . APK erhu 1.0.11 (12), 39,021,449 bytes, SHA-256 f5e173686b3c8aa557844747cdd43a8dd6d2622b850fb46ea57726aa813d6d07. Downloaded artifact checksum matches published asset digest; local apksigner/aapt verification passed. Evidence/rollback APK in workspace outputs/erhu-vybe-metadata-ci-42391998583. Phone installation remains pending connection.
+
+- Installation confirmed: erhu 1.0.11 (12), source a4d733436d140564461ce9591134edaec87d0c44 / CI 42391998583, installed successfully on S23 RZCXA1H43GW with adb install -r. Package version verified by dumpsys; app data retained. Supersedes the pending-install note. Installed evidence: workspace outputs/erhu-vybe-metadata-ci-42391998583/installed.json. No launch/playback interaction performed.
+
+## 2026-11-08 — Authorized update announcement broadcast
+
+- User explicitly requested an all-user announcement. Published ID 75104789-06f4-464e-91cd-ad4aa1e17d33, title App update available, exact requested body: "There is a new version of app available, please update through the github checker. If already done please ignore". Audience all, no version restrictions, expires seven days after publication.
+- Existing free Spark Hosting/FCM publisher deployed successfully; FCM accepted the topic message and the public feed was independently checked for ID/body. This confirms publication/FCM acceptance, not delivery to every device. Receipt and idempotent input under private untracked work/firebase-setup/update-announcement-20261108*.json. Do not resend with a new ID unless requested. No billing, Functions deployment, app rebuild, local commit or push.
+
+## 2026-11-08 — In-app announcement startup refresh
+
+- User clarified announcement popups must appear on Home without POST_NOTIFICATIONS. Existing AnnouncementHost wraps MainScaffold, and foreground popup selection precedes the OS notification permission checks; permission applies only to notification-shade posting. Do not gate in-app display or feed retrieval on notification permission.
+- Changed AnnouncementController.resumed to force the feed refresh on each process foreground session, bypassing the 15-minute background cache window so missed pushes are discovered on open. Existing read/dismissed suppression and refresh mutex are unchanged. No duplicate broadcast or reset of production announcement state.
+- On S23 1.0.11, the actual update announcement is present and already marked Read. Returned phone to Home. This source change is not in the installed APK; next requested GitHub build must base on a4d733436d140564461ce9591134edaec87d0c44 and bump versionCode beyond 12. No local APK assembly, commit or push.
+- Validation: app compileDebugKotlin and all four AnnouncementTest cases passed. No APK was assembled locally. Checks log: work/announcement-home-20261108/checks.log. Permission independence verified in code; an end-to-end unseen-popup test with permission denied was not performed on production data.
