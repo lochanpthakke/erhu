@@ -3,7 +3,9 @@ package com.erhu.erhu.feature.library
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -228,27 +230,34 @@ private val StrokeWidth =
     androidx.compose.ui.unit
         .Dp(2f)
 
-private fun decodeForCircularCrop(
+@Suppress("TooGenericExceptionCaught", "SwallowedException", "ReturnCount")
+internal fun decodeForCircularCrop(
     context: Context,
     uri: Uri,
 ): Bitmap? {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val decoded =
+            try {
+                ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, info, _ ->
+                    val longest = max(info.size.width, info.size.height)
+                    if (longest > MAX_CROP_SOURCE_DIMENSION) {
+                        decoder.setTargetSampleSize((longest + MAX_CROP_SOURCE_DIMENSION - 1) / MAX_CROP_SOURCE_DIMENSION)
+                    }
+                    decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                }
+            } catch (_: Exception) {
+                null // Some document providers cannot supply the descriptor ImageDecoder needs.
+            }
+        if (decoded != null) return decoded
+    }
     return try {
-        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, boundsOptions)
-        } ?: return null
-        val (w, h) = boundsOptions.outWidth to boundsOptions.outHeight
-        if (w <= 0 || h <= 0) return null
-
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
-        while (w / sample > MAX_CROP_SOURCE_DIMENSION || h / sample > MAX_CROP_SOURCE_DIMENSION) {
-            sample *= 2
-        }
-
-        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sample }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, decodeOptions)
-        }
+        while (bounds.outWidth / sample > MAX_CROP_SOURCE_DIMENSION || bounds.outHeight / sample > MAX_CROP_SOURCE_DIMENSION) sample *= 2
+        val options = BitmapFactory.Options().apply { inSampleSize = sample }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
     } catch (_: Exception) {
         null
     }

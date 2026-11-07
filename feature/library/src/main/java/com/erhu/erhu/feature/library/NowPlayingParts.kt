@@ -271,6 +271,7 @@ internal fun TransportControls(
     /** Whether the neighbour cards are stacked into one behind the current card. */
     stacked: Boolean,
     onToggleStack: () -> Unit,
+    stackProgress: () -> Float = { if (stacked) 1f else 0f },
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -299,11 +300,11 @@ internal fun TransportControls(
                 val playInteraction = rememberInteraction()
                 FilledIconButton(
                     onClick = onPlayPause,
-                    modifier = Modifier.size(ComponentSize.primaryButton),
+                    modifier = Modifier.size(ComponentSize.primaryButton).pressScale(playInteraction, pressedScale = 0.92f),
                     shape = CircleShape,
                     interactionSource = playInteraction,
                 ) {
-                    Box(Modifier.pressScale(playInteraction)) {
+                    Box {
                         SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
                             Icon(
                                 imageVector = icon,
@@ -352,10 +353,16 @@ internal fun TransportControls(
             Slot {}
             Slot {
                 PressIconButton(onClick = onToggleStack) {
-                    SwapIcon(if (stacked) Icons.Default.ViewCarousel else Icons.Default.Layers) { icon ->
+                    Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = icon,
-                            contentDescription = if (stacked) "Show albums side by side" else "Stack background albums",
+                            imageVector = Icons.Default.Layers,
+                            contentDescription = if (!stacked) "Stack background albums" else null,
+                            modifier = Modifier.graphicsLayer { alpha = 1f - stackProgress().coerceIn(0f, 1f) },
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ViewCarousel,
+                            contentDescription = if (stacked) "Show albums side by side" else null,
+                            modifier = Modifier.graphicsLayer { alpha = stackProgress().coerceIn(0f, 1f) },
                         )
                     }
                 }

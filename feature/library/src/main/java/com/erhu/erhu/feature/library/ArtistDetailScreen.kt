@@ -120,6 +120,7 @@ fun ArtistDetailScreen(
     onBack: () -> Unit,
     onOpenAlbum: (Album) -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToArtworkFetcher: () -> Unit = {},
 ) {
     val detail by remember(artistId) {
         combine(
@@ -132,6 +133,7 @@ fun ArtistDetailScreen(
         )
     }.collectAsState(initial = null)
 
+    val openArtworkSearch = rememberArtworkWebSearchLauncher()
     val currentSongId by viewModel.currentSongId.collectAsState()
     val candidates by viewModel.metadataCandidates.collectAsState()
 
@@ -190,6 +192,7 @@ fun ArtistDetailScreen(
                             }
                             GlassMenu(
                                 label = "Artist options",
+                                albumMotionPilot = true,
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
@@ -236,8 +239,19 @@ fun ArtistDetailScreen(
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.enqueueArtistForArtwork(artist)
+                                        onNavigateToArtworkFetcher()
                                     },
                                 )
+                                artistArtworkSearchUrl(artist.name)?.let { searchUrl ->
+                                    GlassMenuItem(
+                                        icon = Icons.Default.ImageSearch,
+                                        text = { Text("Search images in browser") },
+                                        onClick = {
+                                            menuExpanded = false
+                                            openArtworkSearch(searchUrl)
+                                        },
+                                    )
+                                }
                                 GlassMenuItem(
                                     icon = Icons.Default.PhotoLibrary,
                                     text = { Text("Set Custom Photo (Local File)") },

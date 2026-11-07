@@ -127,7 +127,7 @@ fun NowPlayingScreen(
     /** Songs of the Smart Radio in the queue (empty when none): "New radio picks" shows for these. */
     radioSongIds: Set<Long> = emptySet(),
     onRefreshRadio: (() -> Unit)? = null,
-    /** The outcome of an Add to playlist started here ("Added to …", "Already in …"), shown once. */
+    /** The outcome of an Add to playlist started here ("Added to â€¦", "Already in â€¦"), shown once. */
     playlistMessage: String? = null,
     onPlaylistMessageShown: () -> Unit = {},
 ) {
@@ -176,10 +176,10 @@ fun NowPlayingScreen(
     // one. The animated value is read only while drawing, so the page does not recompose per frame;
     // a tap mid-way simply retargets the running spring.
     var stacked by remember { mutableStateOf(false) }
-    val stack = remember { Animatable(0f) }
+    val stack = remember { Animatable(0f, visibilityThreshold = 0.001f) }
     // One cover video for the current card: a track change within the album keeps it running.
     val coverVideo = rememberCoverVideoHost()
-    LaunchedEffect(stacked) { stack.animateTo(if (stacked) 1f else 0f, Motion.settle()) }
+    LaunchedEffect(stacked) { stack.animateTo(if (stacked) 1f else 0f, Motion.gestureSettle()) }
     var showAudioDetails by remember { mutableStateOf(false) }
     var lyricsExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -405,6 +405,7 @@ fun NowPlayingScreen(
                                         onRepeat = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
                                         stacked = stacked,
                                         onToggleStack = { stacked = !stacked },
+                                        stackProgress = { stack.value },
                                         modifier = Modifier.revealWithPlayer(transition, start = 0.48f, end = 0.92f),
                                     )
                                 }

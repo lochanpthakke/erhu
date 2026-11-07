@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.erhu.erhu.core.designsystem.component.PopupGlassBackdropHost
+import com.erhu.erhu.core.model.TransitionPairKey
 
 /**
  * Shows the Transition Studio for [input] full screen over the current page (its own window, so
@@ -17,9 +18,10 @@ internal fun TransitionStudioHost(
     input: StudioInput,
     viewModel: TransitionStudioViewModel,
     onClose: () -> Unit,
+    initialPair: TransitionPairKey? = null,
 ) {
-    DisposableEffect(input) {
-        viewModel.open(input)
+    DisposableEffect(input, initialPair) {
+        viewModel.open(input, initialPair)
         onDispose { viewModel.close() }
     }
     Dialog(

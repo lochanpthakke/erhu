@@ -75,6 +75,10 @@ object Motion {
     fun <T> responsive(visibilityThreshold: T? = null): SpringSpec<T> =
         spring(dampingRatio = 0.9f, stiffness = 1000f, visibilityThreshold = visibilityThreshold)
 
+    /** Album-menu pilot: a restrained reveal with one small, quick spring-back. */
+    fun <T> albumMenuReveal(visibilityThreshold: T? = null): SpringSpec<T> =
+        spring(dampingRatio = 0.78f, stiffness = 650f, visibilityThreshold = visibilityThreshold)
+
     /** A brief, damped jiggle for a confirmed selection, never for continuous content. */
     fun <T> playful(visibilityThreshold: T? = null): SpringSpec<T> =
         spring(dampingRatio = 0.45f, stiffness = 550f, visibilityThreshold = visibilityThreshold)
@@ -95,6 +99,21 @@ object Motion {
      */
     fun <T> gestureSettle(visibilityThreshold: T? = null): SpringSpec<T> =
         spring(dampingRatio = 1f, stiffness = 380f, visibilityThreshold = visibilityThreshold)
+
+    /** Short player releases settle briskly; long journeys keep the existing gesture weight. */
+    fun <T> playerRelease(
+        distance: Float,
+        velocity: Float,
+        visibilityThreshold: T? = null,
+    ): SpringSpec<T> {
+        val remaining = 1f - distance.coerceIn(0f, 1f)
+        val speed = kotlin.math.abs(velocity).coerceAtMost(4f)
+        return spring(
+            dampingRatio = 1f,
+            stiffness = 380f + remaining * remaining * 320f + speed * 40f,
+            visibilityThreshold = visibilityThreshold,
+        )
+    }
 
     /**
      * Level 4: the player moving between collapsed and expanded on its own (tap,

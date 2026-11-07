@@ -54,6 +54,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -116,7 +117,19 @@ fun ArtworkManagerScreen(
     onNavigateToLibrary: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    val artworkQueue by viewModel.artworkQueue.collectAsState()
+    val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
+    var selectedTab by rememberSaveable { mutableStateOf(if (artworkQueue.isEmpty() && artistArtworkQueue.isNotEmpty()) 1 else 0) }
+    var upgradeTab by rememberSaveable { mutableStateOf<Int?>(null) }
+    if (upgradeTab != null) {
+        ArtworkUpgradeScreen(
+            controller = viewModel.artworkUpgrades,
+            kind = if (upgradeTab == 0) ArtworkUpgradeKind.ALBUMS else ArtworkUpgradeKind.ARTISTS,
+            onBack = { upgradeTab = null },
+            modifier = modifier,
+        )
+        return
+    }
     var searchQuery by remember { mutableStateOf("") }
     var appliedItemSuccessTitle by remember { mutableStateOf<String?>(null) }
 
@@ -126,8 +139,6 @@ fun ArtworkManagerScreen(
         }
     }
 
-    val artworkQueue by viewModel.artworkQueue.collectAsState()
-    val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
     val searchAlbums by viewModel.searchAlbums.collectAsState()
     val searchArtists by viewModel.searchArtists.collectAsState()
     val isScanning by viewModel.isScanning.collectAsState()
@@ -293,6 +304,17 @@ fun ArtworkManagerScreen(
 
             // ---- Resolution target.
             Column(modifier = Modifier.fillMaxWidth()) {
+                SectionHeading(title = "Improve existing artwork")
+                Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
+                    GroupRow(
+                        title = if (selectedTab == 0) "Upgrade album covers" else "Upgrade artist photos",
+                        summary = "Find a larger version of the same image; review before replacing.",
+                        onClick = { upgradeTab = selectedTab },
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
                 SectionHeading(title = "Resolution target", trailing = "$minResolution×$minResolution px")
                 SegmentedSelector(
                     options = RESOLUTION_TARGETS.map { "$it px" },
@@ -318,6 +340,15 @@ fun ArtworkManagerScreen(
             if (currentContextTitle != null) {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     SectionHeading(title = "Artwork candidates")
+                    ArtworkWebSearchButton(
+                        url =
+                            if (selectedTab == 0) {
+                                currentProcessingAlbum?.let { albumArtworkSearchUrl(it.title, it.artist) }
+                            } else {
+                                currentProcessingArtist?.let { artistArtworkSearchUrl(it.name) }
+                            },
+                        targetName = currentContextTitle,
+                    )
 
                     if (diagnostics != null) {
                         Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
@@ -535,6 +566,7 @@ fun ArtworkManagerScreen(
                                         status = queueItem.status,
                                         icon = Icons.Default.MusicNote,
                                         onRemove = { viewModel.removeFromArtworkQueue(queueItem.album) },
+                                        webSearchUrl = albumArtworkSearchUrl(queueItem.album.title, queueItem.album.artist),
                                     )
                                 }
                             }
@@ -551,6 +583,7 @@ fun ArtworkManagerScreen(
                                         status = queueItem.status,
                                         icon = Icons.Default.Person,
                                         onRemove = { viewModel.removeFromArtistArtworkQueue(queueItem.artist) },
+                                        webSearchUrl = artistArtworkSearchUrl(queueItem.artist.name),
                                     )
                                 }
                             }
@@ -808,6 +841,7 @@ private fun AlbumQueueCard(
     status: String,
     icon: ImageVector,
     onRemove: () -> Unit,
+    webSearchUrl: String?,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -871,6 +905,7 @@ private fun AlbumQueueCard(
                 )
             }
         }
+        ArtworkWebSearchButton(webSearchUrl, title, Modifier.padding(start = Spacing.lg))
         if (status == "SEARCHING" || status == "WRITING") {
             ProgressBar(modifier = Modifier.padding(horizontal = Spacing.lg).padding(bottom = Spacing.sm))
         }

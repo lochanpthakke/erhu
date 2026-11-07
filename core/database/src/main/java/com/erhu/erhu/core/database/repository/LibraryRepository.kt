@@ -6,11 +6,15 @@ import androidx.paging.PagingData
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.model.ArtistOnSongs
 import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.flow.Flow
 
 @Suppress("TooManyFunctions")
 interface LibraryRepository {
+    /** Approved search aliases; never rewrite tags or merge library identities. */
+    fun observeVybeAliases(): Flow<Map<String, String>> = kotlinx.coroutines.flow.flowOf(emptyMap())
+
     fun getSongsPaged(): Flow<PagingData<Song>>
 
     fun getFavoriteSongsPaged(): Flow<PagingData<Song>>
@@ -43,6 +47,12 @@ interface LibraryRepository {
     fun getAlbumById(id: Long): Flow<Album?>
 
     fun getAllArtists(): Flow<List<Artist>>
+
+    /** Optional artist artwork projection; implementations without verified links show song art. */
+    fun observeArtistsForSongs(
+        songIds: List<Long>,
+        seedSongId: Long,
+    ): Flow<List<ArtistOnSongs>> = kotlinx.coroutines.flow.flowOf(emptyList())
 
     fun getArtistsPaged(): Flow<PagingData<Artist>>
 

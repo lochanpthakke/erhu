@@ -48,7 +48,9 @@ class AnnouncementController
 
         fun resumed() {
             foreground.value = true
-            scope.launch { refresh() }
+            // Opening the app must discover new notices even when a push was missed.
+            // The periodic/background refresh can still reuse the cached feed.
+            scope.launch { refresh(force = true) }
         }
 
         fun paused() {

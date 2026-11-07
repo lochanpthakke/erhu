@@ -26,6 +26,8 @@ data class Song(
     val channels: Int = 2,
     /** The file's BPM tag, when it holds a plausible tempo. */
     val bpm: Int? = null,
+    /** The file's genre tag(s), joined by a semicolon if there are multiple. */
+    val genre: String? = null,
 ) {
     val isLossless: Boolean
         get() =

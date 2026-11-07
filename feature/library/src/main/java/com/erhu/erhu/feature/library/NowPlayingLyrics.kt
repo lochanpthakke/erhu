@@ -222,6 +222,8 @@ internal fun ExpandedLyrics(
                     modifier = Modifier.weight(1f),
                     actions = actions,
                     searchQuery = listOf(song.title, song.artist).filter { it.isNotBlank() }.joinToString(" "),
+                    song = song,
+                    onPlayPause = onPlayPause,
                 )
             }
             LyricsTransport(isPlaying, onPlayPause, onPrevious, onNext)

@@ -62,12 +62,15 @@ import com.erhu.erhu.core.model.CollectionRef
 import com.erhu.erhu.core.model.Playlist
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.model.TrackOccurrence
+import com.erhu.erhu.core.model.TransitionPairKey
 import com.erhu.erhu.feature.library.mix.RadioSeed
+import com.erhu.erhu.feature.library.transition.CollectionTransitionConnector
 import com.erhu.erhu.feature.library.transition.StudioInput
 import com.erhu.erhu.feature.library.transition.StudioTrack
 import com.erhu.erhu.feature.library.transition.TransitionStudioHost
 import com.erhu.erhu.feature.library.transition.TransitionStudioRow
 import com.erhu.erhu.feature.library.transition.TransitionStudioViewModel
+import com.erhu.erhu.feature.library.transition.rememberCollectionTransitionPairs
 
 /** Same proportions as the album page header. */
 private const val COVER_WIDTH_FRACTION = 0.62f
@@ -91,13 +94,16 @@ fun PlaylistDetailScreen(
 ) {
     LaunchedEffect(playlistId) { viewModel.openPlaylist(playlistId) }
     val playlist by viewModel.openPlaylist.collectAsState()
-    val songs by viewModel.openPlaylistSongs.collectAsState()
     val currentSongId by libraryViewModel.currentSongId.collectAsState()
     val candidates by libraryViewModel.metadataCandidates.collectAsState()
 
     var showEditor by remember { mutableStateOf(false) }
     var showStudio by remember { mutableStateOf(false) }
+    var studioPair by remember { mutableStateOf<TransitionPairKey?>(null) }
     val entries by viewModel.openPlaylistEntries.collectAsState()
+    val songs = remember(entries) { entries.map { it.song } }
+    val studioTracks = remember(entries) { entries.map { StudioTrack(it.song, TrackOccurrence(it.song.id, it.position)) } }
+    val transitionPairs = rememberCollectionTransitionPairs(CollectionRef.playlist(playlistId), studioTracks, transitionsViewModel)
     var confirmDelete by remember { mutableStateOf(false) }
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
@@ -159,7 +165,11 @@ fun PlaylistDetailScreen(
                 )
             }
             item(key = "transitions") {
-                TransitionStudioRow(CollectionRef.playlist(playlistId), transitionsViewModel, onOpen = { showStudio = true })
+                TransitionStudioRow(CollectionRef.playlist(playlistId), transitionsViewModel, onOpen = {
+                    studioPair = null
+                    showStudio =
+                        true
+                })
             }
             if (songs.isEmpty()) {
                 item(key = "empty") {
@@ -170,14 +180,22 @@ fun PlaylistDetailScreen(
                 }
             } else {
                 // A playlist can hold the same song twice (a saved queue): the position makes the key unique.
-                itemsIndexed(songs, key = { index, song -> "${song.id}_$index" }) { index, song ->
-                    LibrarySongRow(
-                        song = song,
-                        isCurrent = song.id == currentSongId,
-                        onClick = { viewModel.playOpenPlaylist(index) },
-                        actions = actions,
-                        onRemoveFromPlaylist = { viewModel.removeSongFromOpenPlaylist(song) },
-                    )
+                itemsIndexed(songs, key = { index, song -> "${song.id}_${entries[index].position}" }) { index, song ->
+                    Column {
+                        LibrarySongRow(
+                            song = song,
+                            isCurrent = song.id == currentSongId,
+                            onClick = { viewModel.playOpenPlaylist(index) },
+                            actions = actions,
+                            onRemoveFromPlaylist = { viewModel.removeSongFromOpenPlaylist(song) },
+                        )
+                        transitionPairs.getOrNull(index)?.let { pair ->
+                            CollectionTransitionConnector(pair) {
+                                studioPair = pair.key
+                                showStudio = true
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -239,11 +257,12 @@ fun PlaylistDetailScreen(
     val studioPlaylist = playlist?.takeIf { it.id == playlistId }
     if (showStudio && studioPlaylist != null) {
         // Playlist order; each entry's position is its identity, so duplicates are separate tracks here.
-        val tracks = entries.map { StudioTrack(it.song, TrackOccurrence(it.song.id, it.position)) }
+        val tracks = studioTracks
         TransitionStudioHost(
             StudioInput(CollectionRef.playlist(playlistId), studioPlaylist.name, tracks),
             transitionsViewModel,
             onClose = { showStudio = false },
+            initialPair = studioPair,
         )
     }
 
@@ -321,7 +340,7 @@ private fun PlaylistMenu(
         IconButton(modifier = Modifier.glassMenuTrigger(), onClick = { expanded = true }) {
             Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Playlist options")
         }
-        GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }) {
+        GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }, albumMotionPilot = true) {
             GlassMenuItem(
                 icon = Icons.Default.Edit,
                 text = { Text("Edit playlist") },

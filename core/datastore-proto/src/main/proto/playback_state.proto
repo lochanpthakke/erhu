@@ -74,6 +74,18 @@ message PlaybackStateProto {
   optional bool vybe_enabled = 37;
   // Introduction completion is independent of music permission and playback.
   bool onboarding_completed = 38;
+  // Local per-track / per-lyrics-version display adjustments. Existing source lyrics stay intact.
+  map<string, LyricsTimingAdjustmentProto> lyrics_timing = 39;
+  // Collection switches preserve all existing transition presets and pair overrides.
+  repeated string disabled_transition_collections = 40;
+}
+
+message LyricsTimingAdjustmentProto {
+  string song_key = 1;
+  string source_key = 2;
+  string label = 3;
+  sint64 offset_ms = 4;
+  int64 saved_at_ms = 5;
 }
 
 message RepairBatchProto {

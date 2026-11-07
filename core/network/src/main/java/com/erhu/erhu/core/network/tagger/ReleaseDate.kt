@@ -120,7 +120,7 @@ sealed interface ReleaseDateDecision {
 
 /**
  * The release date to write for [match], or why there is none: the match must carry a validated
- * date, and no other equally good confident match may name a different year (e.g. two versions of
+ * date (or a confident same-edition sibling must), and no equally good match may name a different year (e.g. two versions of
  * the song, released years apart, both matching the file), because then the year is a guess.
  */
 fun releaseDateFor(
@@ -129,7 +129,11 @@ fun releaseDateFor(
     today: LocalDate,
     confidentScore: Float,
 ): ReleaseDateDecision {
-    val date = ReleaseDate.parse(match.releaseDate, today)
+    val date =
+        ReleaseDate.parse(match.releaseDate, today)
+            ?: com.erhu.erhu.core.network.scorer
+                .metadataSiblings(match, candidates, confidentScore)
+                .firstNotNullOfOrNull { ReleaseDate.parse(it.releaseDate, today) }
     val otherYears =
         candidates
             .filter { it !== match && it.confidenceScore >= confidentScore && match.confidenceScore - it.confidenceScore <= TIE_MARGIN }

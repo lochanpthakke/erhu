@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.EmptyState
@@ -57,9 +55,12 @@ fun RadioStationDetailScreen(
     LaunchedEffect(albumId) { viewModel.open(albumId) }
     val loaded by viewModel.content.collectAsState()
     val error by viewModel.error.collectAsState()
-    val artwork by libraryViewModel.artistArtwork.collectAsState()
     val currentSongId by libraryViewModel.currentSongId.collectAsState()
     val candidates by libraryViewModel.metadataCandidates.collectAsState()
+    val content = loaded?.takeIf { it.album.id == albumId }
+    val portraits = remember(content) { content?.let(::radioPortraits).orEmpty() }
+    val palette by androidx.compose.runtime.key(albumId) { rememberRadioPalette(portraits.firstOrNull()) }
+
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
     var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
@@ -84,110 +85,103 @@ fun RadioStationDetailScreen(
             },
         )
 
-    AppScaffold(
-        topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = modifier,
-    ) { innerPadding ->
-        val content = loaded
-        if (content == null) {
-            Column(
-                Modifier.fillMaxSize().padding(innerPadding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                if (error == null) {
-                    CircularProgressIndicator()
-                } else {
-                    Text(error.orEmpty(), style = TextStyles.metadata)
-                    Button(onClick = { viewModel.open(albumId) }) { Text("Retry") }
-                }
-            }
-            return@AppScaffold
-        }
-        val songs = content.songs
-        val scroll = innerPadding.forScrollingContent(topOverlay = true)
-        LazyColumn(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(scroll.container),
-            contentPadding = PaddingValues(top = scroll.contentTop, bottom = Spacing.lg + scroll.contentBottom),
-        ) {
-            item(key = "header") {
-                val radio =
-                    remember(content.album, featuredAlbums, artwork) {
-                        FeaturedSetlists.radioFor(content.album, featuredAlbums, artwork)
-                    }
+    MaterialTheme(colorScheme = radioColorScheme(MaterialTheme.colorScheme, palette)) {
+        AppScaffold(
+            topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            modifier = modifier,
+        ) { innerPadding ->
+            if (content == null) {
                 Column(
-                    Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.lg),
+                    Modifier.fillMaxSize().padding(innerPadding),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    RadioArtwork(radio, Modifier.fillMaxWidth(0.62f).aspectRatio(1f))
-                    Spacer(Modifier.height(Spacing.lg))
-                    Text("${radio.identity} Radio", style = TextStyles.pageTitle, textAlign = TextAlign.Center)
-                    Text(
-                        "Based on ${content.album.title}",
-                        style = TextStyles.metadata,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(Spacing.sm))
-                    Text(countLabel(songs.size, "song"), style = TextStyles.metadata)
-                    Spacer(Modifier.height(Spacing.lg))
-                    Button(
-                        enabled = songs.isNotEmpty() && content.plan != null,
-                        onClick = { content.plan?.let { libraryViewModel.playRadioPlan(it, songs) } },
+                    if (error == null) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text(error.orEmpty(), style = TextStyles.metadata)
+                        Button(onClick = { viewModel.open(albumId) }) { Text("Retry") }
+                    }
+                }
+                return@AppScaffold
+            }
+            val songs = content.songs
+            val scroll = innerPadding.forScrollingContent(topOverlay = true)
+            LazyColumn(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(scroll.container),
+                contentPadding = PaddingValues(top = scroll.contentTop, bottom = Spacing.lg + scroll.contentBottom),
+            ) {
+                item(key = "header") {
+                    val radio =
+                        remember(content.album, featuredAlbums) {
+                            FeaturedSetlists.radioFor(content.album, featuredAlbums, emptyMap())
+                        }
+                    RadioStationHero(portraits, "${radio.identity} Radio", "Based on ${content.album.title}", palette)
+                    Column(
+                        Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(Spacing.sm))
-                        Text("Play Radio")
+                        Text(countLabel(songs.size, "song"), style = TextStyles.metadata)
+                        Spacer(Modifier.height(Spacing.sm))
+                        Button(
+                            enabled = songs.isNotEmpty() && content.plan != null,
+                            onClick = { content.plan?.let { libraryViewModel.playRadioPlan(it, songs) } },
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(Modifier.width(Spacing.sm))
+                            Text("Play Radio")
+                        }
+                    }
+                }
+                if (songs.isEmpty()) {
+                    item(key = "empty") {
+                        EmptyState(
+                            message = "No available songs for this station. Add more music to your library and reopen it.",
+                            modifier = Modifier.padding(top = Spacing.xl),
+                        )
+                    }
+                } else {
+                    itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+                        LibrarySongRow(
+                            song = song,
+                            isCurrent = song.id == currentSongId,
+                            onClick = { libraryViewModel.playSongsFromQueue(songs, index) },
+                            actions = actions,
+                        )
                     }
                 }
             }
-            if (songs.isEmpty()) {
-                item(key = "empty") {
-                    EmptyState(
-                        message = "No available songs for this station. Add more music to your library and reopen it.",
-                        modifier = Modifier.padding(top = Spacing.xl),
-                    )
-                }
-            } else {
-                itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                    LibrarySongRow(
-                        song = song,
-                        isCurrent = song.id == currentSongId,
-                        onClick = { libraryViewModel.playSongsFromQueue(songs, index) },
-                        actions = actions,
-                    )
-                }
-            }
         }
-    }
 
-    songForFixTags?.let { song ->
-        FixTagsDialog(
-            song = song,
-            candidates = candidates,
-            onDismiss = { songForFixTags = null },
-            onSaveTags = { title, artist, album, year, genre, bpm ->
-                libraryViewModel.writeTags(song, title, artist, album, year, genre, bpm)
-                songForFixTags = null
-            },
-        )
-    }
+        songForFixTags?.let { song ->
+            FixTagsDialog(
+                song = song,
+                candidates = candidates,
+                onDismiss = { songForFixTags = null },
+                onSaveTags = { title, artist, album, year, genre, bpm ->
+                    libraryViewModel.writeTags(song, title, artist, album, year, genre, bpm)
+                    songForFixTags = null
+                },
+            )
+        }
 
-    songForViewMetadata?.let { song ->
-        ViewMetadataScreen(
-            song = song,
-            viewModel =
-                androidx.hilt.navigation.compose
-                    .hiltViewModel(),
-            libraryViewModel = libraryViewModel,
-            onDismiss = { songForViewMetadata = null },
-        )
-    }
+        songForViewMetadata?.let { song ->
+            ViewMetadataScreen(
+                song = song,
+                viewModel =
+                    androidx.hilt.navigation.compose
+                        .hiltViewModel(),
+                libraryViewModel = libraryViewModel,
+                onDismiss = { songForViewMetadata = null },
+            )
+        }
 
-    songsForPlaylist?.let { picked ->
-        AddToPlaylistDialog(songs = picked, viewModel = playlistsViewModel, onDismiss = { songsForPlaylist = null })
+        songsForPlaylist?.let { picked ->
+            AddToPlaylistDialog(songs = picked, viewModel = playlistsViewModel, onDismiss = { songsForPlaylist = null })
+        }
     }
 }

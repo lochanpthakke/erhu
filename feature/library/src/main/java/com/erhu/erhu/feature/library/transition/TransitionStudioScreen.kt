@@ -2,7 +2,6 @@ package com.erhu.erhu.feature.library.transition
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.RestartAlt
@@ -54,7 +52,6 @@ import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
 import com.erhu.erhu.core.designsystem.component.GlassMenuItem
 import com.erhu.erhu.core.designsystem.component.glassMenuTrigger
-import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.CollectionKind
 import com.erhu.erhu.core.model.CollectionRef
@@ -71,42 +68,7 @@ internal fun TransitionStudioRow(
     modifier: Modifier = Modifier,
 ) {
     val config by viewModel.config.collectAsState()
-    val choice = config.collection(collection)
-    val summary =
-        when {
-            !config.global.masterEnabled -> "Automatic crossfades are off"
-            choice == TransitionChoice.Off -> "Off for this ${noun(collection)}"
-            choice is TransitionChoice.Custom -> specSummary(choice.spec)
-            else -> "Default · ${specSummary(config.global.default.specOrNull())}"
-        }
-    val custom = config.pairs.keys.count { it.collection == collection }
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clickable(onClickLabel = "Open Transition Studio", onClick = onOpen)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            Icons.Outlined.Tune,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(IconSize.small),
-        )
-        Spacer(Modifier.width(Spacing.md))
-        Column(Modifier.weight(1f)) {
-            Text("Transition Studio", style = MaterialTheme.typography.titleSmall)
-            Text(
-                summary + if (custom > 0) " · $custom custom" else "",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    CollectionTransitionRow(collection, config, { viewModel.setCollectionEnabled(collection, it) }, onOpen, modifier)
 }
 
 private fun noun(collection: CollectionRef) = if (collection.kind == CollectionKind.ALBUM) "album" else "playlist"
@@ -177,7 +139,19 @@ internal fun TransitionStudioScreen(
             }
             item(key = "collection") {
                 Panel {
-                    Text("This $noun", style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("This $noun", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = state.collectionEnabled,
+                            onCheckedChange = { viewModel.setCollectionEnabled(state.input.collection, it) },
+                        )
+                    }
+                    if (!state.collectionEnabled) {
+                        Text(
+                            "Transitions are disabled for this $noun. Saved settings are kept.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                     val options = listOf(TransitionChoice.Inherit to "Default", TransitionChoice.Off to "Off")
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         options.forEachIndexed { index, (choice, label) ->

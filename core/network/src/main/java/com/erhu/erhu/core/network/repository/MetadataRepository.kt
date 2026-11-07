@@ -161,6 +161,11 @@ interface MetadataRepository {
      */
     suspend fun lookupGenre(match: MetadataCandidate): GenreLookup
 
+    suspend fun lookupGenre(
+        match: MetadataCandidate,
+        candidates: List<MetadataCandidate>,
+    ): GenreLookup = lookupGenre(match)
+
     /** Downloads an image for embedding (artwork); fails rather than returning a non-image. */
     suspend fun downloadArtwork(url: String): AppResult<ByteArray>
 

@@ -143,6 +143,18 @@ class ProcessSingleTrackUseCase
 
             val record =
                 if (bestCandidate != null && bestCandidate.confidenceScore >= HIGH_CONFIDENCE_THRESHOLD) {
+                    val fetchedGenre =
+                        if (fixAction == MetadataFixAction.ALL_FIELDS || fixAction == MetadataFixAction.GENRE_ONLY) {
+                            bestCandidate.genre
+                                ?: (
+                                    metadataRepository.lookupGenre(
+                                        bestCandidate,
+                                    ) as? com.erhu.erhu.core.network.repository.GenreLookup.Found
+                                )?.genre
+                        } else {
+                            null
+                        }
+
                     val writeRequest =
                         TagWriteRequest(
                             contentUri = song.uri,
@@ -162,6 +174,7 @@ class ProcessSingleTrackUseCase
                                     fixAction == MetadataFixAction.ALL_FIELDS ||
                                         fixAction == MetadataFixAction.ALBUM_ONLY
                                 },
+                            genre = fetchedGenre,
                             bpm =
                                 bestCandidate.bpm.takeIf {
                                     fixAction == MetadataFixAction.ALL_FIELDS ||
