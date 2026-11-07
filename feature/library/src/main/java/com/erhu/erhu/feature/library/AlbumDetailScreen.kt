@@ -54,6 +54,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -93,15 +95,18 @@ import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.CollectionRef
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.model.TrackOccurrence
+import com.erhu.erhu.core.model.TransitionPairKey
 import com.erhu.erhu.feature.library.components.AnimatedAlbumCoverPlayer
 import com.erhu.erhu.feature.library.components.LiveCoverControl
 import com.erhu.erhu.feature.library.components.rememberAnimatedArtworkPath
 import com.erhu.erhu.feature.library.mix.RadioSeed
+import com.erhu.erhu.feature.library.transition.CollectionTransitionConnector
 import com.erhu.erhu.feature.library.transition.StudioInput
 import com.erhu.erhu.feature.library.transition.StudioTrack
 import com.erhu.erhu.feature.library.transition.TransitionStudioHost
 import com.erhu.erhu.feature.library.transition.TransitionStudioRow
 import com.erhu.erhu.feature.library.transition.TransitionStudioViewModel
+import com.erhu.erhu.feature.library.transition.rememberCollectionTransitionPairs
 import kotlinx.coroutines.flow.combine
 
 /** The hero artwork moves at this share of the scroll speed (parallax) as the page scrolls. */
@@ -110,13 +115,12 @@ private const val HERO_PARALLAX = 0.5f
 /** How much the hero artwork fades by the time it has scrolled away. */
 private const val HERO_FADE = 0.6f
 
-/** The artwork fades into the page from here down, so the title reads over its lower part (any cover). */
-private const val HERO_SCRIM_START = 0.35f
-private const val HERO_SCRIM_STEPS = 12
-
-/** Smoothstep (3t² − 2t³): eases the fade at both ends. */
-private const val SMOOTHSTEP_A = 3f
-private const val SMOOTHSTEP_B = 2f
+/** Keep the full image clear until just above the measured title and metadata. */
+private val HERO_FADE_LEAD = 48.dp
+private const val HERO_FADE_MIDPOINT = 0.3f
+private const val HERO_FADE_MID_ALPHA = 0.18f
+private const val HERO_FADE_LOWER_POINT = 0.75f
+private const val HERO_FADE_LOWER_ALPHA = 0.75f
 
 /** Width of the centered Play / Shuffle pair as a share of the screen (as on the artist page). */
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
@@ -153,6 +157,7 @@ fun AlbumDetailScreen(
     val detail = rememberAlbumDetail(albumId, viewModel)
     val albumRef = remember(albumId) { CollectionRef.album(albumId) }
     var showStudio by remember { mutableStateOf(false) }
+    var studioPair by remember { mutableStateOf<TransitionPairKey?>(null) }
     // Only the playing song's id: position ticks must not recompose this page.
     val openArtworkSearch = rememberArtworkWebSearchLauncher()
     val currentSongId by viewModel.currentSongId.collectAsState()
@@ -336,6 +341,9 @@ fun AlbumDetailScreen(
                         )
                     }
 
+                val studioTracks = remember(songs) { songs.map { StudioTrack(it, TrackOccurrence(it.id)) } }
+                val transitionPairs = rememberCollectionTransitionPairs(albumRef, studioTracks, transitionsViewModel)
+
                 val setFocusedArtwork = LocalSetFocusedArtworkUri.current
                 val albumArtUri = album.artworkUri ?: songs.firstOrNull()?.artworkUri ?: songs.firstOrNull()?.uri
                 LaunchedEffect(albumArtUri) {
@@ -376,7 +384,10 @@ fun AlbumDetailScreen(
                         )
                     }
                     item(key = "transitions") {
-                        TransitionStudioRow(albumRef, transitionsViewModel, onOpen = { showStudio = true })
+                        TransitionStudioRow(albumRef, transitionsViewModel, onOpen = {
+                            studioPair = null
+                            showStudio = true
+                        })
                     }
                     if (songs.isEmpty() && data.loaded) {
                         item(key = "empty") {
@@ -384,13 +395,21 @@ fun AlbumDetailScreen(
                         }
                     } else {
                         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                            LibrarySongRow(
-                                song = song,
-                                isCurrent = song.id == currentSongId,
-                                onClick = { viewModel.playSongsFromQueue(songs, index, albumRef) },
-                                actions = actions,
-                                showTrackNumber = true,
-                            )
+                            Column {
+                                LibrarySongRow(
+                                    song = song,
+                                    isCurrent = song.id == currentSongId,
+                                    onClick = { viewModel.playSongsFromQueue(songs, index, albumRef) },
+                                    actions = actions,
+                                    showTrackNumber = true,
+                                )
+                                transitionPairs.getOrNull(index)?.let { pair ->
+                                    CollectionTransitionConnector(pair) {
+                                        studioPair = pair.key
+                                        showStudio = true
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -421,7 +440,7 @@ fun AlbumDetailScreen(
         )
     }
 
-    if (showStudio) AlbumStudio(albumRef, detail, transitionsViewModel, onClose = { showStudio = false })
+    if (showStudio) AlbumStudio(albumRef, detail, transitionsViewModel, onClose = { showStudio = false }, initialPair = studioPair)
 
     songsForPlaylist?.let { songs ->
         AddToPlaylistDialog(
@@ -460,7 +479,7 @@ private fun rememberAlbumDetail(
  * fades, and the title fades out (read in the draw phase: no recomposition).
  */
 @Composable
-private fun AlbumHero(
+internal fun AlbumHero(
     album: Album,
     songs: List<Song>?,
     listState: LazyListState,
@@ -470,13 +489,6 @@ private fun AlbumHero(
 ) {
     // The opaque colour the track list sits on (the theme background is translucent under glass).
     val page = ErhuGlass.backdropColor(MaterialTheme.colorScheme.background).copy(alpha = 1f)
-    val scrim =
-        remember(page) {
-            List(HERO_SCRIM_STEPS + 1) { i ->
-                val t = i / HERO_SCRIM_STEPS.toFloat()
-                page.copy(alpha = t * t * (SMOOTHSTEP_A - SMOOTHSTEP_B * t))
-            }
-        }
     Box(
         modifier =
             Modifier
@@ -504,15 +516,6 @@ private fun AlbumHero(
         ) {
             AlbumArtwork(artworkUri = album.artworkUri, contentDescription = "Album artwork", modifier = Modifier.fillMaxSize())
         }
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    // Eased in many small steps: the cover flows into the page with no visible boundary.
-                    .drawBehind {
-                        drawRect(Brush.verticalGradient(scrim, startY = size.height * HERO_SCRIM_START, endY = size.height))
-                    },
-        )
         AlbumTitleBlock(
             album = album,
             songs = songs,
@@ -520,7 +523,21 @@ private fun AlbumHero(
             modifier =
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .collapsingHeroBlock(header),
+                    .collapsingHeroBlock(header)
+                    .drawBehind {
+                        drawRect(
+                            Brush.verticalGradient(
+                                0f to page.copy(alpha = 0f),
+                                HERO_FADE_MIDPOINT to page.copy(alpha = HERO_FADE_MID_ALPHA),
+                                HERO_FADE_LOWER_POINT to page.copy(alpha = HERO_FADE_LOWER_ALPHA),
+                                1f to page,
+                                startY = -HERO_FADE_LEAD.toPx(),
+                                endY = size.height,
+                            ),
+                            topLeft = Offset(0f, -HERO_FADE_LEAD.toPx()),
+                            size = Size(size.width, size.height + HERO_FADE_LEAD.toPx()),
+                        )
+                    },
         )
     }
 }
@@ -721,6 +738,7 @@ private fun AlbumStudio(
     detail: AlbumDetailData?,
     viewModel: TransitionStudioViewModel,
     onClose: () -> Unit,
+    initialPair: TransitionPairKey? = null,
 ) {
     val album = detail?.album ?: return
     val tracks =
@@ -732,5 +750,5 @@ private fun AlbumStudio(
                         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },
                 ).map { StudioTrack(it, TrackOccurrence(it.id)) }
         }
-    TransitionStudioHost(StudioInput(albumRef, album.title, tracks), viewModel, onClose)
+    TransitionStudioHost(StudioInput(albumRef, album.title, tracks), viewModel, onClose, initialPair)
 }

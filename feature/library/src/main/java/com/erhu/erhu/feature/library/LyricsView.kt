@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -61,6 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.core.model.LyricsTimingAdjustment
+import com.erhu.erhu.core.model.LyricsTimingContext
+import com.erhu.erhu.core.model.LyricsTimingOffset
 import com.erhu.erhu.core.network.lyrics.CachedLyrics
 import com.erhu.erhu.core.network.lyrics.LyricsTiming
 import kotlinx.coroutines.flow.collectLatest
@@ -110,6 +114,7 @@ internal fun LyricsOverlay(
     }
 }
 
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 internal fun SongLyricsView(
     songId: Long,
@@ -120,6 +125,8 @@ internal fun SongLyricsView(
     modifier: Modifier = Modifier,
     actions: LyricsActions? = null,
     searchQuery: String = "",
+    song: com.erhu.erhu.core.model.Song? = null,
+    onPlayPause: (() -> Unit)? = null,
 ) {
     // Showing the page is what asks for lyrics: once per song, never per position update.
     if (actions != null) LaunchedEffect(songId) { actions.onShown(songId) }
@@ -127,13 +134,38 @@ internal fun SongLyricsView(
         key(songId) {
             val current = lyrics?.takeIf { it.songId == songId }
             var searching by remember { mutableStateOf(false) }
-            if (current != null && actions != null) LyricsSourceBar(current, actions) { searching = true }
+            var adjusting by remember(current?.timingContext?.id) { mutableStateOf(false) }
+            val canAdjust = current?.timingContext != null && song?.id == songId && actions?.saveTiming != null
+            val onAdjust: (() -> Unit)? =
+                if (canAdjust) {
+                    { adjusting = true }
+                } else {
+                    null
+                }
+            if (current != null && actions != null) LyricsSourceBar(current, actions, onAdjust) { searching = true }
+            if (canAdjust) {
+                TextButton(onClick = { adjusting = true }, modifier = Modifier.padding(start = Spacing.lg)) {
+                    Text(
+                        if (current.offsetMs ==
+                            0L
+                        ) {
+                            "Not synced? Adjust timing"
+                        } else {
+                            "Adjust timing · ${if (current.offsetMs > 0) "+" else ""}${current.offsetMs} ms"
+                        },
+                    )
+                }
+            }
             Box(Modifier.weight(1f)) {
                 when {
+                    adjusting -> Unit // Only the visible editor runs the lyrics frame clock.
                     current?.text != null -> LyricsContent(current, position, isPlaying, onSeek)
                     current != null -> LyricsLookupStatus(current.lookup, actions, onSearch = { searching = true })
                     else -> NoLyrics()
                 }
+            }
+            if (adjusting && canAdjust) {
+                LyricsTimingEditor(song, current, position, isPlaying, onSeek, onPlayPause, actions.saveTiming) { adjusting = false }
             }
             if (searching && current != null && actions != null) {
                 ManualLyricsSearchDialog(
@@ -184,7 +216,10 @@ internal fun LyricsContent(
     when (parsed) {
         null -> NoLyrics()
         is Lyrics.Plain -> PlainLyrics(parsed)
-        is Lyrics.Synced -> SyncedLyrics(parsed, position, isPlaying, onSeek)
+        is Lyrics.Synced ->
+            SyncedLyrics(parsed, position, isPlaying, { time ->
+                onSeek(LyricsTimingOffset.playbackPosition(time, lyrics.offsetMs, lyrics.timingContext?.durationMs ?: 0))
+            }, lyrics.offsetMs)
     }
 }
 
@@ -206,6 +241,10 @@ data class SongLyrics(
     val downloaded: Boolean = false,
     val saving: Boolean = false,
     val saveError: String? = null,
+    val sourceId: String? = null,
+    val timingContext: LyricsTimingContext? = null,
+    val offsetMs: Long = 0,
+    val previousTiming: List<LyricsTimingAdjustment> = emptyList(),
 )
 
 @Composable
@@ -244,11 +283,13 @@ private fun SyncedLyrics(
     position: State<Long>,
     isPlaying: Boolean,
     onSeek: (Long) -> Unit,
+    offsetMs: Long,
 ) {
     val smooth = rememberSmoothPosition(position, isPlaying)
+    val lyricPosition = remember(smooth, offsetMs) { derivedStateOf { LyricsTimingOffset.lyricsPosition(smooth.value, offsetMs) } }
     // Only these two values change as the song plays; they change a few times per line.
-    val currentLine by remember(lyrics) { derivedStateOf { lyrics.lineAt(smooth.value) } }
-    val currentWord by remember(lyrics) { derivedStateOf { lyrics.wordAt(currentLine, smooth.value) } }
+    val currentLine by remember(lyrics, lyricPosition) { derivedStateOf { lyrics.lineAt(lyricPosition.value) } }
+    val currentWord by remember(lyrics, lyricPosition) { derivedStateOf { lyrics.wordAt(currentLine, lyricPosition.value) } }
     val listState = rememberLazyListState()
     var following by remember { mutableStateOf(true) }
 
@@ -449,6 +490,7 @@ private fun TimedWordsLine(
         }
     val starts = remember(words) { words.runningFold(0) { at, word -> at + word.text.length } }
     val latestWords by rememberUpdatedState(words)
+    val latestSeek by rememberUpdatedState(onSeek)
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     Text(
         text = text,
@@ -460,7 +502,7 @@ private fun TimedWordsLine(
                 detectTapGestures { tap ->
                     val offset = layout?.getOffsetForPosition(tap) ?: return@detectTapGestures
                     val index = (starts.indexOfLast { it <= offset }).coerceIn(0, latestWords.lastIndex)
-                    onSeek(latestWords[index].timeMs)
+                    latestSeek(latestWords[index].timeMs)
                 }
             },
     )

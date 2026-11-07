@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -50,10 +51,12 @@ import com.erhu.erhu.core.network.lyrics.LyricsTiming
 import kotlin.math.roundToLong
 
 /** One unobtrusive line saying where the lyrics come from, with refresh / search / back-to-file actions. */
+@Suppress("LongMethod")
 @Composable
 internal fun LyricsSourceBar(
     lyrics: SongLyrics,
     actions: LyricsActions,
+    onAdjustTiming: (() -> Unit)? = null,
     onSearch: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -71,6 +74,12 @@ internal fun LyricsSourceBar(
                 onClick = { menu = true },
             ) { Icon(Icons.Default.MoreVert, contentDescription = "Lyrics options") }
             GlassMenu(label = "Lyrics options", expanded = menu, onDismissRequest = { menu = false }) {
+                if (onAdjustTiming != null) {
+                    GlassMenuItem(icon = Icons.Default.Schedule, text = { Text("Adjust timing") }, onClick = {
+                        menu = false
+                        onAdjustTiming()
+                    })
+                }
                 if (online && lyrics.text != null && !lyrics.downloaded) {
                     GlassMenuItem(icon = Icons.Default.Download, text = { Text("Download lyrics") }, onClick = {
                         menu = false

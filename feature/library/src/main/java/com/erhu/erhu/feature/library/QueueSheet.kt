@@ -476,6 +476,8 @@ private fun LyricsPage(
             modifier = Modifier.fillMaxSize(),
             actions = lyricsActions,
             searchQuery = listOf(currentSong.title, currentSong.artist).filter { it.isNotBlank() }.joinToString(" "),
+            song = currentSong,
+            onPlayPause = { if (isPlaying) playbackRepository.pause() else playbackRepository.play() },
         )
     } else {
         Box(

@@ -30,6 +30,7 @@ private const val MODE_CUSTOM = "CUSTOM"
 fun PlaybackStateProto.toTransitionConfig(): TransitionConfig =
     TransitionConfig(
         global = if (hasGlobalTransitions()) globalTransitions.toDomain() else GlobalTransitionSettings(),
+        disabledCollections = disabledTransitionCollectionsList.mapNotNull(CollectionRef::fromKey).toSet(),
         collections =
             collectionTransitionsMap.entries
                 .mapNotNull { (key, proto) -> CollectionRef.fromKey(key)?.let { it to proto.toChoice() } }
@@ -156,3 +157,18 @@ private inline fun <reified E : Enum<E>> enumOr(
     name: String,
     default: E,
 ): E = enumValues<E>().firstOrNull { it.name == name } ?: default
+
+/** Update only this collection's switch/default, preserving every other setting and queue field. */
+internal fun PlaybackStateProto.withCollectionEnabled(
+    collection: CollectionRef,
+    enabled: Boolean,
+): PlaybackStateProto {
+    val next = toTransitionConfig().withCollectionEnabled(collection, enabled)
+    return next
+        .collection(collection)
+        .applyToCollection(collection, this)
+        .toBuilder()
+        .clearDisabledTransitionCollections()
+        .addAllDisabledTransitionCollections(next.disabledCollections.map { it.key })
+        .build()
+}

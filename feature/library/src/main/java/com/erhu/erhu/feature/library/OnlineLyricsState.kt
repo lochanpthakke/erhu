@@ -1,5 +1,7 @@
 package com.erhu.erhu.feature.library
 
+import com.erhu.erhu.core.common.result.AppResult
+import com.erhu.erhu.core.model.LyricsTimingContext
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.network.lyrics.CachedLyrics
 import com.erhu.erhu.core.network.lyrics.LyricsCandidate
@@ -72,6 +74,7 @@ class LyricsActions(
     val closeSearch: () -> Unit,
     val download: () -> Unit = {},
     val removeDownload: (CachedLyrics) -> Unit = {},
+    val saveTiming: (suspend (LyricsTimingContext, Long) -> AppResult<Unit>)? = null,
 )
 
 /** The online lookup state of one song. */
@@ -137,6 +140,7 @@ internal fun chooseLyrics(
                     lookup = view.lookup,
                     hasFileLyrics = fileUsable,
                     search = search,
+                    sourceId = "${view.candidate.provider}:${view.candidate.providerId}",
                 )
             fileUsable ->
                 SongLyrics(

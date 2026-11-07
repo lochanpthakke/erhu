@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.dataStoreFile
 import com.erhu.erhu.core.datastore.HiddenTracksPersistence
 import com.erhu.erhu.core.datastore.HiddenTracksPersistenceImpl
+import com.erhu.erhu.core.datastore.LyricsTimingPersistence
+import com.erhu.erhu.core.datastore.LyricsTimingPersistenceImpl
 import com.erhu.erhu.core.datastore.PlaybackStatePersistence
 import com.erhu.erhu.core.datastore.PlaybackStatePersistenceImpl
 import com.erhu.erhu.core.datastore.PlaybackStateProtoSerializer
@@ -32,6 +34,11 @@ private const val PLAYBACK_STATE_DATASTORE_FILE_NAME = "playback_state.pb"
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
+    @Provides
+    @Singleton
+    fun provideLyricsTimingPersistence(dataStore: DataStore<PlaybackStateProto>): LyricsTimingPersistence =
+        LyricsTimingPersistenceImpl(dataStore)
+
     // Exception to project-wide DispatcherProvider convention: DataStoreFactory
     // requires a CoroutineScope matching the DataStore's own singleton lifetime,
     // not a general-purpose testable scope. Hardcoded per Deliverable #6 decision.

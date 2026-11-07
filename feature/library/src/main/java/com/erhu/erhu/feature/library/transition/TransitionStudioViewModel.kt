@@ -39,7 +39,12 @@ data class StudioInput(
     val collection: CollectionRef,
     val title: String,
     val tracks: List<StudioTrack>,
-)
+) {
+    fun pair(
+        key: TransitionPairKey,
+        config: TransitionConfig,
+    ): StudioPair? = studioPairs(collection, tracks, config).firstOrNull { it.key == key }
+}
 
 data class StudioUi(
     val input: StudioInput,
@@ -50,6 +55,7 @@ data class StudioUi(
     val pairs: List<StudioPair>,
     /** Whether this collection is what is playing now. */
     val isPlaying: Boolean,
+    val collectionEnabled: Boolean,
 )
 
 /** What the editor is editing. */
@@ -135,6 +141,7 @@ data class PairWaveforms(
  * setting, the timeline of pairs, and the editor. Edits live here until Save; Save writes once.
  */
 @HiltViewModel
+@Suppress("TooManyFunctions") // Existing editor actions stay together; the collection switch shares their state.
 class TransitionStudioViewModel
     @Inject
     constructor(
@@ -166,9 +173,22 @@ class TransitionStudioViewModel
         /** All transition settings, for the entry rows on album and playlist pages. */
         val config: StateFlow<TransitionConfig> = settings.config
 
-        fun open(input: StudioInput) {
+        fun open(
+            input: StudioInput,
+            initialPair: TransitionPairKey? = null,
+        ) {
             this.input.value = input
+            initialPair?.let { key ->
+                input
+                    .pair(key, settings.config.value)
+                    ?.let { openEditor(EditorTarget.Pair(it)) }
+            }
         }
+
+        fun setCollectionEnabled(
+            collection: CollectionRef,
+            enabled: Boolean,
+        ) = settings.setCollectionEnabled(collection, enabled)
 
         fun close() {
             cancelEditor()
@@ -375,6 +395,7 @@ class TransitionStudioViewModel
                 collectionDefault = TransitionResolver.collectionDefault(config, input.collection),
                 pairs = studioPairs(input.collection, input.tracks, config),
                 isPlaying = playing == input.collection,
+                collectionEnabled = config.collectionEnabled(input.collection),
             )
         }
     }

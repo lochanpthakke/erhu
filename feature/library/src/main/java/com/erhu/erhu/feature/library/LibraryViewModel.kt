@@ -211,6 +211,7 @@ class LibraryViewModel
         private val repairBatchPersistence: RepairBatchPersistence,
         private val bpmFinder: BpmFinder,
         private val radioRepository: RadioRepository,
+        private val lyricsTimingPersistence: com.erhu.erhu.core.datastore.LyricsTimingPersistence,
     ) : ViewModel() {
         internal val artworkUpgrades =
             ArtworkUpgradeController(
@@ -577,7 +578,7 @@ class LibraryViewModel
          * previous song's lyrics while its own are read): the file's own lyrics when it has readable
          * ones, otherwise what was found online (see [chooseLyrics]).
          */
-        val currentSongLyrics: StateFlow<SongLyrics?> =
+        val currentSongLyrics: StateFlow<SongLyrics?> = combine(
             currentSongId
                 .flatMapLatest { id ->
                     id?.let { songId ->
@@ -589,7 +590,11 @@ class LibraryViewModel
                             chooseLyrics(songId, embedded, online.takeIf { lyricsIdentity == currentTrack(songId) }, search)
                         }
                     } ?: flowOf(null)
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+                },
+            playbackRepository.playbackState.map { it.currentSong }.distinctUntilChanged(),
+            lyricsTimingPersistence.observe(),
+        ) { lyrics, song, timing -> withLyricsTiming(song, lyrics, timing) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
         /** What the lyrics page can do: automatic lookup, refresh, manual search and choice, back to the file's lyrics. */
         val lyricsActions =
@@ -602,6 +607,13 @@ class LibraryViewModel
                 closeSearch = { manualLyricsSearch.value = ManualLyricsSearch.Idle },
                 download = { changeLyricsDownload(remove = false) },
                 removeDownload = { changeLyricsDownload(remove = true, expected = it) },
+                saveTiming = { context, offset ->
+                    if (currentSongLyrics.value?.timingContext != context) {
+                        AppResult.Error(AppError.ValidationError("The track or lyrics changed. Reopen lyrics timing and try again."))
+                    } else {
+                        lyricsTimingPersistence.save(context, offset)
+                    }
+                },
             )
 
         private fun currentTrack(songId: Long) =

@@ -90,6 +90,15 @@ class TransitionSettingsRepository
             save { persistence.saveCollection(collection, clean) }
         }
 
+        /** A reversible collection gate; never clears custom presets or pair settings. */
+        fun setCollectionEnabled(
+            collection: CollectionRef,
+            enabled: Boolean,
+        ) {
+            _config.update { it.withCollectionEnabled(collection, enabled) }
+            save { persistence.saveCollectionEnabled(collection, enabled) }
+        }
+
         /** Only this exact pair changes. */
         fun setPair(
             pair: TransitionPairKey,

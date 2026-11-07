@@ -414,10 +414,35 @@ data class TransitionConfig(
     val global: GlobalTransitionSettings = GlobalTransitionSettings(),
     val collections: Map<CollectionRef, TransitionChoice> = emptyMap(),
     val pairs: Map<TransitionPairKey, TransitionChoice> = emptyMap(),
+    /** Pauses a collection without deleting its default or exact-pair edits. */
+    val disabledCollections: Set<CollectionRef> = emptySet(),
 ) {
     fun collection(ref: CollectionRef): TransitionChoice = collections[ref] ?: TransitionChoice.Inherit
 
     fun pair(key: TransitionPairKey): TransitionChoice = pairs[key] ?: TransitionChoice.Inherit
+
+    /** Independent of the global safety switch; reflects this collection's saved configuration. */
+    fun collectionEnabled(ref: CollectionRef): Boolean =
+        ref !in disabledCollections &&
+            (
+                collection(ref) is TransitionChoice.Custom ||
+                    (collection(ref) == TransitionChoice.Inherit && global.default is TransitionChoice.Custom) ||
+                    pairs.any { (key, choice) -> key.collection == ref && choice is TransitionChoice.Custom }
+            )
+
+    fun withCollectionEnabled(
+        ref: CollectionRef,
+        enabled: Boolean,
+    ): TransitionConfig {
+        if (!enabled) return copy(disabledCollections = disabledCollections + ref)
+        val resumed = copy(disabledCollections = disabledCollections - ref)
+        // A previously unconfigured collection starts with the existing Fade preset.
+        return if (resumed.collectionEnabled(ref)) {
+            resumed
+        } else {
+            resumed.copy(collections = collections + (ref to TransitionChoice.Custom(TransitionSpec())))
+        }
+    }
 }
 
 /** Which level decided a boundary. */
@@ -446,6 +471,7 @@ object TransitionResolver {
         if (!config.global.masterEnabled) return ResolvedTransition(null, TransitionSource.MASTER_OFF)
         val collection = outgoing?.collection?.takeIf { it == incoming?.collection }
         if (collection != null && incoming != null) {
+            if (collection in config.disabledCollections) return ResolvedTransition(null, TransitionSource.COLLECTION)
             val pair = config.pair(TransitionPairKey(collection, outgoing.occurrence, incoming.occurrence))
             if (pair != TransitionChoice.Inherit) return ResolvedTransition(pair.specOrNull(), TransitionSource.PAIR)
             val own = config.collection(collection)
@@ -459,7 +485,7 @@ object TransitionResolver {
         config: TransitionConfig,
         collection: CollectionRef,
     ): TransitionSpec? {
-        if (!config.global.masterEnabled) return null
+        if (!config.global.masterEnabled || collection in config.disabledCollections) return null
         val own = config.collection(collection)
         return if (own == TransitionChoice.Inherit) config.global.default.specOrNull() else own.specOrNull()
     }

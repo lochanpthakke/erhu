@@ -56,6 +56,37 @@ class TransitionResolverTest {
     ) = TransitionResolver.resolve(config, from, to)
 
     @Test
+    fun `collection switch pauses exact pair overrides and restores them without affecting other collections`() {
+        val original = config(collection = TransitionChoice.Custom(albumSpec), pair = TransitionChoice.Custom(pairSpec))
+        assertTrue(original.collectionEnabled(album))
+        val disabled = original.withCollectionEnabled(album, false)
+        assertFalse(disabled.collectionEnabled(album))
+        assertNull(resolve(disabled).spec)
+        assertNull(TransitionResolver.collectionDefault(disabled, album))
+        assertEquals(global, resolve(disabled, origin(playlist, 1), origin(playlist, 2)).spec)
+        assertEquals(original.collections, disabled.collections)
+        assertEquals(original.pairs, disabled.pairs)
+        val resumed = disabled.withCollectionEnabled(album, true)
+        assertEquals(original, resumed)
+        assertEquals(pairSpec, resolve(resumed).spec)
+    }
+
+    @Test
+    fun `enabling unconfigured collection creates fade without changing global settings or explicit pair off`() {
+        val original = config(default = TransitionChoice.Off, pair = TransitionChoice.Off)
+        assertFalse(original.collectionEnabled(album))
+        val enabled = original.withCollectionEnabled(album, true)
+        assertTrue(enabled.collectionEnabled(album))
+        assertEquals(original.global, enabled.global)
+        assertEquals(original.pairs, enabled.pairs)
+        assertNull(resolve(enabled).spec) // This exact pair still explicitly opts out.
+        assertEquals(TransitionSpec(), resolve(enabled, a2, origin(album, 3)).spec)
+        val masterOff = enabled.copy(global = enabled.global.copy(masterEnabled = false))
+        assertNull(resolve(masterOff).spec)
+        assertTrue(masterOff.collectionEnabled(album)) // Master safety switch stays independent.
+    }
+
+    @Test
     fun `master switch off disables everything`() {
         val r = resolve(config(master = false, collection = TransitionChoice.Custom(albumSpec), pair = TransitionChoice.Custom(pairSpec)))
         assertNull(r.spec)

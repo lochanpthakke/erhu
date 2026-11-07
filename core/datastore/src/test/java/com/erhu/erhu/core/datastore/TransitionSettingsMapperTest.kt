@@ -49,6 +49,25 @@ class TransitionSettingsMapperTest {
     }
 
     @Test
+    fun `collection switches round trip while preserving pair edits and playback fields`() {
+        val pair = TransitionPairKey(albumA, TrackOccurrence(1), TrackOccurrence(2))
+        val base = TransitionChoice.Custom(TransitionSpec(durationMs = 6000))
+            .applyToCollection(albumA, PlaybackStateProto.newBuilder().setPositionMs(12345).addQueueSongIds(1).build())
+        val withPair = TransitionChoice.Custom(TransitionSpec(durationMs = 2000)).applyToPair(pair, base)
+        val disabled = withPair.withCollectionEnabled(albumA, false)
+        val loaded = PlaybackStateProto.parseFrom(disabled.toByteArray())
+        assertEquals(setOf(albumA), loaded.toTransitionConfig().disabledCollections)
+        assertEquals(withPair.collectionTransitionsMap, loaded.collectionTransitionsMap)
+        assertEquals(withPair.pairTransitionsMap, loaded.pairTransitionsMap)
+        assertEquals(withPair.queueSongIdsList, loaded.queueSongIdsList)
+        assertEquals(withPair.positionMs, loaded.positionMs)
+        val enabled = loaded.withCollectionEnabled(albumA, true)
+        assertEquals(withPair.toTransitionConfig(), enabled.toTransitionConfig())
+        // A missing field on older installs preserves the existing resolver behavior.
+        assertTrue(withPair.toTransitionConfig().disabledCollections.isEmpty())
+    }
+
+    @Test
     fun `every level survives a restart, custom curves included`() {
         var state = PlaybackStateProto.newBuilder().setAppThemeId("ocean").build()
         state = GlobalTransitionSettings(masterEnabled = false, default = TransitionChoice.Custom(TransitionSpec(durationMs = 1_000))).applyTo(state)

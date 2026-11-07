@@ -28,6 +28,11 @@ interface TransitionSettingsPersistence {
         choice: TransitionChoice,
     ): AppResult<Unit>
 
+    suspend fun saveCollectionEnabled(
+        collection: CollectionRef,
+        enabled: Boolean,
+    ): AppResult<Unit>
+
     /** [TransitionChoice.Inherit] removes the pair's entry. */
     suspend fun savePair(
         pair: TransitionPairKey,
@@ -53,6 +58,15 @@ class TransitionSettingsPersistenceImpl(
     ): AppResult<Unit> =
         appResultOf {
             dataStore.updateData { choice.applyToCollection(collection, it) }
+            Unit
+        }
+
+    override suspend fun saveCollectionEnabled(
+        collection: CollectionRef,
+        enabled: Boolean,
+    ): AppResult<Unit> =
+        appResultOf {
+            dataStore.updateData { it.withCollectionEnabled(collection, enabled) }
             Unit
         }
 

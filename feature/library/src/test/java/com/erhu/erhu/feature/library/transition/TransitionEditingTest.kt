@@ -46,6 +46,17 @@ class TransitionEditingTest {
     ) = TransitionPairKey(playlist, a.occurrence, b.occurrence)
 
     @Test
+    fun `pair shortcut opens the exact occurrence and rejects removed or foreign pairs`() {
+        val input = StudioInput(playlist, "Playlist", listOf(t1, t2, t1Again))
+        val selected = key(t2, t1Again)
+        assertEquals(selected, input.pair(selected, config())?.key)
+        assertEquals(t1Again, input.pair(selected, config())?.to)
+        assertNull(input.pair(key(t2, t1), config()))
+        assertNull(input.pair(selected.copy(collection = CollectionRef.album(3)), config()))
+        assertNull(input.copy(tracks = listOf(t1, t1Again)).pair(selected, config()))
+    }
+
+    @Test
     fun `pairs follow the order and settings stay with their exact pair`() {
         val cfg = config(key(t1, t2) to TransitionChoice.Custom(rise), key(t2, t3) to TransitionChoice.Off)
         val pairs = studioPairs(playlist, listOf(t1, t2, t3), cfg)

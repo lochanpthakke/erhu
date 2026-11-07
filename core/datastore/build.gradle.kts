@@ -32,4 +32,5 @@ dependencies {
     ksp(libs.hilt.android.compiler)
 
     testImplementation(libs.junit)
+    testImplementation("androidx.datastore:datastore-core-okio:${libs.versions.datastore.get()}")
 }
