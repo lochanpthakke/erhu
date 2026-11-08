@@ -119,6 +119,37 @@ class SoundRepositoryImplTest {
         ).toPersisted()
 
     @Test
+    fun utilitiesPersistWithoutErasingEqAndRestoreDoesNotOverwriteEarlyChanges() = runTest {
+        val saved = SoundSettings().copy(utilities = com.erhu.erhu.core.model.AudioUtilities(mono = true, preampDb = -4f))
+        val persistence = FakePersistence(saved.toPersisted()).apply { readGate = CompletableDeferred() }
+        val h = Harness(this, persistence)
+        runCurrent()
+        h.repository.setBandGain(0, 5f)
+        persistence.readGate!!.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(h.repository.soundSettings.value.utilities.mono)
+        assertEquals(5f, h.repository.soundSettings.value.bands[0].gainDb, 0f)
+        h.repository.setUtilities(h.repository.soundSettings.value.utilities.copy(balance = 0.5f))
+        advanceUntilIdle()
+        assertEquals(0.5f, persistence.stored.value!!.utilities.balance, 0f)
+        h.repository.resetToFlat()
+        assertTrue(h.repository.soundSettings.value.utilities.mono)
+    }
+
+    @Test
+    fun earlyUtilityChangePreservesSavedEqAndWinsOnlyForUtilities() = runTest {
+        val saved = SoundSettings(bands = SoundSettings.defaultBands().mapIndexed { index, band -> if (index == 0) band.copy(gainDb = 7f) else band })
+        val persistence = FakePersistence(saved.toPersisted()).apply { readGate = CompletableDeferred() }
+        val h = Harness(this, persistence)
+        runCurrent()
+        h.repository.setUtilities(com.erhu.erhu.core.model.AudioUtilities(mono = true))
+        persistence.readGate!!.complete(Unit)
+        advanceUntilIdle()
+        assertTrue(h.repository.soundSettings.value.utilities.mono)
+        assertEquals(7f, h.repository.soundSettings.value.bands[0].gainDb, 0f)
+    }
+
+    @Test
     fun freshInstall_keepsDefaults_andWritesNothing() =
         runTest {
             val h = Harness(this, FakePersistence(initial = null))

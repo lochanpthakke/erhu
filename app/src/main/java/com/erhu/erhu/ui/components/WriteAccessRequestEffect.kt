@@ -6,6 +6,11 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.erhu.erhu.core.network.tagger.WriteAuthorization
 
 /**
@@ -17,6 +22,7 @@ import com.erhu.erhu.core.network.tagger.WriteAuthorization
 fun WriteAccessRequestEffect(
     request: WriteAuthorization?,
     onResult: (granted: Boolean) -> Unit,
+    onLaunch: () -> Boolean = { true },
 ) {
     val consentLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
@@ -27,7 +33,18 @@ fun WriteAccessRequestEffect(
             onResult(granted)
         }
 
-    LaunchedEffect(request) {
+    var resumed by remember { mutableStateOf(false) }
+    var launched by remember(request) { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        resumed = true
+        onPauseOrDispose { resumed = false }
+    }
+    LaunchedEffect(request, resumed) {
+        if (!resumed || launched) return@LaunchedEffect
+        if (request != null) {
+            launched = true
+            if (!onLaunch()) return@LaunchedEffect
+        }
         when (request) {
             is WriteAuthorization.NeedsUserConsent ->
                 consentLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())

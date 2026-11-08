@@ -23,6 +23,7 @@ data class PersistedSoundSettings(
     val filterTypes: List<String> = emptyList(),
     val activeBandCount: Int = 8,
     val selectedBandIndex: Int = 0,
+    val utilities: AudioUtilities = AudioUtilities(),
 )
 
 data class PersistedEqPreset(

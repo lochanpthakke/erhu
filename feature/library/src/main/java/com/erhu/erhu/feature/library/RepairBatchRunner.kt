@@ -9,6 +9,7 @@ import com.erhu.erhu.core.network.tagger.TagWriteRequest
 object RepairStatus {
     const val PENDING = "PENDING"
     const val FIXING = "FIXING"
+    const val READY = "READY_TO_APPLY"
     const val DONE = "DONE"
     const val PARTIAL_SUCCESS = "PARTIAL_SUCCESS"
     const val UNCHANGED = "UNCHANGED"
@@ -99,12 +100,13 @@ class RepairBatchRunner(
     suspend fun lookUp(
         start: List<RepairQueueItem>,
         onProgress: (List<RepairQueueItem>) -> Unit = {},
+        onTrackComplete: suspend (LookupPhaseResult) -> Unit = {},
     ): LookupPhaseResult {
         val queue = start.toMutableList()
         val writes = mutableMapOf<Int, TagWriteRequest>()
         val renames = mutableMapOf<Int, String>()
 
-        fun result(pause: BatchPause?) = LookupPhaseResult(queue, writes, pause, renames)
+        fun result(pause: BatchPause?) = LookupPhaseResult(queue.toList(), writes.toMap(), pause, renames.toMap())
         for (i in queue.indices) {
             val item = queue[i]
             if (item.status !in RepairStatus.TO_PROCESS) continue
@@ -131,6 +133,7 @@ class RepairBatchRunner(
                 }
             }
             onProgress(queue.toList())
+            onTrackComplete(result(null))
         }
         return result(null)
     }

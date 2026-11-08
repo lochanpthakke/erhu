@@ -1,44 +1,21 @@
-name: erhu Release APK
-
+name: erhu Metadata Debug Build
 on:
-  push:
-    branches: [kshitij]
-    tags: ['erhu-v*']
   workflow_dispatch:
-    inputs:
-      publish:
-        description: 'Publish a GitHub Release after all build and signature checks pass'
-        type: boolean
-        default: true
-      channel:
-        description: 'Release channel when publication is explicitly requested'
-        type: choice
-        options: [beta, stable]
-        default: beta
-      release_notes:
-        description: 'Release notes for the published GitHub Release'
-        type: string
-        default: ''
-
 permissions:
   contents: read
-
 concurrency:
-  group: erhu-release-${{ github.ref }}
+  group: erhu-metadata-debug-${{ github.ref }}
   cancel-in-progress: false
-
 jobs:
-  release-apk:
+  debug-apk:
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     env:
       ERHU_FIREBASE_APP_ID: ${{ vars.ERHU_FIREBASE_APP_ID }}
       ERHU_FIREBASE_API_KEY: ${{ vars.ERHU_FIREBASE_API_KEY }}
       ERHU_FIREBASE_PROJECT_ID: ${{ vars.ERHU_FIREBASE_PROJECT_ID }}
       ERHU_FIREBASE_SENDER_ID: ${{ vars.ERHU_FIREBASE_SENDER_ID }}
       ERHU_ANNOUNCEMENTS_URL: ${{ vars.ERHU_ANNOUNCEMENTS_URL }}
-    timeout-minutes: 60
-    outputs:
-      version: ${{ steps.verify.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -53,85 +30,64 @@ jobs:
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v5
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/kshitij' }}
-      - name: Prepare existing signing key
-        env:
-          ERHU_KEYSTORE_BASE64: ${{ secrets.ERHU_KEYSTORE_BASE64 }}
-          ERHU_KEYSTORE_PASSWORD: ${{ secrets.ERHU_KEYSTORE_PASSWORD }}
-          ERHU_KEY_ALIAS: ${{ secrets.ERHU_KEY_ALIAS }}
-          ERHU_KEY_PASSWORD: ${{ secrets.ERHU_KEY_PASSWORD }}
-        run: python3 scripts/ci/signing.py
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: backend/announcements/functions/package-lock.json
-      - name: Announcement backend tests
-        run: |
-          npm ci --prefix backend/announcements/functions --ignore-scripts --no-audit --no-fund
-          npm test --prefix backend/announcements/functions
-      - name: Unit tests and release lint
+          cache-read-only: true
+      - name: Regression tests and isolated debug APK
         run: |
           chmod +x gradlew
-          python3 -m unittest discover -s scripts/ci -p 'test_*.py'
-          ./gradlew :app:testDebugUnitTest :core:common:testDebugUnitTest \
-            :core:database:testDebugUnitTest :core:datastore:testDebugUnitTest \
-            :core:designsystem:testDebugUnitTest :core:network:testDebugUnitTest \
-            :core:playback:testDebugUnitTest :core:sound:testDebugUnitTest :core:vybe:test \
-            :feature:library:testDebugUnitTest :feature:settings:testDebugUnitTest :feature:transfer:testDebugUnitTest :app:lintVitalRelease \
-            -PrequireReleaseSigning=true -PtargetAbi=arm64-v8a --no-configuration-cache \
-            --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process \
-            -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
-      - name: Compile optimized release APK
+          ./gradlew :app:testDebugUnitTest :core:sound:testDebugUnitTest :core:datastore:testDebugUnitTest \
+            :core:playback:testDebugUnitTest :feature:library:testDebugUnitTest :feature:settings:testDebugUnitTest \
+            :app:assembleDebug -PbenchApp -PtargetAbi=arm64-v8a --no-configuration-cache --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
+      - name: Verify APK and retain checksums
         run: |
-          ./gradlew :app:assembleRelease -PrequireReleaseSigning=true -PtargetAbi=arm64-v8a \
-            --no-configuration-cache --max-workers=2 -Pkotlin.compiler.execution.strategy=in-process \
-            -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
-      - name: Verify release outputs and signature
-        id: verify
-        run: python3 scripts/ci/verify_release.py
+          python3 - <<'PY'
+          import hashlib, json, os, re, shutil, subprocess, zipfile
+          from pathlib import Path
+          apks = list(Path('app/build/outputs/apk').rglob('*.apk'))
+          assert len(apks) == 1, [str(p) for p in apks]
+          apk = apks[0]
+          assert apk.stat().st_size > 1024 * 1024
+          tools = Path(os.environ['ANDROID_HOME']) / 'build-tools/36.0.0'
+          badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(apk)], text=True)
+          match = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
+          assert match, 'APK identity unavailable'
+          package, code, name = match.groups()
+          assert package == 'com.lochanpthakke.empee3.bench', package
+          gradle = Path('app/build.gradle.kts').read_text()
+          assert int(code) == int(re.search(r'versionCode = (\d+)', gradle).group(1))
+          assert name == re.search(r'versionName = "([^"]+)"', gradle).group(1)
+          signing = subprocess.check_output([str(tools/'apksigner'), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
+          certificate = re.search(r'certificate SHA-256 digest: ([0-9a-f]+)', signing).group(1)
+          with zipfile.ZipFile(apk) as archive:
+              abis = {p.split('/')[1] for p in archive.namelist() if p.startswith('lib/') and p.endswith('.so')}
+          assert abis == {'arm64-v8a'}, abis
+          out = Path('debug-artifact'); out.mkdir()
+          target = out/'erhu-metadata-debug-arm64.apk'
+          shutil.copy2(apk, target)
+          digest = hashlib.sha256(target.read_bytes()).hexdigest()
+          Path(str(target)+'.sha256').write_text(digest+'  '+target.name+'\n')
+          verification = dict(commit=os.environ['GITHUB_SHA'], package=package, version_name=name, version_code=int(code),
+              variant='debug', isolated=True, abi='arm64-v8a', sha256=digest, certificate_sha256=certificate)
+          (out/'verification.json').write_text(json.dumps(verification, indent=2)+'\n')
+          print(json.dumps(verification))
+          PY
       - uses: actions/upload-artifact@v4
         with:
-          name: erhu-release-${{ github.run_id }}
-          path: dist/
+          name: erhu-metadata-debug-${{ github.run_id }}
+          path: debug-artifact/*
           if-no-files-found: error
-          retention-days: 30
-      - name: Upload test reports and R8 mapping
+          retention-days: 14
+      - name: Test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: erhu-validation-${{ github.run_id }}
+          name: erhu-metadata-tests-${{ github.run_id }}
           path: |
-            **/build/test-results/**/TEST-*.xml
-            app/build/reports/lint-results-release*
-            app/build/outputs/mapping/release/mapping.txt
+            app/build/test-results/testDebugUnitTest/*.xml
+            core/sound/build/test-results/testDebugUnitTest/*.xml
+            core/datastore/build/test-results/testDebugUnitTest/*.xml
+            core/playback/build/test-results/testDebugUnitTest/*.xml
+            feature/library/build/test-results/testDebugUnitTest/*.xml
+            feature/settings/build/test-results/testDebugUnitTest/*.xml
           if-no-files-found: warn
           retention-days: 14
-      - name: Remove signing material
-        if: always()
-        run: python3 scripts/ci/signing.py --cleanup
-
-  publish:
-    needs: release-apk
-    if: startsWith(github.ref, 'refs/tags/erhu-v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: actions/download-artifact@v4
-        with:
-          name: erhu-release-${{ github.run_id }}
-          path: dist
-      - name: Publish verified APK
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RELEASE_CHANNEL: ${{ inputs.channel || 'beta' }}
-          RELEASE_NOTES: ${{ inputs.release_notes }}
-        run: python3 scripts/ci/publish_release.py

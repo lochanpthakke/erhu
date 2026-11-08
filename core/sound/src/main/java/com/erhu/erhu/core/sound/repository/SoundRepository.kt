@@ -12,6 +12,8 @@ interface SoundRepository {
 
     fun attachAudioSession(audioSessionId: Int)
 
+    fun setUtilities(value: com.erhu.erhu.core.model.AudioUtilities)
+
     fun setEqEnabled(enabled: Boolean)
 
     fun setBandGain(

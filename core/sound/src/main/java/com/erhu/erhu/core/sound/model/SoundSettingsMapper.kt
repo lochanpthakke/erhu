@@ -32,6 +32,7 @@ fun SoundSettings.toPersisted(): PersistedSoundSettings =
         filterTypes = currentFilterTypes.map { it.name },
         activeBandCount = activeBandCount,
         selectedBandIndex = selectedBandIndex,
+        utilities = utilities.sanitized(),
     )
 
 /**
@@ -125,6 +126,7 @@ fun PersistedSoundSettings.toSoundSettings(): SoundSettings {
         selectedBandIndex = safeSelectedBandIndex,
         activePresetId = activePresetId.takeIf { it in knownPresetIds } ?: EqPreset.FLAT.id,
         customPresets = customs,
+        utilities = utilities.sanitized(),
     )
 }
 

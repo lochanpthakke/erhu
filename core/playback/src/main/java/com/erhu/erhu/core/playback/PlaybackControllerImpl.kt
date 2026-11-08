@@ -72,6 +72,7 @@ class PlaybackControllerImpl
         playerDiagnostics: com.erhu.erhu.core.playback.diagnostics.PlayerDiagnosticsTracker,
         private val transitionSettings: TransitionSettingsRepository,
         transitionGain: TransitionGainProcessor,
+        utilityEq: com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor = com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor(),
     ) : PlaybackController {
         private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
@@ -115,10 +116,10 @@ class PlaybackControllerImpl
                         PlayerTransitionHost(
                             player = exo,
                             resolve = transitionSettings::resolve,
-                            abLoopEnabled = { abLoop.state?.enabled == true },
+                            abLoopEnabled = { abLoop.state?.enabled == true || soundRepository.soundSettings.value.utilities.sleepAtTrackEnd },
                         ),
                     incomingFade = ProcessorIncomingFade(transitionGain),
-                    newTailPlayer = { ExoTailPlayer(context, soundRepository.soundSettings.value) },
+                    newTailPlayer = { ExoTailPlayer(context, soundRepository.soundSettings.value) { soundRepository.soundSettings.value.utilities } },
                 )
             }
 
@@ -243,6 +244,10 @@ class PlaybackControllerImpl
 
         init {
             player.addListener(playerListener)
+            PlaybackUtilities(player, soundRepository, utilityEq, scope, transportChanged = {
+                transitions?.onSpeedChanged(player.playbackParameters.speed)
+                transitions?.reevaluate()
+            }).start()
             // Records what the player reports about the audio (decoder, formats) for the audio inspector.
             playerDiagnostics.start()
             (player as? ExoPlayer)?.audioSessionId?.takeIf { it != C.AUDIO_SESSION_ID_UNSET }?.let {

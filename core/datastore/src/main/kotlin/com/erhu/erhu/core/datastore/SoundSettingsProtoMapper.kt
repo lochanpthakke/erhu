@@ -24,6 +24,17 @@ fun PersistedSoundSettings.toProto(): SoundSettingsProto =
         .addAllFilterTypes(filterTypes)
         .setActiveBandCount(activeBandCount)
         .setSelectedBandIndex(selectedBandIndex)
+        .setMono(utilities.mono)
+        .setBalance(utilities.balance)
+        .setPreampDb(utilities.preampDb)
+        .setBassDb(utilities.bassDb)
+        .setLimiter(utilities.limiter)
+        .setReplayGainMode(utilities.replayGain.name)
+        .setPlaybackSpeed(utilities.speed)
+        .setPlaybackPitch(utilities.pitch)
+        .setSkipSilence(utilities.skipSilence)
+        .setSleepDeadlineMs(utilities.sleepDeadlineMs)
+        .setSleepAtTrackEnd(utilities.sleepAtTrackEnd)
         .build()
 
 fun SoundSettingsProto.toDomain(): PersistedSoundSettings =
@@ -43,6 +54,14 @@ fun SoundSettingsProto.toDomain(): PersistedSoundSettings =
         filterTypes = filterTypesList,
         activeBandCount = if (activeBandCount > 0) activeBandCount else 8,
         selectedBandIndex = selectedBandIndex,
+        utilities = com.erhu.erhu.core.model.AudioUtilities(
+            mono = mono, balance = balance, preampDb = preampDb, bassDb = bassDb, limiter = limiter,
+            replayGain = com.erhu.erhu.core.model.ReplayGainMode.entries.firstOrNull { it.name == replayGainMode }
+                ?: com.erhu.erhu.core.model.ReplayGainMode.OFF,
+            speed = if (hasPlaybackSpeed()) playbackSpeed else 1f,
+            pitch = if (hasPlaybackPitch()) playbackPitch else 1f,
+            skipSilence = skipSilence, sleepDeadlineMs = sleepDeadlineMs, sleepAtTrackEnd = sleepAtTrackEnd,
+        ).sanitized(),
     )
 
 private fun PersistedEqPreset.toProto(): EqPresetProto =

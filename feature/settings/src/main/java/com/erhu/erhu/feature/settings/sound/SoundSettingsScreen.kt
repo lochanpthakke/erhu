@@ -92,6 +92,8 @@ fun SoundSettingsScreen(
             }
         }
 
+        AudioUtilityControls(soundSettings.utilities, viewModel::updateUtilities)
+
         SettingsSection(title = "Preset & curve") {
             SettingsPanel {
                 PresetAndResetHeader(
