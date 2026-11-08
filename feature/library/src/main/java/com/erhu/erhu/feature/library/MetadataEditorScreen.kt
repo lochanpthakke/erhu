@@ -117,6 +117,18 @@ fun MetadataEditorScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showCompletionDialog by remember { mutableStateOf(false) }
 
+    val pendingApproval by viewModel.metadataRepair.awaitingApproval.collectAsState()
+    val notificationContext = androidx.compose.ui.platform.LocalContext.current
+    val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { viewModel.startFixingQueue() }
+    val startFetching = {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(
+                notificationContext, android.Manifest.permission.POST_NOTIFICATIONS,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        else viewModel.startFixingQueue()
+    }
     val repairQueue by viewModel.repairQueue.collectAsState()
     val forceFixTags by viewModel.forceFixTags.collectAsState()
     val isScanning by viewModel.isFindingBadTracks.collectAsState()
@@ -132,7 +144,10 @@ fun MetadataEditorScreen(
     val sourceOptions by viewModel.metadataSourceOptions.collectAsState()
     val toProcessCount = repairQueue.count { it.status in RepairStatus.TO_PROCESS }
     val totalCount = repairQueue.size
-    val processedCount = repairQueue.count { it.status !in RepairStatus.TO_PROCESS && it.status != RepairStatus.FIXING }
+    val fetchProgress by viewModel.metadataRepair.progress.collectAsState()
+    val processedCount = if (isFixingQueue && fetchProgress.phase in setOf(RepairPhase.FETCHING, RepairPhase.PAUSED)) {
+        fetchProgress.processed
+    } else repairQueue.count { it.status != RepairStatus.PENDING && it.status != RepairStatus.FIXING }
     val isQueueComplete = totalCount > 0 && processedCount == totalCount
     val progressFloat = if (totalCount > 0) processedCount.toFloat() / totalCount.toFloat() else 0f
     var selectedRevertIds by remember { mutableStateOf(setOf<Long>()) }
@@ -146,7 +161,7 @@ fun MetadataEditorScreen(
     // The summary appears whenever a run ends: finished, paused by the connection or by the user.
     var wasFixing by remember { mutableStateOf(false) }
     LaunchedEffect(isFixingQueue) {
-        if (wasFixing && !isFixingQueue && !isReverting && revertCompletionMessage == null && totalCount > 0) {
+        if (wasFixing && !isFixingQueue && !pendingApproval && !isReverting && revertCompletionMessage == null && totalCount > 0) {
             showCompletionDialog = true
         }
         wasFixing = isFixingQueue
@@ -465,6 +480,13 @@ fun MetadataEditorScreen(
                                     enabled = !isReverting && !isFixingQueue && revertableQueue.isNotEmpty(),
                                 )
                             }
+                        } else if (pendingApproval && !isFixingQueue) {
+                            ActionButton(
+                                text = "Allow changes",
+                                onClick = { viewModel.metadataRepair.approvePending() },
+                                icon = Icons.Default.CheckCircle,
+                                primary = true,
+                            )
                         } else if (isFixingQueue) {
                             ActionButton(
                                 text = "Pause after this track",
@@ -480,7 +502,7 @@ fun MetadataEditorScreen(
                                         } else {
                                             "Start Fixing Queue / Fix Tags"
                                         },
-                                    onClick = { viewModel.startFixingQueue() },
+                                    onClick = startFetching,
                                     icon = Icons.Default.AutoFixHigh,
                                     primary = true,
                                     enabled = toProcessCount > 0,
@@ -851,6 +873,7 @@ private fun RepairQueueCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 when (queueItem.status) {
+                    RepairStatus.READY -> Text("Waiting for file approval", style = MaterialTheme.typography.bodySmall)
                     "FIXING" ->
                         Icon(
                             imageVector = Icons.Default.HourglassTop,

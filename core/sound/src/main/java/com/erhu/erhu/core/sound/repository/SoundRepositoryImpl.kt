@@ -49,6 +49,8 @@ class SoundRepositoryImpl
 
         private var restoreFinished = false
         private var changedBeforeRestore = false
+        private var utilitiesChangedBeforeRestore = false
+        private var eqChangedBeforeRestore = false
         private val pendingSave = MutableStateFlow<SoundSettings?>(null)
 
         init {
@@ -80,8 +82,13 @@ class SoundRepositoryImpl
                             .map { it.id }
                             .toSet()
                     _soundSettings.update { current ->
-                        current.copy(customPresets = saved.customPresets.filter { it.id !in known } + current.customPresets)
+                        val base = if (eqChangedBeforeRestore) current else saved
+                        base.copy(
+                            utilities = if (utilitiesChangedBeforeRestore) current.utilities else saved.utilities,
+                            customPresets = saved.customPresets.filter { it.id !in known } + current.customPresets,
+                        )
                     }
+                    applyToPipeline(_soundSettings.value)
                 } else {
                     applyToPipeline(saved)
                     _soundSettings.value = saved
@@ -95,12 +102,24 @@ class SoundRepositoryImpl
             customEqAudioProcessor.applySettings(settings)
         }
 
-        private fun onUserChange() {
-            if (restoreFinished) requestSave() else changedBeforeRestore = true
+        private fun onUserChange(utilitiesOnly: Boolean = false) {
+            if (restoreFinished) {
+                requestSave()
+            } else {
+                changedBeforeRestore = true
+                if (utilitiesOnly) utilitiesChangedBeforeRestore = true else eqChangedBeforeRestore = true
+            }
         }
 
         private fun requestSave() {
             pendingSave.value = _soundSettings.value
+        }
+
+        override fun setUtilities(value: com.erhu.erhu.core.model.AudioUtilities) {
+            val clean = value.sanitized()
+            _soundSettings.update { it.copy(utilities = clean) }
+            customEqAudioProcessor.setUtilities(clean)
+            onUserChange(utilitiesOnly = true)
         }
 
         override fun eqRuntimeState() = customEqAudioProcessor.runtimeState()

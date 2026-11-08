@@ -66,6 +66,7 @@ import com.erhu.erhu.feature.settings.component.SettingsSegmentedControl
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsScreen
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsViewModel
+import com.erhu.erhu.feature.settings.sound.PlaybackSettingsScreen
 import com.erhu.erhu.feature.settings.sound.SoundSettingsScreen
 import com.erhu.erhu.feature.settings.sound.SoundViewModel
 import com.erhu.erhu.feature.settings.theme.ThemeSettingsScreen
@@ -104,8 +105,15 @@ private val SETTING_CATEGORIES =
         SettingCategory(
             "audio",
             "Audio & Equalizer",
-            "8-band equalizer, presets and audio effects",
+            "Parametric EQ, channels, level and normalization",
             Icons.Default.Equalizer,
+            SECTION_SOUND,
+        ),
+        SettingCategory(
+            "playback",
+            "Playback",
+            "Crossfade, sleep timer, speed, pitch and silence skipping",
+            Icons.Default.Tune,
             SECTION_SOUND,
         ),
         SettingCategory(
@@ -197,6 +205,7 @@ fun SettingsCategoryScreen(
                 title = title,
                 navigation = TopBarNavigation.Detail(onBack),
             )
+        "playback" -> PlaybackSettingsScreen(soundViewModel, title, onBack)
         "library" ->
             LibrarySettingsSubPage(
                 viewModel = libraryViewModel,

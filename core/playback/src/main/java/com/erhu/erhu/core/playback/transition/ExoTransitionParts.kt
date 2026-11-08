@@ -124,9 +124,10 @@ internal class ProcessorIncomingFade(
 internal class ExoTailPlayer(
     context: Context,
     soundSettings: SoundSettings,
+    private val currentUtilities: () -> com.erhu.erhu.core.model.AudioUtilities = { soundSettings.utilities },
 ) : TailPlayer {
     private val gain = TransitionGainProcessor(cancelOnLaterFlush = false)
-    private val eq = CustomEqAudioProcessor().apply { applySettings(soundSettings) }
+    private val eq = CustomEqAudioProcessor().apply { applySettings(soundSettings); utilitySettingsProvider = currentUtilities }
     private val player: ExoPlayer =
         ExoPlayer
             .Builder(context, renderers(context))
@@ -155,6 +156,9 @@ internal class ExoTailPlayer(
 
     private val playerListener =
         object : Player.Listener {
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                eq.setReplayGain(com.erhu.erhu.core.playback.replayGainFromTracks(tracks))
+            }
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) listener?.onFinished()
             }
@@ -208,7 +212,8 @@ internal class ExoTailPlayer(
         player.addListener(playerListener)
         player.addAnalyticsListener(analytics)
         player.volume = volume
-        player.playbackParameters = PlaybackParameters(speed)
+        player.playbackParameters = PlaybackParameters(speed, currentUtilities().pitch)
+        player.skipSilenceEnabled = currentUtilities().skipSilence
         player.setMediaItem(item, startMs)
         player.playWhenReady = false
         player.prepare()
@@ -252,7 +257,10 @@ internal class ExoTailPlayer(
     }
 
     override fun setSpeed(speed: Float) {
-        if (!released) player.playbackParameters = PlaybackParameters(speed)
+        if (!released) {
+            player.playbackParameters = PlaybackParameters(speed, currentUtilities().pitch)
+            player.skipSilenceEnabled = currentUtilities().skipSilence
+        }
     }
 
     override fun release() {

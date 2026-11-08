@@ -20,6 +20,13 @@ import javax.inject.Singleton
 class CustomEqAudioProcessor
     @Inject
     constructor() : BaseAudioProcessor() {
+        private val utilityDsp = AudioUtilityDsp()
+        private var utilityFrame = FloatArray(0)
+        @Volatile var utilitySettingsProvider: (() -> com.erhu.erhu.core.model.AudioUtilities)? = null
+
+        fun setUtilities(value: com.erhu.erhu.core.model.AudioUtilities) { if (utilityDsp.settings != value) utilityDsp.settings = value.sanitized() }
+        fun setReplayGain(value: ReplayGainData) { utilityDsp.replayGain = value }
+
         @Volatile private var isEqEnabled: Boolean = true
 
         private val bandGains = FloatArray(BAND_COUNT) { 0.0f }
@@ -188,6 +195,8 @@ class CustomEqAudioProcessor
             if (channelFilters.size != channels) {
                 channelFilters = Array(channels) { Array(BAND_COUNT) { BiquadFilter() } }
             }
+            utilityFrame = FloatArray(channels)
+            utilityDsp.flush(inputAudioFormat.sampleRate, channels)
             coefficientsDirty = true
             resetRequested = true
         }
@@ -203,7 +212,10 @@ class CustomEqAudioProcessor
             val outputBuffer = replaceOutputBuffer(remaining)
             val channelCount = inputAudioFormat.channelCount
 
-            if (!isEqEnabled || channelFilters.size != channelCount || isFlat()) {
+            utilitySettingsProvider?.invoke()?.let(::setUtilities)
+            val utilityActive = utilityDsp.beginBlock()
+            val eqActive = isEqEnabled && channelFilters.size == channelCount && !isFlat()
+            if (!eqActive && !utilityActive) {
                 outputBuffer.put(inputBuffer)
                 outputBuffer.flip()
                 return
@@ -216,14 +228,18 @@ class CustomEqAudioProcessor
 
             val bytesPerFrame = channelCount * 2
             while (inputBuffer.remaining() >= bytesPerFrame) {
-                for (ch in 0 until channelCount) {
-                    var sample = inputBuffer.short / SHORT_MAX_FLOAT
-                    val filters = channelFilters[ch]
-                    for (b in 0 until BAND_COUNT) {
-                        sample = filters[b].processSample(sample)
+                for (ch in 0 until channelCount) utilityFrame[ch] = inputBuffer.short / SHORT_MAX_FLOAT
+                if (utilityActive) utilityDsp.beforeEq(utilityFrame)
+                if (eqActive) {
+                    for (ch in 0 until channelCount) {
+                        var sample = utilityFrame[ch]
+                        for (filter in channelFilters[ch]) sample = filter.processSample(sample)
+                        utilityFrame[ch] = sample
                     }
-                    val clamped = sample.coerceIn(-1.0f, 1.0f)
-                    outputBuffer.putShort((clamped * SHORT_MAX_FLOAT).toInt().toShort())
+                }
+                if (utilityActive) utilityDsp.afterEq(utilityFrame)
+                for (sample in utilityFrame) {
+                    outputBuffer.putShort((sample.coerceIn(-1f, 1f) * SHORT_MAX_FLOAT).toInt().toShort())
                 }
             }
 

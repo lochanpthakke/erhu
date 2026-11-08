@@ -12,7 +12,6 @@ import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.ArtistArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.database.repository.RecentlyPlayedRecorder
-import com.erhu.erhu.core.datastore.RepairBatchPersistence
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
@@ -23,46 +22,21 @@ import com.erhu.erhu.core.model.PersistedRepairBatch
 import com.erhu.erhu.core.model.PersistedRepairItem
 import com.erhu.erhu.core.model.ProviderStatus
 import com.erhu.erhu.core.model.Song
-import com.erhu.erhu.core.model.TagChange
-import com.erhu.erhu.core.network.bpm.BpmFinder
-import com.erhu.erhu.core.network.bpm.BpmLookup
-import com.erhu.erhu.core.network.connectivity.NetworkStatus
-import com.erhu.erhu.core.network.connectivity.NetworkStatusSource
 import com.erhu.erhu.core.network.lyrics.CachedLyrics
 import com.erhu.erhu.core.network.lyrics.LyricsCandidate
 import com.erhu.erhu.core.network.lyrics.LyricsTrack
 import com.erhu.erhu.core.network.lyrics.OnlineLyricsRepository
 import com.erhu.erhu.core.network.lyrics.OnlineLyricsResult
 import com.erhu.erhu.core.network.lyrics.ProviderResponse
-import com.erhu.erhu.core.network.repository.DetailedSearchResponse
-import com.erhu.erhu.core.network.repository.GenreLookup
-import com.erhu.erhu.core.network.repository.MatchDecision
 import com.erhu.erhu.core.network.repository.MetadataRepository
-import com.erhu.erhu.core.network.repository.MetadataSources
-import com.erhu.erhu.core.network.repository.TrackIdentity
-import com.erhu.erhu.core.network.repository.TrackMatcher
-import com.erhu.erhu.core.network.repository.usableIdentityText
-import com.erhu.erhu.core.network.retry.classifyProviderFailure
 import com.erhu.erhu.core.network.scorer.HIGH_CONFIDENCE_THRESHOLD
 import com.erhu.erhu.core.network.tagger.EditableTags
 import com.erhu.erhu.core.network.tagger.EmbeddedTagReader
-import com.erhu.erhu.core.network.tagger.FieldFixPlan
-import com.erhu.erhu.core.network.tagger.FieldSelection
-import com.erhu.erhu.core.network.tagger.FixField
-import com.erhu.erhu.core.network.tagger.LocalTrackTags
 import com.erhu.erhu.core.network.tagger.PLAUSIBLE_BPM
-import com.erhu.erhu.core.network.tagger.ReleaseDate
-import com.erhu.erhu.core.network.tagger.ReleaseDateDecision
 import com.erhu.erhu.core.network.tagger.TagWriteRequest
-import com.erhu.erhu.core.network.tagger.WriteAuthorization
 import com.erhu.erhu.core.network.tagger.buildTagWriteRequest
 import com.erhu.erhu.core.network.tagger.fieldSelection
 import com.erhu.erhu.core.network.tagger.fields
-import com.erhu.erhu.core.network.tagger.isUsableTag
-import com.erhu.erhu.core.network.tagger.isUsableYearTag
-import com.erhu.erhu.core.network.tagger.planFieldFix
-import com.erhu.erhu.core.network.tagger.releaseDateFor
-import com.erhu.erhu.core.network.tagger.usableBpm
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.feature.library.mix.RadioPlan
 import com.erhu.erhu.feature.library.mix.RadioRepository
@@ -96,7 +70,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.time.LocalDate
 import javax.inject.Inject
 
 data class RepairQueueItem(
@@ -205,12 +178,9 @@ class LibraryViewModel
         private val onlineLyrics: OnlineLyricsRepository,
         private val learnedWatermarkDao: com.erhu.erhu.core.database.dao.LearnedWatermarkDao,
         private val fileRenamer: com.erhu.erhu.core.network.tagger.FileRenamer,
-        private val titleCandidateGenerator: com.erhu.erhu.core.network.cleaner.TitleCandidateGenerator,
         private val embeddedTagReader: EmbeddedTagReader,
-        private val trackMatcher: TrackMatcher,
-        private val networkStatus: NetworkStatusSource,
-        private val repairBatchPersistence: RepairBatchPersistence,
-        private val bpmFinder: BpmFinder,
+        val metadataRepair: MetadataRepairOperation,
+        private val metadataWriteAccess: MetadataWriteAccess,
         private val radioRepository: RadioRepository,
         private val lyricsTimingPersistence: com.erhu.erhu.core.datastore.LyricsTimingPersistence,
     ) : ViewModel() {
@@ -223,7 +193,7 @@ class LibraryViewModel
                 artistArtworkRepository,
                 writeAccess = { uris, granted, denied ->
                     check(
-                        pendingWrite == null && !_isFixingQueue.value,
+                        !metadataWriteAccess.isPending && !_isFixingQueue.value,
                     ) { "Another tag write is in progress. Wait for it to finish and try again." }
                     withWriteAccess(uris, granted, denied)
                 },
@@ -322,7 +292,7 @@ class LibraryViewModel
         private val _isFindingBadTracks = MutableStateFlow(false)
         val isFindingBadTracks: StateFlow<Boolean> = _isFindingBadTracks.asStateFlow()
 
-        private val _repairQueue = MutableStateFlow<List<RepairQueueItem>>(emptyList())
+        private val _repairQueue = metadataRepair.queue
         val repairQueue: StateFlow<List<RepairQueueItem>> = _repairQueue.asStateFlow()
 
         private val _forceFixTags = MutableStateFlow(false)
@@ -344,7 +314,7 @@ class LibraryViewModel
         private val _recentSearchItems = MutableStateFlow<List<RecentSearchItem>>(emptyList())
         val recentSearchItems: StateFlow<List<RecentSearchItem>> = _recentSearchItems.asStateFlow()
 
-        private val _isFixingQueue = MutableStateFlow(false)
+        private val _isFixingQueue = metadataRepair.busy
         val isFixingQueue: StateFlow<Boolean> = _isFixingQueue.asStateFlow()
 
         /** Metadata & Artwork source, stored in settings; one of [metadataSourceOptions]. */
@@ -400,90 +370,6 @@ class LibraryViewModel
 
         fun setSelectedProvider(provider: String) {
             viewModelScope.launch { themeRepository.setMetadataProvider(offeredMetadataSource(provider)) }
-        }
-
-        private fun buildSuccessDetails(
-            oldTitle: String,
-            oldArtist: String,
-            oldAlbum: String,
-            oldYear: String? = null,
-            oldGenre: String? = null,
-            newTitle: String,
-            newArtist: String,
-            newAlbum: String,
-            newYear: String? = null,
-            newGenre: String? = null,
-            oldFileName: String,
-            newFileName: String?,
-            renameError: String? = null,
-            isManual: Boolean = false,
-            extraChanges: List<TagChange> = emptyList(),
-            hadOriginalArtwork: Boolean = false,
-            originalArtworkBytes: ByteArray? = null,
-            hadEmbeddedTitle: Boolean = true,
-            hadEmbeddedArtist: Boolean = true,
-            hadEmbeddedAlbum: Boolean = true,
-        ): com.erhu.erhu.core.model.SuccessDetails {
-            val changes = mutableListOf<com.erhu.erhu.core.model.TagChange>()
-            if (oldTitle.trim() != newTitle.trim()) {
-                changes.add(
-                    com.erhu.erhu.core.model
-                        .TagChange("Title", oldTitle, newTitle),
-                )
-            }
-            if (oldArtist.trim() != newArtist.trim()) {
-                changes.add(
-                    com.erhu.erhu.core.model
-                        .TagChange("Artist", oldArtist, newArtist),
-                )
-            }
-            if (oldAlbum.trim() != newAlbum.trim()) {
-                changes.add(
-                    com.erhu.erhu.core.model
-                        .TagChange("Album", oldAlbum, newAlbum),
-                )
-            }
-            if (!oldYear.isNullOrBlank() || !newYear.isNullOrBlank()) {
-                if (oldYear?.trim() != newYear?.trim()) {
-                    changes.add(
-                        com.erhu.erhu.core.model
-                            .TagChange("Year", oldYear.orEmpty(), newYear.orEmpty()),
-                    )
-                }
-            }
-            if (!oldGenre.isNullOrBlank() || !newGenre.isNullOrBlank()) {
-                if (oldGenre?.trim() != newGenre?.trim()) {
-                    changes.add(
-                        com.erhu.erhu.core.model
-                            .TagChange("Genre", oldGenre.orEmpty(), newGenre.orEmpty()),
-                    )
-                }
-            }
-            changes += extraChanges
-            val isRenamed = newFileName != null && newFileName != oldFileName
-            return com.erhu.erhu.core.model.SuccessDetails(
-                originalTitle = oldTitle,
-                originalArtist = oldArtist,
-                originalAlbum = oldAlbum,
-                originalYear = oldYear,
-                originalGenre = oldGenre,
-                updatedTitle = newTitle,
-                updatedArtist = newArtist,
-                updatedAlbum = newAlbum,
-                updatedYear = newYear,
-                updatedGenre = newGenre,
-                changes = changes,
-                isManualSelection = isManual,
-                isRenamed = isRenamed,
-                oldFilename = oldFileName,
-                newFilename = newFileName,
-                renameError = renameError,
-                hadOriginalArtwork = hadOriginalArtwork,
-                originalArtworkBytes = originalArtworkBytes,
-                hadEmbeddedTitle = hadEmbeddedTitle,
-                hadEmbeddedArtist = hadEmbeddedArtist,
-                hadEmbeddedAlbum = hadEmbeddedAlbum,
-            )
         }
 
         // Library search (title / artist / album), live-updating with the database.
@@ -780,11 +666,7 @@ class LibraryViewModel
                 }
         }
 
-        private val _writeAccessRequest = MutableStateFlow<WriteAuthorization?>(null)
-
-        /** Non-null while a tag write waits for the user to grant write access. */
-        val writeAccessRequest: StateFlow<WriteAuthorization?> = _writeAccessRequest.asStateFlow()
-        private var pendingWrite: PendingWrite? = null
+        val writeAccessRequest = metadataWriteAccess.request
 
         private val _userMessage = MutableStateFlow<String?>(null)
         val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
@@ -881,10 +763,10 @@ class LibraryViewModel
         }
 
         fun clearRepairQueue() {
+            if (_isFixingQueue.value || metadataRepair.awaitingApproval.value) return
             _repairQueue.value = emptyList()
             _selectAllForRepair.value = null
             _batchPause.value = null
-            autoResumeArmed = false
         }
 
         /**
@@ -1555,6 +1437,7 @@ class LibraryViewModel
         }
 
         fun enqueueSongForRepair(song: Song) {
+            if (_isFixingQueue.value || metadataRepair.awaitingApproval.value) return
             val currentQueue = _repairQueue.value.toMutableList()
             if (currentQueue.none { it.song.id == song.id }) {
                 currentQueue.add(RepairQueueItem(song = song, status = "PENDING"))
@@ -1563,12 +1446,14 @@ class LibraryViewModel
         }
 
         fun removeFromRepairQueue(song: Song) {
+            if (_isFixingQueue.value || metadataRepair.awaitingApproval.value) return
             val currentQueue = _repairQueue.value.toMutableList()
             currentQueue.removeAll { it.song.id == song.id }
             _repairQueue.value = currentQueue
         }
 
         fun retryRepairQueueItem(song: Song) {
+            if (_isFixingQueue.value || metadataRepair.awaitingApproval.value) return
             val currentQueue = _repairQueue.value.toMutableList()
             val index = currentQueue.indexOfFirst { it.song.id == song.id }
             if (index != -1) {
@@ -1583,6 +1468,7 @@ class LibraryViewModel
         }
 
         fun enqueueAlbumForRepair(album: Album) {
+            if (_isFixingQueue.value || metadataRepair.awaitingApproval.value) return
             viewModelScope.launch {
                 val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
                 val currentQueue = _repairQueue.value.toMutableList()
@@ -1594,6 +1480,7 @@ class LibraryViewModel
         }
 
         fun enqueueArtistForRepair(artist: Artist) {
+            if (_isFixingQueue.value || metadataRepair.awaitingApproval.value) return
             viewModelScope.launch {
                 val artistSongs = libraryRepository.getSongsByArtistId(artist.id).first()
                 val currentQueue = _repairQueue.value.toMutableList()
@@ -1604,435 +1491,32 @@ class LibraryViewModel
             }
         }
 
-        /** Why the last batch stopped before every track was looked up; null when it didn't. */
-        private val _batchPause = MutableStateFlow<BatchPause?>(null)
+        private val _batchPause = metadataRepair.pause
         val batchPause: StateFlow<BatchPause?> = _batchPause.asStateFlow()
-
-        /** Set by [pauseFixingQueue]: the batch stops before its next track and still writes what it found. */
-        @Volatile private var pauseRequested = false
-
-        /** One automatic resume per connection pause, when the network comes back. */
-        private var autoResumeArmed = false
-
-        /** Stops the running batch after the current track; finished tracks are kept and their tags still written. */
-        fun pauseFixingQueue() {
-            if (_isFixingQueue.value) pauseRequested = true
-        }
-
-        /** Keyless sources shared by Settings, tag repair and artwork selection. */
         val metadataSourceOptions: StateFlow<List<MetadataSourceOption>> = MutableStateFlow(metadataSourceOptions()).asStateFlow()
 
         init {
             viewModelScope.launch {
-                restoreRepairBatch()
-                // Saved as it changes, so a batch survives the process; a track mid-lookup is saved as pending.
-                combine(_repairQueue, _batchPause) { queue, pause -> queue to pause }
-                    .debounce(PERSIST_DEBOUNCE_MS)
-                    .collect { (queue, pause) -> repairBatchPersistence.save(queue.toPersisted(pause)) }
-            }
-            viewModelScope.launch {
-                // A batch paused by the connection resumes once when the network comes back (not in a loop).
-                networkStatus.status.collect { status ->
-                    val pause = _batchPause.value
-                    val resumable = autoResumeArmed && pause?.kind?.resumesWithNetwork == true && !_isFixingQueue.value
-                    if (status == NetworkStatus.AVAILABLE && resumable) {
-                        autoResumeArmed = false
-                        startFixingQueue()
-                    }
+                metadataRepair.messages.collect { message ->
+                    if (message != null) { _userMessage.value = message; metadataRepair.messages.value = null }
                 }
             }
         }
 
-        /** Puts back a batch saved by an earlier session (songs no longer in the library are dropped). */
-        private suspend fun restoreRepairBatch() {
-            val saved = repairBatchPersistence.load() ?: return
-            if (_repairQueue.value.isNotEmpty()) return
-            val songs = libraryRepository.getAllSongs().first().associateBy { it.id }
-            _repairQueue.value =
-                saved.items.mapNotNull { stored ->
-                    songs[stored.songId]?.let { song ->
-                        val status = if (stored.status == RepairStatus.FIXING) RepairStatus.PENDING else stored.status
-                        RepairQueueItem(song = song, status = status, failureReason = stored.reason)
-                    }
-                }
-            // A restored pause waits for the user: nothing starts by itself when the app opens.
-            _batchPause.value = saved.pauseReason?.let { BatchPause(BatchPause.Kind.USER, it) }
-        }
+        fun pauseFixingQueue() = metadataRepair.requestPause()
 
-        /**
-         * Looks up matches for every track still to process ([RepairStatus.TO_PROCESS]: pending ones
-         * and earlier network failures, never finished ones), then writes all confident matches in
-         * one go, so Android 11+ shows a single write-access dialog for the whole batch. Before
-         * starting it checks the connection and that the chosen providers' addresses resolve (DNS
-         * only, nothing is sent to them). A lost connection pauses the batch (see [RepairBatchRunner]);
-         * it resumes by itself when the network returns, or with [startFixingQueue].
-         */
-        @Suppress("ReturnCount")
         fun startFixingQueue() {
-            if (_isFixingQueue.value) return
-            val selection = fieldSelection(selectedFields.value)
-            if (selection.fields.isEmpty() && !selection.rename) {
-                _userMessage.value = "Choose at least one field to fix"
-                return
-            }
-            val acceptAt = confidenceThreshold.value
-            if (_repairQueue.value.none { it.status in RepairStatus.TO_PROCESS }) return
-            _isFixingQueue.value = true
-            val provider = selectedProvider.value
-            viewModelScope.launch {
-                when (val check = preflight(provider)) {
-                    is Preflight.Refused -> {
-                        _userMessage.value = check.message
-                        _isFixingQueue.value = false
-                    }
-                    is Preflight.Paused -> {
-                        _batchPause.value = check.pause
-                        autoResumeArmed = check.pause.kind.resumesWithNetwork
-                        _userMessage.value = "${check.pause.reason}. Nothing was looked up; the queue is kept."
-                        _isFixingQueue.value = false
-                    }
-                    Preflight.Ready -> runBatch(provider, selection, acceptAt)
-                }
-            }
-        }
-
-        private sealed interface Preflight {
-            data object Ready : Preflight
-
-            data class Refused(
-                val message: String,
-            ) : Preflight
-
-            data class Paused(
-                val pause: BatchPause,
-            ) : Preflight
-        }
-
-        @Suppress("ReturnCount")
-        private suspend fun preflight(provider: String): Preflight {
-            val netStatus = networkStatus.status.value
-            when (netStatus) {
-                NetworkStatus.OFFLINE -> return Preflight.Paused(BatchPause(BatchPause.Kind.OFFLINE, "No internet connection"))
-                NetworkStatus.BLOCKED ->
-                    return Preflight.Paused(BatchPause(BatchPause.Kind.BLOCKED, "Android is blocking erhu's network access"))
-                NetworkStatus.AVAILABLE -> Unit
-            }
-            val hosts = MetadataSources.hostsFor(provider)
-            if (hosts.isEmpty()) {
-                return Preflight.Refused("Choose a supported metadata source.")
-            }
-            if (netStatus == NetworkStatus.AVAILABLE) {
-                return Preflight.Ready
-            }
-            val resolved = networkStatus.resolves(hosts)
-            if (resolved.values.none { it }) {
-                return Preflight.Paused(
-                    BatchPause(BatchPause.Kind.UNREACHABLE, "Couldn't resolve ${hosts.joinToString()}: check the connection, then resume"),
-                )
-            }
-            return Preflight.Ready
-        }
-
-        @Suppress("TooGenericExceptionCaught")
-        private suspend fun runBatch(
-            provider: String,
-            selection: FieldSelection,
-            acceptAt: Float,
-        ) {
-            pauseRequested = false
-            autoResumeArmed = false
-            _batchPause.value = null
-
-            // Start the foreground service orchestration
-            val intent = android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java).apply {
-                action = com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_START
-            }
-            androidx.core.content.ContextCompat.startForegroundService(appContext, intent)
-
-            val plans = mutableMapOf<Long, FieldFixPlan>()
-            val runner =
-                RepairBatchRunner(
-                    networkStatus = { networkStatus.status.value },
-                    pauseRequested = { pauseRequested },
-                    inProgress = { item -> item.copy(diagnostics = searchingDiagnostics(item, provider)) },
-                    lookup = { item ->
-                        delay(REPAIR_DELAY_MS)
-                        lookUpTrack(item, provider, selection, acceptAt, plans)
-                    },
-                )
-            val phase =
-                try {
-                    runner.lookUp(_repairQueue.value) { _repairQueue.value = it }
-                } catch (e: CancellationException) {
-                    // Cancelled mid-track: that track wasn't concluded.
-                    _repairQueue.value =
-                        _repairQueue.value.map { item ->
-                            if (item.status == RepairStatus.FIXING) item.copy(status = RepairStatus.PENDING) else item
-                        }
-                    _isFixingQueue.value = false
-                    throw e
-                } finally {
-                    val stopIntent = android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java).apply {
-                        action = com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_STOP
-                    }
-                    appContext.startService(stopIntent)
-                }
-            _batchPause.value = phase.pause
-            phase.pause?.let { pause ->
-                autoResumeArmed = pause.kind.resumesWithNetwork
-                val written = phase.queue.count { it.status == RepairStatus.DONE || it.status == RepairStatus.PARTIAL_SUCCESS }
-                val remaining = phase.queue.count { it.status in RepairStatus.TO_PROCESS }
-                _userMessage.value = "${pause.reason}. ${written + phase.writes.size} fixed or being written; $remaining still to check."
-            }
-            writePlanned(phase.queue.toMutableList(), phase.writes, phase.renames, plans)
-        }
-
-        /**
-         * Writes the planned tag edits, then renames the files that asked for it ("Filename"). A track
-         * is only marked fixed once its file was actually written (or renamed, for a rename alone).
-         */
-        @Suppress("LongMethod", "CyclomaticComplexMethod")
-        private suspend fun writePlanned(
-            queue: MutableList<RepairQueueItem>,
-            writes: Map<Int, TagWriteRequest>,
-            renames: Map<Int, String>,
-            plans: Map<Long, FieldFixPlan>,
-        ) {
-            _repairQueue.value = queue.toList()
-            val indices = (writes.keys + renames.keys).sorted()
-            if (indices.isEmpty()) {
-                _isFixingQueue.value = false
-                return
-            }
-            withWriteAccess(
-                contentUris = indices.map { queue[it].song.uri },
-                onGranted = {
-                    var changedAny = false
-                    for (index in indices) {
-                        val item = queue[index]
-                        val request = writes[index]
-                        val filePath = request?.filePath ?: libraryRepository.getSongFilePath(item.song.id) ?: item.song.filePath.orEmpty()
-                        val preWriteEmbedded = embeddedTagReader.readEmbeddedTags(filePath)
-
-                        val writeResult = request?.let { metadataRepository.writeTagsToFile(it) }
-                        if (writeResult is AppResult.Error) {
-                            queue[index] = item.copy(status = RepairStatus.FAILED, failureReason = writeResult.error.message)
-                            _repairQueue.value = queue.toList()
-                            continue
-                        }
-                        if (request != null) {
-                            changedAny = true
-                            ArtworkLoader.invalidate(request.contentUri)
-                        }
-
-                        val renameRes =
-                            renames[index]?.let { target -> fileRenamer.renameAudioFile(item.song.uri, filePath, target) }
-                        val newPath = (renameRes as? AppResult.Success)?.data?.newFilePath
-                        val newName = (renameRes as? AppResult.Success)?.data?.newFileName
-                        if (newPath != null) {
-                            changedAny = true
-                            libraryRepository.updateFilePath(item.song.id, newPath)
-                        }
-
-                        val successDetails =
-                            buildSuccessDetails(
-                                oldTitle = preWriteEmbedded.title ?: item.song.title,
-                                oldArtist = preWriteEmbedded.artist ?: item.song.artist,
-                                oldAlbum = preWriteEmbedded.album ?: item.song.album,
-                                oldYear = preWriteEmbedded.year,
-                                oldGenre = preWriteEmbedded.genre,
-                                newTitle = request?.title ?: item.song.title,
-                                newArtist = request?.artist ?: item.song.artist,
-                                newAlbum = request?.album ?: item.song.album,
-                                newYear = request?.releaseDate ?: request?.year?.toString() ?: preWriteEmbedded.year,
-                                newGenre = request?.genre ?: preWriteEmbedded.genre,
-                                oldFileName = java.io.File(filePath).name,
-                                newFileName = newName,
-                                renameError = (renameRes as? AppResult.Error)?.error?.message,
-                                isManual = (_repairMode.value == RepairMode.MANUAL),
-                                extraChanges = plans[item.song.id]?.let(::nonTextChanges).orEmpty(),
-                                hadOriginalArtwork = preWriteEmbedded.artworkBytes != null,
-                                originalArtworkBytes = preWriteEmbedded.artworkBytes,
-                                hadEmbeddedTitle = !preWriteEmbedded.title.isNullOrBlank(),
-                                hadEmbeddedArtist = !preWriteEmbedded.artist.isNullOrBlank(),
-                                hadEmbeddedAlbum = !preWriteEmbedded.album.isNullOrBlank(),
-                            )
-                        // A selected field that couldn't be found (e.g. no BPM) makes it a partial fix, said so.
-                        val unfilled = plans[item.song.id]?.unfilled.orEmpty()
-                        queue[index] =
-                            when {
-                                renameRes is AppResult.Error && request == null ->
-                                    item.copy(
-                                        status = RepairStatus.FAILED,
-                                        failureReason = renameRes.error.message,
-                                        successDetails = successDetails,
-                                    )
-                                renameRes is AppResult.Error || unfilled.isNotEmpty() ->
-                                    item.copy(
-                                        status = RepairStatus.PARTIAL_SUCCESS,
-                                        failureReason =
-                                            (unfilled + listOfNotNull((renameRes as? AppResult.Error)?.error?.message))
-                                                .joinToString("; "),
-                                        successDetails = successDetails,
-                                    )
-                                else -> item.copy(status = RepairStatus.DONE, successDetails = successDetails)
-                            }
-                        _repairQueue.value = queue.toList()
-                    }
-                    if (changedAny) libraryRepository.requestRescanAfterChange()
-                    _isFixingQueue.value = false
-                },
-                onDenied = {
-                    for (index in indices) {
-                        queue[index] = queue[index].copy(status = RepairStatus.FAILED, failureReason = "Write access not granted")
-                    }
-                    _repairQueue.value = queue.toList()
-                    _isFixingQueue.value = false
-                },
-            )
-        }
-
-        /** Looks up one track and concludes what to do with it. Network trouble is reported as such, never as "no match". */
-        @Suppress("TooGenericExceptionCaught", "LongMethod", "ReturnCount", "CyclomaticComplexMethod")
-        private suspend fun lookUpTrack(
-            item: RepairQueueItem,
-            provider: String,
-            selection: FieldSelection,
-            acceptAt: Float,
-            plans: MutableMap<Long, FieldFixPlan>,
-        ): TrackLookup =
+            if (!metadataRepair.prepare(selectedProvider.value, fieldSelection(selectedFields.value), confidenceThreshold.value)) return
             try {
-                val filePath = libraryRepository.getSongFilePath(item.song.id)
-                val rawFileName = filePath?.let { java.io.File(it).name } ?: item.song.title
-                val activeLearnedTokens = learnedWatermarkDao.getAllActiveTokensSync()
-                val cleanerResult =
-                    (metadataRepository as? com.erhu.erhu.core.network.repository.MetadataRepositoryImpl)?.let {
-                        metadataRepository.cleanFilename(rawFileName, activeLearnedTokens)
-                    }
-                // The file's own tags are the track's identity; the file name is only a fallback
-                // (downloaders shorten it: "THANK YOU.mp3" holds "GONE, GONE / THANK YOU").
-                val embedded = filePath?.let { embeddedTagReader.readEmbeddedTags(it) }
-                val identity =
-                    TrackIdentity(
-                        title = usableIdentityText(embedded?.title) ?: usableIdentityText(item.song.title),
-                        artist = usableIdentityText(embedded?.artist) ?: usableIdentityText(item.song.artist),
-                        album = usableIdentityText(embedded?.album) ?: usableIdentityText(item.song.album),
-                        durationMs = item.song.durationMs.takeIf { it > 0 },
-                        fileTitles = titleCandidateGenerator.generateCandidates(rawFileName, activeLearnedTokens),
-                        fileArtist = usableIdentityText(cleanerResult?.artistGuess),
-                    )
-                val result =
-                    trackMatcher.match(identity, acceptAt) { query ->
-                        metadataRepository
-                            .searchAndScoreTrackDetailed(
-                                title = query.title,
-                                artist = query.artist?.takeUnless { it.equals(query.title, ignoreCase = true) },
-                                album = query.album,
-                                durationMs = identity.durationMs,
-                                sourceProvider = provider,
-                            ).getOrDefault(DetailedSearchResponse(emptyList(), emptyList()))
-                    }
-                val candidates = result.candidates
-                val outcomes = result.providerOutcomes
-                val diag =
-                    com.erhu.erhu.core.model.RepairDiagnostics(
-                        originalFilename = rawFileName,
-                        searchTitle =
-                            result.queries
-                                .firstOrNull()
-                                ?.title
-                                .orEmpty(),
-                        searchArtist = result.queries.firstOrNull()?.artist,
-                        targetDurationMs = item.song.durationMs.takeIf { it > 0 },
-                        providerOutcomes = outcomes,
-                        topCandidates = candidates.take(TOP_CANDIDATES_SHOWN),
-                        embeddedTitle = embedded?.title,
-                        embeddedArtist = embedded?.artist,
-                        embeddedAlbum = embedded?.album,
-                        fileTitles = identity.fileTitles,
-                        queries = result.attempts,
-                    )
-
-                fun concluded(
-                    status: String,
-                    reason: String?,
-                    write: TagWriteRequest? = null,
-                    renameTo: String? = null,
-                ) = TrackLookup.Concluded(
-                    item.copy(status = status, failureReason = reason, diagnostics = diag.copy(finalReason = reason)),
-                    write,
-                    renameTo,
+                androidx.core.content.ContextCompat.startForegroundService(
+                    appContext,
+                    android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java)
+                        .setAction(com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_START),
                 )
-
-                val decision = result.decision
-                val verdict = if (decision is MatchDecision.Confident) null else networkVerdict(outcomes)
-                when {
-                    filePath == null -> concluded(RepairStatus.FAILED, "FILE_NOT_FOUND")
-                    verdict is NetworkVerdict.Unreachable -> TrackLookup.Unreachable(verdict.reason)
-                    verdict is NetworkVerdict.PartlyUnreachable ->
-                        TrackLookup.PartlyUnreachable(item.copy(diagnostics = diag.copy(finalReason = verdict.reason)), verdict.reason)
-                    decision is MatchDecision.NoMatch -> {
-                        val providerFailure = if (candidates.isEmpty()) providerFailureSummary(outcomes) else null
-                        if (providerFailure != null) {
-                            concluded(RepairStatus.FAILED, providerFailure)
-                        } else {
-                            concluded(RepairStatus.NO_MATCH, decision.reason ?: "No online match found")
-                        }
-                    }
-                    decision is MatchDecision.LowConfidence -> concluded(RepairStatus.NEEDS_REVIEW, decision.reason)
-                    decision is MatchDecision.Ambiguous -> concluded(RepairStatus.NEEDS_REVIEW, decision.reason)
-                    else -> {
-                        val match = (decision as MatchDecision.Confident).match
-                        val plan = planFix(item.song, filePath, match, candidates, selection, acceptAt)
-                        plans[item.song.id] = plan
-                        val request = plan.request
-                        // "Filename": the file is named after its (new or current) title.
-                        val renameTo =
-                            if (selection.rename) {
-                                val title = request?.title ?: embedded?.title ?: item.song.title
-                                fileRenamer
-                                    .buildTargetFileName(title, filePath.substringAfterLast('.', "mp3"))
-                                    .takeIf { it != java.io.File(filePath).name }
-                            } else {
-                                null
-                            }
-                        if (request == null && renameTo == null) {
-                            // Nothing to write is not a fix: say why instead of reporting success.
-                            val why = plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
-                            concluded(RepairStatus.UNCHANGED, why)
-                        } else {
-                            concluded(RepairStatus.FIXING, null, request, renameTo)
-                        }
-                    }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                val failure = classifyProviderFailure(e)
-                if (failure.status.isTransient) {
-                    TrackLookup.PartlyUnreachable(item, failure.message)
-                } else {
-                    TrackLookup.Concluded(item.copy(status = RepairStatus.FAILED, failureReason = failure.message))
-                }
+            } catch (e: RuntimeException) {
+                metadataRepair.startFailed("Android could not start background metadata fetching: ${e.message}. Try again while erhu is open.")
             }
-
-        /** While a track is looked up: the providers being asked, marked as in progress. */
-        private fun searchingDiagnostics(
-            item: RepairQueueItem,
-            provider: String,
-        ): com.erhu.erhu.core.model.RepairDiagnostics =
-            com.erhu.erhu.core.model.RepairDiagnostics(
-                originalFilename = item.song.filePath?.substringAfterLast('/') ?: item.song.title,
-                searchTitle = item.song.title,
-                searchArtist = item.song.artist,
-                providerOutcomes =
-                    metadataSourceOptions.value
-                        .filter { it.key != MetadataSources.ALL && MetadataSources.matches(it.key, provider) }
-                        .map { option ->
-                            com.erhu.erhu.core.model
-                                .ProviderOutcome(option.label, status = ProviderStatus.IN_PROGRESS)
-                        },
-            )
+        }
 
         /**
          * Plays [song] with the whole list it was tapped in as the queue. The list
@@ -2304,138 +1788,6 @@ class LibraryViewModel
         }
 
         /**
-         * Plans the tag edit for a confident [match]: reads the file's current genre and cover, looks
-         * up a genre and downloads the cover only when [action] could use them, then lets
-         * [planFieldFix] decide field by field. Lookup failures become notes, never empty values;
-         * the ones for fields the file needs are also kept as the plan's "unfilled" reasons.
-         */
-        @Suppress("CyclomaticComplexMethod")
-        private suspend fun planFix(
-            song: Song,
-            filePath: String,
-            match: MetadataCandidate,
-            candidates: List<MetadataCandidate>,
-            selection: FieldSelection,
-            acceptAt: Float,
-        ): FieldFixPlan {
-            val fields = selection.fields
-            val fillOnly = selection.fillOnly
-            val local = localTags(song, filePath, checkDateFormat = FixField.YEAR in fields)
-            // Specific reasons found here replace the plan's generic "not found" notes.
-            val notes = mutableMapOf<String, String>()
-            val wantsGenre = FixField.GENRE in fields && (!fillOnly || (local.tagsReadable && !isUsableTag(local.genre)))
-            val genre = if (wantsGenre) onlineGenre(match, candidates, notes) else null
-            val wantsArtwork = FixField.ARTWORK in fields && (!fillOnly || (local.tagsReadable && !local.hasArtwork))
-            val artwork = if (wantsArtwork) onlineCover(match, notes) else null
-            val wantsYear = FixField.YEAR in fields && (!fillOnly || (local.tagsReadable && !isUsableYearTag(local.year)))
-            val releaseDate = if (wantsYear) onlineReleaseDate(match, candidates, acceptAt, notes) else null
-            // The file's own plausible BPM is kept by All Fields: no lookup or audio analysis then.
-            val wantsBpm = FixField.BPM in fields && (!fillOnly || (local.tagsReadable && usableBpm(local.bpm) == null))
-            val bpm = if (wantsBpm) foundBpm(match, candidates, filePath, notes) else null
-
-            val plan = planFieldFix(song.uri, filePath, fields, fillOnly, local, match, genre, artwork, releaseDate, bpm)
-            return plan.copy(notes = plan.notes.map { notes[it] ?: it }, unfilled = notes.values.toList())
-        }
-
-        /** What the file has now, read from its embedded tags (the library's title / artist / album). */
-        private suspend fun localTags(
-            song: Song,
-            filePath: String,
-            checkDateFormat: Boolean,
-        ): LocalTrackTags {
-            val embedded = embeddedTagReader.readEmbeddedTags(filePath)
-            // What the file says, which is what a write changes (the library's copy can differ, e.g.
-            // a title Android misread); the library's values only stand in for missing tags.
-            return LocalTrackTags(
-                title = embedded.title ?: song.title,
-                artist = embedded.artist ?: song.artist,
-                album = embedded.album ?: song.album,
-                genre = embedded.genre,
-                hasArtwork = embedded.artworkBytes != null,
-                tagsReadable = embedded.hasEmbeddedTag,
-                year = embedded.year,
-                canStoreYearMonth = checkDateFormat && embeddedTagReader.canStoreYearMonth(filePath),
-                bpm = embedded.bpm,
-            )
-        }
-
-        /** The match's release date if it is valid and unambiguous, or null with the reason in [notes]. */
-        private fun onlineReleaseDate(
-            match: MetadataCandidate,
-            candidates: List<MetadataCandidate>,
-            acceptAt: Float,
-            notes: MutableMap<String, String>,
-        ): ReleaseDate? =
-            when (val decision = releaseDateFor(match, candidates, LocalDate.now(), acceptAt)) {
-                is ReleaseDateDecision.Found -> decision.date
-                is ReleaseDateDecision.Rejected -> null.also { notes[NO_YEAR_NOTE] = "No year: ${decision.reason}" }
-            }
-
-        /** The match's genre, or null with the reason in [notes]. */
-        private suspend fun onlineGenre(
-            match: MetadataCandidate,
-            candidates: List<MetadataCandidate>,
-            notes: MutableMap<String, String>,
-        ): String? =
-            when (val lookup = metadataRepository.lookupGenre(match, candidates)) {
-                is GenreLookup.Found -> lookup.genre
-                is GenreLookup.NotFound -> null.also { notes[NO_GENRE_NOTE] = "No genre: ${lookup.reason}" }
-                is GenreLookup.Failed -> null.also { notes[NO_GENRE_NOTE] = "Genre lookup failed: ${lookup.reason}" }
-            }
-
-        /** The track's tempo (AcousticBrainz, else estimated on this device), or null with the reason in [notes]. */
-        private suspend fun foundBpm(
-            match: MetadataCandidate,
-            candidates: List<MetadataCandidate>,
-            filePath: String,
-            notes: MutableMap<String, String>,
-        ): BpmLookup.Found? =
-            when (val lookup = bpmFinder.find(match, filePath, candidates)) {
-                is BpmLookup.Found -> lookup
-                is BpmLookup.NotFound -> null.also { notes[NO_BPM_NOTE] = "No BPM: ${lookup.reason}" }
-                is BpmLookup.Failed -> null.also { notes[NO_BPM_NOTE] = "BPM lookup failed: ${lookup.reason}" }
-            }
-
-        /** The match's cover image, or null with the reason in [notes]. */
-        private suspend fun onlineCover(
-            match: MetadataCandidate,
-            notes: MutableMap<String, String>,
-        ): ByteArray? {
-            val url =
-                match.coverArtUrl
-                    ?: return null.also { notes[NO_ARTWORK_NOTE] = "No cover: ${match.sourceName} gave none for this match" }
-            return when (val download = metadataRepository.downloadArtwork(url)) {
-                is AppResult.Success -> download.data
-                is AppResult.Error -> null.also { notes[NO_ARTWORK_NOTE] = "No cover: ${download.error.message}" }
-            }
-        }
-
-        private fun nonTextChanges(plan: FieldFixPlan): List<TagChange> =
-            plan.changes
-                .filter { it.field in NON_TEXT_FIELDS }
-                .map { change ->
-                    val label =
-                        when (change.field) {
-                            FixField.YEAR -> "Year"
-                            FixField.GENRE -> "Genre"
-                            FixField.BPM -> "BPM"
-                            else -> "Artwork"
-                        }
-                    TagChange(label, change.oldValue, change.newValue)
-                }
-
-        /** When every provider that was asked (or should have been) failed rather than answered, the failures. */
-        private fun providerFailureSummary(outcomes: List<com.erhu.erhu.core.model.ProviderOutcome>): String? {
-            val considered = outcomes.filter { it.status != ProviderStatus.SKIPPED }
-            val failed = considered.filter { it.status !in ANSWERED_STATUSES }
-            return when {
-                considered.isEmpty() -> "No provider could be queried for this source"
-                failed.size != considered.size -> null
-                else -> "Lookup failed: " + failed.joinToString("; ") { "${it.providerName}: ${it.errorMessage ?: it.status.label}" }
-            }
-        }
-
-        /**
          * Writes the user's edits from the Fix Tags dialog. Only fields that differ
          * from the current values are written; blank year/genre keep the file's values.
          */
@@ -2549,53 +1901,22 @@ class LibraryViewModel
             onGranted: suspend () -> Unit,
             onDenied: suspend () -> Unit,
             attempt: Int = 0,
-        ) {
-            val authorization = metadataRepository.checkTagWriteAccess(contentUris)
-            // Android 10 asks per file, so allow one round per file; after that just try
-            // the write and let it report a precise error instead of re-prompting forever.
-            if (authorization is WriteAuthorization.Granted || attempt > contentUris.size) {
-                onGranted()
-                return
-            }
-            pendingWrite =
-                PendingWrite(
-                    onGranted = { withWriteAccess(contentUris, onGranted, onDenied, attempt + 1) },
-                    onDenied = onDenied,
-                )
-            _writeAccessRequest.value = authorization
-        }
+        ) = metadataWriteAccess.withWriteAccess(contentUris, onGranted, onDenied, attempt)
 
-        /** Called by the UI with the result of the system dialog / permission request. */
-        fun onWriteAccessResult(granted: Boolean) {
-            _writeAccessRequest.value = null
-            val pending = pendingWrite ?: return
-            pendingWrite = null
-            viewModelScope.launch { if (granted) pending.onGranted() else pending.onDenied() }
-        }
+        fun claimWriteAccessLaunch(): Boolean = metadataWriteAccess.claimLaunch()
 
-        private class PendingWrite(
-            val onGranted: suspend () -> Unit,
-            val onDenied: suspend () -> Unit,
-        )
+        fun onWriteAccessResult(granted: Boolean) = metadataWriteAccess.onResult(granted)
 
         companion object {
             // The plan's generic notes, replaced by the specific reason when there is one.
-            private const val NO_GENRE_NOTE = "No genre found online"
-            private const val NO_ARTWORK_NOTE = "No artwork found online"
-            private const val NO_YEAR_NOTE = "No release year found online"
-            private const val NO_BPM_NOTE = "No BPM found"
-            private val NON_TEXT_FIELDS = setOf(FixField.YEAR, FixField.GENRE, FixField.ARTWORK, FixField.BPM)
 
             /** Opening an album waits at most this long for its tracks (then they load as before). */
             const val PREPARE_ALBUM_TIMEOUT_MS = 150L
 
             private const val SCAN_TIMEOUT_MS = 15_000L
             private const val SCAN_INDICATOR_DELAY_MS = 1000L
-            private const val REPAIR_DELAY_MS = 600L
-            private const val PERSIST_DEBOUNCE_MS = 500L
             const val MIN_THRESHOLD = 0.50f
             const val MAX_THRESHOLD = 0.95f
-            private const val TOP_CANDIDATES_SHOWN = 3
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L

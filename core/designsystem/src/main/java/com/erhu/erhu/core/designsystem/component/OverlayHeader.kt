@@ -2,6 +2,7 @@ package com.erhu.erhu.core.designsystem.component
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -95,6 +97,7 @@ fun OverlayHeader(
     title: String? = null,
     collapsingHeader: CollapsingHeaderState? = null,
     collapsingTitle: CollapsingTitleState? = null,
+    subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val scrim = ErhuGlass.backdropColor(MaterialTheme.colorScheme.background)
@@ -172,24 +175,49 @@ fun OverlayHeader(
                 val announced by remember(collapsingHeader, collapsingTitle) {
                     derivedStateOf { collapsingHeader == null && (collapsingTitle?.progress ?: 0f) < TITLE_ANNOUNCED_UNTIL }
                 }
-                Text(
-                    text = title,
-                    style = TextStyles.screenTitle,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .then(if (announced) Modifier else Modifier.clearAndSetSemantics {})
-                            .then(
-                                when {
-                                    collapsingHeader != null -> Modifier.collapsingBarTitle(collapsingHeader)
-                                    collapsingTitle != null -> Modifier.mergingTitle(collapsingTitle, merge)
-                                    else -> Modifier
-                                },
-                            ),
-                )
+                val titleModifier =
+                    Modifier
+                        .weight(1f)
+                        .then(if (announced) Modifier else Modifier.clearAndSetSemantics {})
+                        .then(
+                            when {
+                                collapsingHeader != null -> Modifier.collapsingBarTitle(collapsingHeader)
+                                collapsingTitle != null ->
+                                    Modifier.mergingTitle(
+                                        collapsingTitle,
+                                        merge,
+                                        unclipped = !subtitle.isNullOrBlank(),
+                                    )
+                                else -> Modifier
+                            },
+                        )
+                if (subtitle.isNullOrBlank()) {
+                    Text(
+                        text = title,
+                        style = TextStyles.screenTitle,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = titleModifier,
+                    )
+                } else {
+                    Column(modifier = titleModifier) {
+                        Text(
+                            text = title,
+                            style = TextStyles.screenTitle,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = subtitle,
+                            style = TextStyles.metadata,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             } else {
                 Spacer(modifier = Modifier.weight(1f))
             }
@@ -213,6 +241,7 @@ private class TitleMerge {
 private fun Modifier.mergingTitle(
     state: CollapsingTitleState,
     merge: TitleMerge,
+    unclipped: Boolean = false,
 ): Modifier =
     onGloballyPositioned {
         val position = it.positionInRoot()
@@ -220,6 +249,8 @@ private fun Modifier.mergingTitle(
         merge.top = position.y
         merge.height = it.size.height.toFloat()
     }.graphicsLayer {
+        // Preserve the moving two-line block outside its resting layout bounds.
+        if (unclipped) compositingStrategy = CompositingStrategy.ModulateAlpha
         if (merge.measured) {
             mergeIntoButton(
                 t = smoothstep(state.progress),

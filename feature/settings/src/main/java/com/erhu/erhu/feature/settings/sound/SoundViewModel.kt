@@ -17,8 +17,37 @@ class SoundViewModel
     constructor(
         private val soundRepository: SoundRepository,
         val customEqAudioProcessor: CustomEqAudioProcessor,
+        private val transitions: com.erhu.erhu.core.playback.transition.TransitionSettingsRepository,
+        playback: com.erhu.erhu.core.playback.repository.PlaybackRepository,
     ) : ViewModel() {
         val soundSettings: StateFlow<SoundSettings> = soundRepository.soundSettings
+
+        val transitionConfig = transitions.config
+        val playbackState = playback.playbackState
+
+        fun updateUtilities(change: (com.erhu.erhu.core.model.AudioUtilities) -> com.erhu.erhu.core.model.AudioUtilities) {
+            soundRepository.setUtilities(change(soundSettings.value.utilities).sanitized())
+        }
+
+        fun setTransitionMaster(enabled: Boolean) = transitions.setGlobal(transitionConfig.value.global.copy(masterEnabled = enabled))
+
+        fun setDefaultCrossfade(enabled: Boolean) {
+            val global = transitionConfig.value.global
+            val choice = if (enabled) com.erhu.erhu.core.model.TransitionChoice.Custom(com.erhu.erhu.core.model.TransitionSpec())
+                else com.erhu.erhu.core.model.TransitionChoice.Off
+            transitions.setGlobal(global.copy(default = choice))
+        }
+
+        fun setCrossfadeDuration(ms: Int) {
+            val global = transitionConfig.value.global
+            val base = (global.default as? com.erhu.erhu.core.model.TransitionChoice.Custom)?.spec ?: com.erhu.erhu.core.model.TransitionSpec()
+            transitions.setGlobal(global.copy(default = com.erhu.erhu.core.model.TransitionChoice.Custom(base.copy(durationMs = ms))))
+        }
+
+        fun setSleepMinutes(minutes: Int) {
+            require(minutes in 1..720)
+            updateUtilities { it.copy(sleepDeadlineMs = System.currentTimeMillis() + minutes * 60_000L, sleepAtTrackEnd = false) }
+        }
 
         fun setEqEnabled(enabled: Boolean) {
             soundRepository.setEqEnabled(enabled)

@@ -233,7 +233,8 @@ class AudioDiagnosticsTest {
         assertTrue(report.contains("Bit depth: 24-bit (File header"))
         assertTrue(report.contains("Channels: unavailable"))
         assertTrue(report.contains("Route: Bluetooth (A2DP) (estimated)"))
-        assertTrue(report.contains("not part of this app version"))
+        assertTrue(report.contains("sample-peak limiter"))
+        assertTrue(report.contains("Audio & Equalizer"))
         assertFalse(report.contains("AirPods")) // device names can be personal
         assertFalse(report.contains("content://") || report.contains("/storage/"))
         assertFalse(report.contains("\u0000"))
