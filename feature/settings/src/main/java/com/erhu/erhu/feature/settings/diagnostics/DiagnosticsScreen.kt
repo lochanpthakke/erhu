@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import com.erhu.erhu.core.common.logging.CrashLogEntry
@@ -38,6 +39,7 @@ fun DiagnosticsScreen(
     onOpenAnnouncements: (() -> Unit)? = null,
 ) {
     val crashLogs by viewModel.crashLogs.collectAsState()
+    val uriHandler = LocalUriHandler.current
 
     SettingsPage(
         title = title,
@@ -79,6 +81,20 @@ fun DiagnosticsScreen(
         }
         SettingsSection(title = "Updates") {
             UpdatePanel(viewModel)
+        }
+
+        SettingsSection(title = "Legal") {
+            SettingsGroup {
+                row {
+                    com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
+                        title = "Privacy Policy",
+                        summary = "How erhu handles local data and online services. Opens in your browser.",
+                        onClick = {
+                            uriHandler.openUri("https://github.com/lochanpthakke/erhu/blob/master/docs/privacy-policy.md")
+                        },
+                    )
+                }
+            }
         }
 
         SettingsSection(title = "Local crash log history") {

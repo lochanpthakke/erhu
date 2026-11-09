@@ -18,6 +18,7 @@ data class SoundSettings(
     val selectedBandIndex: Int = 0,
     val activePresetId: String = EqPreset.FLAT.id,
     val customPresets: List<EqPreset> = emptyList(),
+    val utilities: com.erhu.erhu.core.model.AudioUtilities = com.erhu.erhu.core.model.AudioUtilities(),
 ) {
     val currentBandGains: FloatArray
         get() = FloatArray(bands.size) { bands[it].gainDb }

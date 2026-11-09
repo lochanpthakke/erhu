@@ -25,6 +25,31 @@ class SoundSettingsProtoMapperTest {
         )
 
     @Test
+    fun audioUtilitiesRoundTripAndLegacyMessagesKeepNeutralDefaults() {
+        val utilities = com.erhu.erhu.core.model.AudioUtilities(
+            mono = true, balance = -0.4f, preampDb = -3f, bassDb = 6f, limiter = true,
+            replayGain = com.erhu.erhu.core.model.ReplayGainMode.ALBUM,
+            speed = 1.25f, pitch = 0.9f, skipSilence = true, sleepDeadlineMs = 1234567, sleepAtTrackEnd = true,
+        )
+        val bytes = settings.copy(utilities = utilities).toProto().toByteArray()
+        val restored = com.erhu.erhu.core.datastore.proto.SoundSettingsProto.parseFrom(bytes).toDomain()
+        assertEquals(utilities, restored.utilities)
+        val legacy = com.erhu.erhu.core.datastore.proto.SoundSettingsProto.newBuilder().setEqEnabled(true).build().toDomain()
+        assertEquals(com.erhu.erhu.core.model.AudioUtilities(), legacy.utilities)
+    }
+
+    @Test
+    fun invalidUtilityNumbersAndUnknownModesAreSafelySanitized() {
+        val corrupt = com.erhu.erhu.core.datastore.proto.SoundSettingsProto.newBuilder()
+            .setPlaybackSpeed(Float.NaN).setPlaybackPitch(900f).setBalance(Float.POSITIVE_INFINITY)
+            .setPreampDb(-100f).setBassDb(900f).setReplayGainMode("future-mode").build().toDomain().utilities
+        assertEquals(1f, corrupt.speed, 0f); assertEquals(2f, corrupt.pitch, 0f)
+        assertEquals(0f, corrupt.balance, 0f); assertEquals(-24f, corrupt.preampDb, 0f)
+        assertEquals(12f, corrupt.bassDb, 0f)
+        assertEquals(com.erhu.erhu.core.model.ReplayGainMode.OFF, corrupt.replayGain)
+    }
+
+    @Test
     fun roundTrip_preservesEveryField() {
         assertEquals(settings, settings.applyTo(PlaybackStateProto.getDefaultInstance()).toSoundSettingsOrNull())
     }

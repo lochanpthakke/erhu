@@ -123,6 +123,7 @@ import com.erhu.erhu.feature.library.LibraryViewModel
 import com.erhu.erhu.feature.library.LocalPlayerTransition
 import com.erhu.erhu.feature.library.LocalVybeEnabled
 import com.erhu.erhu.feature.library.MetadataEditorScreen
+import com.erhu.erhu.feature.library.RepairPhase
 import com.erhu.erhu.feature.library.NowPlayingScreen
 import com.erhu.erhu.feature.library.PlayerExtrasViewModel
 import com.erhu.erhu.feature.library.PlaylistDetailScreen
@@ -272,7 +273,11 @@ fun MainScaffold(
 
     // Tag edits from the library or the metadata editor may need write access first.
     val writeAccessRequest by libraryViewModel.writeAccessRequest.collectAsState()
-    WriteAccessRequestEffect(request = writeAccessRequest, onResult = libraryViewModel::onWriteAccessResult)
+    WriteAccessRequestEffect(
+        request = writeAccessRequest,
+        onResult = libraryViewModel::onWriteAccessResult,
+        onLaunch = libraryViewModel::claimWriteAccessLaunch,
+    )
 
     // One setter for the whole app: a static local whose value changed on every recomposition
     // of this shell (a new lambda each time) recomposed every screen below it, e.g. on each
@@ -288,6 +293,29 @@ fun MainScaffold(
             popupGlassOpacity = popupGlassOpacity,
         ) {
             val navController = rememberNavController()
+            var repairResumed by remember { mutableStateOf(false) }
+            LifecycleResumeEffect(Unit) {
+                repairResumed = true
+                onPauseOrDispose { repairResumed = false }
+            }
+            val repairPending by libraryViewModel.metadataRepair.awaitingApproval.collectAsState()
+            val repairOpen by libraryViewModel.metadataRepair.openRequested.collectAsState()
+            LaunchedEffect(repairResumed, repairPending, repairOpen) {
+                if (repairResumed) {
+                    libraryViewModel.metadataRepair.ready()
+                    val notificationOpen = libraryViewModel.metadataRepair.openRequested.value
+                    if (notificationOpen) {
+                        navController.navigate(MetadataEditor) { launchSingleTop = true }
+                    }
+                    if (libraryViewModel.metadataRepair.awaitingApproval.value &&
+                        (notificationOpen || libraryViewModel.metadataRepair.progress.value.phase == RepairPhase.COMPLETE)
+                    ) {
+                        libraryViewModel.metadataRepair.approvePending()
+                    }
+                    if (notificationOpen) libraryViewModel.metadataRepair.consumeOpen()
+                }
+            }
+
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
             // Now Playing is a sheet over the shell (not a destination), so dragging it down

@@ -173,6 +173,17 @@ message SoundSettingsProto {
   repeated string filter_types = 13;
   int32 active_band_count = 14;
   int32 selected_band_index = 15;
+  bool mono = 16;
+  float balance = 17;
+  float preamp_db = 18;
+  float bass_db = 19;
+  bool limiter = 20;
+  string replay_gain_mode = 21;
+  optional float playback_speed = 22;
+  optional float playback_pitch = 23;
+  bool skip_silence = 24;
+  int64 sleep_deadline_ms = 25;
+  bool sleep_at_track_end = 26;
 }
 
 enum RepeatModeProto {

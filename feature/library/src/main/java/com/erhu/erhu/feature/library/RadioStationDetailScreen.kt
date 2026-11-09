@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -22,6 +23,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,9 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.EmptyState
+import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
 import com.erhu.erhu.core.designsystem.component.OverlayHeader
+import com.erhu.erhu.core.designsystem.component.ReportTitleScroll
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
+import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.Song
@@ -58,6 +63,12 @@ fun RadioStationDetailScreen(
     val currentSongId by libraryViewModel.currentSongId.collectAsState()
     val candidates by libraryViewModel.metadataCandidates.collectAsState()
     val content = loaded?.takeIf { it.album.id == albumId }
+    val radio =
+        remember(content?.album, featuredAlbums) {
+            content?.album?.let { FeaturedSetlists.radioFor(it, featuredAlbums, emptyMap()) }
+        }
+    val listState = rememberLazyListState()
+    val collapsingTitle = rememberCollapsingTitleState()
     val portraits = remember(content) { content?.let(::radioPortraits).orEmpty() }
     val palette by androidx.compose.runtime.key(albumId) { rememberRadioPalette(portraits.firstOrNull()) }
 
@@ -87,7 +98,14 @@ fun RadioStationDetailScreen(
 
     MaterialTheme(colorScheme = radioColorScheme(MaterialTheme.colorScheme, palette)) {
         AppScaffold(
-            topBar = { OverlayHeader(navigation = TopBarNavigation.Detail(onBack)) },
+            topBar = {
+                OverlayHeader(
+                    navigation = TopBarNavigation.Detail(onBack),
+                    title = radio?.let { "${it.identity} Radio" },
+                    subtitle = content?.album?.let { "Based on ${it.title}" },
+                    collapsingTitle = collapsingTitle,
+                )
+            },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             modifier = modifier,
         ) { innerPadding ->
@@ -108,7 +126,11 @@ fun RadioStationDetailScreen(
             }
             val songs = content.songs
             val scroll = innerPadding.forScrollingContent(topOverlay = true)
+            CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) {
+                ReportTitleScroll(listState)
+            }
             LazyColumn(
+                state = listState,
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -116,11 +138,7 @@ fun RadioStationDetailScreen(
                 contentPadding = PaddingValues(top = scroll.contentTop, bottom = Spacing.lg + scroll.contentBottom),
             ) {
                 item(key = "header") {
-                    val radio =
-                        remember(content.album, featuredAlbums) {
-                            FeaturedSetlists.radioFor(content.album, featuredAlbums, emptyMap())
-                        }
-                    RadioStationHero(portraits, "${radio.identity} Radio", "Based on ${content.album.title}", palette)
+                    RadioStationHero(portraits, palette)
                     Column(
                         Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
                         horizontalAlignment = Alignment.CenterHorizontally,

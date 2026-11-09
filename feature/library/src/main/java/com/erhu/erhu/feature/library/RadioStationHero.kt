@@ -8,7 +8,6 @@ import android.graphics.drawable.BitmapDrawable
 import android.util.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -17,12 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
@@ -46,8 +43,6 @@ import com.erhu.erhu.core.database.library.ArtistArtworkCache
 import com.erhu.erhu.core.database.library.CreditText
 import com.erhu.erhu.core.designsystem.artwork.AlbumArtwork
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
-import com.erhu.erhu.core.designsystem.foundation.Spacing
-import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -143,8 +138,6 @@ internal fun radioColorScheme(
 @Suppress("LongMethod")
 internal fun RadioStationHero(
     portraits: List<RadioPortrait>,
-    title: String,
-    subtitle: String,
     palette: LyricsPalette?,
     modifier: Modifier = Modifier,
 ) {
@@ -173,17 +166,6 @@ internal fun RadioStationHero(
                     .height(48.dp)
                     .background(Brush.verticalGradient(listOf(Color.Transparent, colors.background))),
             )
-        }
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .background(colors.background)
-                .padding(horizontal = Spacing.screenGutter)
-                .padding(bottom = Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-        ) {
-            Text(title, style = TextStyles.pageTitle, color = colors.onBackground)
-            Text(subtitle, style = TextStyles.metadata, color = colors.onSurfaceVariant)
         }
     }
 }

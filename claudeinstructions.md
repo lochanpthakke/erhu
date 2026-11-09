@@ -1,6 +1,6 @@
 # erhu — Claude working instructions, progress and pending work
 
-_Last updated: 2026-11-08. Current installed build is erhu 1.0.14 (15), source `c9aca62c3c62b56fd657127c0e13088aaa7005b3`, built and verified by Actions run 42415103581 and installed in place on S23 RZCXA1H43GW. It includes the verified album menu and five additional motion refinements awaiting user feedback. Current public release remains 1.0.12 (13), erhu-v1.0.12-beta.21. Older build/install/publication notes below are historical where superseded._
+_Last updated: 2026-11-09. Current installed build is erhu 1.0.15 (16), source `781e3046b328fd5e3d8d34b4dc04882c94c8d163`, built and verified by Actions run 42506407910 and installed in place on S23 RZCXA1H43GW. Includes audio utilities, background metadata repair, collapsing radio headers and settings layout corrections. Older build/install/publication notes below are historical where superseded._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.

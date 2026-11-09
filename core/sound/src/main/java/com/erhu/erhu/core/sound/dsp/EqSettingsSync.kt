@@ -12,4 +12,5 @@ fun CustomEqAudioProcessor.applySettings(settings: SoundSettings) {
         activeCount = settings.activeBandCount,
     )
     setEqEnabled(settings.isEqEnabled)
+    setUtilities(settings.utilities)
 }
