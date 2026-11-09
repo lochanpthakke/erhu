@@ -28,7 +28,14 @@ class OnboardingInteractionTest {
         var completed = false
         compose.mainClock.autoAdvance = false
         compose.setContent {
-            OnboardingScreen(true, {}, onFinish = { completed = true; true }, onExit = { exited = true })
+            OnboardingScreen(
+                true,
+                {},
+                onFinish = { completed = true; true },
+                onExit = { exited = true },
+                glassEffectEnabled = true,
+                onGlassEffectEnabledChange = {},
+            )
         }
         compose.mainClock.advanceTimeBy(400)
         compose.onNodeWithText("Next").performClick()
@@ -48,7 +55,14 @@ class OnboardingInteractionTest {
     @Test fun swipeButtonsAndLiveVybeAvailabilityKeepPageIdentity() {
         compose.setContent {
             var vybe by remember { mutableStateOf(true) }
-            OnboardingScreen(vybe, { vybe = it }, onFinish = { true }, onExit = {})
+            OnboardingScreen(
+                vybe,
+                { vybe = it },
+                onFinish = { true },
+                onExit = {},
+                glassEffectEnabled = true,
+                onGlassEffectEnabledChange = {},
+            )
         }
         compose.onNodeWithText("Your music. Your space.").assertIsDisplayed()
         compose.onRoot().performTouchInput { swipeLeft() }
@@ -84,7 +98,14 @@ class OnboardingInteractionTest {
     @Test fun failedSkipCanRetryAndCompletesOnlyOnce() {
         var attempts = 0
         compose.setContent {
-            OnboardingScreen(false, {}, onFinish = { ++attempts > 1 }, onExit = {})
+            OnboardingScreen(
+                false,
+                {},
+                onFinish = { ++attempts > 1 },
+                onExit = {},
+                glassEffectEnabled = true,
+                onGlassEffectEnabledChange = {},
+            )
         }
         compose.onNodeWithText("Skip").performClick()
         compose.onNodeWithText("Couldn't save your setup. Try again.").assertIsDisplayed()

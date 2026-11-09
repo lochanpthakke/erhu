@@ -23,6 +23,7 @@ import com.erhu.erhu.findActivity
 fun AppEntry(viewModel: ThemeViewModel = hiltViewModel()) {
     val completed by viewModel.onboardingCompleted.collectAsState()
     val vybeEnabled by viewModel.vybeEnabled.collectAsState()
+    val glassEffectEnabled by viewModel.glassEffectEnabled.collectAsState()
     var startAtHome by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     when (completed) {
@@ -34,6 +35,8 @@ fun AppEntry(viewModel: ThemeViewModel = hiltViewModel()) {
             OnboardingScreen(
                 vybeEnabled = vybeEnabled == true,
                 onVybeEnabledChange = viewModel::setVybeEnabled,
+                glassEffectEnabled = glassEffectEnabled,
+                onGlassEffectEnabledChange = viewModel::setGlassEffectEnabled,
                 onFinish = {
                     startAtHome = true
                     viewModel.completeOnboarding() is AppResult.Success

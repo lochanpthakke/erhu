@@ -775,6 +775,8 @@ fun MainScaffold(
                                                 com.erhu.erhu.onboarding.OnboardingScreen(
                                                     vybeEnabled = vybeEnabled,
                                                     onVybeEnabledChange = themeViewModel::setVybeEnabled,
+                                                    glassEffectEnabled = glassEffectEnabled,
+                                                    onGlassEffectEnabledChange = themeViewModel::setGlassEffectEnabled,
                                                     onFinish = {
                                                         librarySection = LibrarySection.TRACKS
                                                         navController.popBackStack<Library>(false)

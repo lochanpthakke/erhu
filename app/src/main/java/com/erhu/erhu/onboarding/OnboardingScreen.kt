@@ -81,7 +81,7 @@ import kotlin.math.absoluteValue
 @Suppress("MagicNumber") // Onboarding palette, isolated from the app theme.
 private val IntroductionBackground = Color(0xff0b0e11)
 
-/** Local UI state is saveable; only completion and optional VYBE visibility are persisted settings. */
+/** Local UI state is saveable; completion, VYBE visibility and glass use existing persisted settings. */
 @Suppress("LongMethod", "CyclomaticComplexMethod") // Existing declarative navigation/permission tree.
 @Composable
 fun OnboardingScreen(
@@ -89,6 +89,8 @@ fun OnboardingScreen(
     onVybeEnabledChange: (Boolean) -> Unit,
     onFinish: suspend () -> Boolean,
     onExit: () -> Unit,
+    glassEffectEnabled: Boolean,
+    onGlassEffectEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -253,6 +255,8 @@ fun OnboardingScreen(
                             },
                             vybeEnabled = vybeEnabled,
                             onVybeEnabledChange = onVybeEnabledChange,
+                            glassEffectEnabled = glassEffectEnabled,
+                            onGlassEffectEnabledChange = onGlassEffectEnabledChange,
                         )
                     }
                     Surface(color = Color(0xed11161b), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
@@ -349,6 +353,8 @@ private fun IntroductionContent(
     onOpenSettings: () -> Unit,
     vybeEnabled: Boolean,
     onVybeEnabledChange: (Boolean) -> Unit,
+    glassEffectEnabled: Boolean,
+    onGlassEffectEnabledChange: (Boolean) -> Unit,
 ) {
     val toolGuide = remember(page) { page.toolGuide() }
     Column(
@@ -431,6 +437,14 @@ private fun IntroductionContent(
             )
         }
         if (page == IntroductionPage.READY) {
+            SettingsSwitchRow(
+                title = "Glass Effect",
+                summary =
+                    "Backdrop blur requires Android 12 or later. Glass effects may reduce performance on some devices. " +
+                        "Older devices use a simplified appearance.",
+                checked = glassEffectEnabled,
+                onCheckedChange = onGlassEffectEnabledChange,
+            )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Outlined.CheckCircle, null)
                 Text(
@@ -443,6 +457,18 @@ private fun IntroductionContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
+            Surface(shape = RoundedCornerShape(20.dp), color = Color(0xff212426)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Beta release", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "erhu is currently in beta. You may encounter bugs or inconsistent behavior. " +
+                            "VYBE recommendations are still being refined, with further improvements planned " +
+                            "for model tuning, matching parameters and overall accuracy.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         } else if (toolGuide != null) {
             PreviewGallery(page, active, motionEnabled)
             ToolGuideContent(page, toolGuide)
