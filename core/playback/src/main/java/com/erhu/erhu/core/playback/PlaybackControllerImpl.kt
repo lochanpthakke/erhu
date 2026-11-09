@@ -72,7 +72,9 @@ class PlaybackControllerImpl
         playerDiagnostics: com.erhu.erhu.core.playback.diagnostics.PlayerDiagnosticsTracker,
         private val transitionSettings: TransitionSettingsRepository,
         transitionGain: TransitionGainProcessor,
-        utilityEq: com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor = com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor(),
+        utilityEq: com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor =
+            com.erhu.erhu.core.sound.dsp
+                .CustomEqAudioProcessor(),
     ) : PlaybackController {
         private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.main)
         private val queue = PlaybackQueue(player)
@@ -116,10 +118,17 @@ class PlaybackControllerImpl
                         PlayerTransitionHost(
                             player = exo,
                             resolve = transitionSettings::resolve,
-                            abLoopEnabled = { abLoop.state?.enabled == true || soundRepository.soundSettings.value.utilities.sleepAtTrackEnd },
+                            abLoopEnabled = {
+                                abLoop.state?.enabled == true || soundRepository.soundSettings.value.utilities.sleepAtTrackEnd
+                            },
                         ),
                     incomingFade = ProcessorIncomingFade(transitionGain),
-                    newTailPlayer = { ExoTailPlayer(context, soundRepository.soundSettings.value) { soundRepository.soundSettings.value.utilities } },
+                    newTailPlayer = {
+                        ExoTailPlayer(
+                            context,
+                            soundRepository.soundSettings.value,
+                        ) { soundRepository.soundSettings.value.utilities }
+                    },
                 )
             }
 

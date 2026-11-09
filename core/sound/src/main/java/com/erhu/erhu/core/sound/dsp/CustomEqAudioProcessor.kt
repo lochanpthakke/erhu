@@ -22,10 +22,20 @@ class CustomEqAudioProcessor
     constructor() : BaseAudioProcessor() {
         private val utilityDsp = AudioUtilityDsp()
         private var utilityFrame = FloatArray(0)
+
         @Volatile var utilitySettingsProvider: (() -> com.erhu.erhu.core.model.AudioUtilities)? = null
 
-        fun setUtilities(value: com.erhu.erhu.core.model.AudioUtilities) { if (utilityDsp.settings != value) utilityDsp.settings = value.sanitized() }
-        fun setReplayGain(value: ReplayGainData) { utilityDsp.replayGain = value }
+        fun setUtilities(value: com.erhu.erhu.core.model.AudioUtilities) {
+            if (utilityDsp.settings !=
+                value
+            ) {
+                utilityDsp.settings = value.sanitized()
+            }
+        }
+
+        fun setReplayGain(value: ReplayGainData) {
+            utilityDsp.replayGain = value
+        }
 
         @Volatile private var isEqEnabled: Boolean = true
 

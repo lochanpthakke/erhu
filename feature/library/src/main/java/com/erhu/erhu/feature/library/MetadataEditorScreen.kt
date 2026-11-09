@@ -119,15 +119,22 @@ fun MetadataEditorScreen(
 
     val pendingApproval by viewModel.metadataRepair.awaitingApproval.collectAsState()
     val notificationContext = androidx.compose.ui.platform.LocalContext.current
-    val notificationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
-    ) { viewModel.startFixingQueue() }
+    val notificationPermission =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts
+                .RequestPermission(),
+        ) { viewModel.startFixingQueue() }
     val startFetching = {
-        if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(
-                notificationContext, android.Manifest.permission.POST_NOTIFICATIONS,
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                notificationContext,
+                android.Manifest.permission.POST_NOTIFICATIONS,
             ) != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        else viewModel.startFixingQueue()
+        ) {
+            notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.startFixingQueue()
+        }
     }
     val repairQueue by viewModel.repairQueue.collectAsState()
     val forceFixTags by viewModel.forceFixTags.collectAsState()
@@ -145,9 +152,12 @@ fun MetadataEditorScreen(
     val toProcessCount = repairQueue.count { it.status in RepairStatus.TO_PROCESS }
     val totalCount = repairQueue.size
     val fetchProgress by viewModel.metadataRepair.progress.collectAsState()
-    val processedCount = if (isFixingQueue && fetchProgress.phase in setOf(RepairPhase.FETCHING, RepairPhase.PAUSED)) {
-        fetchProgress.processed
-    } else repairQueue.count { it.status != RepairStatus.PENDING && it.status != RepairStatus.FIXING }
+    val processedCount =
+        if (isFixingQueue && fetchProgress.phase in setOf(RepairPhase.FETCHING, RepairPhase.PAUSED)) {
+            fetchProgress.processed
+        } else {
+            repairQueue.count { it.status != RepairStatus.PENDING && it.status != RepairStatus.FIXING }
+        }
     val isQueueComplete = totalCount > 0 && processedCount == totalCount
     val progressFloat = if (totalCount > 0) processedCount.toFloat() / totalCount.toFloat() else 0f
     var selectedRevertIds by remember { mutableStateOf(setOf<Long>()) }
@@ -953,7 +963,7 @@ private fun RepairQueueCard(
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, end = Spacing.md, bottom = if (expanded) 0.dp else Spacing.sm),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             if (diag != null) {
                 TextButton(
@@ -975,7 +985,7 @@ private fun RepairQueueCard(
                 Button(
                     onClick = onReviewMatches,
                     contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 0.dp),
-                    modifier = Modifier.height(32.dp)
+                    modifier = Modifier.height(32.dp),
                 ) {
                     Text("Review Matches", style = MaterialTheme.typography.labelSmall)
                 }

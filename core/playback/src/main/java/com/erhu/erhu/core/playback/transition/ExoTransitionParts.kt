@@ -127,7 +127,11 @@ internal class ExoTailPlayer(
     private val currentUtilities: () -> com.erhu.erhu.core.model.AudioUtilities = { soundSettings.utilities },
 ) : TailPlayer {
     private val gain = TransitionGainProcessor(cancelOnLaterFlush = false)
-    private val eq = CustomEqAudioProcessor().apply { applySettings(soundSettings); utilitySettingsProvider = currentUtilities }
+    private val eq =
+        CustomEqAudioProcessor().apply {
+            applySettings(soundSettings)
+            utilitySettingsProvider = currentUtilities
+        }
     private val player: ExoPlayer =
         ExoPlayer
             .Builder(context, renderers(context))
@@ -157,8 +161,12 @@ internal class ExoTailPlayer(
     private val playerListener =
         object : Player.Listener {
             override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                eq.setReplayGain(com.erhu.erhu.core.playback.replayGainFromTracks(tracks))
+                eq.setReplayGain(
+                    com.erhu.erhu.core.playback
+                        .replayGainFromTracks(tracks),
+                )
             }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) listener?.onFinished()
             }

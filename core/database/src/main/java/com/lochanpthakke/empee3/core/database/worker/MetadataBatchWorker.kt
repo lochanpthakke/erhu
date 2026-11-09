@@ -195,7 +195,10 @@ class MetadataBatchWorker
             totalCount: Int,
             title: String,
         ): ForegroundInfo {
-            val cancelIntent = androidx.work.WorkManager.getInstance(appContext).createCancelPendingIntent(id)
+            val cancelIntent =
+                androidx.work.WorkManager
+                    .getInstance(appContext)
+                    .createCancelPendingIntent(id)
             val text = "Processed $processedCount of $totalCount tracks"
             val notification =
                 NotificationCompat

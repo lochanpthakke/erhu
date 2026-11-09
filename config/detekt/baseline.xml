@@ -1,8 +1,316 @@
 <?xml version="1.0" ?>
+<!-- Existing static-analysis debt at the 1.0.15 launch snapshot; new findings still fail CI. -->
 <SmellBaseline>
-  <ManuallySuppressedIssues/>
+  <ManuallySuppressedIssues />
   <CurrentIssues>
+    <ID>ComplexCondition:AlbumArtworkRanking.kt$AlbumArtworkRanking$!idMatch &amp;&amp; query.year &gt; 0 &amp;&amp; candidate.year &gt; 0 &amp;&amp; abs(query.year - candidate.year) &gt; 1</ID>
+    <ID>ComplexCondition:AndroidArtworkImageInspector.kt$AndroidArtworkImageInspector$width &lt; 64 || height &lt; 64 || width &gt; 12000 || height &gt; 12000 || width.toLong() * height &gt; 60000000</ID>
+    <ID>ComplexCondition:AnimatedAlbumCoverPlayer.kt$video.width == 0 || video.height == 0 || viewW == 0f || viewH == 0f</ID>
+    <ID>ComplexCondition:AnimatedArtworkNetworkDataSourceImpl.kt$AnimatedArtworkNetworkDataSourceImpl$statusCode == 401 || statusCode == 403 || e.message?.contains("401") == true || e.message?.contains("403") == true</ID>
+    <ID>ComplexCondition:AnnouncementHost.kt$!foreground || !fresh || history || selectedId != null</ID>
+    <ID>ComplexCondition:CatalogCandidateScorer.kt$CatalogCandidateScorer$totalScore &gt; bestScore || (totalScore &gt;= bestScore - 0.02f &amp;&amp; localTrackCount != null &amp;&amp; candidate.trackCount == localTrackCount)</ID>
+    <ID>ComplexCondition:Glass.kt$!stillBackdrop &amp;&amp; clippedFrost != null &amp;&amp; !clippedFrost.preBlurred &amp;&amp; Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.S</ID>
+    <ID>ComplexCondition:MediaStoreScanner.kt$MediaStoreScanner$root != null &amp;&amp; root.parentFile != null &amp;&amp; root.parentFile?.name != "storage" &amp;&amp; root.parentFile?.name != "mnt"</ID>
+    <ID>ComplexCondition:PlaybackUtilities.kt$PlaybackUtilities$previous.speed != u.speed || previous.pitch != u.pitch || previous.skipSilence != u.skipSilence || previous.sleepAtTrackEnd != u.sleepAtTrackEnd</ID>
+    <ID>ComplexCondition:SafFileMover.kt$SafFileMover$physical.isSuccess || physical == MoveOutcome.ALREADY_AT_DESTINATION || physical == MoveOutcome.FAILED_DESTINATION_EXISTS || physical == MoveOutcome.FAILED_AMBIGUOUS</ID>
+    <ID>ComplexCondition:UpdateCheckerRepositoryImpl.kt$UpdateCheckerRepositoryImpl$declared != null &amp;&amp; ( declared.packageName != current.packageName || declared.versionCode &lt;= 0 || UpdateVersion.parse(declared.versionName)?.let { version -&gt; if (release.prerelease || latest.prerelease.isNotEmpty() ) { version.numbers != latest.numbers } else { version != latest } } != false )</ID>
+    <ID>CyclomaticComplexMethod:AlbumArtworkFinder.kt$AlbumArtworkFinder$suspend fun search(query: AlbumArtworkQuery): AlbumArtworkResult</ID>
+    <ID>CyclomaticComplexMethod:AlbumArtworkRanking.kt$AlbumArtworkRanking$fun rank( query: AlbumArtworkQuery, candidate: AlbumArtworkCandidate, ): AlbumArtworkCandidate?</ID>
+    <ID>CyclomaticComplexMethod:AlbumDetailScreen.kt$@Composable @Suppress("LongMethod") fun AlbumDetailScreen( albumId: Long, viewModel: LibraryViewModel, playlistsViewModel: PlaylistsViewModel, transitionsViewModel: TransitionStudioViewModel, onBack: () -&gt; Unit, modifier: Modifier = Modifier, onNavigateToArtworkFetcher: () -&gt; Unit = {}, )</ID>
+    <ID>CyclomaticComplexMethod:AnimatedArtworkNetworkDataSourceImpl.kt$AnimatedArtworkNetworkDataSourceImpl$override suspend fun fetchMasterUrls( catalogAlbumId: String, storefront: String, ): AppResult&lt;EditorialVideoUrls&gt;</ID>
+    <ID>CyclomaticComplexMethod:AnimatedArtworkNetworkDataSourceImpl.kt$AnimatedArtworkNetworkDataSourceImpl$override suspend fun resolveAlbum( artist: String, album: String, trackCount: Int?, ): AppResult&lt;ResolveOutcome&gt;</ID>
+    <ID>CyclomaticComplexMethod:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$private suspend fun performFetchAndStore( albumId: Long, albumArtist: String, album: String, trackCount: Int?, orientation: AnimatedArtOrientation, forceRefresh: Boolean, ): AppResult&lt;LocalAnimatedArtwork&gt;</ID>
+    <ID>CyclomaticComplexMethod:AnimatedArtworkScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AnimatedArtworkScreen( viewModel: AnimatedArtworkViewModel, onOpenDrawer: () -&gt; Unit, onNavigateToLibrary: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:Announcement.kt$Announcement$fun valid(): Boolean</ID>
+    <ID>CyclomaticComplexMethod:AnnouncementClient.kt$AnnouncementClient$suspend fun fetch(id: String? = null): List&lt;Announcement&gt;</ID>
+    <ID>CyclomaticComplexMethod:AnnouncementHost.kt$@Composable fun AnnouncementHost( viewModel: AnnouncementsViewModel = hiltViewModel(), content: @Composable (() -&gt; Unit) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:AppleMusicTokenProvider.kt$AppleMusicTokenProvider$suspend fun getToken(forceRefresh: Boolean = false): AppResult&lt;String&gt;</ID>
+    <ID>CyclomaticComplexMethod:CatalogCandidateScorer.kt$CatalogCandidateScorer$fun score( localArtist: String, localAlbum: String, candidates: List&lt;ItunesAlbumDto&gt;, localTrackCount: Int? = null, ): ItunesAlbumDto?</ID>
+    <ID>CyclomaticComplexMethod:EmbeddedTagReader.kt$EmbeddedTagData$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:EmbeddedTagReader.kt$EmbeddedTagData$override fun hashCode(): Int</ID>
+    <ID>CyclomaticComplexMethod:Glass.kt$@Composable @Suppress("LongParameterList") fun Modifier.glassPanel( shape: Shape, strong: Boolean = false, elevated: Boolean = true, outlined: Boolean = true, level: GlassLevel = if (strong) GlassLevel.Strong else GlassLevel.Medium, backdrop: GlassBackdrop? = LocalGlassBackdrop.current, windowFrosted: Boolean = false, bar: Boolean = false, fill: Color? = null, optics: Float = SECONDARY_OPTICS, environmentLens: Boolean = false, frostFactor: Float = 1f, /** * For a large surface that slides over the backdrop (the drawer): when the backdrop is given, * one blurred picture of it is rendered and the surface shows its own region of that picture. * A frame then costs one bitmap draw, whatever redraws in the source meanwhile (a live frost * re-blurred the whole drawer area, or the whole screen, on every frame of the slide). The * picture is kept until the backdrop is taken away (drawer closed). No edge lens. */ stillBackdrop: Boolean = false, material: GlassTokens? = LocalGlassTokens.current, ): Modifier</ID>
+    <ID>CyclomaticComplexMethod:HlsMp4Assembler.kt$HlsMp4Assembler$private suspend fun assembleInto( playlist: HlsMediaPlaylist, tmpFile: File, destFile: File, )</ID>
+    <ID>CyclomaticComplexMethod:HlsPlaylistParser.kt$HlsPlaylistParser$fun parseMasterPlaylistVariants( masterUrl: String, masterContent: String, ): List&lt;HlsVariantStream&gt;</ID>
+    <ID>CyclomaticComplexMethod:HlsPlaylistParser.kt$HlsPlaylistParser$fun parseMediaPlaylist( mediaUrl: String, mediaContent: String, ): HlsMediaPlaylist</ID>
+    <ID>CyclomaticComplexMethod:LibrarySearch.kt$@Composable @Suppress("LongMethod", "LongParameterList") internal fun SearchContent( query: String, songs: List&lt;Song&gt;, artists: List&lt;Artist&gt;, albums: List&lt;Album&gt;, artistArtwork: Map&lt;Long, String&gt;, currentSongId: Long?, recentSearchItems: List&lt;RecentSearchItem&gt; = emptyList(), onRemoveRecentItem: (RecentSearchItem) -&gt; Unit = {}, onClearRecentItems: () -&gt; Unit = {}, onSongClick: (Int) -&gt; Unit, onArtistClick: (Artist) -&gt; Unit, onAlbumClick: (Album) -&gt; Unit, onPlaylistClick: (Long) -&gt; Unit = {}, actions: SongActions, topInset: Dp, bottomInset: Dp, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:LibraryViewModel.kt$LibraryViewModel$fun revertSelectedChanges(selectedSongIds: Set&lt;Long&gt;)</ID>
+    <ID>CyclomaticComplexMethod:LiveCoverControl.kt$@Composable private fun LiveCoverCard( state: LiveCoverUi, artworkUri: String?, onDownload: () -&gt; Unit, onCancel: () -&gt; Unit, onRemove: () -&gt; Unit, onSelectVariant: ((LiveCoverVariant) -&gt; Unit)? = null, compression: ArtworkCompressionState, onCompress: () -&gt; Unit, onCancelCompression: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:MediaStoreScanner.kt$MediaStoreScanner$@Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth") fun triggerMediaScannerForStorage()</ID>
+    <ID>CyclomaticComplexMethod:MusixmatchProvider.kt$MusixmatchProvider$override suspend fun search( query: LyricsQuery, freeText: String?, ): ProviderResponse&lt;List&lt;LyricsCandidate&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:OnlineLyricsRepository.kt$OnlineLyricsRepository$private suspend fun ask( provider: OnlineLyricsProvider, query: LyricsQuery, found: MutableList&lt;LyricsCandidate&gt;, ): OnlineLyricsResult?</ID>
+    <ID>CyclomaticComplexMethod:OnlineLyricsRepository.kt$OnlineLyricsRepository$private suspend fun fromCache(track: LyricsTrack): OnlineLyricsResult?</ID>
+    <ID>CyclomaticComplexMethod:PlaylistDetailScreen.kt$@Composable @Suppress("LongMethod") fun PlaylistDetailScreen( playlistId: Long, viewModel: PlaylistsViewModel, libraryViewModel: LibraryViewModel, transitionsViewModel: TransitionStudioViewModel, onBack: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:QueueSheet.kt$@Composable @Suppress("LongMethod") private fun QueuePage( playbackState: PlaybackState, playbackRepository: PlaybackRepository, onRemove: (Int, Song) -&gt; Unit, onShuffleUpcoming: () -&gt; Unit, onSaveAsPlaylist: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:RepairDiagnostics.kt$SuccessDetails$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:SafFileMover.kt$SafFileMover$private fun copyThenDelete( tag: String, move: ProposedMove, destDir: DocumentFile, fileName: String, sourceLength: Long, ): MoveOutcome</ID>
+    <ID>CyclomaticComplexMethod:SafFileMover.kt$SafFileMover$private fun tryPhysicalMove( tag: String, move: ProposedMove, physicalRootDir: File?, ): MoveOutcome</ID>
+    <ID>CyclomaticComplexMethod:SafFileMover.kt$SafFileMover$private fun trySafMove( tag: String, move: ProposedMove, rootDoc: DocumentFile, ): MoveOutcome</ID>
+    <ID>CyclomaticComplexMethod:TagWriteRequest.kt$TagWriteRequest$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:TrackCarousel.kt$@Composable internal fun Modifier.trackCarouselSwipe( state: TrackCarouselState, canGoNext: () -&gt; Boolean, canGoPrevious: () -&gt; Boolean, skip: (direction: Int) -&gt; Unit, ): Modifier</ID>
+    <ID>CyclomaticComplexMethod:UpdateCheckerRepositoryImpl.kt$UpdateCheckerRepositoryImpl$private suspend fun resolve(current: InstalledAppVersion): AppResult&lt;UpdateCheck&gt;</ID>
+    <ID>CyclomaticComplexMethod:UpdateDownloadManager.kt$UpdateDownloadManager$private suspend fun transfer( update: UpdateCheck.Available, target: File, )</ID>
+    <ID>CyclomaticComplexMethod:UpdatePanel.kt$@Composable internal fun UpdatePanel(viewModel: DiagnosticsViewModel)</ID>
+    <ID>CyclomaticComplexMethod:ViewMetadataViewModel.kt$InspectorUiState$override fun equals(other: Any?): Boolean</ID>
+    <ID>CyclomaticComplexMethod:VinylMusicWidget.kt$VinylMusicWidget$@Composable private fun WidgetContent( title: String, artist: String, artwork: Bitmap?, rawArtwork: Bitmap?, isPlaying: Boolean, hasSong: Boolean, )</ID>
+    <ID>EmptyFunctionBlock:EmbeddedTagReaderTest.kt$EmbeddedTagReaderTest.&lt;no name provided&gt;${}</ID>
+    <ID>ImplicitDefaultLocale:AnimatedArtworkScreen.kt$String.format( "%.1f MB", it.estimatedSizeMb, )</ID>
+    <ID>ImplicitDefaultLocale:AnimatedArtworkScreen.kt$String.format("%.1f MB", variant.estimatedSizeMb)</ID>
+    <ID>InstanceOfCheckForException:AlbumArtworkFinder.kt$AlbumArtworkFinder$e is HttpFailure</ID>
+    <ID>InstanceOfCheckForException:SafFileMover.kt$SafFileMover$e is SecurityException</ID>
+    <ID>InstanceOfCheckForException:UpdateCheckerRepositoryImpl.kt$UpdateCheckerRepositoryImpl$e is IOException</ID>
+    <ID>LargeClass:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl : AnimatedArtworkRepository</ID>
+    <ID>LongMethod:AlbumArtworkFinder.kt$AlbumArtworkFinder$suspend fun search(query: AlbumArtworkQuery): AlbumArtworkResult</ID>
+    <ID>LongMethod:AnimatedArtworkNetworkDataSourceImpl.kt$AnimatedArtworkNetworkDataSourceImpl$override suspend fun resolveAlbum( artist: String, album: String, trackCount: Int?, ): AppResult&lt;ResolveOutcome&gt;</ID>
+    <ID>LongMethod:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$override suspend fun downloadAndSaveVariant( albumId: Long, albumArtist: String, album: String, catalogAlbumId: String, storefront: String, orientation: AnimatedArtOrientation, variantUrl: String, ): AppResult&lt;LocalAnimatedArtwork&gt;</ID>
+    <ID>LongMethod:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$private suspend fun performFetchAndStore( albumId: Long, albumArtist: String, album: String, trackCount: Int?, orientation: AnimatedArtOrientation, forceRefresh: Boolean, ): AppResult&lt;LocalAnimatedArtwork&gt;</ID>
+    <ID>LongMethod:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$private suspend fun performFetchAndStoreDirect( albumId: Long, albumArtist: String, album: String, catalogAlbumId: String, storefront: String, orientation: AnimatedArtOrientation, forceRefresh: Boolean, ): AppResult&lt;LocalAnimatedArtwork&gt;</ID>
+    <ID>LongMethod:AnimatedArtworkScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AnimatedArtworkScreen( viewModel: AnimatedArtworkViewModel, onOpenDrawer: () -&gt; Unit, onNavigateToLibrary: () -&gt; Unit = {}, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:AnnouncementHost.kt$@Composable fun AnnouncementHost( viewModel: AnnouncementsViewModel = hiltViewModel(), content: @Composable (() -&gt; Unit) -&gt; Unit, )</ID>
+    <ID>LongMethod:AppleMusicTokenProvider.kt$AppleMusicTokenProvider$suspend fun getToken(forceRefresh: Boolean = false): AppResult&lt;String&gt;</ID>
+    <ID>LongMethod:AudioUtilityControls.kt$@Composable internal fun AudioUtilityControls( u: AudioUtilities, update: ((AudioUtilities) -&gt; AudioUtilities) -&gt; Unit, )</ID>
+    <ID>LongMethod:AudioUtilityControls.kt$@Composable internal fun PlaybackSettingsScreen( vm: SoundViewModel, title: String, onBack: () -&gt; Unit, )</ID>
+    <ID>LongMethod:GlassMusicWidget.kt$GlassMusicWidget$@Composable private fun WidgetContent( title: String, artist: String, artwork: Bitmap?, isPlaying: Boolean, isFavorite: Boolean, hasSong: Boolean, positionMs: Long, durationMs: Long, )</ID>
+    <ID>LongMethod:HlsPlaylistParser.kt$HlsPlaylistParser$fun parseMediaPlaylist( mediaUrl: String, mediaContent: String, ): HlsMediaPlaylist</ID>
+    <ID>LongMethod:IntroductionToolGuides.kt$internal fun IntroductionPage.toolGuide(): IntroductionToolGuide?</ID>
+    <ID>LongMethod:LibrarySearch.kt$@Composable private fun RecentSearchesContent( recentSearchItems: List&lt;RecentSearchItem&gt;, artistArtwork: Map&lt;Long, String&gt;, currentSongId: Long?, onSongClick: (Song) -&gt; Unit, onArtistClick: (Artist) -&gt; Unit, onAlbumClick: (Album) -&gt; Unit, onPlaylistClick: (Long) -&gt; Unit, onRemoveItem: (RecentSearchItem) -&gt; Unit, onClearAll: () -&gt; Unit, actions: SongActions, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:LibraryViewModel.kt$LibraryViewModel$fun revertSelectedChanges(selectedSongIds: Set&lt;Long&gt;)</ID>
+    <ID>LongMethod:LibraryViewModel.kt$LibraryViewModel$fun searchArtworkForAlbum(album: Album)</ID>
+    <ID>LongMethod:LiveCoverControl.kt$@Composable private fun LiveCoverCard( state: LiveCoverUi, artworkUri: String?, onDownload: () -&gt; Unit, onCancel: () -&gt; Unit, onRemove: () -&gt; Unit, onSelectVariant: ((LiveCoverVariant) -&gt; Unit)? = null, compression: ArtworkCompressionState, onCompress: () -&gt; Unit, onCancelCompression: () -&gt; Unit, )</ID>
+    <ID>LongMethod:MusicWidget.kt$MusicWidget$@Composable private fun WidgetContent( title: String, artist: String, artwork: Bitmap?, isPlaying: Boolean, isFavorite: Boolean, hasSong: Boolean, positionMs: Long, durationMs: Long, )</ID>
+    <ID>LongMethod:SafFileMover.kt$SafFileMover$private fun trySafMove( tag: String, move: ProposedMove, rootDoc: DocumentFile, ): MoveOutcome</ID>
+    <ID>LongMethod:SettingsScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun WatermarksBlocklistSection( activeWatermarks: List&lt;String&gt;, onAddWatermark: (String) -&gt; Unit, onRemoveWatermark: (String) -&gt; Unit, )</ID>
+    <ID>LongMethod:SoundSettingsMapper.kt$fun PersistedSoundSettings.toSoundSettings(): SoundSettings</ID>
+    <ID>LongMethod:UpdateCheckerRepositoryImpl.kt$UpdateCheckerRepositoryImpl$private suspend fun resolve(current: InstalledAppVersion): AppResult&lt;UpdateCheck&gt;</ID>
+    <ID>LongMethod:UpdateDownloadManager.kt$UpdateDownloadManager$private suspend fun transfer( update: UpdateCheck.Available, target: File, )</ID>
+    <ID>LongMethod:UpdatePanel.kt$@Composable internal fun UpdatePanel(viewModel: DiagnosticsViewModel)</ID>
+    <ID>LongMethod:VinylMusicWidget.kt$VinylMusicWidget$@Composable private fun WidgetContent( title: String, artist: String, artwork: Bitmap?, rawArtwork: Bitmap?, isPlaying: Boolean, hasSong: Boolean, )</ID>
+    <ID>LoopWithTooManyJumpStatements:AlbumArtworkFinder.kt$AlbumArtworkFinder$for</ID>
+    <ID>LoopWithTooManyJumpStatements:CatalogCandidateScorer.kt$CatalogCandidateScorer$for</ID>
+    <ID>LoopWithTooManyJumpStatements:DominantColorExtractor.kt$DominantColorExtractor$for</ID>
+    <ID>LoopWithTooManyJumpStatements:HlsPlaylistParser.kt$HlsPlaylistParser$while</ID>
+    <ID>LoopWithTooManyJumpStatements:LibraryViewModel.kt$LibraryViewModel$for</ID>
+    <ID>LoopWithTooManyJumpStatements:MusixmatchProvider.kt$MusixmatchProvider$for</ID>
+    <ID>LoopWithTooManyJumpStatements:PlaybackUtilities.kt$for</ID>
+    <ID>MagicNumber:AlbumDetailScreen.kt$1900</ID>
+    <ID>MagicNumber:AlbumDetailScreen.kt$2099</ID>
+    <ID>MagicNumber:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$1080</ID>
+    <ID>MagicNumber:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$360</ID>
+    <ID>MagicNumber:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$480</ID>
+    <ID>MagicNumber:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$720</ID>
+    <ID>MagicNumber:AnimatedArtworkViewModel.kt$AnimatedArtworkViewModel$10</ID>
+    <ID>MagicNumber:AnimatedArtworkViewModel.kt$AnimatedArtworkViewModel$5000</ID>
+    <ID>MagicNumber:AnnouncementController.kt$AnnouncementController$100</ID>
+    <ID>MagicNumber:AnnouncementController.kt$AnnouncementController$899999</ID>
+    <ID>MagicNumber:AnnouncementMessaging.kt$AnnouncementPush$12</ID>
+    <ID>MagicNumber:AnnouncementMessaging.kt$AnnouncementPush$30</ID>
+    <ID>MagicNumber:AnnouncementMessaging.kt$AnnouncementWorker$3</ID>
+    <ID>MagicNumber:AnnouncementNotifications.kt$AnnouncementNotifications$240</ID>
+    <ID>MagicNumber:AnnouncementNotifications.kt$AnnouncementNotifications$33</ID>
+    <ID>MagicNumber:ArtworkLoader.kt$ArtworkLoader$3000</ID>
+    <ID>MagicNumber:AudioUtilities.kt$AudioUtilities$0.5f</ID>
+    <ID>MagicNumber:AudioUtilities.kt$AudioUtilities$12f</ID>
+    <ID>MagicNumber:AudioUtilities.kt$AudioUtilities$24f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.00001f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.001f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.01</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.08</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.2f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.707f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.89125f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$0.999f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$20.0</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$AudioUtilityDsp$44100</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$ReplayGainData$0.99f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$ReplayGainData$20.0</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$ReplayGainData.Companion$0.000001f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$ReplayGainData.Companion$100f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$ReplayGainData.Companion$20f</ID>
+    <ID>MagicNumber:AudioUtilityDsp.kt$ReplayGainData.Companion$30f</ID>
+    <ID>MagicNumber:ErhuApplication.kt$ErhuApplication$30</ID>
+    <ID>MagicNumber:GlassMusicWidget.kt$GlassMusicWidget$1000</ID>
+    <ID>MagicNumber:GlassMusicWidget.kt$GlassMusicWidget$14f</ID>
+    <ID>MagicNumber:GlassMusicWidget.kt$GlassMusicWidget$15000</ID>
+    <ID>MagicNumber:GlassMusicWidget.kt$GlassMusicWidget$60</ID>
+    <ID>MagicNumber:LibraryViewModel.kt$LibraryViewModel$15</ID>
+    <ID>MagicNumber:LibraryViewModel.kt$LibraryViewModel$4</ID>
+    <ID>MagicNumber:LibraryViewModel.kt$LibraryViewModel$500</ID>
+    <ID>MagicNumber:LibraryViewModel.kt$LibraryViewModel$500L</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$12f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$14.5f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$15f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$17.5f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$19f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$20f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$3f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$5f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$6.5f</ID>
+    <ID>MagicNumber:LiveCoverControl.kt$9.5f</ID>
+    <ID>MagicNumber:MediaStoreScanner.kt$MediaStoreScanner$10</ID>
+    <ID>MagicNumber:MusicWidget.kt$MusicWidget$1000</ID>
+    <ID>MagicNumber:MusicWidget.kt$MusicWidget$15000</ID>
+    <ID>MagicNumber:MusicWidget.kt$MusicWidget$60</ID>
+    <ID>MagicNumber:MusicWidgetActions.kt$SeekForwardAction$10_000L</ID>
+    <ID>MagicNumber:SoundViewModel.kt$SoundViewModel$720</ID>
+    <ID>MagicNumber:ThemeRepositoryImpl.kt$ThemeRepositoryImpl$0.35f</ID>
+    <ID>MagicNumber:ThemeRepositoryImpl.kt$ThemeRepositoryImpl$0.85f</ID>
+    <ID>MagicNumber:TrackCarousel.kt$25f</ID>
+    <ID>MagicNumber:TrackCarousel.kt$3f</ID>
+    <ID>MagicNumber:TrackCarousel.kt$4f</ID>
+    <ID>MagicNumber:TrackCarousel.kt$TrackCarouselState$3L</ID>
+    <ID>MagicNumber:VinylMusicWidget.kt$VinylMusicWidget$15000</ID>
+    <ID>MagicNumber:WidgetActions.kt$5_000L</ID>
+    <ID>MagicNumber:WidgetPreviewWorker.kt$WidgetPreviewWorker$35</ID>
+    <ID>MagicNumber:WidgetPreviewWorker.kt$WidgetPreviewWorker.Companion$35</ID>
+    <ID>MagicNumber:WidgetUpdater.kt$WidgetUpdater$150L</ID>
+    <ID>MagicNumber:WidgetUpdater.kt$WidgetUpdater$15_000L</ID>
+    <ID>MatchingDeclarationName:AnnouncementHost.kt$AnnouncementsViewModel : ViewModel</ID>
+    <ID>MatchingDeclarationName:IntroductionToolGuides.kt$IntroductionToolGuide</ID>
+    <ID>MatchingDeclarationName:UpdateInstallation.kt$InstallPreparation</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$assertTrue("Recording credits must not overwrite an album's own artist", recording.outcomes.any { it.providerName == "MusicBrainz release identification" &amp;&amp; it.candidateCount == 1 })</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$private fun candidate(album: String = "Discovery", artist: String = "Daft Punk")</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$val endpoints = AlbumArtworkFinder.Endpoints(server.url("/mb/").toString(), server.url("/caa/").toString(), server.url("/deezer/").toString(), server.url("/apple/").toString())</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$val endpoints = AlbumArtworkFinder.Endpoints(server.url("/mb/").toString(), server.url("/caa/").toString(), server.url("/deezer/").toString(), server.url("/apple/").toString(), server.url("/audiodb/").toString())</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$val finder = AlbumArtworkFinder(OkHttpClient(), Json { ignoreUnknownKeys = true }, cache, JvmArtworkInspector, endpoints = endpoints, musicBrainzRequest = { it() })</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$val finder = AlbumArtworkFinder(OkHttpClient(), Json, AlbumArtworkCache(kotlin.io.path.createTempDirectory("cancel-art").toFile()), JvmArtworkInspector, endpoints = endpoints, musicBrainzRequest = { it() })</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest$val finder = AlbumArtworkFinder(OkHttpClient(), Json, AlbumArtworkCache(kotlin.io.path.createTempDirectory("invalid-art").toFile()), JvmArtworkInspector, endpoints = endpoints, musicBrainzRequest = { it() })</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest.&lt;no name provided&gt;$path == "/apple/search" -&gt; MockResponse().setBody("""{"results":[{"collectionType":"Album","collectionName":"Discovery","artistName":"Daft Punk","artworkUrl100":"${server.url("/good.png")}"}]}""")</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest.&lt;no name provided&gt;$path == "/caa/release-group/$group" -&gt; MockResponse().setBody("""{"images":[{"front":true,"back":false,"approved":true,"image":"${server.url("/good.png")}"}]}""")</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest.&lt;no name provided&gt;$path == "/caa/release/$id" -&gt; MockResponse().setBody("""{"images":[{"front":true,"back":false,"approved":true,"image":"${server.url("/bad.png")}"},{"front":false,"back":true,"approved":true,"image":"${server.url("/back.png")}"}]}""")</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest.&lt;no name provided&gt;$path == "/mb/ws/2/recording/$id" -&gt; MockResponse().setBody("""{"artist-credit":[{"name":"Different recording artist"}],"releases":[{"id":"$id","title":"Discovery","artist-credit":[{"name":"Daft Punk"}],"release-group":{"id":"$group","primary-type":"Album"}}]}""")</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest.&lt;no name provided&gt;$path == "/mb/ws/2/release/$id" -&gt; MockResponse().setBody("""{"id":"$id","title":"Discovery","artist-credit":[{"name":"Daft Punk"}],"release-group":{"id":"$group","primary-type":"Album"}}""")</ID>
+    <ID>MaxLineLength:AlbumArtworkTest.kt$AlbumArtworkTest.&lt;no name provided&gt;$request.path!!.startsWith("/deezer/") -&gt; MockResponse().setBody("""{"data":[{"title":"Discovery","artist":{"name":"Daft Punk"},"cover_xl":"${server.url("/html")}"}]}""")</ID>
+    <ID>MaxLineLength:AnnouncementTest.kt$AnnouncementTest$for (bad in listOf(item.copy(id="../../bad"),item.copy(title=""),item.copy(body="x".repeat(4001)),item.copy(type="other"),item.copy(expiresAt="bad"),item.copy(minVersionCode=8,maxVersionCode=4),item.copy(minVersionName="1.1.0",maxVersionName="1.0.0"),item.copy(actionUrl="https://example.com/"),item.copy(actionLabel="Read",actionUrl="intent://unsafe"))) assertFalse(bad.valid())</ID>
+    <ID>MaxLineLength:AnnouncementTest.kt$AnnouncementTest$for(url in listOf("http://example.com/","file:///tmp/test","https://user:password@example.com/","https://localhost/","https://127.0.0.1/","https://[::1]/"))assertFalse(url,safeAnnouncementUrl(url))</ID>
+    <ID>MaxLineLength:ApkUpdateValidationTest.kt$ApkUpdateValidationTest$candidate.copy(minSdk = 99)</ID>
+    <ID>MaxLineLength:ApkUpdateValidationTest.kt$ApkUpdateValidationTest$validateUpdateIdentity(current, candidate.copy(signers = setOf("rotated"), signingHistory = setOf("original", "rotated")), release, 37, listOf("arm64-v8a"))</ID>
+    <ID>MaxLineLength:ArtworkAccuracyRunTest.kt$ArtworkAccuracyRunTest$putJsonArray("outcomes") { result.outcomes.forEach { outcome -&gt; addJsonObject { put("provider", outcome.providerName); put("status", outcome.status.name); put("count", outcome.candidateCount); put("error", outcome.errorMessage) } } }</ID>
+    <ID>MaxLineLength:ArtworkUpgradeTest.kt$ArtworkUpgradeTest$canvas.drawRect(size * (if (moved) 0.6f else 0.1f), size * 0.2f, size * (if (moved) 0.85f else 0.35f), size * 0.8f, Paint().apply { color = 0xffff9900.toInt() })</ID>
+    <ID>MaxLineLength:ArtworkUpgradeTest.kt$ArtworkUpgradeTest.Harness$AlbumArtworkCandidate("https://example.test/art", "Test catalogue", album.title, album.artist, width = 1200, height = 1200, verifiedImage = true)</ID>
+    <ID>MaxLineLength:ITunesProviderTest.kt$ITunesProviderTest$server.enqueue(MockResponse().setBody("""{"resultCount":1,"results":[{"trackId":1,"trackName":"Get Lucky","artistName":"Daft Punk","collectionName":"Random Access Memories","trackTimeMillis":369000,"releaseDate":"2013-05-17T00:00:00Z","artworkUrl100":"https://example.test/100x100bb.jpg"}]}"""))</ID>
+    <ID>MaxLineLength:ITunesProviderTest.kt$ITunesProviderTest$server.enqueue(MockResponse().setBody("""{"resultCount":1,"results":[{"trackId":7,"trackName":"Track","artistName":"Artist","collectionName":"Album","primaryGenreName":" R&amp;B "}]}"""))</ID>
+    <ID>MaxLineLength:IdentityRenameCompatibilityTest.kt$IdentityRenameCompatibilityTest$if (indices != null) for (i in 0 until indices.length()) legacy.execSQL(indices.getJSONObject(i).getString("createSql").replace("\${TABLE_NAME}", table))</ID>
+    <ID>MaxLineLength:IntroductionPagesTest.kt$IntroductionPagesTest$for</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"A pair's saved transition applies when those two tracks play back to back, including with shuffle. Auto follows the collection's setting. Use Reset to default to remove a collection override."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"All Fields fills missing tag values while retaining valid ones. A smaller field selection replaces those selected fields. Filename Only renames the file using its title."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Automatic Tagging handles matching for you. Manual Selection lets you choose the matching result. Tap Start Fixing Queue / Fix Tags to begin."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Check each destination before continuing. Missing metadata and filename collisions are marked; choose Resolve to edit a destination or Skip to leave that file out."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Choose a metadata provider and the fields to change: title, artist, album, year, genre, BPM or Filename Only. Artwork has its own fetcher."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Choose a preset and duration. Open Volume, EQ or Filter for their floating controls. Custom volume curves let you move points on the timeline."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Default follows the global transition. Off disables crossfades for this album or playlist. Custom gives that collection its own transition. Individual pairs can have their own settings."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"For a track pair, use the preview control when available to hear the handover. Save applies your draft; closing the editor without saving discards it."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Normally, previously organized files can be skipped. Enable Force Re-organize to include them in a new scan. Scanning and reviewing alone do not execute the proposed moves."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Open Transition Studio from an album or playlist. Edit Default for all music, use a Custom transition for this collection, or tap a transition between two tracks to edit that exact pair."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Open an album's three-dot menu and choose Set Custom Cover (Local File). Fetch Cover Online in that menu adds the album to Artwork Fetcher."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Search tracks, albums or artists and add them to the repair queue. You can also find tracks with bad tags or select a larger batch."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Start Scanning Files uses your configured scan location. Scan another folder lets you choose a folder for this run without changing the library's scan location."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Tag writes and renaming may need Android's file-access approval. These tools update metadata; they do not repair damaged audio or improve recording quality. Online matches can be unavailable or incorrect, so use Manual Selection when needed."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"The proposed structure is Artist / Album / Track title.ext. The builder prefers the primary album artist, falling back to the track artist. Correct incomplete tags first for better folder names."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"The resolution target helps narrow the search. Available images depend on the provider and internet connection; not every album has a matching high-resolution cover."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"This changes file locations on your device, rather than only sorting the library view. Choose a folder you can grant write access to and review the destinations before executing."</ID>
+    <ID>MaxLineLength:IntroductionToolGuides.kt$"Watch each queued track's status. Pause after the current track and resume later in the queue. Completed tracks with saved originals can be selected for Revert Changes."</ID>
+    <ID>MaxLineLength:LyricsTimingPersistenceTest.kt$LyricsTimingPersistenceTest$store.updateData { it.toBuilder().addQueueSongIds(42).setPositionMs(5000).setAppThemeId("dark").setVybeEnabled(false).setSidebarGlassyness(0.75f).build() }</ID>
+    <ID>MaxLineLength:Migrations.kt$&lt;no name provided&gt;$"CREATE UNIQUE INDEX IF NOT EXISTS `index_animated_artwork_normalized_artist_normalized_album` ON `animated_artwork` (`normalized_artist`, `normalized_album`)"</ID>
+    <ID>MaxLineLength:NetworkLoggingTest.kt$NetworkLoggingTest$assertEquals("GET https://www.theaudiodb.com/api/v1/json/&lt;redacted&gt;/searchalbum.php?a=Discovery", redactSecrets("GET https://www.theaudiodb.com/api/v1/json/private-key/searchalbum.php?a=Discovery"))</ID>
+    <ID>MaxLineLength:ProviderSearchTest.kt$ProviderSearchTest$val (candidates, outcome) = search(source, retry = RetryPolicy(maxAttempts = 3, baseDelayMs = 1), onSessionFailure = { _, reason -&gt; rejected += reason })</ID>
+    <ID>MaxLineLength:SafFileMover.kt$SafFileMover$"$tag state=${move.state} sourcePath='${move.sourcePath}' sourceUri=${move.sourceUri} sourceParentUri=${move.sourceParentUri} dest='${move.destinationPath}'"</ID>
+    <ID>MaxLineLength:SyncedFallbackTest.kt$SyncedFallbackTest.Api$return response("""{"subtitle":{"restricted":$restricted,"subtitle_body":${Json.encodeToString(kotlinx.serialization.serializer&lt;String&gt;(), lrc)}}}""")</ID>
+    <ID>MaxLineLength:SyncedFallbackTest.kt$SyncedFallbackTest.Api$return response("""{"track_list":[{"track":{"track_id":1,"track_name":"${this.title}","artist_name":"Artist","album_name":"Album","track_length":200,"has_subtitles":1}}]}""")</ID>
+    <ID>MaxLineLength:TempoEstimatorTest.kt$TempoEstimatorTest$for (i in 0 until 600) if (at.toInt() + i &lt; audio.size) audio[at.toInt() + i] += sin(2 * PI * 60 * i / rate12k).toFloat() * exp(-i / 150.0).toFloat()</ID>
+    <ID>MaxLineLength:UpdateCheckerTest.kt$UpdateCheckerTest$assertEquals(UpdateCheck.UpToDate, (repo(api, PublishedAppVersion(installed.packageName, "1.0.2", 2)).checkForUpdates(installed) as AppResult.Success).data)</ID>
+    <ID>MaxLineLength:UpdateCheckerTest.kt$UpdateCheckerTest$assertTrue((repo(api, PublishedAppVersion(installed.packageName, "1.0.2", 3)).checkForUpdates(installed) as AppResult.Success).data is UpdateCheck.Available)</ID>
+    <ID>MaxLineLength:UpdateCheckerTest.kt$UpdateCheckerTest$private val release = GitHubReleaseDto("v1.0.2", "erhu", "Release notes", "https://github.com/lochanpthakke/erhu/releases/tag/v1.0.2", listOf(apk), publishedAt = "2026-11-01T10:00:00Z")</ID>
+    <ID>MaxLineLength:UpdateLiveIntegrationTest.kt$UpdateLiveIntegrationTest$val api=Retrofit.Builder().baseUrl("https://api.github.com/").client(client).addConverterFactory(json.asConverterFactory("application/json".toMediaType())).build().create(GitHubUpdateApi::class.java)</ID>
+    <ID>MaxLineLength:UpdateLiveIntegrationTest.kt$UpdateLiveIntegrationTest.&lt;no name provided&gt;$override fun w(tag:String,message:String,throwable:Throwable?)</ID>
+    <ID>NestedBlockDepth:CatalogCandidateScorer.kt$CatalogCandidateScorer$fun score( localArtist: String, localAlbum: String, candidates: List&lt;ItunesAlbumDto&gt;, localTrackCount: Int? = null, ): ItunesAlbumDto?</ID>
+    <ID>NestedBlockDepth:HlsMp4Assembler.kt$HlsMp4Assembler$private suspend fun assembleInto( playlist: HlsMediaPlaylist, tmpFile: File, destFile: File, )</ID>
+    <ID>NestedBlockDepth:HlsPlaylistParser.kt$HlsPlaylistParser$fun parseMasterPlaylistVariants( masterUrl: String, masterContent: String, ): List&lt;HlsVariantStream&gt;</ID>
+    <ID>NestedBlockDepth:HlsPlaylistParser.kt$HlsPlaylistParser$fun parseMediaPlaylist( mediaUrl: String, mediaContent: String, ): HlsMediaPlaylist</ID>
+    <ID>NestedBlockDepth:IdentityRenameCompatibilityTest.kt$IdentityRenameCompatibilityTest$@Test fun renamedDatabaseOpensExistingSchemaAndRetainsEveryTable()</ID>
+    <ID>NestedBlockDepth:LibraryBuilderAnalyzer.kt$LibraryBuilderAnalyzer$private fun resolveFilePath(uri: Uri): String?</ID>
+    <ID>NestedBlockDepth:PlaybackUtilities.kt$@androidx.annotation.OptIn(UnstableApi::class) internal fun replayGainFromTracks(tracks: Tracks): ReplayGainData</ID>
+    <ID>NestedBlockDepth:SafFileMover.kt$SafFileMover$private fun trySafMove( tag: String, move: ProposedMove, rootDoc: DocumentFile, ): MoveOutcome</ID>
+    <ID>NestedBlockDepth:WidgetUpdater.kt$WidgetUpdater$private suspend fun updateAllWidgetInstances()</ID>
     <ID>NewLineAtEndOfFile:ExampleUnitTest.kt$com.erhu.erhu.core.designsystem.ExampleUnitTest.kt</ID>
+    <ID>ReturnCount:AlbumArtworkFinder.kt$AlbumArtworkFinder$private suspend fun archive( release: AlbumArtworkCandidate, type: String, id: String, ): List&lt;AlbumArtworkCandidate&gt;</ID>
+    <ID>ReturnCount:AlbumArtworkRanking.kt$AlbumArtworkRanking$fun similarity( a: String, b: String, ): Double</ID>
+    <ID>ReturnCount:AndroidArtworkImageInspector.kt$AndroidArtworkImageInspector$override fun inspect(bytes: ByteArray): ArtworkImageFacts?</ID>
+    <ID>ReturnCount:AnimatedAlbumCoverPlayer.kt$@Composable fun rememberAnimatedArtworkPath( albumId: Long?, repository: AnimatedArtworkRepository, ): String?</ID>
+    <ID>ReturnCount:AnimatedArtworkNetworkDataSourceImpl.kt$AnimatedArtworkNetworkDataSourceImpl$private suspend fun editionSiblings( match: com.erhu.erhu.core.network.apple.model.ItunesAlbumDto, storefront: String, ): List&lt;com.erhu.erhu.core.network.apple.model.ItunesAlbumDto&gt;</ID>
+    <ID>ReturnCount:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$private suspend fun singleDownload( albumId: Long, orientation: AnimatedArtOrientation, download: suspend () -&gt; AppResult&lt;LocalAnimatedArtwork&gt;, ): AppResult&lt;LocalAnimatedArtwork&gt;</ID>
+    <ID>ReturnCount:AnimatedArtworkViewModel.kt$AnimatedArtworkViewModel$fun downloadAndSaveArtwork()</ID>
+    <ID>ReturnCount:AnnouncementMessaging.kt$AnnouncementWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:AnnouncementNotifications.kt$AnnouncementNotifications$suspend fun show(id: String)</ID>
+    <ID>ReturnCount:DominantColorExtractor.kt$DominantColorExtractor$@Suppress("MagicNumber", "CyclomaticComplexMethod") private fun findDominantInPixels( pixels: IntArray, startIndex: Int, endIndex: Int, ): Color?</ID>
+    <ID>ReturnCount:DominantColorExtractor.kt$DominantColorExtractor$private fun unweightedDominantPixelAverage( pixels: IntArray, startIndex: Int, endIndex: Int, ): Color?</ID>
+    <ID>ReturnCount:JAudioTaggerEnricher.kt$JAudioTaggerEnricher$@Suppress("TooGenericExceptionCaught") fun extractYearFromId3Header(filePath: String): Int</ID>
+    <ID>ReturnCount:LibraryBuilderAnalyzer.kt$LibraryBuilderAnalyzer$private fun resolveFilePath(uri: Uri): String?</ID>
+    <ID>ReturnCount:LibraryBuilderAnalyzer.kt$LibraryBuilderAnalyzer$suspend fun analyze( customUriString: String = "", forceReorganize: Boolean = false, ): AnalysisResult</ID>
+    <ID>ReturnCount:MediaStoreScanner.kt$MediaStoreScanner$private fun matchesCustomLocation( filePath: String, isCustomEnabled: Boolean, customPath: String, customUri: String, ): Boolean</ID>
+    <ID>ReturnCount:OnlineLyricsRepository.kt$OnlineLyricsRepository$private suspend fun ask( provider: OnlineLyricsProvider, query: LyricsQuery, found: MutableList&lt;LyricsCandidate&gt;, ): OnlineLyricsResult?</ID>
+    <ID>ReturnCount:SafFileMover.kt$SafFileMover$private fun copyThenDelete( tag: String, move: ProposedMove, destDir: DocumentFile, fileName: String, sourceLength: Long, ): MoveOutcome</ID>
+    <ID>ReturnCount:SafFileMover.kt$SafFileMover$private fun executeOne( tag: String, move: ProposedMove, physicalRootDir: File?, safRoot: DocumentFile?, ): MoveOutcome</ID>
+    <ID>ReturnCount:SafFileMover.kt$SafFileMover$private fun renameDocument( tag: String, uri: Uri, fileName: String, expectedLength: Long, success: MoveOutcome, failure: MoveOutcome, ): MoveOutcome</ID>
+    <ID>ReturnCount:SafFileMover.kt$SafFileMover$private fun resolvePhysicalRootDir(rootUriString: String): File?</ID>
+    <ID>ReturnCount:SafFileMover.kt$SafFileMover$private fun tryPhysicalMove( tag: String, move: ProposedMove, physicalRootDir: File?, ): MoveOutcome</ID>
+    <ID>ReturnCount:SafFileMover.kt$SafFileMover$private fun trySafMove( tag: String, move: ProposedMove, rootDoc: DocumentFile, ): MoveOutcome</ID>
+    <ID>ReturnCount:SearchNormalizer.kt$SearchNormalizer$fun matches( target: String, query: String, ): Boolean</ID>
+    <ID>ReturnCount:SyncedLyricsValidation.kt$internal fun usableSyncedLyrics( text: String?, durationMs: Long = 0, ): Boolean</ID>
+    <ID>ReturnCount:TagWriteAccess.kt$TagWriteAccessChecker$private fun checkScopedStorage(uris: List&lt;Uri&gt;): WriteAuthorization</ID>
+    <ID>ReturnCount:UpdateVersion.kt$UpdateVersion$override fun compareTo(other: UpdateVersion): Int</ID>
+    <ID>ReturnCount:UpdateVersion.kt$UpdateVersion.Companion$fun parse(raw: String): UpdateVersion?</ID>
+    <ID>SwallowedException:AlbumArtworkFinder.kt$AlbumArtworkFinder$e: TimeoutCancellationException</ID>
+    <ID>SwallowedException:AnimatedArtworkNetworkDataSourceImpl.kt$AnimatedArtworkNetworkDataSourceImpl$e: Exception</ID>
+    <ID>SwallowedException:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$e: Exception</ID>
+    <ID>SwallowedException:AppleMusicTokenProvider.kt$AppleMusicTokenProvider$e: Exception</ID>
+    <ID>SwallowedException:UpdateCheckerRepositoryImpl.kt$UpdateCheckerRepositoryImpl$e: TimeoutCancellationException</ID>
+    <ID>SwallowedException:ViewMetadataViewModel.kt$ViewMetadataViewModel$e: Exception</ID>
+    <ID>ThrowsCount:AlbumArtworkFinder.kt$AlbumArtworkFinder$private suspend fun download(url: String): ByteArray</ID>
+    <ID>ThrowsCount:AlbumArtworkFinder.kt$AlbumArtworkFinder$private suspend fun get( base: String, path: String, params: Map&lt;String, String&gt; = emptyMap(), missingIsEmpty: Boolean = false, ): JsonObject?</ID>
+    <ID>ThrowsCount:HlsMp4Assembler.kt$HlsMp4Assembler$private suspend fun assembleInto( playlist: HlsMediaPlaylist, tmpFile: File, destFile: File, )</ID>
+    <ID>ThrowsCount:MusixmatchProvider.kt$MusixmatchProvider$private fun body(response: Response&lt;JsonObject&gt;): JsonObject</ID>
+    <ID>TooGenericExceptionCaught:DiagnosticsViewModel.kt$DiagnosticsViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LibraryBuilderIntegrator.kt$LibraryBuilderIntegrator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LibraryViewModel.kt$LibraryViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LibraryViewModel.kt$LibraryViewModel$e: RuntimeException</ID>
+    <ID>TooGenericExceptionCaught:SafFileMover.kt$SafFileMover$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:WidgetActions.kt$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:WidgetPreviewWorker.kt$WidgetPreviewWorker$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:WidgetUpdater.kt$WidgetUpdater$error: Exception</ID>
+    <ID>TooManyFunctions:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl : AnimatedArtworkRepository</ID>
+    <ID>TooManyFunctions:Glass.kt$com.erhu.erhu.core.designsystem.theme.Glass.kt</ID>
+    <ID>TooManyFunctions:SettingsScreen.kt$com.erhu.erhu.feature.settings.SettingsScreen.kt</ID>
+    <ID>UnusedParameter:AnimatedArtworkRepositoryImpl.kt$AnimatedArtworkRepositoryImpl$forceRefresh: Boolean</ID>
+    <ID>UnusedParameter:AnimatedArtworkViewModel.kt$AnimatedArtworkViewModel$album: Album</ID>
+    <ID>UnusedParameter:ArtworkUpgradeTest.kt$UpgradeRetriever$context: Context</ID>
+    <ID>UnusedParameter:FileRenamer.kt$FileNamingUtils$artist: String?</ID>
+    <ID>UnusedParameter:FileRenamer.kt$FileRenamer$artist: String?</ID>
+    <ID>UnusedPrivateMember:TrackMatcher.kt$private fun writtenIdentity(candidate: MetadataCandidate): Triple&lt;String, String, String&gt;</ID>
+    <ID>UseCheckOrError:AppleRequestGateTest.kt$AppleRequestGateTest$throw IllegalStateException()</ID>
+    <ID>UseCheckOrError:FileRenamer.kt$FileRenamer$throw IllegalStateException("Failed to rename file on storage")</ID>
+    <ID>UseCheckOrError:FileRenamer.kt$FileRenamer$throw IllegalStateException("Failed to rename file via MediaStore or direct filesystem")</ID>
+    <ID>UseCheckOrError:LibraryViewModel.kt$LibraryViewModel$throw IllegalStateException("Could not download artwork image")</ID>
+    <ID>WildcardImport:AlbumArtworkTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:AnnouncementTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ArtworkAccuracyRunTest.kt$import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:ArtworkUpgradeTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:AudioUtilityDspTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:CircularCropDecodeTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:CollectionTransitionPersistenceTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:ExampleUnitTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:LyricsTimingPersistenceTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:LyricsTimingStateTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:MetadataBackgroundTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:MetadataSiblingsTest.kt$import com.erhu.erhu.core.network.tagger.*</ID>
+    <ID>WildcardImport:MetadataSiblingsTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:PlaybackUtilitiesTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:QueueDragMotionTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:RadioPortraitPaletteTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:RadioPortraitsTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:RepairCheckpointTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ReplayGainMetadataTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:TransitionPointPrecisionTest.kt$import com.erhu.erhu.core.model.*</ID>
+    <ID>WildcardImport:TransitionPointPrecisionTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:UpdateLiveIntegrationTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:VybeAdvancedQueryTest.kt$import org.junit.Assert.*</ID>
   </CurrentIssues>
 </SmellBaseline>

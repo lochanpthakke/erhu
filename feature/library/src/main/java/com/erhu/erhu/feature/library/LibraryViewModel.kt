@@ -36,7 +36,6 @@ import com.erhu.erhu.core.network.tagger.PLAUSIBLE_BPM
 import com.erhu.erhu.core.network.tagger.TagWriteRequest
 import com.erhu.erhu.core.network.tagger.buildTagWriteRequest
 import com.erhu.erhu.core.network.tagger.fieldSelection
-import com.erhu.erhu.core.network.tagger.fields
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.feature.library.mix.RadioPlan
 import com.erhu.erhu.feature.library.mix.RadioRepository
@@ -66,8 +65,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -465,23 +464,24 @@ class LibraryViewModel
          * previous song's lyrics while its own are read): the file's own lyrics when it has readable
          * ones, otherwise what was found online (see [chooseLyrics]).
          */
-        val currentSongLyrics: StateFlow<SongLyrics?> = combine(
-            currentSongId
-                .flatMapLatest { id ->
-                    id?.let { songId ->
-                        combine(
-                            libraryRepository.observeEmbeddedLyrics(songId),
-                            onlineLyricsView,
-                            manualLyricsSearch,
-                        ) { embedded, online, search ->
-                            chooseLyrics(songId, embedded, online.takeIf { lyricsIdentity == currentTrack(songId) }, search)
-                        }
-                    } ?: flowOf(null)
-                },
-            playbackRepository.playbackState.map { it.currentSong }.distinctUntilChanged(),
-            lyricsTimingPersistence.observe(),
-        ) { lyrics, song, timing -> withLyricsTiming(song, lyrics, timing) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+        val currentSongLyrics: StateFlow<SongLyrics?> =
+            combine(
+                currentSongId
+                    .flatMapLatest { id ->
+                        id?.let { songId ->
+                            combine(
+                                libraryRepository.observeEmbeddedLyrics(songId),
+                                onlineLyricsView,
+                                manualLyricsSearch,
+                            ) { embedded, online, search ->
+                                chooseLyrics(songId, embedded, online.takeIf { lyricsIdentity == currentTrack(songId) }, search)
+                            }
+                        } ?: flowOf(null)
+                    },
+                playbackRepository.playbackState.map { it.currentSong }.distinctUntilChanged(),
+                lyricsTimingPersistence.observe(),
+            ) { lyrics, song, timing -> withLyricsTiming(song, lyrics, timing) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
         /** What the lyrics page can do: automatic lookup, refresh, manual search and choice, back to the file's lyrics. */
         val lyricsActions =
@@ -1168,7 +1168,10 @@ class LibraryViewModel
             album: Album,
             artworkUrl: String,
         ) {
-            fun updateStatus(status: String, reason: String? = null) {
+            fun updateStatus(
+                status: String,
+                reason: String? = null,
+            ) {
                 _artworkQueue.update { latest ->
                     latest.map { item -> if (item.album.id == album.id) item.copy(status = status, failureReason = reason) else item }
                 }
@@ -1498,7 +1501,10 @@ class LibraryViewModel
         init {
             viewModelScope.launch {
                 metadataRepair.messages.collect { message ->
-                    if (message != null) { _userMessage.value = message; metadataRepair.messages.value = null }
+                    if (message != null) {
+                        _userMessage.value = message
+                        metadataRepair.messages.value = null
+                    }
                 }
             }
         }
@@ -1510,11 +1516,14 @@ class LibraryViewModel
             try {
                 androidx.core.content.ContextCompat.startForegroundService(
                     appContext,
-                    android.content.Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java)
+                    android.content
+                        .Intent(appContext, com.erhu.erhu.feature.library.service.MetadataRepairService::class.java)
                         .setAction(com.erhu.erhu.feature.library.service.MetadataRepairService.ACTION_START),
                 )
             } catch (e: RuntimeException) {
-                metadataRepair.startFailed("Android could not start background metadata fetching: ${e.message}. Try again while erhu is open.")
+                metadataRepair.startFailed(
+                    "Android could not start background metadata fetching: ${e.message}. Try again while erhu is open.",
+                )
             }
         }
 

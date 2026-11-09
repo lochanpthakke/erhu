@@ -51,7 +51,7 @@ class AnimatedArtworkViewModel
         private val _selectedAlbum = MutableStateFlow<Album?>(null)
         val selectedAlbum: StateFlow<Album?> = _selectedAlbum.asStateFlow()
 
-        private val _queuedAlbumIds = MutableStateFlow<Set<Long>>(emptySet())
+        private val queuedAlbumIds = MutableStateFlow<Set<Long>>(emptySet())
 
         private val _isFetchingMaster = MutableStateFlow(false)
         val isFetchingMaster: StateFlow<Boolean> = _isFetchingMaster.asStateFlow()
@@ -90,7 +90,7 @@ class AnimatedArtworkViewModel
 
         val queueItems: StateFlow<List<AnimatedArtworkQueueItem>> =
             combine(
-                _queuedAlbumIds,
+                queuedAlbumIds,
                 libraryRepository.getAllAlbums(),
             ) { queuedIds, allAlbums ->
                 val albumMap = allAlbums.associateBy { it.id }
@@ -127,7 +127,7 @@ class AnimatedArtworkViewModel
 
         fun selectAlbumFromSearch(album: Album) {
             _selectedAlbum.value = album
-            _queuedAlbumIds.value = setOf(album.id)
+            queuedAlbumIds.value = setOf(album.id)
             _selectedDiagnosticAlbumId.value = album.id
             _previewStreamUrl.value = null
             _availableVariants.value = emptyList()
@@ -152,7 +152,7 @@ class AnimatedArtworkViewModel
             _searchQuery.value = ""
             _searchAlbums.value = emptyList()
             _selectedAlbum.value = null
-            _queuedAlbumIds.value = emptySet()
+            queuedAlbumIds.value = emptySet()
             _selectedDiagnosticAlbumId.value = null
             _availableVariants.value = emptyList()
             _selectedVariant.value = null
@@ -289,9 +289,9 @@ class AnimatedArtworkViewModel
         }
 
         fun removeFromQueue(albumId: Long) {
-            _queuedAlbumIds.value = _queuedAlbumIds.value - albumId
+            queuedAlbumIds.value = queuedAlbumIds.value - albumId
             if (_selectedDiagnosticAlbumId.value == albumId) {
-                _selectedDiagnosticAlbumId.value = _queuedAlbumIds.value.firstOrNull()
+                _selectedDiagnosticAlbumId.value = queuedAlbumIds.value.firstOrNull()
             }
             if (_selectedAlbum.value?.id == albumId) {
                 _selectedAlbum.value = null
