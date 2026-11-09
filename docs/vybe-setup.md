@@ -21,6 +21,6 @@ Official source: https://storage.googleapis.com/mediapipe-models/text_embedder/e
 
 ## Model terms
 
-The model is provided under the Gemma Terms of Use, supplied as GEMMA_TERMS.html and available at https://ai.google.dev/gemma/terms. It is not licensed under erhu's GPL-3.0 licence.
+The model is provided under the Gemma Terms of Use, supplied as GEMMA_TERMS.html and available at https://ai.google.dev/gemma/terms. Its model-specific terms are independent of erhu Android's application licence.
 
 Use and redistribution of the model are governed by those terms. The use restrictions in Section 3.2, including the incorporated Gemma Prohibited Use Policy, form an enforceable condition of use and redistribution of this pack. Subsequent recipients must receive these terms, restrictions and NOTICE.txt. The model has not been modified.

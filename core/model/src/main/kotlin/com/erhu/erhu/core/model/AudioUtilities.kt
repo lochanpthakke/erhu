@@ -2,8 +2,8 @@
  * Copyright (C) 2026 Kshitij H Kekunnaya
  *
  * This file is part of erhu.
- * Licensed under the GNU General Public License v3.0.
- * See the LICENSE file in the project root.
+ * Future Android releases from 1.0.18: proprietary terms in LICENSE.
+ * Historical GPL grants are preserved in LICENSES/GPL-3.0-historical.txt.
  */
 
 package com.erhu.erhu.core.model

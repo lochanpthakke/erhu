@@ -167,4 +167,6 @@ Report bugs through [GitHub Issues](https://github.com/lochanpthakke/erhu/issues
 
 ## License
 
-[GNU General Public License v3.0](LICENSE). Read the [Privacy Policy](docs/privacy-policy.md) for local storage, online services and permissions.
+Android releases through **1.0.17** retain their [GPL-3.0 rights](LICENSES/GPL-3.0-historical.txt). This review branch prepares [proprietary terms](LICENSE) for original Android contributions from the intended **1.0.18** release, subject to the unresolved clearance gates in [LICENSING.md](LICENSING.md). No proprietary release is approved for distribution by this branch.
+
+Third-party components retain their own licences; see [copyright attribution](COPYRIGHT.md), the [dependency inventory](THIRD_PARTY_LICENSES.md) and [preserved notices](LICENSES/THIRD-PARTY-NOTICES.txt). Commercial licensing requires written permission from the relevant Android rights holders. Read the [Privacy Policy](docs/privacy-policy.md) for local storage, online services and permissions.
