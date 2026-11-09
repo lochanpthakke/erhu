@@ -39,3 +39,6 @@ log2.txt
 /backend/announcements/.firebaserc
 /backend/announcements/spark/public/
 /backend/announcements/spark-state*.json
+
+# Unused development authorization token; do not reintroduce it.
+/jwt.txt

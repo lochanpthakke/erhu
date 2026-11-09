@@ -114,7 +114,10 @@ object DiagnosticsReport {
             }
             line("Audio utilities", "Mono, balance, preamp, bass shelf, ReplayGain and sample-peak limiter: Settings → Audio & Equalizer")
             snapshot.headroom?.let {
-                line("EQ-only clipping risk (estimate)", String.format(Locale.ROOT, "%s, max EQ boost %+.1f dB", it.risk.label, it.maxBoostDb))
+                line(
+                    "EQ-only clipping risk (estimate)",
+                    String.format(Locale.ROOT, "%s, max EQ boost %+.1f dB", it.risk.label, it.maxBoostDb),
+                )
             }
             snapshot.peak?.takeIf { it.frames > 0 }?.let {
                 line(

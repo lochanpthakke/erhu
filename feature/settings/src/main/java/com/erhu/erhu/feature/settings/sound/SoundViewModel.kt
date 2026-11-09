@@ -33,15 +33,31 @@ class SoundViewModel
 
         fun setDefaultCrossfade(enabled: Boolean) {
             val global = transitionConfig.value.global
-            val choice = if (enabled) com.erhu.erhu.core.model.TransitionChoice.Custom(com.erhu.erhu.core.model.TransitionSpec())
-                else com.erhu.erhu.core.model.TransitionChoice.Off
+            val choice =
+                if (enabled) {
+                    com.erhu.erhu.core.model.TransitionChoice
+                        .Custom(
+                            com.erhu.erhu.core.model
+                                .TransitionSpec(),
+                        )
+                } else {
+                    com.erhu.erhu.core.model.TransitionChoice.Off
+                }
             transitions.setGlobal(global.copy(default = choice))
         }
 
         fun setCrossfadeDuration(ms: Int) {
             val global = transitionConfig.value.global
-            val base = (global.default as? com.erhu.erhu.core.model.TransitionChoice.Custom)?.spec ?: com.erhu.erhu.core.model.TransitionSpec()
-            transitions.setGlobal(global.copy(default = com.erhu.erhu.core.model.TransitionChoice.Custom(base.copy(durationMs = ms))))
+            val base =
+                (global.default as? com.erhu.erhu.core.model.TransitionChoice.Custom)?.spec ?: com.erhu.erhu.core.model
+                    .TransitionSpec()
+            transitions.setGlobal(
+                global.copy(
+                    default =
+                        com.erhu.erhu.core.model.TransitionChoice
+                            .Custom(base.copy(durationMs = ms)),
+                ),
+            )
         }
 
         fun setSleepMinutes(minutes: Int) {

@@ -358,9 +358,10 @@ private fun QueuePage(
                     isHighlighted = index == playbackState.currentIndex,
                     onClick = { if (!drag.settling) playbackRepository.skipToQueueItem(index) },
                     modifier =
-                        itemModifier.onSizeChanged {
-                            if (drag.index == null && it.height > 0) rowHeightPx = it.height.toFloat()
-                        }.graphicsLayer { alpha = if (played) PLAYED_ENTRY_ALPHA else 1f },
+                        itemModifier
+                            .onSizeChanged {
+                                if (drag.index == null && it.height > 0) rowHeightPx = it.height.toFloat()
+                            }.graphicsLayer { alpha = if (played) PLAYED_ENTRY_ALPHA else 1f },
                 ) {
                     IconButton(
                         onClick = {},

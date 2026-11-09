@@ -109,11 +109,11 @@ class SafFileMover
                         .filterNot { it.isSuccess || it == MoveOutcome.ALREADY_AT_DESTINATION || it == MoveOutcome.SKIPPED_STATE }
                         .groupingBy { it }
                         .eachCount()
+                val outcomeCounts = outcomes.groupingBy { it }.eachCount()
                 Log.i(
                     TAG,
-                    "=== summary success=$successCount failed=$failedCount skipped=$skippedCount already=$alreadyCount outcomes=${outcomes.groupingBy {
-                        it
-                    }.eachCount()}",
+                    "=== summary success=$successCount failed=$failedCount skipped=$skippedCount " +
+                        "already=$alreadyCount outcomes=$outcomeCounts",
                 )
                 ExecutionResult(successCount, failedCount, skippedCount, alreadyCount, failures)
             }
@@ -235,7 +235,11 @@ class SafFileMover
                             }
                         } catch (e: Exception) {
                             Log.e(TAG, "$tag saf: createDirectory('$segment') ${e.javaClass.name}: ${e.message}")
-                            return if (e is SecurityException) MoveOutcome.FAILED_NO_WRITE_PERMISSION else MoveOutcome.FAILED_DIRECTORY_CREATION
+                            return if (e is SecurityException) {
+                                MoveOutcome.FAILED_NO_WRITE_PERMISSION
+                            } else {
+                                MoveOutcome.FAILED_DIRECTORY_CREATION
+                            }
                         }
                     }
                 if (nextDir == null || !nextDir.isDirectory) {
