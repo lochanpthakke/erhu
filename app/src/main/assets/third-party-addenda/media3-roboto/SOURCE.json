@@ -1,0 +1,15 @@
+{
+  "status": "CONDITIONAL",
+  "resolved": "Exact upstream subset source and Apache-2.0 grant/notice evidence",
+  "pending": "Deliver the staged licence/notice with the eventual APK; no Stage3 files changed",
+  "version": "androidx.media3:media3-ui:1.5.1",
+  "source_commit": "76088cd6af7f263aba238b7a48d64bd4f060cb8b",
+  "font_sha256": "acbf6c59d8c5765ffa9af2a839249e2800e0b107aad4045cf5c070765fa29322",
+  "source_url": "https://github.com/androidx/media/blob/76088cd6af7f263aba238b7a48d64bd4f060cb8b/libraries/ui/src/main/res/font/roboto_medium_numbers.ttf",
+  "license_url": "https://github.com/androidx/media/blob/76088cd6af7f263aba238b7a48d64bd4f060cb8b/LICENSE",
+  "original_author_copyright": "Copyright 2011 Google Inc. All Rights Reserved.",
+  "project_modifications": "None; exact byte match",
+  "separate_wordmark_font": "Still unidentified",
+  "published_apk_entry": "res/RV.ttf",
+  "published_apk_font_bytes_match": true
+}

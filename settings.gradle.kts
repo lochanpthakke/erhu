@@ -24,6 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "erhu"
 include(":app")
+include(":third-party:jaudiotagger")
 include(":core:common")
 include(":core:designsystem")
 include(":core:playback")

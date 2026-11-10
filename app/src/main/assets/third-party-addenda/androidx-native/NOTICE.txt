@@ -1,0 +1,11 @@
+AndroidX native components retained by the 1.0.18 candidate
+
+Android Open Source Project — Apache License 2.0.
+androidx.graphics:graphics-path:1.0.1 — libandroidx.graphics.path.so
+androidx.datastore:datastore-core-android:1.1.7 — libdatastore_shared_counter.so
+
+Erhu has not modified these dependency binaries. The existing Stage 3 inventory
+records the resolved artifact and ARM64 binary hashes. Exact constituent/static
+runtime notice mapping remains pending; this notice does not certify it complete.
+MediaPipe is excluded from the candidate dependency graph; its earlier staged
+notice is retained as evidence and does not assert that MediaPipe is present.

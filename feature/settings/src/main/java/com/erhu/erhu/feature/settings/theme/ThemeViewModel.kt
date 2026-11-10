@@ -29,12 +29,18 @@ class ThemeViewModel
         val widgetSkin: StateFlow<SkinManifest?> = themeRepository.widgetSkinState
         val libraryLayout: StateFlow<String> = themeRepository.libraryLayoutMode
         val isRollbackActive: StateFlow<Boolean> = themeRepository.isRollbackFlagActive
-        val vybeEnabled = themeRepository.vybeEnabled
+        val vybeEnabled =
+            if (com.erhu.erhu.core.network.BuildConfig.PROPRIETARY_CANDIDATE) {
+                MutableStateFlow<Boolean?>(false).asStateFlow()
+            } else {
+                themeRepository.vybeEnabled
+            }
         val onboardingCompleted = themeRepository.onboardingCompleted
 
         suspend fun completeOnboarding(): AppResult<Unit> = themeRepository.completeOnboarding()
 
         fun setVybeEnabled(enabled: Boolean) {
+            if (com.erhu.erhu.core.network.BuildConfig.PROPRIETARY_CANDIDATE) return
             viewModelScope.launch { themeRepository.setVybeEnabled(enabled) }
         }
 

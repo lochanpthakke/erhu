@@ -7,8 +7,10 @@ plugins {
     alias(libs.plugins.hilt.android)
 }
 
+val proprietaryCandidate = providers.gradleProperty("proprietaryCandidate").map(String::toBoolean).getOrElse(true)
+
 // Provision only with licensed subtitle access; never commit credentials.
-val musixmatchApiKey: String =
+val musixmatchApiKey: String = if (proprietaryCandidate) "" else
     rootProject
         .file("local.properties")
         .takeIf { it.isFile }
@@ -19,7 +21,7 @@ val musixmatchApiKey: String =
         ?: System.getenv("MUSIXMATCH_API_KEY")?.trim().orEmpty()
 
 // Optional app-owner production access. Public test key is confined to debug builds.
-val audioDbApiKey =
+val audioDbApiKey = if (proprietaryCandidate) "" else
     rootProject
         .file("local.properties")
         .takeIf { it.isFile }
@@ -28,11 +30,13 @@ val audioDbApiKey =
         .orEmpty()
         .ifBlank { System.getenv("THEAUDIODB_API_KEY")?.trim().orEmpty() }
 
+
 android {
     namespace = "com.erhu.erhu.core.network"
     compileSdk = 37
 
     defaultConfig {
+        buildConfigField("boolean", "PROPRIETARY_CANDIDATE", proprietaryCandidate.toString())
         minSdk = 26
         val announcementUrl =
             providers.gradleProperty("erhu.announcements.url").orNull
@@ -63,7 +67,7 @@ dependencies {
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
-    api(libs.jaudiotagger)
+    if (proprietaryCandidate) api(project(":third-party:jaudiotagger")) else api(libs.jaudiotagger)
     // Reads LRCLIB's Lyricsfile (YAML) for word-timed lyrics; data only, no class instantiation.
     implementation(libs.snakeyaml.engine)
     implementation(libs.androidx.core.ktx)

@@ -1,0 +1,12 @@
+{
+  "purpose": "Staged third-party notices and preferred covered source; not legal clearance",
+  "files": {
+    "LGPL-2.1-or-later.txt": "5749785c8bdefafcb5d798270ed0a967036fe2ca63dcedade1627565dfef81d2",
+    "mediapipe-1.1.0-NOTICE.txt": "8db2ce1a7fb4fa13d2261bcc4cd1f1c3044d94b59fb0e4b35a5c0b4ecb6a56d2",
+    "MPL-2.0.txt": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172",
+    "okhttp-publicsuffix-4.12.0/NOTICE": "8a9c58fbded5ea3474315e4a9824ca8b1486098a1a03e897e0b19419d5e1876a",
+    "okhttp-publicsuffix-4.12.0/public_suffix_list.dat": "e8b273972eb5a70e888bd3e7d7c5b9b04e600a59d69def9136a74d70ae6fcdd3",
+    "okhttp-publicsuffix-4.12.0/SOURCE.json": "96eade37c91fbf94c7437228c09ced8a60134b61685fb545b4f2081ec902ccf7",
+    "README.txt": "d96008105d2672d3beb31c2124f90d58cda9d729ad488ae0fd31c3a306c18d87"
+  }
+}

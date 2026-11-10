@@ -2,10 +2,16 @@ plugins {
     alias(libs.plugins.android.library)
 }
 
+val proprietaryCandidate = providers.gradleProperty("proprietaryCandidate").map(String::toBoolean).getOrElse(true)
+
 android {
     namespace = "com.erhu.erhu.core.vybe.mediapipe"
     compileSdk {
         version = release(37)
+    }
+
+    if (proprietaryCandidate) {
+        sourceSets.getByName("main").java.setSrcDirs(listOf("src/proprietaryCandidate/java"))
     }
 
     defaultConfig {
@@ -21,7 +27,7 @@ android {
 
 dependencies {
     api(project(":core:vybe"))
-    implementation(libs.mediapipe.tasks.text)
+    if (!proprietaryCandidate) implementation(libs.mediapipe.tasks.text)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

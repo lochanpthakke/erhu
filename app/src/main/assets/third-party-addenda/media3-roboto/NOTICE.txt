@@ -1,0 +1,6 @@
+Roboto Medium numeric subset
+Copyright 2011 Google Inc. All Rights Reserved.
+Distributed by AndroidX Media3 UI 1.5.1 under its Apache-2.0 repository licence.
+Source: https://github.com/androidx/media/blob/76088cd6af7f263aba238b7a48d64bd4f060cb8b/libraries/ui/src/main/res/font/roboto_medium_numbers.ttf
+Exact subset source bytes match the resolved AAR. No changes by Erhu.
+This is not the unidentified font used to render the raster Erhu wordmark.

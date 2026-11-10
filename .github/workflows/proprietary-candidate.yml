@@ -1,0 +1,97 @@
+name: Erhu 1.0.18 proprietary candidate
+
+on:
+  push:
+    branches: [licensing-remediation-stage5-20261110]
+    paths:
+      - '.github/workflows/proprietary-candidate.yml'
+      - 'app/**'
+      - 'core/**'
+      - 'feature/**'
+      - 'third-party/**'
+      - 'scripts/ci/verify_proprietary_candidate.py'
+      - 'tools/package_proprietary_candidate.py'
+      - '*.gradle.kts'
+      - 'gradle/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proprietary-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: true
+      - name: Disposable signing only
+        run: |
+          test ! -e keystore.properties
+          mkdir -p "$HOME/.android"
+          rm -f "$HOME/.android/debug.keystore"
+          keytool -genkeypair -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -keypass android -alias androiddebugkey \
+            -dname 'CN=Erhu Disposable Candidate,O=Android,C=US' \
+            -keyalg RSA -keysize 2048 -validity 30 -noprompt
+          chmod +x gradlew
+      - name: Targeted metadata and candidate policy tests
+        run: |
+          ./gradlew :core:network:testDebugUnitTest \
+            --tests 'com.erhu.erhu.core.network.tagger.*' \
+            --tests '*DistributionNetworkPolicyTest' \
+            -PproprietaryCandidate=true -PtargetAbi=arm64-v8a \
+            --no-configuration-cache --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
+      - name: Android release lint and optimized debug-signed candidate
+        run: |
+          ./gradlew :app:lintVitalRelease :app:assembleRelease \
+            -PproprietaryCandidate=true -PtargetAbi=arm64-v8a \
+            --no-configuration-cache --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -Dorg.gradle.jvmargs="-Xmx3g -Dfile.encoding=UTF-8" --console=plain
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath \
+            -PproprietaryCandidate=true -PtargetAbi=arm64-v8a \
+            --no-configuration-cache --console=plain > candidate-dependencies.txt
+      - name: Matching recipient source and APK verification
+        run: |
+          python3 tools/package_proprietary_candidate.py
+          python3 scripts/ci/verify_proprietary_candidate.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: erhu-1.0.18-debug-signed-candidate-${{ github.run_id }}
+          path: dist/proprietary-candidate/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: erhu-1.0.18-candidate-validation-${{ github.run_id }}
+          path: |
+            core/network/build/test-results/**/TEST-*.xml
+            app/build/reports/lint-results-*
+            app/build/outputs/mapping/release/mapping.txt
+            candidate-dependencies.txt
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Remove disposable signing key
+        if: always()
+        run: rm -f "$HOME/.android/debug.keystore"

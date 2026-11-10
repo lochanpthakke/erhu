@@ -1,0 +1,2316 @@
+{
+  "upstream": "net.jthink:jaudiotagger:3.0.1",
+  "sourceSha256": "d9c79a145944e6bc37579403843c9da84cd81459e42c9877351802ee284f5858",
+  "changes": "Removed tree implementations and dependent MP4 I/O; removed MP4 reader/writer registration from AudioFileIO. Other retained upstream files unchanged.",
+  "removed": [
+    "org/jaudiotagger/utils/tree/MutableTreeNode.java",
+    "org/jaudiotagger/utils/tree/TreeModelEvent.java",
+    "org/jaudiotagger/utils/tree/EventListenerList.java",
+    "org/jaudiotagger/utils/tree/package.html",
+    "org/jaudiotagger/utils/tree/TreeModel.java",
+    "org/jaudiotagger/audio/mp4/Mp4FileWriter.java",
+    "org/jaudiotagger/utils/tree/TreePath.java",
+    "org/jaudiotagger/audio/mp4/Mp4FileReader.java",
+    "org/jaudiotagger/audio/mp4/Mp4InfoReader.java",
+    "org/jaudiotagger/utils/tree/DefaultMutableTreeNode.java",
+    "org/jaudiotagger/audio/mp4/Mp4TagWriter.java",
+    "org/jaudiotagger/utils/tree/TreeModelListener.java",
+    "org/jaudiotagger/utils/tree/TreeNode.java",
+    "org/jaudiotagger/audio/mp4/Mp4AtomTree.java",
+    "org/jaudiotagger/utils/tree/DefaultTreeModel.java"
+  ],
+  "retained": [
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffFileHeader.java",
+      "sha256": "2f6672c00825e0d78ba0ba2a6fee3e74d5624004566712a82818b89bfe99c3c2"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffType.java",
+      "sha256": "d5bab1dd8bce110d53c53d51b92e436665388d5819521610e6034eab7b314182"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/AnnotationChunk.java",
+      "sha256": "7d83e435f74c3319f6a36ef2192c8e8cf7ca407b3ebe875698be4c07373d878b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/NameChunk.java",
+      "sha256": "7a357b96d6c6ab4bec6bcfd5d86a42fb6e5d83e11ba8f716eab1a96ec56a93cd"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/AsfExtendedHeader.java",
+      "sha256": "3df742645cd4a6d2123d13c88227639b2d5aeb6832e883712bfa06562400f12a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ChunkContainerReader.java",
+      "sha256": "566e23696f2801574e697bd5e8da554f1b01b1824212d490444b4e45f761fed8"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/FileHeaderReader.java",
+      "sha256": "eda4a87ca98ed447067f13e1f48399403b2c24d3fd2bef37dff3f6037ceacd90"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/WriteableChunk.java",
+      "sha256": "39a53f713c67273a0dd911352b7867db77a02b8d4cd63550d44680f611f6490d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/AudioFile.java",
+      "sha256": "0fbf521f8a378c33957172633d720df0618be3e7b486c319ac668955627b1fe5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/InvalidBoxHeaderException.java",
+      "sha256": "5ba24da90e4746bb3238f4f32f7191e71186dcb4e51bb0b8b544bd8bdc912f6c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/InvalidChunkException.java",
+      "sha256": "1620d5a7d4e93b1127e4d48991917e199fc144fb2871ae9cd3a41c00b1a00a71"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockData.java",
+      "sha256": "be343da85e6d4276f55163e1e9a962f22ad7eac48eb8884556e9fad3f29d273f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockDataPicture.java",
+      "sha256": "cf84486c220d8677192859398f6071ad18391bb4ca6764040cabb89eab2e8bd8"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/MP3File.java",
+      "sha256": "0c3b58566fbbc8f9dca8a2333257ca3e3346ec2d91d5bb1b4e02195412500fa0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavInfoReader.java",
+      "sha256": "2b44309aea7c4a9c13e4850ae7204cd6acb96481f2aea37766abb8afc67d2724"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/package.html",
+      "sha256": "6b6080a8fd194d6e3de5af69e1b2845962e638732cf8b02602b693cb3714217b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/StringSizeTerminated.java",
+      "sha256": "43db23b12068b0c0fb3e0f57c28c0965eeba37fc7238fea1945a80146b11fef9"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractID3v2Tag.java",
+      "sha256": "e64b28d6a058d533c812c0554146168f19bb7358cc3daf7621c5c87c42a8da83"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/AbstractFrameBodyTextInfo.java",
+      "sha256": "cadcaee0891b310728e07a6c9ab58f1722c4e66c7a8b1591c4c4e691e0e76b4f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyCOMR.java",
+      "sha256": "2ca69bfe042f05353e30238d75afaee88ce170668654b05459ba096aca10ed66"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyETCO.java",
+      "sha256": "576a9f214f700a6240c79fe2522966059a474a8ff293916d36dc166819c3de63"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyMVIN.java",
+      "sha256": "fb88389a275e28f24feb03e0955950aff5a9e4e57ed933dd9c86cf41c3a4d126"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyRBUF.java",
+      "sha256": "5548095b2a29c09ce14d6048162b5e181fbe46543e3bc56a321fe53f45c3308f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodySYTC.java",
+      "sha256": "699c19c8f564a88540364dbdd907922c50546027066930bf340aed5f02256bf8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTALB.java",
+      "sha256": "72c1bd112f32133f4598da17d49aa8e71176effee7adaf0675b0e6cc1a6b6d91"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDLY.java",
+      "sha256": "ab62f38e2e7f1b434e3e5790c8a7455d7ecf83e3ed5c6a5501184b3771a66bb8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTIME.java",
+      "sha256": "894097414a2cbc1151388674b8fe144e0065224d9ad96914c1093c9e95091183"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTMCL.java",
+      "sha256": "f3f329e4cfbaa65f93c4e85c177b84b7f42c37b4bf958d6e52c380151697f90b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTOWN.java",
+      "sha256": "334ad3e14221939df1648eed325869620f724b9319ff8d90cbdd6bcae9db044a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTRCK.java",
+      "sha256": "98a62a7c1fc067384a8b79c10c22da86637935e2d714506601faf190f7140c53"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSOP.java",
+      "sha256": "86d1fa81d1d95eeceff3605569e5391dec40277f93e2f859b70424c0ccc27b28"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyUnsupported.java",
+      "sha256": "2fe24c6f485399692037d012f0d4a3a2915f293c56d1985b4db2e43fede4e621"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWORS.java",
+      "sha256": "b9db09ee17fb42bdbc10cb8c403d5a5cfefdc25c35be7f44f072a0e872190014"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/ID3v23FrameBody.java",
+      "sha256": "4b5212347e9b2c01c9844bbffa91cdb6fa0b2b5b196133b3452b7600d7506b42"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3SyncSafeInteger.java",
+      "sha256": "82be844648345f16c8a174912f7e113ef0712e6df911fd97beefa166097630f2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3Tags.java",
+      "sha256": "bb8bd6697c7070ad8db8c3688548d320ecf13de034a94ccc0c2b81d958085906"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v22FieldKey.java",
+      "sha256": "0e6e33ad532fd56f6bb29ef290cd3e62c5a86adb4a6febe643880dfe2d25fee3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v23PreferredFrameOrderComparator.java",
+      "sha256": "e75f49784ad21a17d6124ba6f3fa1bec23006dc5cfde1facb1ef845010d2a155"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/EventTimingTimestampTypes.java",
+      "sha256": "b434bfa8b42834616759f98918b56c79253b09d935658dfd71ed7b011889ea45"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/V2GenreTypes.java",
+      "sha256": "71205370c816cd7782bc822af966eb7413b427b67535d38f121110b753ef1a5c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/Artwork.java",
+      "sha256": "fbeb1e405a55ffc2a1e787a068bad719c336b9a09a245357336e3d12e32cd309"
+    },
+    {
+      "path": "org/jaudiotagger/tag/KeyNotFoundException.java",
+      "sha256": "c0e1ff7da266c28cc56437c02f40702ad123eee75a8d27989ff7aaa9b0ad94b0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyIND.java",
+      "sha256": "7a95dbf184bcb13c85af29a967a5246170d8011fc90770ad87d1b084c8a01f63"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/Lyrics3v2Field.java",
+      "sha256": "f2f5664af88999a90bbc7521a51f1d953fbd493851c39b8b343097dd4e457762"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/atom/package.html",
+      "sha256": "52e338e64f191e3674d3a05c730ba6ec4678e0b2c8bd13ec11e7942f9d02f37d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4DiscNoField.java",
+      "sha256": "d35a6f7b8ba48e1f1f491e5a906128facc24418fa3dfd216c2d10ce0fe537d5f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/Mp4FieldKey.java",
+      "sha256": "422a4f33926dd826633128d01b94859fd451678e3457d03de1849f8db42d7c65"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/Languages.java",
+      "sha256": "7570ffdbfbbeba9edec8ff2184d4a77d3c3c72ce7733134ed0f68cb515ce74cd"
+    },
+    {
+      "path": "org/jaudiotagger/tag/TagTextField.java",
+      "sha256": "74fce6ab9b0107cbb41b6274302da902e93625a4f0694fb783faad9946de1314"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisCommentCreator.java",
+      "sha256": "8c3cbd5ac9ca8a4a223960e4bffd2523edb3e20d45def19c49a2ff6a89b46165"
+    },
+    {
+      "path": "org/jaudiotagger/tag/wav/WavTag.java",
+      "sha256": "613a41263000ebb8b38bc6dae872071b5a13d16d80e7c88b85b78c279ba52c5d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffInfoReader.java",
+      "sha256": "e4aabdaeb78f005a15433839bbf26d400b8d8668d69d1fcca8f3584caa720e5c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/AiffChunkType.java",
+      "sha256": "700db67638d8964c4fa883365c1ff562ca756ebb5f8e1f3a0d064af49ff48667"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/FormatVersionChunk.java",
+      "sha256": "312ec6d72e15a649ec88659e107b67a4910ae591c3b418e8f6cb9f033b6ab8b4"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/ContainerType.java",
+      "sha256": "8df1ad9e65ce05bd197768147a01e0c994599cc4435bcfe5c8522624e32dd48a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/FileHeader.java",
+      "sha256": "116615c834a487901a75c287b48e56db7554389f35b414b710d23d13f5fdfdf9"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/LanguageList.java",
+      "sha256": "3d814135ac01d1640615435be05f00916a137299fbbf9285cae4413dadfdc11f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/AsfExtHeaderModifier.java",
+      "sha256": "fc3bc773273482daac6328f62ad454a5283963fa90a684bcc45afca7eca69b11"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ChunkRemover.java",
+      "sha256": "a2bbb30e3f9a0d18d386e77f8a97fe5065f2633634975152140bb2a125b39164"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/ModifyVetoException.java",
+      "sha256": "9f46ec2e09737ddac0f64a8c553daea31db5e2a841e8843c0a77154c5b174bc0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/MPEGFrameHeader.java",
+      "sha256": "1cb155aa5194f60d614289aa8a09165d16c9f7b55736a57709ae35187c06f3f7"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavSaveOptions.java",
+      "sha256": "c310a8b2e93a7f44203093787757aee9b8ea3b6f0f8c73a727d40dc3d2634177"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/NumberHashMap.java",
+      "sha256": "4dc7c6824a5f4376e600ac9923bcee4b994408b47fdb75356aec4a38f3afd32a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/StringNullTerminated.java",
+      "sha256": "f7b73389d9af7cf320bef92297082b0b03811291fbb18c756b97518e31bc88c6"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/SynchronisedTempoCodeList.java",
+      "sha256": "35e0f95c52a54c994e605b87d4baaf0cd05c974e60fb0f5d0a6f0ecb4e1908db"
+    },
+    {
+      "path": "org/jaudiotagger/tag/FieldKey.java",
+      "sha256": "a0adac2f1834358798f89ce180aa397dc6ba43b94cb2ac9c534e0008f4bddfec"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractTagFrame.java",
+      "sha256": "3e46840276e961784db38ef08de11019540d17b52f461e4cb9d69f98491659d8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyAENC.java",
+      "sha256": "cf863c797b5a8847e3eda9ac6154d16a73e3b97efc191ff667b4670ac8eba070"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyGRID.java",
+      "sha256": "df86bc5c147a2d8c673dfd3fa52a40b2936336e6c3fd27374c6382a2e40e337a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyOWNE.java",
+      "sha256": "132dda0c77baa6e810ee448c20cdea2710d76b4feb1e5fa2b8b43fc1901fdf0a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyRVAD.java",
+      "sha256": "2ae65fb3927d10fdf23b7729ec39eb292b28f0c676c242068e6e19153d1528cd"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTCMP.java",
+      "sha256": "00b5960fdf0e51c4cf14d535c8417d15d1e13a45ae2adf0948ffc13d5b07e681"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDRC.java",
+      "sha256": "6d9b5982e680e9b699564002a75fdbd2fe71eccf2247ebaf126cadbddbb18a11"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTIT1.java",
+      "sha256": "5f6566cd8385beffb60ef4d9cf4aa2152b3f3fdc1c437289a2a7ff870ecdf41a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTMOO.java",
+      "sha256": "cde400c73c0e22fcedab5661b37f7eba67e0f3029ed88423719b73b8c63431a1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPE2.java",
+      "sha256": "c39099e1852529ebc6c55146297458f7d0a2bf9b59c11e544e83f884ab195077"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTRSN.java",
+      "sha256": "7d45a3c0f3513b4efedec8e5580da164ba9f96471afb7b5aa604656663f652c3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSRC.java",
+      "sha256": "f5fddb8b9662e06914aaa0692eef73fa5d0d117dc04e4472192d06cf2410d053"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyUSLT.java",
+      "sha256": "915ce34784391a60d547695bedc091cc9de1b50596c6e5ffb3c431f40a5524ee"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWPUB.java",
+      "sha256": "16b5755bc4773bf3b1cca2d5080ce254844e77edff0a25e880c9d3bc3dec0a5a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/ID3v2ChapterFrameBody.java",
+      "sha256": "dd2eba935e472b38f749193ce6f06039dfe7f4388ef9ffaf5d7e9738421348e1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3TextEncodingConversion.java",
+      "sha256": "26f2b883c12fe1b14765776ec83e0f0c0e04533cd72ae2a854f3e06c591b9b43"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3Unsynchronization.java",
+      "sha256": "e223ebb53bec8c22b6e3d1610f6d7169f7c561c9e4e542ecc0b338d2044d1832"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v22Frames.java",
+      "sha256": "5bc42d7dc2412b953c300e11eb284eb30ab79ed47755511a60ca353bc6773e7f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v24FieldKey.java",
+      "sha256": "8e66e11bb48cab89ed9a7cf8c8efe8eb414039ca776bd3cd9fa7214ba59fa1f4"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/reference/ID3Rating.java",
+      "sha256": "9b9b5eeabbc957670332733c7953dec5485993f3320e284b170eaf42ac794130"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/MusicianCredits.java",
+      "sha256": "0e8a00e3908667ff38dfdebdf6f48b28b4f14b1bb1fc2ebb258728aa75264088"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/StandardImageHandler.java",
+      "sha256": "af7e677172101a57de68631a6f3930e7d0bbbd822ad32b4bbc0de7d88fe35d6f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/Lyrics3v2.java",
+      "sha256": "6eacd03847a49582f4807b39d2f2957ec3618e3b94a757ee73fb54dbd60ddc75"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4FieldType.java",
+      "sha256": "7443e266b5d89275a351fef53e699558936a2ceed1edc8ddd4179f65b7198610"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagBinaryField.java",
+      "sha256": "c6b6fbdd696c42a6d53de085c722b2b8da5bff95a49da5fefb7bcda037f67be4"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/package.html",
+      "sha256": "3264b950c59e4e2c8debf24863ff44dce112f55499329ad204181ccaef6387cd"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/Mp4NonStandardFieldKey.java",
+      "sha256": "53dfaa8154fb51cc623eedde61399a6d4df95027f28ff94daad4158a99d00d51"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/Mp4Tag.java",
+      "sha256": "ea6a8372eeb922017b510d95c1beb85d465879a1289e2fc75defa8158471d382"
+    },
+    {
+      "path": "org/jaudiotagger/tag/Tag.java",
+      "sha256": "c2c2608fff6a5765717ce3319c7c6e52acccdb15b95f2f6e66ba7057a138dcf7"
+    },
+    {
+      "path": "org/jaudiotagger/test/ExtractID3TagFromFile.java",
+      "sha256": "8550770470a64c9e5614a8c0004c94a36571b95c97aa7bc968806051ebe5f110"
+    },
+    {
+      "path": "org/jaudiotagger/test/package.html",
+      "sha256": "0f4d5bfbe841e31efb8f441b895c1829926fb157881a0095891e3edc267fb564"
+    },
+    {
+      "path": "org/jaudiotagger/utils/EqualsUtil.java",
+      "sha256": "a7ab4bb32beaacb28939ec9c4b884a525e9c72dec944c61c17ab0ee3ecfdf940"
+    },
+    {
+      "path": "org/jaudiotagger/utils/package.html",
+      "sha256": "93900376b184eea6216c5ac235440018c041ec7be630d5161847192ccb73a520"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffAudioHeader.java",
+      "sha256": "0d5f81f2c3b6e9ebc987078b13b30fdf66c0f9c2e9906c67a6470166f1b63746"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/CommentsChunk.java",
+      "sha256": "72ab16101e67200f15b41692be3ce526834740ca9bba2f0e0144244fcf3ef2bf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/AsfFileReader.java",
+      "sha256": "9533379c6fa483592e49daea2da198e4cd5b13dcc4ffee23fbf4568352fb3ee9"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/ChunkContainer.java",
+      "sha256": "7ebdfa17c7600e6db791d52fe94ebff18c8fc67f6d166df4daf1f90a3c8d5a52"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/ContentBranding.java",
+      "sha256": "a0eaa46058a1d4fbc4864b21028e211b2580b7a92275e039f7f717ebecaab461"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/EncodingChunk.java",
+      "sha256": "c087b888d671fbfa3019361a8df5fac7b5125a89fa0bc51f18d87ed66e9061c5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/GUIDFormatException.java",
+      "sha256": "499c202b55ad982490b3c8ff34aa662195356a71c06f28a45a2f6441534ad37c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/MetadataContainer.java",
+      "sha256": "222fbf8bb9184cc65dacc0f105936b9a16347f3f6b5fcb82b2c5b1969a326dd4"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/MetadataContainerFactory.java",
+      "sha256": "7a9468069c8856de01b9161f1850bb704a112408d75c5bf5100e4f50db5726eb"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/package.html",
+      "sha256": "0f42ba658128a3053a2ea79955f9797a23faf1a7d70c823f8dc657b035be9979"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/StreamBitratePropertiesChunk.java",
+      "sha256": "e4b63c4080b748a85563a68b28e568e937f92bbf8477964e9e74ba6a7173c04d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/StreamChunk.java",
+      "sha256": "6225592de0479496892c40eb7e572bbc965739da7e73f22f1a3e2f28078a5752"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/VideoStreamChunk.java",
+      "sha256": "2580aff1542eb18629c14c63d4451cc2d44574a211a7d2a40a0d5d9d8c6f5a89"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/AsfExtHeaderReader.java",
+      "sha256": "bead04b11c2f6e0660eaf256dd5c23acb9bd4843bc85faa79aed98c121299791"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ContentDescriptionReader.java",
+      "sha256": "e94272811c226567dedb56e18d789c45d2325a5b768fb3606f2de095f82db5c9"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/StreamBitratePropertiesReader.java",
+      "sha256": "239ebe81bc0ec132788bf889198abe3b59f0cc81970b5fab849524216df833cd"
+    },
+    {
+      "path": "org/jaudiotagger/audio/AudioFileFilter.java",
+      "sha256": "9d27fb425ca8601d75a36893a5c51cbe335377b81bbe92bbd0f8787ca383c570"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/CmprChunk.java",
+      "sha256": "67c4d6bc2229b89a6b0994d7edf652cb37c3d1c5da52f83f7800516964f8b26c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/CannotWriteException.java",
+      "sha256": "854ac118b6002f7073e2e868025566309076ca1ab8ca154f77dc0057278e81d5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockDataCueSheet.java",
+      "sha256": "df4eaf3da45603f9d934eba54f2d3b3a704bae1a388abf075ed43ccc9d0cc313"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockDataStreamInfo.java",
+      "sha256": "178a56e6285f9726b4999ce70c3838860f8d3f1a948709067feadb494da135cd"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/MP3FileWriter.java",
+      "sha256": "0e664172a547ed74e231042ac908ef7f19bb521de5f0b86df5c9f10724862fa1"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavInfoChunk.java",
+      "sha256": "c555c3b119da97723becdfec4cc541703eeb41c5fbc630713e9aeef926684b2c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavOptions.java",
+      "sha256": "019cda4482bd604d5f58ee664c4783475a6f7535ae5f31d3702cd8d2448e6c9f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/NumberFixedLength.java",
+      "sha256": "e6ce66f2be3259b6f0be9466d7d70fe74d4fd1a0e6f164327d7c0da5741eb9fd"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/StringDate.java",
+      "sha256": "52b2ca5b672afd461af1e92639c140829ee7b73dba81cf6f5dc0cf1f833f50f5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/StringHashMap.java",
+      "sha256": "2b7af20af60bd8fc1d24db4e76622e21748f102d9bedc1ae415949a31cfac7e9"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractID3v2Frame.java",
+      "sha256": "67568c5ea47ce70175cf6807938992884af9b528313a2974a3945b983c369286"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/AbstractFrameBodyPairs.java",
+      "sha256": "7ddd5553512b391b06ea6e4bdd344be08b45b34a6ea14e62d2d6cd189975aeb8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyCOMM.java",
+      "sha256": "3e9f3dc2f6075ce122451021bedce2e2c1e94983eada693d7b6cef100384ed2c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyEQUA.java",
+      "sha256": "9f8356199a95981c2e5a4e1f429be166e896b3ed57dac581e8b0a02b8bf2f079"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyPOPM.java",
+      "sha256": "7b2b75b1246b32badec86ed02451e026299c5744aaa09f49e428434630e548d5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodySIGN.java",
+      "sha256": "99c3771f0f0080b3d374061bf29ad835d2d8161f7f04a3ab1f7dc808b7d896aa"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTCOP.java",
+      "sha256": "6ff15692b9937a777e7aae2b760af53d7b9007df5db646f35e47cd34d02a431f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDTG.java",
+      "sha256": "8d9a8aa7952e7037f68f0d36f667eb711275b47deb63ac2ed7c7b22fa917adfc"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTIT3.java",
+      "sha256": "461885200242420d5a09c159e69d457a76b7dd5b030a57d989da389cb22e2d3c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTOFN.java",
+      "sha256": "415c89a9de771eb94421a69444550d2ab8eb19edb977e65e22baa2fb9230fc09"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPE4.java",
+      "sha256": "a64a0402f3803cb54c6a982c1adcf773c7d48f6dd490ab80da57307e5ae2dc12"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSIZ.java",
+      "sha256": "e4b30518bee48cdd31c8a1871570e403f3c6c937cf604a91416634fdd6e2851e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSST.java",
+      "sha256": "457310a50e34d5bd0a939041acfc91a90df42110a2fa89750cbc1abac963aec3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWCOP.java",
+      "sha256": "16b9c185c20c9683d8dd7df27a4ee9049fa2c51445f3d184b15788829fe86240"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyXSOA.java",
+      "sha256": "565d6f2529043ffed04d2c75355a30cfd0707bf65e49698799f79627f2ba9611"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3Compression.java",
+      "sha256": "e85d6d4c480564ab35f2e30c1c436c0ec9d59f41f6cdf7204439d2d4cd12c60b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v11Tag.java",
+      "sha256": "7aae17e131b11c3e05c45498b929fc2078bfc6d2f6c0c4babd163d32ab99c056"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v22PreferredFrameOrderComparator.java",
+      "sha256": "cc5ee9050e170f90c85ae35d688b7db12282b5b73aedb78fbd8fd7a595a6608f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v24Frame.java",
+      "sha256": "8cfac6ee74903a9986c76a4de8f14c10c3334eba47ba2f47c24b7c3e0b5a6ccb"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/reference/MediaMonkeyPlayerRating.java",
+      "sha256": "f1576247820bc87114280aca805360894dc72341765287db88d8ae8a878b2f97"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/ID3V2ExtendedGenreTypes.java",
+      "sha256": "7e3fc53414f9fce0fc21fb27d0e3f0433551296d2fed45fe947124b08fd29614"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/ReceivedAsTypes.java",
+      "sha256": "a5494af90a222bc4bf9ce8e27a9ac4be8abb8d091a8d97c0bd26d7c79abb490e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/TextEncoding.java",
+      "sha256": "6554d4f62fca79c2fb33cd35f7b160c50556e931bb3963cf7e38b61f938ccae0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/ImageHandler.java",
+      "sha256": "e0ccb1655150c26c2e541ed564d6fe66427b88bf4a2d61aa1ba8e1441d776bf0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/InvalidFrameException.java",
+      "sha256": "d9c6dac57f9acffe9d2d8f9732798eb4a4b5f0e30bab73f065737624c930c5ac"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyEAL.java",
+      "sha256": "9338aaafb913f1d59912cc1a06a2bb1f76047ab76db98c56997ad1aa9f4f724f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyINF.java",
+      "sha256": "dc50bfb6522c3de3b588a061be2a74f56b53a888bc404a432b861116e4b12789"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/package.html",
+      "sha256": "1db74f864c82161cc166499f1c31c8061476064716564b92b670e1f317ab152a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/atom/Mp4DataBox.java",
+      "sha256": "7c0a2f3a701c5adfa2dcdbfa4379bb423b12e7cd0d17cf18a956bdfd7e3489e2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagCoverField.java",
+      "sha256": "3d3abd521a52f9c0c6792bd355398a533ed3b3853125f1b5876ec304da43411c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/Mp4TagFieldSubType.java",
+      "sha256": "6c7517aab455bf9e7f4c1c2077f63fe5542818def0740b0c8641e3a7c87b870d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/package.html",
+      "sha256": "708c6c0df5ab04c7a06dc23b08922869dd3998970894d9a36255678593df0b29"
+    },
+    {
+      "path": "org/jaudiotagger/tag/package.html",
+      "sha256": "96c9206505428ddfa436dd14b98f0e10d0ed5fc2893983f23018e3cad9f14950"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/GenreTypes.java",
+      "sha256": "06552e118400ae885e52daf9791bbf237a87253ea5301db667259e2bffd286ab"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/Tagger.java",
+      "sha256": "42a8e7a6cdc039694269f78598a6284ec3921409d29bb327300a2e20dcc9ed2e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/TagException.java",
+      "sha256": "e62abbf4e4f8f33ecbc72c6df4e14a6e2f20cfc6ce9e4faa85923c5bf77a7006"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisAlbumArtistSaveOptions.java",
+      "sha256": "abc688cf17781b0acfe23242123e0a09d8b823cfef1816dad0841c47d2032f9b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisCommentTag.java",
+      "sha256": "5a9dbba2d0971616e3c20ab90e81e464367ea7cecdd7385152d42e5aa48fe747"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffTagReader.java",
+      "sha256": "d4622bddf3030cf59a6a114751851da8e86fab26d216ade0924d0514fcf380b6"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffUtil.java",
+      "sha256": "30eccaf77ee253071b2636fd071eac381bd2f4fd6f010211e2242e61ce59ba7b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/AiffChunkReader.java",
+      "sha256": "1270e7441c11b555cd8671a62a653d8593cbfb0238542dc0fd70a9704cba8d13"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/AiffChunkSummary.java",
+      "sha256": "69ef846b58d90b6c71f2f6aac28039436a27f0ef714167d3a28207cb0ad3747d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/ApplicationChunk.java",
+      "sha256": "15412c72f9c14d93f6dc4774887659de02143f252365221a2439dc8344ad3cd5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/SoundChunk.java",
+      "sha256": "cd6d6da3cbc5ba1ea1d8d3055eeb16fe4e9a891074c71bf533c2be4f93b3d7eb"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/ExtDouble.java",
+      "sha256": "7d5049d2cb9b48b1598dfa9d1aed5074ef0bbbedf7bdbe4bece8dd8d15cfc208"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/AsfStreamer.java",
+      "sha256": "8af2b9f4ce3a3a5d9106ab523eb2dcc8dba912a9703f117d9d809e80ed30db0b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/EncodingChunkReader.java",
+      "sha256": "9ca826dee6f4c7f86548af6d3889016d74e786acab8fc43fcad45bb0de28a5e2"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/LanguageListReader.java",
+      "sha256": "8096e7692f00e444cdbaadaae8dd988436d175879f2723b92e6bf948f7b60c8c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/package.html",
+      "sha256": "3a1a0f59e6031f0b95b0b1db701e1867d4eea807e0cc3aa867db701e8830c99b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/RandomAccessFileInputstream.java",
+      "sha256": "8d18999bd2ef01ddcc9abe122512573a4c9131562a1bab96724fabce3961045d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/WriteableChunkModifer.java",
+      "sha256": "78b33f9cec8cf411171273b0a2ba5d3c802741b0b2738cb7c15c203418ef8ebf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/AudioFileIO.java",
+      "sha256": "9514a8fbf1563dbbf1c157d112cf03be7baef5f6ec1f7aad312faef1e8a7f77c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/DsdChunk.java",
+      "sha256": "c915f6627db4d450e804854be19a95a956ec7b03c2162c70eeef0e46dec44609"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/FrteChunk.java",
+      "sha256": "c192cd4faf33c4c59f5284345238b01992234fc248d3bc3388c29f40c1e270fd"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/SndChunk.java",
+      "sha256": "482578c8ac6ccfa0bc4ec4ce79fc365048ed43a6d806c4ecd57d18d3a6f8b7bf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/DsfFileReader.java",
+      "sha256": "89a14ca4856a8480f2693b99a90546fef7055dc2d63e26ae399e2c805b092bda"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/CannotReadException.java",
+      "sha256": "369c7830bd4de1bb756ad322943b6968fc1c2fa775f4c69179c292d285a93285"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/NullBoxIdException.java",
+      "sha256": "07c3fced8e7a60a22d4e31d5fe504d7fc6754fef157e12cdf957884be54015f8"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/package.html",
+      "sha256": "a137de9c66f749d350910f56e31ae3e59f664742e1300cb7ea313f9cbd93331a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/UnableToCreateFileException.java",
+      "sha256": "f9bcc66709391f24ab0c4772bc43e4c0fda2a478a7504ef22047f3f02677fbb0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/UnableToModifyFileException.java",
+      "sha256": "82fe14086bc7b7fa131b7a707727d8047feae1fe65f3e51bcc0a3025cbc37d39"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacInfoReader.java",
+      "sha256": "c18827698c13c306867e9019b2eaef31bb57a130bbe252f3f39c28d49b512a03"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacTagWriter.java",
+      "sha256": "e62cc73b63e36e1b3dda1786503195b29857e18d071c6be2ef57e7e8d7cd4e72"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AbstractTagCreator.java",
+      "sha256": "517974bd2c9106103d4cfaa89455f93db4cc14d2aec1a78028404c9e9072c6f5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AudioFileReader2.java",
+      "sha256": "920c78e92b5a600f3f70e7436fcd2870781c61c3969cc122e347404d49113901"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AudioFileWriter2.java",
+      "sha256": "baa7293da579f7bd85640a6c3bf36e47d142d233486d404d261ac5df10869adf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/ModificationHandler.java",
+      "sha256": "1cfb2ec608219efa1feceb47da2a7001d6a36e8d667cc463b0fe047b295928c0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/Utils.java",
+      "sha256": "d4b5f081b75de68ecd0ecc4545f1b0844cd9417b495d342cdf94a3bfbf3af3a5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/ByteArrayMP3AudioHeader.java",
+      "sha256": "a413e8df210baf5b88147da4e1ab576ea2556fbd908ad85d49b14d5d0a2d2e83"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4AlacBox.java",
+      "sha256": "b4c066bc8432c4f60987d1bd91220a3f7be4920f0eb79ca09cdbab1922893e5f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4DrmsBox.java",
+      "sha256": "a18c2a12d1ed0e6e390d26943a19fdb6cb22431b0a39fbdfde136c6d20afa04b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4FtypBox.java",
+      "sha256": "4f38fac91049eb50b53f07fdfe28abdd5239bd12ab1ef372213618992b595aca"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4Mp4aBox.java",
+      "sha256": "7260b71c642d2e097d67fcc9639e97e6594592fe68899091ab9b7a60ccf7bb3a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4StsdBox.java",
+      "sha256": "4d7984c357db84f9a7446081e34f60dffffbb3bcac13b3177dff1f283ce34a59"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/Mp4AudioHeader.java",
+      "sha256": "4f357406b7d24713557a61685842784a084221ce170ca33db7dd5b680376a95f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/package.html",
+      "sha256": "a4e71adef147be9b5286c95d2e9c66740cd7ba4fe4324f3f99e42e501c30e80b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/OggFileReader.java",
+      "sha256": "ba606918a08e7df31a8cd8be257d7028aa20d39f5a7bdcb9248aff506937a06d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/package.html",
+      "sha256": "49afc4e83553c9ff7ff533f58c43e50983caaadd0b50d46490a70cff576e5058"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/OggInfoReader.java",
+      "sha256": "8f499d891eb94727886d3e1202c65c9849411705b2a063fd174fcd5dd475ab94"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/VorbisIdentificationHeader.java",
+      "sha256": "7b0f05a80280ad63800158f813fb7872105b99d9ce639aeea78f206783121fd7"
+    },
+    {
+      "path": "org/jaudiotagger/audio/SupportedFileFormat.java",
+      "sha256": "6437fbccbe3c618e9c41f9d1d415a6c33b7e147dc62c3486654545fc3cc4be5e"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavId3Chunk.java",
+      "sha256": "fba6f648cbfd90cee5e8706a9557eb4d949617972f624066f83ce2d751316577"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavCleaner.java",
+      "sha256": "eca182076d19cb288219c3420c47596849746d74048f0ab30011054a12ef316d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavSubFormat.java",
+      "sha256": "61887164ac1c82d49912f2f5a393d58b422fc1062d9e5b45ff2ae666869c0556"
+    },
+    {
+      "path": "org/jaudiotagger/logging/AbstractTagDisplayFormatter.java",
+      "sha256": "a65937586a45ba440a8bf071953707e0000b56e7e44c1884a0da1376a65e8830"
+    },
+    {
+      "path": "org/jaudiotagger/logging/Hex.java",
+      "sha256": "88bbc9e75d97d364073c92380e7ed037d891eeb1a930e1e4c776f8c3f492b1ee"
+    },
+    {
+      "path": "org/jaudiotagger/logging/package.html",
+      "sha256": "ef121aa43e9d3c6b2aae9194c6c147d3e5eca239cc83f740ca01a06ac8fb9412"
+    },
+    {
+      "path": "org/jaudiotagger/logging/PlainTextTagDisplayFormatter.java",
+      "sha256": "2a72724624beb2902b1aef41f84bd62942dc3632568cea4fed6f0bace639ab0b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/aiff/AiffTag.java",
+      "sha256": "8ad599623213fca13ad7eb8b9acc5b6193ec4ce5f95d247325624771e5dd017f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AsfTagCoverField.java",
+      "sha256": "c0de081f579f11b5ee4dd0c54a09ec8bfedcb04772ec5aa46203532976258ab6"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/package.html",
+      "sha256": "9708fcc831d873a6b92600174e6d67b1d943318a5fb1a4cd0e5607f6eb92c195"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/AbstractIntStringValuePair.java",
+      "sha256": "6b16e065cf444a5c95c29d52a879e28d6c4c54ae375961abbc7addb084879462"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/AbstractStringStringValuePair.java",
+      "sha256": "d1329879ac681156ecbf6aaa455d5c08bab0d503e9970d9fc127c054e193eb2c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/BooleanByte.java",
+      "sha256": "b83cea7fc91be0e8c1a120a7da4b10b1bb8a4d3763f914bb3f5bac7c99a9689d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/EventTimingCode.java",
+      "sha256": "e5bbd58639f164ac6d07d0a27b1c26c7258d908198e4c889d823fc0f3c676c4c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/Lyrics3TimeStamp.java",
+      "sha256": "42f4c92025287162813f410324c9af2ce2d152cd1bfe434633586bc56e1d90cb"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/PartOfSet.java",
+      "sha256": "c36a2e7c6396cd749e9a92d128fb5dad13cbb583fba265b4a7b62326952a895e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/TCONString.java",
+      "sha256": "643e695f35d0a547252c965778ec8b45e8288ab1f3a2deb073d19d38497795bb"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractID3Tag.java",
+      "sha256": "de1bc1afad5ce0428bda184fa4053fb69cfacc89696084c051d9ef110b9f8379"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AggregatedFrame.java",
+      "sha256": "6994ae168ffff39ba6c18a2f4dfdbcd93fd15495e404c53d054bc31a920b6a83"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyASPI.java",
+      "sha256": "ca8b8ffe1f474aacb6e841dd3ad16ee7b586c480966c890d9755292d394b8517"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyEncrypted.java",
+      "sha256": "da3690bddbaa1b4b4b0e15396ffbb59a054b22d8766095c524d513e28f80221a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyPIC.java",
+      "sha256": "b3fd60a68e96cf6a720c9b841f7bdcdc54db6225c37601aea0a22369e9522cd0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodySEEK.java",
+      "sha256": "63daef05c8ebd0b7d01bbdda6ce380e29b41b73c06e473cf6b8b24c9894208c2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTCON.java",
+      "sha256": "d761b516c611633e12f4b2a58fed49757ad16a5328f3b72ee9dd906e919a2b47"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTENC.java",
+      "sha256": "bf2dc843994770d9a9d5a78920e704918d678c6f51fc4b6c8716485ed00ac04e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTKEY.java",
+      "sha256": "ec40fd5987e192f65e2438af238588de19dc6da424afaa62515599aab13de839"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTOLY.java",
+      "sha256": "70d56487e241287ebb14020884cdeef31d905829b060ce91b4c3e25cdd7ef7a5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPOS.java",
+      "sha256": "d523b51d3e7b3fa8938cffda1b37d02870a57c35e712c771967b5370ab41fb6b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSO2.java",
+      "sha256": "695dfd75e0e852fbbb892af87b67f0f900b0ca372d3dbad50e631ff0f79ac459"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTXXX.java",
+      "sha256": "3b6d00f523579f897e56bb1377f1d17d4f4c22a919836679356bcb85f25bf7bb"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWOAF.java",
+      "sha256": "6d4645d135ffd7a4728f47748c2e6c8b9f5090068cb38182b44b76eda5c4c7ab"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyXSOP.java",
+      "sha256": "31d360d54dd449e7347a0e80cac402c225b76ea87fc35fe58e6beeecd2e08cc5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/Id3FieldType.java",
+      "sha256": "c459dcf9bf5670c2ece73433f53d6c6a01a14446fe5b2bb4ce388a7ea7f09dfd"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v1FieldKey.java",
+      "sha256": "f1605d0b336258862888f7e6bf54c4b2da96421c60d23b8525331fd2753c2613"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v22Tag.java",
+      "sha256": "d03a6cef80339c4ebe487df29156c5dd8a4fcdfddc11162cab04a9977571eba2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v24Frames.java",
+      "sha256": "af49b2bd1609bb6350281623dc690b53f0da03706465756b51fb43b83f4871c7"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/reference/MediaPlayerRating.java",
+      "sha256": "9b1f9a1abc5c442e4b402be26f2fe298ef530661aaa7e530db0b594471455bb7"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/ImageFormats.java",
+      "sha256": "027ecbd9fad02e9bce1c4f8a92285ffee769b6dabbf048ffaa053840ad310ad3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/ImageHandlingFactory.java",
+      "sha256": "6cc628f437bda4ca389af981bce14a17c58ef1af8ae6fc199d53c6a5806f8579"
+    },
+    {
+      "path": "org/jaudiotagger/tag/InvalidTagException.java",
+      "sha256": "30100ac647e0d0268e58a117f34b643efb324d544b911a1a7f5cd4af9ad85183"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyAUT.java",
+      "sha256": "d19d597393272ece5b21d988e9c255a1faa30b0cb5c54249e07a96fc4b485bed"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyLYR.java",
+      "sha256": "33a3e5dc2f79715bf263558c077d6cd87941a94754578c74ae8273f2624d0f54"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagTextField.java",
+      "sha256": "2ce57ba240b2b34063c94332617b316979c0a606a9624f66af427b8626af67bb"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/Mp4TagField.java",
+      "sha256": "2a0f5aadba41afcd5836b6751f834e8a19fa0014fe2b6509ae61109c555ae8f3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/package.html",
+      "sha256": "b204dc62c39e9bbc014562b34344aed7540955701babbc969c1ac8da3b223628"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/PictureTypes.java",
+      "sha256": "072fc3731c846113cdecf4650c179d2ad2aafd81c93dd1565879974f31119660"
+    },
+    {
+      "path": "org/jaudiotagger/tag/TagField.java",
+      "sha256": "e0b709932727f0bd72c7b62ebcf6305080092cc6fa77534e9773fb5565170578"
+    },
+    {
+      "path": "org/jaudiotagger/tag/wav/WavInfoTag.java",
+      "sha256": "9fe23a0cb57439d1c692d964d92630755b24022a0fc1e94b1f3b9032f40db9d2"
+    },
+    {
+      "path": "org/jaudiotagger/utils/ShiftData.java",
+      "sha256": "76352bf338fb7b40b7ef520be2d56317069c9b996053f5193d9ee93484925fc7"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffTagWriter.java",
+      "sha256": "9dc578d8fad0271c51ac9068ebbc1ad4782d8755913754ec3ba6613cda8433cf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/CommonChunk.java",
+      "sha256": "0d4ef772491807b2e9530fcdd622fa461ff616e92cf2a0e0820f427e1a75d87a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/AsfHeader.java",
+      "sha256": "83aa7b72036c6b245d596fd67722133cc254a6bb8851543e8cedabbabbadd43d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ChunkHeaderReader.java",
+      "sha256": "eab0b49efe567a209a24e2eb30ed282666962c44d12abb57a60d7b385989943f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/CountingInputStream.java",
+      "sha256": "01893f73fdb29bbd6c8dd00e9bbfe28d1fac551c2bb97ac34b82e1dd69f32a1b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/util/ChunkPositionComparator.java",
+      "sha256": "3453d9beb213122ac849b5c98ef261e9fa3a39a7c9793735dbe731414b944d39"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/ChnlChunk.java",
+      "sha256": "9b5c5b8bfc1442a953a3e99ab5a010a4563347b43feb5f71d9dfcee178cb7cd4"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/DffFileReader.java",
+      "sha256": "130f4e425e49bb063ce18e371ed2f154b9e4e4c896a90b984528f56b5c689f48"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/DitiChunk.java",
+      "sha256": "a78dc4b3108209381b0b3f027e99f1bf020f87942fcb0beecbe9488bc4b2a9bf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/EndChunk.java",
+      "sha256": "aa85933e924c66e8888abf5688ad43b73809462cfd58b520300c31a7005ea03a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/Dsf.java",
+      "sha256": "ca194da2df129c843b1d2f07eaba7d8cab8e299783c2eb484b11509adceb9738"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/FmtChunk.java",
+      "sha256": "5bfe47cb776bab962e228cfbd88bd1a30e3232e1fe4585bac5ff8e5c1b915025"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/NoReadPermissionsException.java",
+      "sha256": "2679d2994d5933ea3b591d4550628489e2f3b3244b9810ab28530d8161d108ee"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/UnableToRenameFileException.java",
+      "sha256": "4b40c64e0fe12435c74a27e34f680aa505632deab66ea7254490bba5698488ca"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacFileReader.java",
+      "sha256": "7afe41df429a947eb489053ad796578c38ad8767b1a189e9280083a0dfb7aa4b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacTagCreator.java",
+      "sha256": "382060dec03b1145832acfd6e46464326c1db2b46a65b7f21654b3a749b0d8cb"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockDataSeekTable.java",
+      "sha256": "4f939627cb847a506597e686f250ab75c6d3f90770c668575a952b3e4296a5ee"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AudioFileModificationAdapter.java",
+      "sha256": "cc110cbaf0156efa63adb2c8f9dd85d410c5e725f0f036e2b0eed1a0312dced8"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AudioFileWriter.java",
+      "sha256": "7c1fad782b9c69931c995e93d780265a82497843b60b549a718812c3e7882a81"
+    },
+    {
+      "path": "org/jaudiotagger/audio/iff/BadChunkSummary.java",
+      "sha256": "bcbeb046e0fb8b1c28ce7c1da0f70936f08869032ff30bea4bb7a4e4151acc98"
+    },
+    {
+      "path": "org/jaudiotagger/audio/iff/ChunkSummary.java",
+      "sha256": "1c72404be5f23790bd564dacc4bea06de45d50c2a0af3162e6efeb10ca95309b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/package.html",
+      "sha256": "d84f2e5fc6ec24bd5636dda4ca9f143f359578251923fdfa26644269b06fffaa"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/VbriFrame.java",
+      "sha256": "eb68d3ef8e8c78fa837d4eadc06a0d2431edcde022f9020ca6b180bab5aeaa37"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4FreeBox.java",
+      "sha256": "6b67e865bd64a07d0837a64e1ff3fe28225a70eea4dba1d51d1f07bbd13c683b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4MetaBox.java",
+      "sha256": "c981e375b041bfba244a9a672bc5c320cec89e7e22f3e06cd1cd7dde72dd739d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4StcoBox.java",
+      "sha256": "7f0d917fb08c61dcbc5dc0f9474de0fa75c52f7bd4e6e2d8dc60f14b0def02c2"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/OggVorbisCommentTagCreator.java",
+      "sha256": "de8c00800db10305f39ebb50259e009a3ea16ed135af0314f5f2e1b615aa09fb"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/OggCRCFactory.java",
+      "sha256": "f4a1b879781ac62e536998f658c15df4ca2e7ce16b8fc09cf92342811b5d605a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/OggPageHeader.java",
+      "sha256": "6e1332234a6c3b0e42c09297b85c69e67e209b7009445b7e1386af8df9db5db9"
+    },
+    {
+      "path": "org/jaudiotagger/audio/package.html",
+      "sha256": "4cf876687c75eda510be1b665c816d6db4de006d8e8c6dfa6604b41348cbb298"
+    },
+    {
+      "path": "org/jaudiotagger/audio/real/RealChunk.java",
+      "sha256": "e7948f88c2b9254b2710154803ec50508c7f7935011990b96e8deae095be567a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavChunkSummary.java",
+      "sha256": "cdc09829d8b0c49f0b61ce869d5fd4b95ff3fc38763b2a4379539a45710bb0fa"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavListChunk.java",
+      "sha256": "85e75ae937a3c796d566d8f5d44a5edab6133b3d4eaf0ed2b565143174cb4e48"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavFileWriter.java",
+      "sha256": "370fa20c5c8e3852e4213ccdb4e899e9ae0c33d146308bcc3c8730724666b23f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavTagWriter.java",
+      "sha256": "12c7bee27b5df25785a91751e1e79422312cb1b51f8b97996f10175971cd1bb1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AsfFieldKey.java",
+      "sha256": "b4a920bea37ef2de8e710ab3dcf772282f9f6973bb94bb78b73c622a832778ef"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AsfTagTextField.java",
+      "sha256": "d6f06b3efd935e84fd1015c77271edd6452246595793408905375c7dcaa79b5f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/AbstractString.java",
+      "sha256": "eb51933c587f47b0f3b48fd6c6ee8d0d016fe81188315d714aa1b32d51153928"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/BooleanString.java",
+      "sha256": "a1d5f6b1103e62f11cf3da8ac613c8fe0999a4f76f06896c30e4e2daa18e1af9"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/EventTimingCodeList.java",
+      "sha256": "5f72124d8a3b9386b5bb44cad95fa68498745e9c34a2b0ad4378808d28842725"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/Lyrics3Image.java",
+      "sha256": "6d770f82678dcd086b73d75dcd2cbf0f9ffc127000b2dd7f12a3a6c791da81e8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/Pair.java",
+      "sha256": "6bab0b02f03ebbdd300f3ede0c48f0c825bc0beb9fca13117ddc2b3bf8473e8b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/SynchronisedTempoCode.java",
+      "sha256": "c79e4a95c2bbd18c8e664628d9e8f97ce860a8d869c8622ee085e8f382a46ae8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/flac/FlacTag.java",
+      "sha256": "798b6208118f952cdf506478eb46ef821c8ef81119d12bfbbe85556e68bdd5cf"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractTagFrameBody.java",
+      "sha256": "1708c500f7579effb877ca4a8ae8eb54d143a712fc8c4bff41f16deb7d7c8986"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/AbstractID3v2FrameBody.java",
+      "sha256": "6ff636803dd540846d665ffa082f2e334f68b8517bb86fcc962dd5a83ea0f414"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyCTOC.java",
+      "sha256": "8caed5d4d768df1497f1e1b15f706858f5e7e3368dfd9c49deb8cd91579b5015"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyDeprecated.java",
+      "sha256": "f6031568de64753e0316ac7ebde5c9505ea86b8feb410f8cffd677688568d8e0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyGRP1.java",
+      "sha256": "0ca7b18f03be9e73e586893198160800c7f17111674da0ce818788487a364c8e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyPCNT.java",
+      "sha256": "3d3b4d67eede02434f8a5e94239d4d2960a95e5bd386025f96486f48ff0c154e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyRVRB.java",
+      "sha256": "97e399ccb6d770f9498131b81acc0088eaedce5dce199af3e6953afbd0b64648"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTCOM.java",
+      "sha256": "b9e4d99bd091f2b9607ca6b6370d0b65fae821cab883bca3ef3a27fa201bdfd1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDRL.java",
+      "sha256": "3f1b6a10951a97ebaa6b28d31a1915729ce3106c5561928caa9df845650d5ef4"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTIT2.java",
+      "sha256": "816592491eed5d0e2d01271229a2c3e6241ff6195f7fe6d8ac0d69323a49c75c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTOAL.java",
+      "sha256": "8df49de7ce6a438a5aba48cc761076ef5c627eb4eb2bc2906ddd12729699f6a2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPE3.java",
+      "sha256": "8aa622b6dd60fb1d54fddaf9423e64f2e7fd4431cabd865f4971bc22ed7ed760"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTRSO.java",
+      "sha256": "ca43bfd1beb6ec723c162481c73f0f3de9156e023c3898b266edcd3073ed83c0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSSE.java",
+      "sha256": "7550770e37fc2d307f87ae04576882cfd1d2e1b9d1e05af7f56ed32a303509e4"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWCOM.java",
+      "sha256": "123e8c004da3a092f9c9b4c2857af3e8ab940433951803e3c29e6e3732cceef0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWXXX.java",
+      "sha256": "b7b1e541cfeca2c7427b8716451b923990393b4d0bff3994c8e9558524f306b2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/package.html",
+      "sha256": "0bcc8631639bcba53fc6420c3d72a5a172e52e1e1e9d3951ee0fd56c43dd0189"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v22Frame.java",
+      "sha256": "1fdc40b617e548ec9a85d1e5727e10b397154ff46ae3c39e8f510ccde6fe4f1c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v23Tag.java",
+      "sha256": "8dd996881bd76d67968c82e6e61d153ac6623f1e721a0855857bae4e3d403d9e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/reference/ITunesRating.java",
+      "sha256": "6e1c18352d9dcf29db0eb795ae8096b477ac06943f8882e703c0a37911d71f27"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/package.html",
+      "sha256": "6359c11f090a9323791669baaf49d17e1db4e5e47abdb3bcfd972aac4e0dbeea"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/StandardIPLSKey.java",
+      "sha256": "757bf12a086bfaac610b80ada6af62bf5430b3db73d4ea72698e79bb455f836f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/ArtworkFactory.java",
+      "sha256": "6ffe830352881cfbaddbbeed081a56e3f20810307574e32b4881cb6cbf172522"
+    },
+    {
+      "path": "org/jaudiotagger/tag/InvalidFrameIdentifierException.java",
+      "sha256": "d6445ff31eaa99780a05b49beca341b0124b5258c30713c159ab72015856b657"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyIMG.java",
+      "sha256": "1db5114673ac692911c70c69ab583afbf6521b580fbb3f9629410100e36d52e8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/atom/Mp4ContentTypeValue.java",
+      "sha256": "4d8d918f56bc33e7d8b1cf90cb7d71292b3aa9a92fc050daf63c904fdcb2e553"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/atom/Mp4MeanBox.java",
+      "sha256": "94763e071ab805b88c33fa1abc9e6addb54d5bfb15741ff8129544dc9492963c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagRawBinaryField.java",
+      "sha256": "f9c814a2af5048c31c61057e54e95d194367fbc55acae545a9401607d715c7da"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagTextNumberField.java",
+      "sha256": "843275906217327854f5179933bc9aaf83ebb9522aef34f58d202e4d9f5405a1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/Mp4TagCreator.java",
+      "sha256": "0ef05f18e1c88f7b509c8aaf0defcb615083b7a6d5a3466bb95f19615e7856cf"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/PerformerHelper.java",
+      "sha256": "6e2ebfaefaceea8c073546333bc658ac5e746dd79c06baa249f268fae0a102d3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/TagOptionSingleton.java",
+      "sha256": "4659fbd788e51577b547d423667469fea12390ae07425fc193dfb8b7ae196770"
+    },
+    {
+      "path": "org/jaudiotagger/test/MergeID3AndMP3Files.java",
+      "sha256": "2556815bba1f72217ac1620d5d044723228012ce99da9a4c8b4688d340774b64"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffFileWriter.java",
+      "sha256": "4eb54d62e09a1f9a768f59a5b4564cc59a66ad3e152ef27c15ef71ef7fc0f196"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/AuthorChunk.java",
+      "sha256": "9bc08ebb333a6f1a18d55db122d05b869b76e4fe02136c534e0164d0cc481ddf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/TextChunk.java",
+      "sha256": "fadd79250a7a4e584b843643a763603f95f761026acb43faec0a8fdbc0fa2702"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/AsfFileWriter.java",
+      "sha256": "fa548ea65c79a7e173849bbe63aeaa5cf4bdd45054b274c92fc2f986ccf5097a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/AudioStreamChunk.java",
+      "sha256": "f5cce42e1d1a971339570c1f6989e17e3b0de1326303ef8cfed19522d4068d09"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ChunkModifier.java",
+      "sha256": "f465e61808b452caadc612678fa5971b38764077f528dbb121dcb014ba0df304"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ContentBrandingReader.java",
+      "sha256": "6bfade128e1e8cb23fdbcef886889826f74580a3c2d3acc0134a11ad81732c79"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/package.html",
+      "sha256": "89229a58a359901ef5b2b08c5b99505c8f782cb9dc9245c188e8b1daa5980316"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/BaseChunk.java",
+      "sha256": "68b500cff6e933b5efb232f1a64d7c87ebeb97d370f3d0eabd66b494f2400651"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/DstChunk.java",
+      "sha256": "45c631e7f156181e3e289644a3ce877ad231dfd98a240060074c8b3c8fa2e17f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/FsChunk.java",
+      "sha256": "fb1726410e5bb5a4221a513e015096a029edfab5606442013d24423d792a24ca"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/DsdChunk.java",
+      "sha256": "437f3bb87b10cf508fe69804308e352e4d16ec3a13a8201e303d68f142f6dc53"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/DsfFileWriter.java",
+      "sha256": "26f512f879bb0fa41fb418024ecaa7f65089ab3b1f517ebd089c35fd925274bb"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/InvalidAudioFrameException.java",
+      "sha256": "af8c93ee2183365aa68103454ce578970e450c301f860f20c513a09b935a70a2"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockDataPadding.java",
+      "sha256": "b9a9809b616afcfdd4e9e640430d01403f6e0ae582635f7f571fcfaf69469ede"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/package.html",
+      "sha256": "92f1d0d5149daa98b2a89d71a3901abd2572a26a545e411bc3d90846cb5c6211"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/package.html",
+      "sha256": "04e91ff7e380935d716f9eb92b177df87cbabdaaff8985329b45f22fbfdbe132"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AbstractTag.java",
+      "sha256": "80fedc0a5c89e94ecd0fcfacd7872be8b9b9b41da077c225dfdafe6b8de4be4d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AudioFileReader.java",
+      "sha256": "00cd231f0815f0c06a9cb07b1352cd2e7ee2e7105f50d80824e2e2b1ff7f08f7"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/GenericTag.java",
+      "sha256": "22108bce64d066484f00dfc56827c5a2e5cf594c3e2fd7875b4178a54f81d244"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/TagWriter.java",
+      "sha256": "75eaa3b7c7a429406499f7ab760756502f16cbfc347aefa22d58af805f3010b6"
+    },
+    {
+      "path": "org/jaudiotagger/audio/iff/ChunkHeader.java",
+      "sha256": "e59ac6ad2f646c10a5c65ced3e3a1742fe8d37dd6c04b44beb3bbb8664318f53"
+    },
+    {
+      "path": "org/jaudiotagger/audio/iff/PaddingChunkSummary.java",
+      "sha256": "ff241a8818ffa4b8b5a21a5af60386dff253693acf2ce327735ca1d8261086dc"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/LameFrame.java",
+      "sha256": "38bed674cb4db5e97627efd355d44cfe86a288d3ec4ea9427e49aaf48c407d20"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/XingFrame.java",
+      "sha256": "38f06c99454a6da8ad91de07aeb912e10bf25bfa566922b4c16863e764faa71c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4EsdsBox.java",
+      "sha256": "5b35c7f5407dfc29e4112c7b9cbe838c17a6937452b1812a3a9649265e37f67e"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4MdhdBox.java",
+      "sha256": "7b6311c37bca8a7d2d4b0f5c55a05b31210822c7965a82afa5cfdc93180c7a6b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4MvhdBox.java",
+      "sha256": "a8850d97341ebe74a414077d6e8fbd0e602458e49c1de6754784e10fd0c0dbe6"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/package.html",
+      "sha256": "209c79b07593b2a063e35a9ac997ae2536885a705cc5c5eadbb35e91c44b72ae"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/Mp4AtomIdentifier.java",
+      "sha256": "1996a5cf4d4a9766be5d6a95b7c5ae3d13893905852621d75a4f3e53a1beaa37"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/OggVorbisTagReader.java",
+      "sha256": "8ebf900f82aac657c3735e6aca783600d6030766fec62a36bb1d70f3e820b856"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/package.html",
+      "sha256": "fdb30a626deb8aaeb3739b495010adf4c209adeeb2afaaf656730dd666e9391d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/VorbisHeader.java",
+      "sha256": "6ca55b8336f51f7363332fbd5566ccc60a854944d7a8cc876dca8ab9cf099e9e"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/VorbisSetupHeader.java",
+      "sha256": "99eac029d61839b174fab4cf7249f37eb085a789fb6982af6acd23f8d4ebf118"
+    },
+    {
+      "path": "org/jaudiotagger/audio/real/RealTag.java",
+      "sha256": "56e1bbd282a4e240551b4a9dd91117855b628af66dbbf2e95ba09d5d6ae61001"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavFactChunk.java",
+      "sha256": "2ca8da671906dbdfad96af8769c6933b80983519ef55e68bec9fdecc872bd550"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavInfoIdentifier.java",
+      "sha256": "b89e33a2346875c731480cf1a50c1bbe390aac9fc29273c77b3837e52251bc54"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavFileReader.java",
+      "sha256": "03e67f5596dd35040743bac8e16d388c85fcc66d1b57612789fec119f521505f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavTagReader.java",
+      "sha256": "04b609fb9407df435483e975d167921471ec1bee437ad740dcca9fae9c813424"
+    },
+    {
+      "path": "org/jaudiotagger/logging/FileSystemMessage.java",
+      "sha256": "97a528f0dfdf72bde81d068fb04597bd7f16a60f453ee89273bb0a087ed18fed"
+    },
+    {
+      "path": "org/jaudiotagger/logging/LogFormatter.java",
+      "sha256": "a51a4916d492e942f4b7aedbfe779578b6b2342797890082920acace4ecd2324"
+    },
+    {
+      "path": "org/jaudiotagger/package.html",
+      "sha256": "d8afa94ee9ff7ba6362585f947c2df5ac4b9af9dff0e77a50eac536c48c77fbc"
+    },
+    {
+      "path": "org/jaudiotagger/tag/aiff/AiffTagFieldKey.java",
+      "sha256": "27bb85a6d92b235afec1a0691f3371789231ea5023753119da1d258a2954f73d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AbstractAsfTagImageField.java",
+      "sha256": "f6ab7d45aed55bc2acee5c236edb9e061678b07d7f596ea8773cc24e75c05393"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AsfTagBannerField.java",
+      "sha256": "6a085394a6f198107a042af069e48412e6740b14d940341e985b511184dfc700"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AsfTagField.java",
+      "sha256": "5fac36c72c9e5cdcaf9bd3b356d05a478d2cc36bd3d57cec0c3ff1de3be8d75d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/AbstractDataType.java",
+      "sha256": "9ee76a87fc486164accb337e206c3056ff55c1514443820d10f73afc0e44f067"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/AbstractValuePair.java",
+      "sha256": "71dd20e7a3c644334dac805f778799c5856051d93a6a73b75fa7428703ccef9b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/DataTypes.java",
+      "sha256": "3e7f976fc1f2a6c9d2c194065c8a979620295e5b8ef05add9b680a4ce37c99a8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/ID3v2LyricLine.java",
+      "sha256": "869b150d5b323e914f9342c44c5a7e08f632219663ed1975dca79db7d43c435c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/MultipleTextEncodedStringNullTerminated.java",
+      "sha256": "97283f08415ad4dd6a872188f8ca0676d949098c151dbd9dcd8fa9bb7d4862c8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/StringDateTime.java",
+      "sha256": "1d06adfed5e0fe337b5b33b3e3d76b4832e27e436c460ac02dd06a8850a2b9a2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/TextEncodedStringNullTerminated.java",
+      "sha256": "77f819328735bd9e00a1c93aee52084173e20ba80753e483ee3c6d1f7c8497e2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractID3v1Tag.java",
+      "sha256": "1f4f52e319a9eda00553c1d2a6379d84c5c39a60b0d5ff3fe327e65ce582283a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/AbstractFrameBodyNumberTotal.java",
+      "sha256": "902e168724c2e3c75e8c016141d9757e74bb010b3b4b25b6b4cf170300e795ed"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyCHAP.java",
+      "sha256": "18b5cc7c8a47c02333a2e94ea64fe7b453798dbf0054dbacf45700f5486748ba"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyEQU2.java",
+      "sha256": "34ccae820de0120cfe2533edc7eb74976e2c972970a75c8eaf601dc08876ceb7"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyMLLT.java",
+      "sha256": "8520076339d83903c8b715f46742e2ff9e6198db829e9cde203e80eefbee6bea"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyPRIV.java",
+      "sha256": "12d233de815a96b132b3659325a8ced7cf828a5baf05cf1c9b3f3ec0528f5553"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDEN.java",
+      "sha256": "efb0ade086dd45046f399a083503d6f00396d20b81bdc9c8481614a24e60e01b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTFLT.java",
+      "sha256": "07189de3dee58747cb1f6cd085c64d8d105ecf83050217b870eb8947747ed39c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTLEN.java",
+      "sha256": "8465a3a7ae21d6f395896285846c20107e684d5507070b0f2cb7e41c750c5b0d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTORY.java",
+      "sha256": "233b64b8c4fe104cd0eab6fb2939e43ddca418657ac1a37d87a6d2700d475de9"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPUB.java",
+      "sha256": "038c5085b6f3dc7eef51dcb8d8e07b0f7a2ab760f8538cef46e9669612b5cfca"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSOC.java",
+      "sha256": "deb2efe4c060d6306f50645102b1b05b1e8fb3b5fd49030856486f47eaa4dbe5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyUFID.java",
+      "sha256": "efe16eb51e9d59f3b59d085aa590afe1a60258aebe733b439f3c537061fb6c25"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyXSOT.java",
+      "sha256": "422e2d431821db600a2e0522474882d201e18d87405f69fc64e88f9e5201ab46"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3Frames.java",
+      "sha256": "c68bec639a471f41452e9871c01ed1f1b0ff1d44f845312bfc2d9080a2439f6d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v1Iterator.java",
+      "sha256": "c44a909a9eae3f1a06eb8218767ea83bbf884e8d5fc4b99cc0c62f7ed89e5395"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v1Tag.java",
+      "sha256": "e21eec4641fb2aee8bdd3a6b8cb5fb894a0d758a1e2d77c71f9a02428c8143b5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v23Frames.java",
+      "sha256": "e9c2782ea9a83685d56f44ac26befd1e60654867187cddea834eb612419cbe72"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v2ChapterFrames.java",
+      "sha256": "ddc6c9c0b51d55e5bc17ac924db20c7008e7576d943c425cf94b8a295e8f30da"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/TyerTdatAggregatedFrame.java",
+      "sha256": "c0106ff428194e1020d690bb1c1214421a5328bd245e33427aad7311d3ee536a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/InterpolationTypes.java",
+      "sha256": "befc22fb2b1c97744e74648f73f7732238239a5188536f7c30cf1b6a96ecfb4d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/SynchronisedLyricsContentType.java",
+      "sha256": "b5158db70bba4dddabc6437c63c85b51510d715b43b37bf258393b581323830c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/package.html",
+      "sha256": "2a39a3bde9f0e06236521b3862efbc7a475b708de888451ed22492082484895e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/InvalidDataTypeException.java",
+      "sha256": "056af95c6621bd2482a1d28ae5e4c3a7add049f5fa3cc1e0982b2d195ef7f852"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/AbstractLyrics3.java",
+      "sha256": "46951804d145f38c201c24c193d1a7c1d892d3e2c7f6e0c95602b880e0babb2c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyETT.java",
+      "sha256": "f788175c9f5a39cd7424580cf3f511481c68e5c0583499fa6d3f90564057057a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyUnsupported.java",
+      "sha256": "139f7afe3e273a3fb453d873180518dd5464cae99e99d9f6d4f6b0ab7ed4a2bc"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/atom/Mp4NameBox.java",
+      "sha256": "27b08541db0b4bccc286e9e5f41fc999ef93a6110c07523838f00a47514c4034"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagReverseDnsField.java",
+      "sha256": "ebf987ae8f7faf8de265134467fc9a2298dafbd5ecce5d54fd51f31f4f2f878f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/options/PadNumberOption.java",
+      "sha256": "4b479d76d7b787b3d3d6d2975dd7271cc9306d528e34bbd4a6ddc95a112d7736"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/ID3V2Version.java",
+      "sha256": "0c7b38565494e68d4234b4121f49c2ba769ff895cc8611f23c688b04aa6af45f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/ISOCountry.java",
+      "sha256": "f8b9c36d70731464ff8bb54a3e001af49de98bd474edbd6d6cd65cc3fa182b8c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/package.html",
+      "sha256": "f113e9f0b440f3d4797ee59100354e121f73240eb00989424391881db8db134e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/util/package.html",
+      "sha256": "77487a31c219148effea811545d7fb471de886ada35b040352c897b4ba0153cc"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisAlbumArtistReadOptions.java",
+      "sha256": "bc5c9c8f737851fc1eec5085abd619fadeb259a3ea85f5303b5bd1bf66fb8ee4"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisCommentReader.java",
+      "sha256": "c19418f24eb72c54ff3b9931e2af601631cba1254d873aaf5cceb0652056abb2"
+    },
+    {
+      "path": "org/jaudiotagger/test/TestAudioTagger.java",
+      "sha256": "382fffe921b5495be23178f362e4fe47185961bfc37b021e5d21d6c00e0a762c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffTagFieldKey.java",
+      "sha256": "ae2910d4aca9d42473fb98c5b1f59330506c2c41e47f7a51752ce1f1c4be5f2b"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/AiffCompressionType.java",
+      "sha256": "4172339671f5c5ddb4238b3ed479715311933de25bcfc8cbf6fbf657058f5825"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/ID3Chunk.java",
+      "sha256": "39d457927be031d4a221fbe36ae41a46b7db1672c4a8788ad7d5aad3d245ea57"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/ContentDescription.java",
+      "sha256": "4da63afb936666b187a1a74db79a33fe1ca85aaa51faf0c798c10c101bf85e9c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/EncryptionChunk.java",
+      "sha256": "d48ad8d6ea8367e0117ef779b8a9ae22d610e30d0e928d077e92402daf25ee89"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/GUID.java",
+      "sha256": "9afdd90f61567d96e0e39205a6c43de9e2e0d7e1e863821a7109229af04b383e"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/MetadataDescriptor.java",
+      "sha256": "bc4bacbfe079032bcb47bacc154c71e2d633b6ace7264c71c965eb563795909a"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/AsfHeaderReader.java",
+      "sha256": "4b93d1ff798bd910cbcb26b5426fc3391f36694cfaeecdcf9f25d5e7e7ebf87c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/CountingOutputstream.java",
+      "sha256": "19fb542bf219eac6090d784eb78a291f487468458027b5bc97c4f3783e96aac4"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/FullRequestInputStream.java",
+      "sha256": "431e36bcfc78d8bff93fdc84d005545a78e32c1ef3d9435a8a7a5241368ddd19"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/RandomAccessFileOutputStream.java",
+      "sha256": "6cf28fe3b100150ad5bb405ab93b7f53a8159d4bd11e902a779a639ec314e0ba"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/util/package.html",
+      "sha256": "201823eb41fa44fd8bb6e15fe49aa1519fc3cc12a62a3e2c996421b65bb8cd8c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/util/Utils.java",
+      "sha256": "906357377c360f88a7b57cd6ef26e97028344742d91432b0709d669b361dde11"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/CannotReadVideoException.java",
+      "sha256": "de07857c5fecaf583f90ffd14917c689235cfbe0c3f01cdce61a52317c261d49"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockDataApplication.java",
+      "sha256": "306f0b0151993dfeee26e37f95410ed4f4fdfc9137e6b6c2e8611e2f42e1ef43"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlockHeader.java",
+      "sha256": "b8371d90a8995b05231a4e37c4c8fb372e69ee2e8b99e117def2135cfd071f79"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/MP3FileReader.java",
+      "sha256": "5eefad7b7992ca3fd7c8f668a7881f7bc80acf69568ffdd0d79763e11cdfd3db"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavFormatChunk.java",
+      "sha256": "900ef4c4a04f29229b664000dda766eb3befe6f2fea6d41d52eb146f600e9aea"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavRIFFHeader.java",
+      "sha256": "6e1eab49a74e5be5f0d42fd1bfb3b45c35aefc42cdb614dbd8de5f7a2beddda3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/NumberVariableLength.java",
+      "sha256": "c194bd8e50cee14b9cf4d59fa97993f2fdb63411e29d69cbc1bc7d7672433298"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/StringFixedLength.java",
+      "sha256": "6bf5fc4bf680e4529748dd73c8111dfa7d1f6ba48e0d0eab12970eb4f80ca0d1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/TextEncodedStringSizeTerminated.java",
+      "sha256": "30a6204184ab40043e1032d50fa63b121f268377117cc04da91956ab50070341"
+    },
+    {
+      "path": "org/jaudiotagger/tag/EmptyFrameException.java",
+      "sha256": "030b0419ddc336ccb8e5a330f3576f0add18dd3d9c6780c6c9ff9ba983d77de9"
+    },
+    {
+      "path": "org/jaudiotagger/tag/FieldDataInvalidException.java",
+      "sha256": "7a324b1ac97e82f0bcc0178c6fd2168eb5d0dc4eb7c230b9e5cbee941d9ae9ab"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractTag.java",
+      "sha256": "30512d5cbff2743ed14a07a2d3dd1b6542ad4c6380ef4ed68f21ac1b15eedb6f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/AbstractFrameBodyUrlLink.java",
+      "sha256": "61bc93065eb468da13362dec6f371ea071838e5f4c812d1cc59b797b8fcf1af8"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyCRM.java",
+      "sha256": "55eca1766f8e8b5c56312d301256ce90b8aae4603eccbed577fefaed9390931f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyGEOB.java",
+      "sha256": "0fa00e4bb644d1d73d015e492db46f8740087b0a031838df5b9c78b216c57430"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyMVNM.java",
+      "sha256": "7f11d7f1595c288968f381ab7fa72f2c30e2dc33b800bd90f6d19435828b36cc"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyRVA2.java",
+      "sha256": "ad5209508dc0e715b03f5e825b5d38a2f41c1598389c41e81fab9f24f4510ae3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTBPM.java",
+      "sha256": "3b50c06b08102d2fa5c335d8df45564f07881794ac02b24869400eed6459ef76"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDOR.java",
+      "sha256": "9e89d258359db29119f0004678847a54a06cccc0837b2d22e52bfe6cdaf5d2e3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTIPL.java",
+      "sha256": "932d5d050aa419019aab7eb3c165f74eda81669947f67c918e348fab53617199"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTMED.java",
+      "sha256": "04fbb3509cdcafba7bd51bfcee55314cecd31037eae66d6f9bf04f190fd12543"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPE1.java",
+      "sha256": "2597ba40afb37371d4ec26d77e655ef7fd6fcc9b1607da1d8ebb11dc9225a396"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTRDA.java",
+      "sha256": "776f5602f6683bf6247edc424ea13c22a28311cca23d26eec41ffa31fe041f35"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSOT.java",
+      "sha256": "77e74bd869d45cb9e4fac71fe424aacb28f0c4ca8c0e2d14e3ee551ba3da2ab2"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyUSER.java",
+      "sha256": "0a4df2aa87a230824c77b549cb0741b81e35d10f28b24b1e5986fbd908142436"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWPAY.java",
+      "sha256": "448e16795719299c5514eb9e687bf75f32f6aef1f30c8b8e1416c01a27097255"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/ID3v24FrameBody.java",
+      "sha256": "0b24489219997e10998e57996e6656f5a42deafbdd5edace3b5c0c86acacb586"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v1TagField.java",
+      "sha256": "3025752ac446b1d2dec120d0240fe6abec10ddacabf9d69ad91310e0a846e125"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v23Frame.java",
+      "sha256": "357a7407aa37bc462cc99d24591ab79f1075e1ff48d1b3628cf7639d03634ff1"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v24Tag.java",
+      "sha256": "5f0b957608acbc8612d0b5107e9af79f55a42ff7ebdfb879c42631befb65a793"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/package.html",
+      "sha256": "2f20af1263b12588f2a8f1a342db0d6b38f82fa088d4e309eec56d8cb4b2cbe0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/ChannelTypes.java",
+      "sha256": "44f91d4f988084a5f70bb04db1e2f004164138c23d6a8d987fb81df55edb040c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/ID3NumberTotalFields.java",
+      "sha256": "fcd908f35447f8d4bfb7805b3c9a734c780fd1ebe8849c3ed47e01b5667ebb9a"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/AndroidArtwork.java",
+      "sha256": "05f8670a37aa4e58d23821de34dc7c597376b47a5c8bc574e9ea4a869ad2a412"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/AbstractLyrics3v2FieldFrameBody.java",
+      "sha256": "885dbed401c603b2774cfb95873c08de3d564ad8d143147bf77bf0d602e7ac96"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/Lyrics3v1.java",
+      "sha256": "2f69cf5871b2389830f211a63f2b3025fb472dad3e258f32089055c3f8948efa"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4GenreField.java",
+      "sha256": "3bf5ca09d15237ae39788d04a3af57b679fd78d9a397b2fdbb38c8566825123b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TrackField.java",
+      "sha256": "abbca2f249d680ff8d1f4f3f54e4423bf7db9292b6bd0aa0c3c1e88bb1868311"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/MusicalKey.java",
+      "sha256": "d5f5df50aee99b9d6d639895358a00f434722411e7adb2ea3bf02755ed3e6019"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/util/Base64Coder.java",
+      "sha256": "e075fd6e571d4d7116aa178c8351db0ed93a74cb25fbafe66259b79393594cbc"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisCommentTagField.java",
+      "sha256": "0fd04ffeaa157e3896e6c059dbaf7b51c70e0fce68697716685c6fccde33f53d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/AiffFileReader.java",
+      "sha256": "eb2023d74f10550eecde4746ce4e49a9b79938b56e79f8b6a6f0f78625974c96"
+    },
+    {
+      "path": "org/jaudiotagger/audio/aiff/chunk/CopyrightChunk.java",
+      "sha256": "0044f6eacb75788aca1543622f273cca7f05d93588d99888b1b1114acc2df512"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/data/Chunk.java",
+      "sha256": "fa876757007b7419d56102f0a0767a48fee1b93b8aa46b99216b27a2c202a9e0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ChunkReader.java",
+      "sha256": "728edce8a04b7dae4a3da9e9b9af7b64993369ac1c8e9d8ba122f77489851d60"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/EncryptionChunkReader.java",
+      "sha256": "153d38bc64c3c573cfc8c9ce616a0475dbd127092819739e5052d6fea9f7cdb0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/MetadataReader.java",
+      "sha256": "1c4e5b8e4b399538d0609f4205be3e12942bdbf7008ec54b23722a288eb50de0"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/ModificationResult.java",
+      "sha256": "80d4971c8b300ce0240c545be6144e538ac0ad78381f9fe5ce265149cfd277a7"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/io/StreamChunkReader.java",
+      "sha256": "a1a6d892fb2a72253f2e61cc45d4c8a38f90848f7f62550535c5252686805548"
+    },
+    {
+      "path": "org/jaudiotagger/audio/asf/util/TagConverter.java",
+      "sha256": "c931d52e87bccafa0e3a156ff9e51488de5091a3e133cb6841fdc45c8de8ccdc"
+    },
+    {
+      "path": "org/jaudiotagger/audio/AudioHeader.java",
+      "sha256": "f94867fa36dd98ca2d580cb8370d345da79c19c0963cfd6a9afbfd6aa20e2fa7"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/DffChunkType.java",
+      "sha256": "745b6d1e9e0cb23b6614163140f827d74878572035e764f0cf723cb9dc6113af"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/Frm8Chunk.java",
+      "sha256": "b02765f1148ddb3ea24d3318e84efc80ec943b2ebd0ffed2c3c3a982cc2c2ffe"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/Id3Chunk.java",
+      "sha256": "aa6208031ab6db697060947f169882b778dda86a30898a4f7b2f6fd834e92607"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dff/PropChunk.java",
+      "sha256": "ab310ef504ebcc036f65d02ab6153bfdd70fc39ac09b2d243fe0b90f536b2c3d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/DsfChunkType.java",
+      "sha256": "cef64764a8a8654ddea38eec462e0528684dc827274646d03894d01b162e2309"
+    },
+    {
+      "path": "org/jaudiotagger/audio/dsf/ID3Chunk.java",
+      "sha256": "e2996432df8377813bab97119b32499032605c2966aed6b6f774840da7a3ae89"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/NoWritePermissionsException.java",
+      "sha256": "1e5956847cf2d89792537eb352ef66e454928afeb88c457fc468bdee8f43d3e5"
+    },
+    {
+      "path": "org/jaudiotagger/audio/exceptions/ReadOnlyFileException.java",
+      "sha256": "7cdd1a308068acf445339c5e5f24988bf0366f70c553861dbeeaf3b543724657"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacAudioHeader.java",
+      "sha256": "6c4bac84bb8f5e81b9728dd5c3e22103b10db46769a901c925b5d2a90c799057"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacFileWriter.java",
+      "sha256": "4b200139552861518df37bdb8c6cd5087e6c1d5736405a4d79bafbeb89829972"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacStreamReader.java",
+      "sha256": "5ff979391ad1c442c0ffa852aa5594c66b4e3854c4cc1bd72d5e78916998fca9"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/FlacTagReader.java",
+      "sha256": "95cbbc4819c3d0d8fb930adadad943ef27496cfbd85c29d469c55f80d8b0e762"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/BlockType.java",
+      "sha256": "dd401e1d61f1221da7794d7e4c883255dd26b8a03d5d6bc5e86a3ee68450b75f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/flac/metadatablock/MetadataBlock.java",
+      "sha256": "559d85784b6483ee5b79a0e89b2b5718cf394608ec41fba06a739b1ae4564a18"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/AudioFileModificationListener.java",
+      "sha256": "2522bc18a8fce4f1e27476500ab5400ec2914ed30f252318fab318b8804cb266"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/GenericAudioHeader.java",
+      "sha256": "eacfa6d34b445090e69f594bb3849e6a2b5350480c8962a75948106a2d50f26c"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/package.html",
+      "sha256": "b4c9a2cd4d0334e5858cb1d95301a03e77097c9b3ef2bb11e86497dc3557ddcf"
+    },
+    {
+      "path": "org/jaudiotagger/audio/generic/Permissions.java",
+      "sha256": "1ec8363625bbacb92b792d0519961aea1749753e27e28ff7fff6fd063808035f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/iff/Chunk.java",
+      "sha256": "f22c32667121547d42a30bdf89f608c7971a164be8ea8cdd2b989367d4c49100"
+    },
+    {
+      "path": "org/jaudiotagger/audio/iff/IffHeaderChunk.java",
+      "sha256": "9a9df85b5a5f31f6b0ba197ed933616815c8c12cd1065d7103aaeea04308f9a6"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp3/MP3AudioHeader.java",
+      "sha256": "ddd90e369aac55e8f6050ef7e63cb293ac56b34b53c056f988d4374ddd092728"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/AbstractMp4Box.java",
+      "sha256": "71ce6e9791a31a4cee62b248804f3165700f96c70e0a6df36598a5f8db2abc20"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4BoxHeader.java",
+      "sha256": "ebdee39c861d08433202b78da7da97bc31bf2c34d82f4dc2664b9616690549da"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/Mp4HdlrBox.java",
+      "sha256": "7c7c1b7161397e3b587cd9af8c5aa3344f4b93921ec430bac7fef74e22aa752d"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/atom/NullPadding.java",
+      "sha256": "ef984e626e8d66c50ce8665c47911c2cd7fa2a1572ff03683efe06938603340e"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/EncoderType.java",
+      "sha256": "cf2d9240a6b6c08ad4e1103a4936e34c053f4ba5490bbb35ab20ba76a69e2836"
+    },
+    {
+      "path": "org/jaudiotagger/audio/mp4/Mp4TagReader.java",
+      "sha256": "9ed2707eade729c1f05539e6726847f08e8f87a08cfa86f95cbc41019f364c70"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/OggFileWriter.java",
+      "sha256": "c0fb998d68bc90d3feb18594c562c4a0435a69f482ffb11939e5642e155e5d50"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/OggVorbisTagWriter.java",
+      "sha256": "4fb0ddb0c2d5e27277b8ae4a0fe67831f27fdf3890a6a38e78095093d619a80f"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/util/VorbisPacketType.java",
+      "sha256": "bdf409aefe06fd9d1573eb6e2cfe6e8fea224d0b3214520b6464c13cf7100259"
+    },
+    {
+      "path": "org/jaudiotagger/audio/ogg/VorbisVersion.java",
+      "sha256": "abe5676506d2c4d937e3f7128f2d37dabedd0d590278348a2410e1da1d1064f8"
+    },
+    {
+      "path": "org/jaudiotagger/audio/real/package.html",
+      "sha256": "ecfe9b7a2d1c715386dd747069d53e11d6063737b815d97a02f9436d0a9ef1b9"
+    },
+    {
+      "path": "org/jaudiotagger/audio/real/RealFileReader.java",
+      "sha256": "869cacae2cb42923e5d8b23a08d2a76daa7e74ec811b85787c4959bbcc20f480"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/chunk/WavCorruptChunkType.java",
+      "sha256": "e2f542d3545d4ca16d91830c0c08347d407f5a5470666ca34d2f15458fcdd347"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavChunkType.java",
+      "sha256": "d069a8a04fa24a81df9e3811fcebc2c8651afa903b35e77b7391c60f39ab5660"
+    },
+    {
+      "path": "org/jaudiotagger/audio/wav/WavSaveOrder.java",
+      "sha256": "5d121af3351cf138b11d02a202f916b4391f27f44072f7f2f4082b780eed7e7b"
+    },
+    {
+      "path": "org/jaudiotagger/FileConstants.java",
+      "sha256": "c458893c47ba70d6fe7c828227b811c7959b124c626505b262b3034bc598ff84"
+    },
+    {
+      "path": "org/jaudiotagger/logging/ErrorMessage.java",
+      "sha256": "ffb19c97ff64c6c995f0367148dcaf996faa821bd3a6e733180f12a3ce2fa351"
+    },
+    {
+      "path": "org/jaudiotagger/logging/XMLTagDisplayFormatter.java",
+      "sha256": "bb26ab1a9036adf90b1f399b92714d7a953ba2c492f88f8d208f329a582041c0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/asf/AsfTag.java",
+      "sha256": "8efcd9b5a24d6e6e7cf22a3d4bb374047c134395624aa76775f2fe4175246514"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/AbstractDataTypeList.java",
+      "sha256": "96397dcc435134fa758f990b79409e7ee963c45b1ca9dc672c2a7e6490495c4c"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/ByteArraySizeTerminated.java",
+      "sha256": "04af1e508c0e30ef088fedd55917ceb65ae92620afce4bc5f929ecb2557ed48e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/HashMapInterface.java",
+      "sha256": "0d523b221acb8be395547fcd50e9b8a553aac0d912a38d36b95795a1cae54302"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/Lyrics3Line.java",
+      "sha256": "8aef5cb7c162bbe1601c88e8b88470534acb8e4acdf9b162f0ef3548f38ce554"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/PairedTextEncodedStringNullTerminated.java",
+      "sha256": "0a68d9748537b3ed4bfdc3e6a5718b751f54419caf8c8a14fb8636b170e38beb"
+    },
+    {
+      "path": "org/jaudiotagger/tag/datatype/TempoCode.java",
+      "sha256": "8422ba569eaf4bff22a64043f9687aab27b981fe201bd28b3ba76539023df0b5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/flac/package.html",
+      "sha256": "bf7596b8ecd394ec9369b8e47aa3f5d121b49e2b5f72e1b87c5438c0ebd44f16"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/AbstractTagItem.java",
+      "sha256": "2c2252c8174668a4ece19ce59c829d972a4227fbe010d5953fafdc7b164f7278"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyAPIC.java",
+      "sha256": "a82ef5979dc4b6a233b68d482bd28fb17aa74483a0e9f0ca1fc1690e94a3fc5f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyENCR.java",
+      "sha256": "9ef0f96bb98f87f95b832fe5d9d998a781e14de6408f7fccae384e37d44f33ac"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyIPLS.java",
+      "sha256": "834787b03a6c157531c2a9380a73da2288bf4bab269a00e50a011e84bdbc8e85"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyLINK.java",
+      "sha256": "3ed8dcc85936d0cc16a42420264b714af0516f262689247159715d3e5c47f71d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyMCDI.java",
+      "sha256": "cf691b7d34192f9471ca1754d112d41614dd2727086ad93c327ba5b261f21e72"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyPOSS.java",
+      "sha256": "b8fc74b5932a3d3d283f4ca523be27897b66e66c0f42b5d79cff0513207f6714"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodySYLT.java",
+      "sha256": "3b5cb932f77d75322dba0e1ef1fcf2e4a5b752a289fccfa8ff3101fb475f8c64"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTDAT.java",
+      "sha256": "2ea40aac376ba6878e0a93ff80b515e1410fa2c44b490a4c33f1bc450ffd5cc3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTEXT.java",
+      "sha256": "f402e7494a6d111a41b74402831935a2f437a60f421dd4c180da8686bc458f78"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTLAN.java",
+      "sha256": "e22a370607372181cacaebdd4f959a0654fa97a808d3b3daea583eea784d62ea"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTOPE.java",
+      "sha256": "afa0908444ce5b6dccd0669d383d6a85f8997d75760fbe18066d6b114b723b30"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTPRO.java",
+      "sha256": "a28886811b9541f3c2a319fc9140e8d9d49399f88fee99d8803d7b9fd84558fe"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTSOA.java",
+      "sha256": "2b6f6d11efc0b603b1c1c08937c47ff87e92bab2fa0c0c0f5e6d49fbc68e6e5b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyTYER.java",
+      "sha256": "b48fb4739d5c0e8757ef6c7f36d80cd16c74b39837e631ed0d21d77bf490c5ce"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWOAR.java",
+      "sha256": "782898bc7eceb0c2a8a7080fdf4acab04f5b5682b4d512b2ada6342a372d4889"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/FrameBodyWOAS.java",
+      "sha256": "8e34eedf29d841fa18ffe04b36e910d826b65ccb19f36ef49678fa25000244f3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/framebody/ID3v22FrameBody.java",
+      "sha256": "4eb773415a9df807aefbec7fd9957f450ee25a68a51f9a7490cca6555af762c3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/Id3SupportingTag.java",
+      "sha256": "f383b0368725e636dad39cf2b967b2c30b2c9d139c771ec377adab05da4a582f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v23FieldKey.java",
+      "sha256": "9326016deebf17c76b57b944ec3217e31bbbfce4214f09994d2b48cde4518b0e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/ID3v24PreferredFrameOrderComparator.java",
+      "sha256": "5942735cf851edd9663515b69b4f36cef2989039f755a01af1a18ea5809464e3"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/reference/package.html",
+      "sha256": "a171c4c815381e6c8827c1e5f318b7ae8413e34e9be9410ce0f2a670262cb03d"
+    },
+    {
+      "path": "org/jaudiotagger/tag/id3/valuepair/EventTimingTypes.java",
+      "sha256": "1393ee9fc0fab5244859052deb861dfc0295451a3a8a7d7953ab4f3af4770586"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/AndroidImageHandler.java",
+      "sha256": "fcca1ccb18cc4fb4f11ca936ab60f0150ca8155ae3ef3aa6734ba78481af9a86"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/Images.java",
+      "sha256": "d54ba6638ea3803cf874e1edf659dd048ad97353da10d24cfbaec2d8d115fd60"
+    },
+    {
+      "path": "org/jaudiotagger/tag/images/StandardArtwork.java",
+      "sha256": "11ad3a24beeb50bbad70fcda9e5315cc4bbb557133b131e82c22a6db4f28b02b"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/FieldFrameBodyEAR.java",
+      "sha256": "7771e3f2cdacf5d32a2089b946451b6a19c4cc3e7b03a517d969eb5d6accd582"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/Lyrics3v1Iterator.java",
+      "sha256": "cea9bb1ff01f3cbbbf1ecba2ac6acd78c0051434819a5b313eb4fbc819c051a0"
+    },
+    {
+      "path": "org/jaudiotagger/tag/lyrics3/Lyrics3v2Fields.java",
+      "sha256": "331554070c69d9a0ad5e2d58d05f4a1139d883a58fc7756cecaadcf71d922ad4"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/atom/Mp4RatingValue.java",
+      "sha256": "ad98e08db4c31b14b09854c147b6542a9130c3cd34a2a2d134f5d46e750164e5"
+    },
+    {
+      "path": "org/jaudiotagger/tag/mp4/field/Mp4TagByteField.java",
+      "sha256": "8b312c3182b0a2731ac740ca39746d062e88a64c8a57a5e9579165a77564fed6"
+    },
+    {
+      "path": "org/jaudiotagger/tag/options/package.html",
+      "sha256": "5496d2434af4cb16c6b1499395e390fc6bf738e8f7b0bde814f2a126c4bb209f"
+    },
+    {
+      "path": "org/jaudiotagger/tag/PaddingException.java",
+      "sha256": "62a2da7afa00bb924a90e7d26cb0e1bd402273b829dcaf5f219092b0042d804e"
+    },
+    {
+      "path": "org/jaudiotagger/tag/reference/ISOScript.java",
+      "sha256": "372864ad29cfadeb7a035b2757fb7291a188e0fc9ae0b2d7f504afcb3ae5bd81"
+    },
+    {
+      "path": "org/jaudiotagger/tag/TagNotFoundException.java",
+      "sha256": "bc43bd9e90163790638953f8460bddec184423d37052daee189a9e10a47dcc03"
+    },
+    {
+      "path": "org/jaudiotagger/tag/vorbiscomment/VorbisCommentFieldKey.java",
+      "sha256": "fc742dc450e9edee2e627b1406df135563bda14f3ce58816dbd9b1575d54818b"
+    },
+    {
+      "path": "org/jaudiotagger/Test.java",
+      "sha256": "aeacae97124f5019ecadc73825d6b73fba89a67e92fc2cdce05953c447366572"
+    },
+    {
+      "path": "org/jaudiotagger/utils/FileTypeUtil.java",
+      "sha256": "2d647d5560b6c8650286c55cbc617a7910a4179b89ef14606feda8c827cd7232"
+    },
+    {
+      "path": "org/jaudiotagger/utils/PrimitiveUtils.java",
+      "sha256": "7716b39eb6c86b425ea03386979cef44f29bc1da10e8754b78c6056b896c4474"
+    }
+  ]
+}

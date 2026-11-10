@@ -53,7 +53,7 @@ object LyricsModule {
         dispatchers: DispatcherProvider,
     ): OnlineLyricsRepository =
         OnlineLyricsRepository(
-            listOf(lrclib, musixmatch),
+            if (BuildConfig.PROPRIETARY_CANDIDATE) emptyList() else listOf(lrclib, musixmatch),
             cache,
             dispatchers,
             responseCache = FileOnlineLyricsCache(File(context.cacheDir, "online-lyrics")),

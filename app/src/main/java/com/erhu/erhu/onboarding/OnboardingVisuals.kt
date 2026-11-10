@@ -109,7 +109,7 @@ internal fun IntroductionVisual(
         }
         if (page == IntroductionPage.READY) {
             IntroductionLogo(phase)
-        } else if (preview != null) {
+        } else if (preview != null && !com.erhu.erhu.BuildConfig.PROPRIETARY_CANDIDATE) {
             Crossfade(
                 targetState = preview,
                 animationSpec = tween(if (motionEnabled) Motion.CONTENT else 0),

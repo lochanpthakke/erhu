@@ -238,6 +238,18 @@ class JAudioTaggerWriterTest {
     }
 
     @Test
+    fun candidateRejectsMp4TagWritesWithoutChangingStoredMedia() {
+        assertTrue(com.erhu.erhu.core.network.BuildConfig.PROPRIETARY_CANDIDATE)
+        store.files[uri] = wavBytes()
+        val before = store.files.getValue(uri).copyOf()
+        listOf("mp4", "m4a", "m4p", "m4b").forEach { extension ->
+            val result = write(TagWriteRequest(uri, "/Music/test.$extension", title = "x"))
+            assertTrue("$result", (result as AppResult.Error).error is AppError.TagWriteError)
+            assertArrayEquals(before, store.files.getValue(uri))
+        }
+    }
+
+    @Test
     fun scratchCopies_areAlwaysDeleted() {
         store.files[uri] = wavBytes()
         write(TagWriteRequest(uri, path, title = "ok"))

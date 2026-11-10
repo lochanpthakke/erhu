@@ -1,4 +1,23 @@
+## Current candidate implementation — 10 November 2026
+
+See [APK_RELEASE_READINESS.md](APK_RELEASE_READINESS.md) for implemented 1.0.18
+source gates, dependency/asset overrides and remaining blockers. The source-visible
+licence is scoped to controlled original material; there is no distribution
+clearance. APK generation/tests are deferred at the user's request. All Stage 1–5
+evidence below is historical and preserved; statements that no dependency, version
+or functionality changed describe those earlier stages, not this candidate.
+
 # erhu Android licensing transition
+
+## Wrap-up position — 10 November 2026
+
+The concise current position is [WRAP_UP_REPORT.md](WRAP_UP_REPORT.md). Stages 1–5 remain preserved evidence; dated checks and proposals are not new release approval. The intended 1.0.18 licence is **source-visible and proprietary**, limited to rights actually controlled by the Android contributors. It reserves reuse of protected original expression while preserving independent implementations of general features, historical GPL, third-party and mandatory-law rights. No proprietary release is cleared.
+
+The ownership exclusion is universal: bundling, repository inclusion, online retrieval or in-app display does not make third-party or user-owned material Erhu-owned. Its upstream terms/notices and applicable reused-GPL obligations remain; exclusion is not redistribution permission. Original application-specific UI/graphics are protected only where rights are established, without claiming ownership of common patterns, algorithms or general features. See [PUSH_READINESS.md](PUSH_READINESS.md) for documentation/push readiness separately from APK clearance.
+
+Public hosting does not prevent cloning/forking or override [GitHub's Terms of Service, including section D](https://docs.github.com/en/site-policy/github-terms/github-terms-of-service). Its platform grants, including applicable processing/AI provisions, require review alongside the draft. No visibility or account setting is changed.
+
+Unconfirmed permissions remain pending. Retain existing artwork; resolve identified rights issues rather than redesigning everything. Supplier requests remain unsent. Native investigation and unavailable runtime work are deferred, not their applicable obligations. Optional integrations must be permission-cleared or disabled/gated in the eventual release; Stage 5 configuration is still a proposal, not an implemented gate or verified blank-key build.
 
 Review branch: `proprietary-licence`. Prepared: 10 November 2026.
 
@@ -10,7 +29,7 @@ This branch prepares prospective terms for original Android project contribution
 
 ## Reason and scope
 
-The participants intend to operate and commercially license future Android development independently. The proprietary terms permit personal, non-commercial use of authorized future releases, while commercial use, redistribution, modification and sublicensing require the applicable permissions, subject to historical GPL rights, mandatory law and third-party exceptions.
+The participants intend to operate and commercially license future Android development independently. The draft permits source inspection and personal, non-commercial use of authorized binaries. Reuse of protected original expression requires permission, subject to historical GPL, third-party, platform and mandatory-law rights. Independent implementation of general features is not prohibited.
 
 Android has no shared revenue pool, financial account, administration or automatic sublicensing arrangement with the independent iOS implementation through this document. No rights in either implementation are transferred to the other. Actual cross-platform reuse requires permission for the specific material.
 

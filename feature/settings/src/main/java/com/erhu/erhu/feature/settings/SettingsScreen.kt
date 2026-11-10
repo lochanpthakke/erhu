@@ -244,12 +244,22 @@ private fun NavigationSettingsSubPage(
         SettingsSection(title = "Navigation & Home") {
             SettingsGroup {
                 row {
-                    SettingsSwitchRow(
-                        title = "Enable VYBE",
-                        summary = "Show VYBE in navigation and Home.",
-                        checked = vybeEnabled != false,
-                        onCheckedChange = viewModel::setVybeEnabled,
-                    )
+                    if (com.erhu.erhu.core.network.BuildConfig.PROPRIETARY_CANDIDATE) {
+                        SettingsNavigationRow(
+                            title = "VYBE unavailable",
+                            summary = "Unavailable in this distribution pending native-library clearance.",
+                            onClick = {},
+                            enabled = false,
+                            trailing = {},
+                        )
+                    } else {
+                        SettingsSwitchRow(
+                            title = "Enable VYBE",
+                            summary = "Show VYBE in navigation and Home.",
+                            checked = vybeEnabled != false,
+                            onCheckedChange = viewModel::setVybeEnabled,
+                        )
+                    }
                 }
             }
         }
@@ -346,7 +356,7 @@ private fun LibrarySettingsSubPage(
             SettingsGroup {
                 row {
                     SettingsNavigationRow(
-                        title = if (isScanning) "Scanning library…" else "Rescan library now",
+                        title = if (isScanning) "Scanning libraryâ€¦" else "Rescan library now",
                         summary = "Find new, changed and removed music",
                         icon = Icons.Default.Refresh,
                         enabled = !isScanning,
@@ -370,9 +380,9 @@ private fun LibrarySettingsSubPage(
         ) {
             SettingsGroup(selectable = true) {
                 listOf(
-                    "1080p" to "1080p (Full HD — Recommended)",
+                    "1080p" to "1080p (Full HD â€” Recommended)",
                     "720p" to "720p (HD)",
-                    "480p" to "480p (SD — Data Saver)",
+                    "480p" to "480p (SD â€” Data Saver)",
                     "Maximum" to "Maximum Available (Highest Quality)",
                 ).forEach { (resolutionKey, label) ->
                     row {
@@ -644,7 +654,7 @@ private fun StorageAccessSection(
                     title = "Full Storage Access",
                     summary =
                         if (hasAllFilesAccess) {
-                            "Granted — full read/write access to internal & SD card storage"
+                            "Granted â€” full read/write access to internal & SD card storage"
                         } else {
                             "Tap to grant full device storage write permission in System Settings"
                         },

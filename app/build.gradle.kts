@@ -9,18 +9,27 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val proprietaryCandidate = providers.gradleProperty("proprietaryCandidate").map(String::toBoolean).getOrElse(true)
+
 android {
     namespace = "com.erhu.erhu"
     compileSdk = 37
 
+    if (proprietaryCandidate) {
+        sourceSets.configureEach {
+            if (name in setOf("debug", "release", "benchmark")) res.srcDir("src/proprietaryCandidate/res")
+        }
+    }
+
     defaultConfig {
+        buildConfigField("boolean", "PROPRIETARY_CANDIDATE", proprietaryCandidate.toString())
         applicationId = "com.lochanpthakke.empee3"
         // Measurement builds (-PperfApp) install beside the real app instead of over it.
         if (project.hasProperty("perfApp")) applicationIdSuffix = ".perf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 18
-        versionName = "1.0.17"
+        versionCode = 19
+        versionName = "1.0.18"
 
         // Public Firebase client identifiers only. Never use service-account or server credentials here.
         for ((field, property, environment) in listOf(

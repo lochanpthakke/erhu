@@ -53,7 +53,11 @@ dependencies {
 
     implementation(libs.androidx.paging.common)
 
-    implementation(libs.jaudiotagger)
+    if (providers.gradleProperty("proprietaryCandidate").map(String::toBoolean).getOrElse(true)) {
+        implementation(project(":third-party:jaudiotagger"))
+    } else {
+        implementation(libs.jaudiotagger)
+    }
     implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.hilt.android)

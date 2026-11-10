@@ -1,122 +1,92 @@
-ERHU ANDROID — PROPRIETARY LICENCE FOR FUTURE RELEASES
-Review candidate prepared 10 November 2026
+ERHU ANDROID — SOURCE-VISIBLE PROPRIETARY LICENCE
+10 November 2026 — intended for 1.0.18 and later expressly designated releases
 
-1. STATUS, SCOPE AND RIGHTS HOLDERS
+1. STATUS AND SCOPE
+This licence does not certify third-party clearance or authorize publication.
+See APK_RELEASE_READINESS.md for distribution blockers. It covers original Android implementation,
+application-specific UI expression/design, graphics, illustrations, branding,
+documentation and other protectable expression only to the extent
+controlled by Kshitij H Kekunnaya and Lochan Thakke, each for their own
+contributions. It asserts no ownership of third-party material, assigns no
+copyright and changes neither contribution arrangements nor the agreed 50/50
+commercial split. COPYRIGHT.md records those limits. No iOS rights are changed.
 
-These terms are prepared for original erhu Android contributions in version
-1.0.18 and later versions expressly distributed under these terms. This local
-licensing review branch is NOT approval to distribute a proprietary APK.
-Resolve the clearance gates in LICENSING.md and the legal placeholders below
-before publishing or relying on these candidate terms.
+2. LIMITED PERMISSIONS
+You may view and inspect publicly supplied source. This is not an open-source
+licence or general permission to reuse Erhu's protected expression.
+You may download, install and run authorized binaries on devices you own or
+control for personal, non-commercial use, with a reasonable private backup
+and necessary technical copies for permitted use/viewing. Building modified
+Erhu versions requires separate permission except under Section 5.
 
-Kshitij H Kekunnaya and Lochan Thakke are the Android rights holders, each for
-their own original contributions and only to the extent they control the
-relevant rights. No assignment, equal copyright share, exclusive ownership of
-every file or ownership of third-party material is asserted. COPYRIGHT.md
-records the evidence and unresolved material.
+3. RESERVED RIGHTS
+Except for permitted use and Sections 4–6, no permission is granted to copy,
+incorporate, modify, rebrand, create derivative versions, redistribute, mirror,
+sublicense or commercially exploit Erhu's covered original material. Such
+uses require prior written permission from the relevant rights holders.
+Retain required notices; do not misrepresent authorship or endorsement.
 
-The participants report a 50/50 Android commercial revenue arrangement. That is
-separate from copyright ownership. This end-user licence does not create an
-assignment or replace a separate revenue-sharing contract. Android and iOS
-have independent operational, financial and licensing arrangements. These
-terms grant no rights in iOS material and create no shared accounts, revenue
-pool or administration arrangement.
+4. PUBLIC GITHUB AND PLATFORM PERMISSIONS
+These terms do not override rights granted to GitHub, affiliates or users by
+applicable platform agreements. Public hosting permits viewing and
+platform-authorized copying/forking; other applicable platform grants remain
+effective. Technical cloning/downloads are not prevented, and a clone or fork
+alone is not evidence of infringement. Visibility does not independently
+grant unrestricted off-platform or commercial reuse beyond applicable grants
+and law. Review GitHub's hosting, processing and AI-related terms:
+https://docs.github.com/en/site-policy/github-terms/github-terms-of-service
+This licence neither narrows those grants nor creates additional platform rights.
 
-2. PERSONAL, NON-COMMERCIAL USE
+5. PRESERVED GPL, THIRD-PARTY AND LEGAL RIGHTS
+Previously GPL-released versions through 1.0.17 retain their original grants.
+No history, source, binary or existing permission is retroactively relicensed
+or revoked. LICENSES/GPL-3.0-historical.txt preserves the original licence.
+Those grants also remain available for previously covered code appearing
+unchanged later; this licence does not make that material exclusively
+proprietary. Any intervening GPL grants remain unaffected.
+Applicable GPL obligations for reused material also remain unaffected; this
+draft does not settle the licensing compatibility of a future combined work.
 
-Subject to these terms and applicable third-party terms, the relevant Android
-rights holders grant a limited, non-exclusive licence to download, install
-and run an authorized future release on devices you own or control for
-personal, non-commercial use. You may keep a reasonable private backup. If
-source is supplied, you may inspect it for personal, non-commercial study.
-This is a licence to use the covered original material, not a sale or an
-assignment. No future updates or support are promised. Other rights are
-reserved, subject to Sections 4 and 5.
+All material outside the rights holders' controlled original Erhu IP is
+excluded from their proprietary ownership claims, whether bundled in an APK,
+included in the repository, obtained online or displayed in the application.
+This includes jaudiotagger, LGPL/MPL/native and other dependencies; Apple,
+MusicBrainz, Deezer, Musixmatch and TheAudioDB content/services; album artwork,
+artist images, lyrics, external metadata, fonts, trademarks and other media;
+and user-imported music/content. No ownership of such material is claimed.
+Third-party code, libraries, models, images, lyrics, fonts and content retain
+their own terms. No missing permission is granted or component terms overridden.
+Exclusion from these ownership claims is not permission to redistribute it.
+See THIRD_PARTY_LICENSES.md and LICENSES/. Required rights to modify, replace,
+rebuild, relink, redistribute and reverse engineer for debugging modifications
+under LGPL/other component terms are preserved, including necessary combined-
+work modifications to the extent those terms require. Mandatory-law rights
+remain unaffected. No production signing key is supplied or promised. Actual
+source/notice/relinking duties must be fulfilled; this exception certifies none.
 
-3. COMMERCIAL USE AND RESTRICTIONS
+6. INDEPENDENT IMPLEMENTATIONS
+No ownership of general music-player features, ideas, functionality or other
+unprotected concepts is claimed. Lawful independent implementations may be
+developed, modified, distributed and commercialized without permission under
+this licence, without unlawfully copying protected Erhu expression or misusing
+branding. This includes independently implemented equalizers/audio effects,
+transitions/mixing, playlists/library management and general player features,
+and lawful use of common UI patterns, algorithms and design concepts. No
+exclusive ownership of those general ideas or functions is asserted.
+No patent or trademark licence is implied; applicable law and
+independently obtained rights govern.
 
-Unless separately authorized in writing by the relevant rights holders, and
-except as provided in Sections 4 and 5, you may not commercially use, sell,
-rent, redistribute, mirror or sublicense the covered original source or
-binaries, modify them, distribute derivative works or provide them as a
-commercial product or service. Do not remove applicable attribution/licence
-notices, misrepresent ownership or imply endorsement.
-
-Commercial permission for the original Android application must be coordinated
-with Kshitij H Kekunnaya and Lochan Thakke for their respective rights. An
-approval cannot convey rights held by someone else.
-Private commercial contact: [TO BE CONFIRMED BY BOTH ANDROID LICENSORS].
-The Android repository issue tracker may be used to request a private contact
-route; do not post confidential information or credentials publicly.
-
-4. THIRD-PARTY AND MANDATORY-LAW EXCEPTIONS
-
-Libraries, models, external code, images, lyrics, fonts and other third-party
-material retain their own rights, licences and service agreements. These
-terms do not relicense that material, grant unverified commercial rights in
-it or override its licences. THIRD_PARTY_LICENSES.md, COPYRIGHT.md and
-LICENSES/ record evidence, preserved notices and outstanding obligations.
-
-No restriction here limits a right required by mandatory law or granted by an
-applicable third-party licence. In particular, permitted use, modification,
-redistribution, replacement, relinking, rebuilding and reverse engineering
-for debugging modifications under LGPL or other applicable component terms
-are not prohibited by restrictions on the original application material.
-Necessary modifications of the combined work for such lawful personal use
-are permitted to the extent required by those component terms.
-
-These exceptions do not represent that current APK packaging already supplies
-every required notice, corresponding source, object file or replacement
-mechanism. Distribution must satisfy those obligations in practice. No
-production signing credentials are granted or required to be disclosed by
-this licence. Third-party content and trademarks do not become Android-owned
-merely because they appear in the app or its screenshots.
-
-5. HISTORICAL GPL RIGHTS
-
-Previously GPL-distributed versions, including 1.0.17 and earlier, retain their
-original GPL rights. The original licence is preserved verbatim in
-LICENSES/GPL-3.0-historical.txt. No old source, binary, tag or grant is
-retroactively relicensed.
-
-Earlier GPL grants remain available to their recipients for covered code that
-also appears unchanged in later versions. These terms do not withdraw those
-grants or make previously GPL-distributed material exclusive. Recipients may
-continue exercising rights in their GPL copies. Any intervening GPL release
-is likewise unaffected.
-
-6. TERMINATION
-
-You may terminate use under these proprietary terms at any time. Rights granted
-by them terminate on material breach, subject to mandatory law and any
-separate written agreement. On termination, stop using and delete copies held
-solely under this proprietary grant, except copies retained as required by
-law. Termination does not revoke historical GPL grants, third-party licences
-or mandatory-law rights.
-
-7. WARRANTY AND LIABILITY
-
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COVERED ORIGINAL MATERIAL
-IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES, INCLUDING IMPLIED
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR
-NONINFRINGEMENT. NO ERROR-FREE OPERATION, CONTINUOUS AVAILABILITY OR
-COMPATIBILITY WITH EVERY DEVICE OR SERVICE IS PROMISED.
-
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE ANDROID LICENSORS ARE NOT
-LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL OR CONSEQUENTIAL LOSS ARISING FROM
-USE OF THE COVERED ORIGINAL MATERIAL. Nothing excludes or limits liability,
-consumer remedies or other rights that cannot lawfully be excluded or limited.
-Third-party warranty/liability terms continue to apply to their components.
-No arbitrary monetary liability cap is invented.
-
-8. GOVERNING LAW, JURISDICTION AND SEPARATE AGREEMENTS
-
-Governing law: [TO BE CONFIRMED BY BOTH ANDROID LICENSORS].
-Jurisdiction/dispute forum: [TO BE CONFIRMED BY BOTH ANDROID LICENSORS].
-Finalize these placeholders before a proprietary public release. No legal
-entity, address, assignment or jurisdiction is implied from names, repository
-access, device location or the commercial split.
-
-Separate written permissions may grant additional rights for material a
-licensor controls. They cannot reduce historical GPL rights, third-party
-rights or mandatory-law protections.
+7. OTHER TERMS AND FINAL REVIEW
+Additional permissions cover only rights their grantor controls.
+Additional commercial rights require a separate written grant from the relevant
+Android rights holder(s).
+Permissions granted solely here terminate on material breach, subject to
+mandatory law/separate agreements. Stop uses relying solely on terminated
+permissions; historical GPL, third-party, platform and legal rights survive.
+To the extent permitted by law, material is supplied AS IS without warranties
+of merchantability, fitness or noninfringement; licensors exclude indirect or
+consequential liability. Non-excludable liability and consumer remedies remain.
+Mandatory applicable law and the jurisdiction of competent courts remain
+unaffected; this licence makes no exclusive choice of law or forum.
+Finalize applicable terms and outstanding rights with appropriate legal review
+before distributing 1.0.18 under proprietary terms.

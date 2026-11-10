@@ -68,6 +68,7 @@ object NetworkModule {
             .dns(ResilientDns())
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor(DistributionNetworkPolicy)
             .addInterceptor(logging)
             .build()
     }

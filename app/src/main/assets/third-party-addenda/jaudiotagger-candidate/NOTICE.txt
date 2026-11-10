@@ -1,0 +1,16 @@
+jaudiotagger 3.0.1 — modified LGPL-2.1-or-later component
+
+Original authors and their notices are retained in the accompanying source.
+Modifications for Erhu 1.0.18: removed nine Oracle-noticed tree implementations,
+associated tree documentation and five dependent MP4 I/O classes; removed
+MP4 reader/writer registrations from AudioFileIO. This removes MP4 tag-writing
+support, not MP4 playback. Original upstream source archive SHA-256:
+d9c79a145944e6bc37579403843c9da84cd81459e42c9877351802ee284f5858
+
+The matching erhu-1.0.18-corresponding-source.zip must accompany the APK.
+It contains the complete modified library, modification manifest, LGPL licence,
+application source and rebuild instructions. Obtain it from the same release
+location as this APK. Library rights, necessary replacement/rebuild rights and
+reverse engineering for debugging library modifications are not restricted by
+Erhu's proprietary licence. See third-party/LGPL-2.1-or-later.txt.
+This notice is not a substitute for actually delivering and verifying that kit.

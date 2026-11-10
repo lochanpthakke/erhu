@@ -64,6 +64,11 @@ class JAudioTaggerWriter
                         audioFileExtension(request.filePath)
                             ?: throw UnsupportedFormatException("Unknown audio format for ${request.filePath}")
 
+                    if (com.erhu.erhu.core.network.BuildConfig.PROPRIETARY_CANDIDATE &&
+                        extension.lowercase() in setOf("mp4", "m4a", "m4p", "m4b")
+                    ) {
+                        throw UnsupportedFormatException("MP4/M4A tag writing is unavailable in this distribution.")
+                    }
                     val dir = workDir.get().apply { mkdirs() }
                     val id = UUID.randomUUID().toString()
                     val backup = File(dir, "$id-original.$extension")

@@ -1,0 +1,13 @@
+{
+  "component": "OkHttp 4.12.0 bundled Public Suffix List",
+  "license": "MPL-2.0",
+  "upstream_release_tag": "parent-4.12.0",
+  "source_commit": "4984568367caaf359b82c452bd28b5e192824d1c",
+  "source_url": "https://raw.githubusercontent.com/square/okhttp/4984568367caaf359b82c452bd28b5e192824d1c/okhttp/src/test/resources/okhttp3/internal/publicsuffix/public_suffix_list.dat",
+  "source_sha256": "e8b273972eb5a70e888bd3e7d7c5b9b04e600a59d69def9136a74d70ae6fcdd3",
+  "binary_resource": "okhttp3/internal/publicsuffix/publicsuffixes.gz",
+  "binary_resource_sha256": "9af43e9995ec749e7a30eec4e5a87770d7e2027847084a07cca82060eff0c791",
+  "modifications": "No edits to the source list; OkHttp compilation sorts and writes length-prefixed UTF-8 rule/exception lists, then gzip.",
+  "source_distribution": "The preferred source is included in this directory; it retains its MPL header. Do not apply Erhu proprietary restrictions to it.",
+  "repository_redirect_note": "The GitHub API currently redirects the historical square/okhttp repository namespace. Source identity is independently checked by immutable commit and exact payload hashes; no new ownership claim is inferred."
+}
