@@ -23,7 +23,11 @@ android {
 
 if (proprietaryCandidate) {
     extensions.configure<com.android.build.api.dsl.LibraryExtension> {
-        sourceSets.getByName("main").java.setSrcDirs(listOf("src/proprietaryCandidate/java"))
+        // Built-in Kotlin uses Kotlin directories independently of Java directories.
+        sourceSets.getByName("main").kotlin.directories.apply {
+            clear()
+            add("src/proprietaryCandidate/java")
+        }
     }
 }
 
