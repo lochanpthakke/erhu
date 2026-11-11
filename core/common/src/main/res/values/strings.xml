@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Language settings -->
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_summary">App language and system default</string>
+    <string name="settings_language_summary_current">App language: %1$s</string>
+    <string name="settings_language_section">App language</string>
+    <string name="settings_language_footer">Changes only erhu without altering your device system language. Any missing text falls back to English.</string>
+    <string name="settings_language_system_default">System default</string>
+    <string name="settings_language_system_default_summary">Follow device language (%1$s)</string>
+    <string name="settings_language_system_default_fallback">Follow your device language</string>
+    <string name="settings_language_available_section">Available languages</string>
+
+    <!-- Common file size units -->
+    <string name="format_size_gb">%1$s GB</string>
+    <string name="format_size_mb">%1$s MB</string>
+    <string name="format_size_kb">%1$s KB</string>
+    <string name="format_size_bytes">%1$s B</string>
+</resources>

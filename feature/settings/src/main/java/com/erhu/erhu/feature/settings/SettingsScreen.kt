@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
@@ -45,8 +46,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.VisualizerMode
@@ -66,6 +70,7 @@ import com.erhu.erhu.feature.settings.component.SettingsSegmentedControl
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsScreen
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsViewModel
+import com.erhu.erhu.feature.settings.language.LanguageSettingsSubPage
 import com.erhu.erhu.feature.settings.sound.PlaybackSettingsScreen
 import com.erhu.erhu.feature.settings.sound.SoundSettingsScreen
 import com.erhu.erhu.feature.settings.sound.SoundViewModel
@@ -100,6 +105,13 @@ private val SETTING_CATEGORIES =
             "Navigation & Home Page",
             "Default landing page and its place in the navigation bar",
             Icons.Default.Tune,
+            SECTION_PERSONALIZE,
+        ),
+        SettingCategory(
+            "language",
+            "Language",
+            "App language and system default",
+            Icons.Default.Language,
             SECTION_PERSONALIZE,
         ),
         SettingCategory(
@@ -158,14 +170,22 @@ fun SettingsScreen(
         navigation = TopBarNavigation.TopLevel(onOpenDrawer),
         modifier = modifier,
     ) {
+        val context = LocalContext.current
+        val selectedTag = remember(context) { AppLocaleManager.selectedLanguageTag(context) }
+        val activeLanguageLabel =
+            AppLocaleManager.findLanguage(selectedTag)?.nativeName
+                ?: stringResource(R.string.settings_language_system_default)
+        val languageRowTitle = stringResource(R.string.settings_language_title)
+        val languageRowSummary = stringResource(R.string.settings_language_summary_current, activeLanguageLabel)
+
         SETTING_CATEGORIES.groupBy { it.section }.forEach { (section, categories) ->
             SettingsSection(title = section) {
                 SettingsGroup {
                     categories.forEach { category ->
                         row {
                             SettingsNavigationRow(
-                                title = category.title,
-                                summary = category.description,
+                                title = if (category.id == "language") languageRowTitle else category.title,
+                                summary = if (category.id == "language") languageRowSummary else category.description,
                                 icon = category.icon,
                                 onClick = { onOpenCategory(category.id) },
                             )
@@ -195,10 +215,16 @@ fun SettingsCategoryScreen(
     onOpenIntroduction: (() -> Unit)? = null,
     onOpenAnnouncements: (() -> Unit)? = null,
 ) {
-    val title = SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
+    val title =
+        if (categoryId == "language") {
+            stringResource(R.string.settings_language_title)
+        } else {
+            SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
+        }
     when (categoryId) {
         "themes" -> ThemeSettingsScreen(viewModel = themeViewModel, title = title, onBack = onBack)
         "navigation" -> NavigationSettingsSubPage(viewModel = themeViewModel, title = title, onBack = onBack)
+        "language" -> LanguageSettingsSubPage(title = title, onBack = onBack)
         "audio" ->
             SoundSettingsScreen(
                 viewModel = soundViewModel,

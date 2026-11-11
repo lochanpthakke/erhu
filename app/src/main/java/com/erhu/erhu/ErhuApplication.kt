@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.erhu.erhu.app.theme.CrashThemeHandler
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.widget.WidgetUpdater
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
@@ -33,6 +34,7 @@ class ErhuApplication :
 
     override fun onCreate() {
         super.onCreate()
+        AppLocaleManager.restoreLegacyLocaleOnStartup(this)
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())
         }
@@ -69,5 +71,10 @@ class ErhuApplication :
                         .build(),
                 ).build(),
         )
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        AppLocaleManager.notifyLocaleChanged()
     }
 }

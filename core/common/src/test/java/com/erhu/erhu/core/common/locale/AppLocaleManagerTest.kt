@@ -1,0 +1,96 @@
+package com.erhu.erhu.core.common.locale
+
+import android.content.Context
+import android.os.Build
+import android.view.View
+import androidx.core.os.LocaleListCompat
+import androidx.test.core.app.ApplicationProvider
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [Build.VERSION_CODES.P, Build.VERSION_CODES.UPSIDE_DOWN_CAKE])
+class AppLocaleManagerTest {
+    private lateinit var context: Context
+
+    @Before
+    fun setUp() {
+        context = ApplicationProvider.getApplicationContext()
+        AppLocaleManager.setLanguageTag(context, null)
+    }
+
+    @After
+    fun tearDown() {
+        AppLocaleManager.setLanguageTag(context, null)
+    }
+
+    @Test
+    fun allTargetLanguages_containsExactTwentyExpectedTags() {
+        val tags = AppLocaleManager.allTargetLanguages.map { it.tag }
+        assertEquals(20, tags.size)
+        assertEquals(
+            listOf(
+                "en",
+                "pl",
+                "es",
+                "pt-BR",
+                "fr",
+                "de",
+                "id",
+                "ru",
+                "ar",
+                "ja",
+                "ko",
+                "zh-CN",
+                "tr",
+                "it",
+                "nl",
+                "th",
+                "vi",
+                "uk",
+                "sv",
+                "ro",
+            ),
+            tags,
+        )
+        assertTrue(AppLocaleManager.allTargetLanguages.first { it.tag == "ar" }.isRtl)
+        assertEquals(1, AppLocaleManager.allTargetLanguages.count { it.isRtl })
+    }
+
+    @Test
+    fun setLanguageTag_persistsAndRestoresSystemDefaultCleanly() {
+        assertNull(AppLocaleManager.selectedLanguageTag(context))
+        AppLocaleManager.setLanguageTag(context, "en")
+        assertEquals("en", AppLocaleManager.selectedLanguageTag(context))
+        AppLocaleManager.setLanguageTag(context, null)
+        assertNull(AppLocaleManager.selectedLanguageTag(context))
+    }
+
+    @Test
+    fun incompleteLanguage_isRejectedAndNotExposed() {
+        val supportedTags = AppLocaleManager.supportedLanguages.map { it.tag }
+        assertFalse(supportedTags.isEmpty())
+        assertNull(AppLocaleManager.findSupportedTag("zz"))
+    }
+
+    @Test
+    fun resolveSupportedTag_handlesRegionalFallbacks() {
+        val locales = LocaleListCompat.forLanguageTags("en-GB")
+        assertEquals("en", AppLocaleManager.resolveSupportedTag(locales))
+    }
+
+    @Test
+    fun localizedContext_setsLtrDirectionForEnglish() {
+        AppLocaleManager.setLanguageTag(context, "en")
+        val localized = AppLocaleManager.localizedContext(context)
+        assertEquals(View.LAYOUT_DIRECTION_LTR, localized.resources.configuration.layoutDirection)
+    }
+}

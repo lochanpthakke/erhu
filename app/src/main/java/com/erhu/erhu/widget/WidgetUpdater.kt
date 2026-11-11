@@ -2,6 +2,7 @@ package com.erhu.erhu.widget
 
 import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.playback.PlaybackController
 import com.lochanpthakke.empee3.widget.GlassMusicWidget
@@ -68,6 +69,7 @@ class WidgetUpdater
                 .merge(
                     kotlinx.coroutines.flow.combine(displayedPlayback, favorite, themeRepository.widgetThemeState) { _, _, _ -> Unit },
                     requests,
+                    AppLocaleManager.localeChanges,
                 ).debounce(150L)
                 .onEach { updateAllWidgetInstances() }
                 .launchIn(scope)
