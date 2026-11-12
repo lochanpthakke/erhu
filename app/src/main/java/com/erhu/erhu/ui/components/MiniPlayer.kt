@@ -23,6 +23,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -32,8 +33,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.component.BottomChrome
@@ -180,54 +183,58 @@ fun MiniPlayer(
                 }
 
                 // In the compact library chrome the skip buttons fold away; play/pause stays.
-                PressIconButton(
-                    onClick = { playbackRepository.skipPrevious() },
-                    modifier = Modifier.collapseHorizontally(compact),
-                    nudge = -1,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipPrevious,
-                        contentDescription =
-                            androidx.compose.ui.res
-                                .stringResource(com.erhu.erhu.core.common.R.string.cd_previous_track),
-                    )
-                }
-
-                PressIconButton(
-                    onClick = {
-                        if (isPlaying) {
-                            playbackRepository.pause()
-                        } else {
-                            playbackRepository.play()
-                        }
-                    },
-                ) {
-                    SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+                // Media control buttons keep their standard LTR sequence (Previous -> Play -> Next)
+                // in all languages, matching system media player conventions.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    PressIconButton(
+                        onClick = { playbackRepository.skipPrevious() },
+                        modifier = Modifier.collapseHorizontally(compact),
+                        nudge = -1,
+                    ) {
                         Icon(
-                            imageVector = icon,
+                            imageVector = Icons.Default.SkipPrevious,
                             contentDescription =
-                                androidx.compose.ui.res.stringResource(
-                                    if (isPlaying) {
-                                        com.erhu.erhu.core.common.R.string.cd_pause
-                                    } else {
-                                        com.erhu.erhu.core.common.R.string.cd_play
-                                    },
-                                ),
+                                androidx.compose.ui.res
+                                    .stringResource(com.erhu.erhu.core.common.R.string.cd_previous_track),
                         )
                     }
-                }
 
-                PressIconButton(
-                    onClick = { playbackRepository.skipNext() },
-                    modifier = Modifier.collapseHorizontally(compact),
-                    nudge = 1,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription =
-                            androidx.compose.ui.res
-                                .stringResource(com.erhu.erhu.core.common.R.string.cd_next_track),
-                    )
+                    PressIconButton(
+                        onClick = {
+                            if (isPlaying) {
+                                playbackRepository.pause()
+                            } else {
+                                playbackRepository.play()
+                            }
+                        },
+                    ) {
+                        SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+                            Icon(
+                                imageVector = icon,
+                                contentDescription =
+                                    androidx.compose.ui.res.stringResource(
+                                        if (isPlaying) {
+                                            com.erhu.erhu.core.common.R.string.cd_pause
+                                        } else {
+                                            com.erhu.erhu.core.common.R.string.cd_play
+                                        },
+                                    ),
+                            )
+                        }
+                    }
+
+                    PressIconButton(
+                        onClick = { playbackRepository.skipNext() },
+                        modifier = Modifier.collapseHorizontally(compact),
+                        nudge = 1,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription =
+                                androidx.compose.ui.res
+                                    .stringResource(com.erhu.erhu.core.common.R.string.cd_next_track),
+                        )
+                    }
                 }
             }
         }

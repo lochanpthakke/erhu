@@ -34,6 +34,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -49,7 +50,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
@@ -369,48 +372,52 @@ fun NowPlayingScreen(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.heroGutter),
                                     verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                                 ) {
-                                    PlaybackProgress(
-                                        position = position,
-                                        totalDurationMs = totalDurationMs,
-                                        extras = extras,
-                                        loop = playbackState.abLoop,
-                                        queueLabel =
-                                            if (playbackState.queue.size > 1) {
-                                                val locale = AppLocaleManager.activeLocale(context)
-                                                stringResource(
-                                                    R.string.player_queue_position,
-                                                    LocaleFormatters.formatInteger(playbackState.currentIndex + 1, locale),
-                                                    LocaleFormatters.formatInteger(playbackState.queue.size, locale),
-                                                )
-                                            } else {
-                                                null
-                                            },
-                                        onSeek = { playbackRepository.seekTo(it) },
-                                        isPlaying = isPlaying,
-                                        accent = seekAccent(lyricsColors),
-                                        reduceMotion = reduceMotion,
-                                        modifier = Modifier.revealWithPlayer(transition, start = 0.40f, end = 0.84f),
-                                    )
+                                    // Playback timeline and transport controls maintain natural LTR direction
+                                    // in all locales, matching iOS and Android media player guidelines.
+                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                        PlaybackProgress(
+                                            position = position,
+                                            totalDurationMs = totalDurationMs,
+                                            extras = extras,
+                                            loop = playbackState.abLoop,
+                                            queueLabel =
+                                                if (playbackState.queue.size > 1) {
+                                                    val locale = AppLocaleManager.activeLocale(context)
+                                                    stringResource(
+                                                        R.string.player_queue_position,
+                                                        LocaleFormatters.formatInteger(playbackState.currentIndex + 1, locale),
+                                                        LocaleFormatters.formatInteger(playbackState.queue.size, locale),
+                                                    )
+                                                } else {
+                                                    null
+                                                },
+                                            onSeek = { playbackRepository.seekTo(it) },
+                                            isPlaying = isPlaying,
+                                            accent = seekAccent(lyricsColors),
+                                            reduceMotion = reduceMotion,
+                                            modifier = Modifier.revealWithPlayer(transition, start = 0.40f, end = 0.84f),
+                                        )
 
-                                    TransportControls(
-                                        playbackState = playbackState,
-                                        isPlaying = isPlaying,
-                                        onShuffle = { playbackRepository.setShuffleModeEnabled(!playbackState.shuffleModeEnabled) },
-                                        // The playing song, the same as the menu's Add to playlist.
-                                        onAddToPlaylist = menuActions.onAddToPlaylist,
-                                        onPrevious = ::previous,
-                                        onPlayPause = ::playPause,
-                                        onNext = ::next,
-                                        onQueue = {
-                                            queueSheetPages = QUEUE_SHEET_QUEUE_PAGES
-                                            queueSheetPage = QUEUE_SHEET_PAGE_QUEUE
-                                        },
-                                        onRepeat = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
-                                        stacked = stacked,
-                                        onToggleStack = { stacked = !stacked },
-                                        stackProgress = { stack.value },
-                                        modifier = Modifier.revealWithPlayer(transition, start = 0.48f, end = 0.92f),
-                                    )
+                                        TransportControls(
+                                            playbackState = playbackState,
+                                            isPlaying = isPlaying,
+                                            onShuffle = { playbackRepository.setShuffleModeEnabled(!playbackState.shuffleModeEnabled) },
+                                            // The playing song, the same as the menu's Add to playlist.
+                                            onAddToPlaylist = menuActions.onAddToPlaylist,
+                                            onPrevious = ::previous,
+                                            onPlayPause = ::playPause,
+                                            onNext = ::next,
+                                            onQueue = {
+                                                queueSheetPages = QUEUE_SHEET_QUEUE_PAGES
+                                                queueSheetPage = QUEUE_SHEET_PAGE_QUEUE
+                                            },
+                                            onRepeat = { playbackRepository.setRepeatMode(playbackState.repeatMode.next()) },
+                                            stacked = stacked,
+                                            onToggleStack = { stacked = !stacked },
+                                            stackProgress = { stack.value },
+                                            modifier = Modifier.revealWithPlayer(transition, start = 0.48f, end = 0.92f),
+                                        )
+                                    }
                                 }
                             }
                             LyricsPanel(

@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="widget_music_name">مشغّل الموسيقى</string>
     <string name="widget_glass_name">المشغّل الزجاجي</string>
     <string name="widget_vinyl_name">مشغّل الفينيل</string>
     <string name="widget_idle_title">لا شيء قيد التشغيل</string>
     <string name="widget_idle_hint">اختر موسيقى في erhu</string>
-    <string name="widget_cd_artwork">غلاف الألبوم</string>
+    <string name="widget_cd_artwork">صورة الألبوم</string>
     <string name="widget_cd_favorite">المفضلة</string>
     <string name="widget_cd_previous">السابق</string>
     <string name="widget_cd_play">تشغيل</string>

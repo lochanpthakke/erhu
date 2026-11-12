@@ -32,12 +32,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.component.PressIconButton
 import com.erhu.erhu.core.designsystem.foundation.IconSize
@@ -244,32 +246,34 @@ private fun LyricsTransport(
     onNext: () -> Unit,
 ) {
     val playPauseDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play)
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        PressIconButton(onClick = onPrevious, nudge = -1) {
-            Icon(
-                imageVector = Icons.Default.SkipPrevious,
-                contentDescription = stringResource(R.string.cd_previous_track),
-                modifier = Modifier.size(IconSize.large),
-            )
-        }
-        PressIconButton(
-            onClick = onPlayPause,
-            modifier = Modifier.semantics { contentDescription = playPauseDescription },
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(IconSize.large))
+            PressIconButton(onClick = onPrevious, nudge = -1) {
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = stringResource(R.string.cd_previous_track),
+                    modifier = Modifier.size(IconSize.large),
+                )
             }
-        }
-        PressIconButton(onClick = onNext, nudge = 1) {
-            Icon(
-                imageVector = Icons.Default.SkipNext,
-                contentDescription = stringResource(R.string.cd_next_track),
-                modifier = Modifier.size(IconSize.large),
-            )
+            PressIconButton(
+                onClick = onPlayPause,
+                modifier = Modifier.semantics { contentDescription = playPauseDescription },
+            ) {
+                SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
+                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(IconSize.large))
+                }
+            }
+            PressIconButton(onClick = onNext, nudge = 1) {
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = stringResource(R.string.cd_next_track),
+                    modifier = Modifier.size(IconSize.large),
+                )
+            }
         }
     }
 }
