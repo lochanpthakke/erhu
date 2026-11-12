@@ -26,8 +26,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 internal fun ToolGuideContent(
@@ -35,6 +37,46 @@ internal fun ToolGuideContent(
     guide: IntroductionToolGuide,
 ) {
     var showDetails by rememberSaveable(page.name) { mutableStateOf(false) }
+    ToolGuideHeaderCard(page = page, entryPointRes = guide.entryPointRes)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = !showDetails,
+            onClick = { showDetails = false },
+            label = { Text(stringResource(CommonR.string.onboarding_guide_how_to_use)) },
+        )
+        FilterChip(
+            selected = showDetails,
+            onClick = { showDetails = true },
+            label = { Text(stringResource(CommonR.string.onboarding_guide_details)) },
+        )
+    }
+    val sections = if (showDetails) guide.details else guide.steps
+    sections.forEachIndexed { index, (titleRes, explanationRes) ->
+        val title = stringResource(titleRes)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+            Text(
+                if (showDetails) {
+                    title
+                } else {
+                    stringResource(CommonR.string.onboarding_guide_step_numbered, index + 1, title)
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                stringResource(explanationRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToolGuideHeaderCard(
+    page: IntroductionPage,
+    entryPointRes: Int,
+) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = .68f),
@@ -56,24 +98,13 @@ internal fun ToolGuideContent(
                 modifier = Modifier.size(28.dp),
             )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Where to find it", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(guide.entryPoint, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(CommonR.string.onboarding_guide_where_to_find),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(stringResource(entryPointRes), style = MaterialTheme.typography.titleSmall)
             }
-        }
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(selected = !showDetails, onClick = { showDetails = false }, label = { Text("How to use") })
-        FilterChip(selected = showDetails, onClick = { showDetails = true }, label = { Text("Details") })
-    }
-    val sections = if (showDetails) guide.details else guide.steps
-    sections.forEachIndexed { index, (title, explanation) ->
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-            Text(
-                if (showDetails) title else "${index + 1}. $title",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(explanation, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

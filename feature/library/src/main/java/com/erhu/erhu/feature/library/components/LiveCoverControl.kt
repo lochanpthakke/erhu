@@ -52,6 +52,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +64,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.database.repository.LiveCoverCheck
 import com.erhu.erhu.core.database.repository.LiveCoverVariant
 import com.erhu.erhu.core.designsystem.artwork.AlbumArtwork
@@ -69,7 +74,9 @@ import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.AnimatedArtOrientation
 import com.erhu.erhu.core.model.ArtworkCompressionState
+import com.erhu.erhu.feature.library.LiveCoverFailureKind
 import com.erhu.erhu.feature.library.LiveCoverUi
+import com.erhu.erhu.core.common.R as CommonR
 
 private val POPUP_MAX_WIDTH = 300.dp
 private val POPUP_MARGIN = 16.dp
@@ -148,7 +155,7 @@ fun LiveCoverControl(
             GlassMenu(
                 expanded = open && state != LiveCoverUi.Hidden,
                 onDismissRequest = { open = false },
-                label = "Live cover",
+                label = stringResource(CommonR.string.live_cover_title),
             ) {
                 LiveCoverCard(
                     state,
@@ -181,12 +188,13 @@ private fun LiveCoverButton(
         when (state) {
             is LiveCoverUi.Downloading ->
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            is LiveCoverUi.Saved -> Icon(Icons.Filled.DownloadDone, contentDescription = "Live cover saved")
+            is LiveCoverUi.Saved ->
+                Icon(Icons.Filled.DownloadDone, contentDescription = stringResource(CommonR.string.live_cover_cd_saved))
             is LiveCoverUi.RateLimited ->
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = DownloadArrowBarIcon,
-                        contentDescription = "Rate limited",
+                        contentDescription = stringResource(CommonR.string.live_cover_cd_rate_limited),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                     )
                     Icon(
@@ -196,7 +204,7 @@ private fun LiveCoverButton(
                         modifier = Modifier.size(16.dp).align(Alignment.BottomEnd),
                     )
                 }
-            else -> Icon(DownloadArrowBarIcon, contentDescription = "Download live cover")
+            else -> Icon(DownloadArrowBarIcon, contentDescription = stringResource(CommonR.string.live_cover_cd_download))
         }
     }
 }
@@ -215,7 +223,13 @@ private fun LiveCoverCard(
 ) {
     val width = min(POPUP_MAX_WIDTH, LocalConfiguration.current.screenWidthDp.dp - POPUP_MARGIN * 2)
     val context = LocalContext.current
-    val offer = extractOffer(state)
+    val offer =
+        when (state) {
+            is LiveCoverUi.Offer -> state.offer
+            is LiveCoverUi.Downloading -> state.offer
+            is LiveCoverUi.Failed -> state.offer
+            LiveCoverUi.Hidden, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
+        }
     val variants = offer?.variants.orEmpty()
 
     var expanded by remember { mutableStateOf(false) }
@@ -239,7 +253,7 @@ private fun LiveCoverCard(
                     modifier = Modifier.size(THUMBNAIL_SIZE).clip(RoundedCornerShape(12.dp)),
                 )
                 Text(
-                    text = "LIVE",
+                    text = stringResource(CommonR.string.live_cover_badge),
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -253,7 +267,11 @@ private fun LiveCoverCard(
             }
             Spacer(modifier = Modifier.width(Spacing.md))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Live cover", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = stringResource(CommonR.string.live_cover_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Text(
                     text = details(state),
                     style = MaterialTheme.typography.bodySmall,
@@ -281,7 +299,14 @@ private fun LiveCoverCard(
                 ) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (expanded) "Collapse options" else "Expand resolution options",
+                        contentDescription =
+                            stringResource(
+                                if (expanded) {
+                                    CommonR.string.live_cover_cd_collapse_options
+                                } else {
+                                    CommonR.string.live_cover_cd_expand_options
+                                },
+                            ),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp),
                     )
@@ -295,7 +320,7 @@ private fun LiveCoverCard(
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xs)) {
                     Text(
-                        text = "Bitrate",
+                        text = stringResource(CommonR.string.live_cover_bitrate_label),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -316,11 +341,13 @@ private fun LiveCoverCard(
                         BitrateTier.entries.forEach { tier ->
                             val isSelected = selectedBitrate == tier
                             val label =
-                                when (tier) {
-                                    BitrateTier.LOW -> "Low"
-                                    BitrateTier.MEDIUM -> "Medium"
-                                    BitrateTier.HIGH -> "High"
-                                }
+                                stringResource(
+                                    when (tier) {
+                                        BitrateTier.LOW -> CommonR.string.live_cover_bitrate_low
+                                        BitrateTier.MEDIUM -> CommonR.string.live_cover_bitrate_medium
+                                        BitrateTier.HIGH -> CommonR.string.live_cover_bitrate_high
+                                    },
+                                )
                             Surface(
                                 onClick = { selectedBitrate = tier },
                                 shape = RoundedCornerShape(10.dp),
@@ -356,9 +383,14 @@ private fun LiveCoverCard(
                             ) {
                                 rowVariants.forEach { v ->
                                     val isSelected = offer?.selectedVariant?.variantUrl == v.variantUrl
+                                    val localizedContext = AppLocaleManager.localizedContext(context)
+                                    val locale = AppLocaleManager.activeLocale(localizedContext)
                                     val sizeStr =
-                                        v.bytes?.let { Formatter.formatShortFileSize(context, it) }
-                                            ?: String.format(java.util.Locale.US, "%.1f MB", v.estimatedSizeMb)
+                                        v.bytes?.let { Formatter.formatShortFileSize(localizedContext, it) }
+                                            ?: stringResource(
+                                                CommonR.string.format_size_mb,
+                                                LocaleFormatters.formatDecimal(v.estimatedSizeMb.toDouble(), 1, locale),
+                                            )
                                     Surface(
                                         onClick = { onSelectVariant?.invoke(v) },
                                         shape = RoundedCornerShape(10.dp),
@@ -432,14 +464,6 @@ private fun filterVariantsByBitrate(
         }.sortedByDescending { (it.width ?: 0) * (it.height ?: 0) }
 }
 
-private fun extractOffer(state: LiveCoverUi): LiveCoverCheck.Downloadable? =
-    when (state) {
-        is LiveCoverUi.Offer -> state.offer
-        is LiveCoverUi.Downloading -> state.offer
-        is LiveCoverUi.Failed -> state.offer
-        LiveCoverUi.Hidden, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
-    }
-
 @Composable
 private fun LiveCoverActions(
     state: LiveCoverUi,
@@ -452,44 +476,84 @@ private fun LiveCoverActions(
             FilledTonalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
                 Icon(DownloadArrowBarIcon, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Download")
+                Text(stringResource(CommonR.string.live_cover_download))
             }
         is LiveCoverUi.Downloading ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Downloading…", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(CommonR.string.live_cover_downloading), style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
-                TextButton(onClick = onCancel) { Text("Cancel") }
+                TextButton(onClick = onCancel) { Text(stringResource(CommonR.string.action_cancel)) }
             }
         is LiveCoverUi.Failed ->
             Column {
-                Text(state.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = localizedFailureMessage(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
                 Spacer(modifier = Modifier.height(Spacing.sm))
-                FilledTonalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) { Text("Try again") }
+                FilledTonalButton(onClick = onDownload, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(CommonR.string.action_try_again))
+                }
             }
         is LiveCoverUi.Saved ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
-                    text = "Saved on this phone",
+                    text = stringResource(CommonR.string.live_cover_saved_on_phone),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = onRemove) { Text("Remove") }
+                TextButton(onClick = onRemove) { Text(stringResource(CommonR.string.action_remove)) }
             }
         is LiveCoverUi.RateLimited ->
             Column {
-                Text(state.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                val locale = AppLocaleManager.activeLocale(LocalContext.current)
+                val text =
+                    state.minutes?.let {
+                        pluralStringResource(
+                            CommonR.plurals.apple_rate_limit_wait,
+                            it,
+                            LocaleFormatters.formatInteger(it, locale),
+                        )
+                    } ?: state.message
+                Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
         LiveCoverUi.Hidden -> Unit
+    }
+}
+
+@Composable
+private fun localizedFailureMessage(state: LiveCoverUi.Failed): String {
+    val context = LocalContext.current
+    val locale = AppLocaleManager.activeLocale(context)
+    return when (state.kind) {
+        LiveCoverFailureKind.NO_LONGER_OFFERED -> stringResource(CommonR.string.live_cover_no_longer_offered)
+        LiveCoverFailureKind.RATE_LIMITED ->
+            state.rateLimitMinutes?.let {
+                pluralStringResource(
+                    CommonR.plurals.apple_rate_limit_wait,
+                    it,
+                    LocaleFormatters.formatInteger(it, locale),
+                )
+            } ?: state.message
+        LiveCoverFailureKind.DOWNLOAD_FAILED -> {
+            val detail = state.error?.localizedMessage(context) ?: state.error?.message
+            if (detail.isNullOrBlank()) {
+                stringResource(CommonR.string.live_cover_download_failed)
+            } else {
+                stringResource(CommonR.string.live_cover_download_failed_detail, detail)
+            }
+        }
     }
 }
 
 /** "Apple Music · 1080 × 1080 · 26.9 MB": what is known, nothing guessed. */
 @Composable
 private fun details(state: LiveCoverUi): String {
-    val context = LocalContext.current
+    val context = AppLocaleManager.localizedContext(LocalContext.current)
     val size: (Long) -> String = { Formatter.formatShortFileSize(context, it) }
     val parts =
         when (state) {
@@ -498,26 +562,39 @@ private fun details(state: LiveCoverUi): String {
             is LiveCoverUi.Offer -> offerParts(state.offer, size)
             is LiveCoverUi.Downloading -> offerParts(state.offer, size)
             is LiveCoverUi.Failed -> offerParts(state.offer, size)
-            is LiveCoverUi.RateLimited -> listOf("Rate Limited")
+            is LiveCoverUi.RateLimited -> listOf(stringResource(CommonR.string.live_cover_rate_limited))
             LiveCoverUi.Hidden -> emptyList()
         }
-    return (listOf("Apple Music") + parts).joinToString(" · ")
+    return (listOf(stringResource(CommonR.string.live_cover_source_apple_music)) + parts).joinToString(" · ")
 }
 
+@Composable
 private fun offerParts(
     offer: LiveCoverCheck.Downloadable,
     size: (Long) -> String,
-): List<String> =
-    listOfNotNull(
-        if (offer.width != null && offer.height != null) "${offer.width} × ${offer.height}" else orientationName(offer.orientation),
-        offer.bytes?.let(size),
-    )
+): List<String> {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val dimensionOrOrientation =
+        if (offer.width != null && offer.height != null) {
+            stringResource(
+                CommonR.string.live_cover_dimensions,
+                LocaleFormatters.formatInteger(offer.width!!, locale),
+                LocaleFormatters.formatInteger(offer.height!!, locale),
+            )
+        } else {
+            orientationName(offer.orientation)
+        }
+    return listOfNotNull(dimensionOrOrientation, offer.bytes?.let(size))
+}
 
+@Composable
 private fun orientationName(orientation: AnimatedArtOrientation): String =
-    when (orientation) {
-        AnimatedArtOrientation.SQUARE_1_1 -> "Square"
-        AnimatedArtOrientation.TALL_3_4 -> "Tall"
-    }
+    stringResource(
+        when (orientation) {
+            AnimatedArtOrientation.SQUARE_1_1 -> CommonR.string.live_cover_orientation_square
+            AnimatedArtOrientation.TALL_3_4 -> CommonR.string.live_cover_orientation_tall
+        },
+    )
 
 /**
  * Below the anchor with their end edges aligned (the button sits at the cover's end), kept

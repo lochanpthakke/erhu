@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.erhu.erhu.core.common.R as CommonR
 
 @Singleton
 class AnnouncementController
@@ -38,11 +39,11 @@ class AnnouncementController
         val requested = MutableStateFlow<String?>(null)
         val fresh = MutableStateFlow(false)
         val refreshing = MutableStateFlow(false)
-        val error = MutableStateFlow<String?>(null)
+        val error = MutableStateFlow<Int?>(null)
         val memory: StateFlow<AnnouncementMemory> =
             store.data
                 .catch {
-                    error.value = "Saved announcements are unavailable."
+                    error.value = CommonR.string.announcements_error_unavailable
                     emit(AnnouncementMemory())
                 }.stateIn(scope, SharingStarted.Eagerly, AnnouncementMemory())
 
@@ -75,7 +76,7 @@ class AnnouncementController
         ): Boolean =
             gate.withLock {
                 if (!configured) {
-                    error.value = "Announcements are not available in this build."
+                    error.value = CommonR.string.announcements_error_not_in_build
                     return@withLock false
                 }
                 refreshing.value = true
@@ -110,7 +111,7 @@ class AnnouncementController
                 } catch (
                     _: Exception,
                 ) {
-                    error.value = "Announcements could not be refreshed. Check your connection and retry."
+                    error.value = CommonR.string.announcements_error_refresh_failed
                     false
                 } finally {
                     refreshing.value = false

@@ -8,9 +8,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import java.net.URLEncoder
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Manual browser fallback only: never used as an artwork provider or an automatic download. */
 internal fun albumArtworkSearchUrl(
@@ -37,9 +40,11 @@ internal fun rememberArtworkWebSearchLauncher(): (String) -> Unit {
             try {
                 handler.openUri(url)
             } catch (_: IllegalArgumentException) {
-                Toast.makeText(context, "No browser is available to open image search.", Toast.LENGTH_LONG).show()
+                val localized = AppLocaleManager.localizedContext(context)
+                Toast.makeText(context, localized.getString(CommonR.string.artwork_web_no_browser), Toast.LENGTH_LONG).show()
             } catch (_: SecurityException) {
-                Toast.makeText(context, "Android couldn't open the browser.", Toast.LENGTH_LONG).show()
+                val localized = AppLocaleManager.localizedContext(context)
+                Toast.makeText(context, localized.getString(CommonR.string.artwork_web_browser_blocked), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -53,10 +58,11 @@ internal fun ArtworkWebSearchButton(
 ) {
     if (url == null) return
     val open = rememberArtworkWebSearchLauncher()
+    val searchCd = stringResource(CommonR.string.artwork_web_search_cd, targetName)
     TextButton(
         onClick = { open(url) },
-        modifier = modifier.semantics { contentDescription = "Search images in browser for $targetName" },
+        modifier = modifier.semantics { contentDescription = searchCd },
     ) {
-        Text("Search images in browser")
+        Text(stringResource(CommonR.string.artwork_web_search_button))
     }
 }

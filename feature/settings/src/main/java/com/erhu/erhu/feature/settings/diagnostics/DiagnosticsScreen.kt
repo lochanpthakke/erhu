@@ -18,15 +18,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import com.erhu.erhu.core.common.logging.CrashLogEntry
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.feature.settings.component.SettingsGroup
+import com.erhu.erhu.feature.settings.component.SettingsNavigationRow
 import com.erhu.erhu.feature.settings.component.SettingsPage
 import com.erhu.erhu.feature.settings.component.SettingsPanel
 import com.erhu.erhu.feature.settings.component.SettingsSection
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 @Suppress("LongMethod")
@@ -48,18 +51,21 @@ fun DiagnosticsScreen(
         actions = {
             if (crashLogs.isNotEmpty()) {
                 IconButton(onClick = { viewModel.clearLogs() }) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Clear crash logs")
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(CommonR.string.diagnostics_cd_clear_logs),
+                    )
                 }
             }
         },
     ) {
         if (onOpenIntroduction != null) {
-            SettingsSection(title = "About") {
+            SettingsSection(title = stringResource(CommonR.string.diagnostics_about_section)) {
                 SettingsGroup {
                     row {
-                        com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
-                            title = "Introduction",
-                            summary = "Explore erhu and music access setup.",
+                        SettingsNavigationRow(
+                            title = stringResource(CommonR.string.diagnostics_intro_title),
+                            summary = stringResource(CommonR.string.diagnostics_intro_summary),
                             onClick = onOpenIntroduction,
                         )
                     }
@@ -67,28 +73,28 @@ fun DiagnosticsScreen(
             }
         }
         if (onOpenAnnouncements != null) {
-            SettingsSection(title = "Announcements") {
+            SettingsSection(title = stringResource(CommonR.string.diagnostics_announcements_section)) {
                 SettingsGroup {
                     row {
-                        com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
-                            title = "Announcements",
-                            summary = "Read active erhu news and notices.",
+                        SettingsNavigationRow(
+                            title = stringResource(CommonR.string.diagnostics_announcements_section),
+                            summary = stringResource(CommonR.string.diagnostics_announcements_summary),
                             onClick = onOpenAnnouncements,
                         )
                     }
                 }
             }
         }
-        SettingsSection(title = "Updates") {
+        SettingsSection(title = stringResource(CommonR.string.diagnostics_updates_section)) {
             UpdatePanel(viewModel)
         }
 
-        SettingsSection(title = "Legal") {
+        SettingsSection(title = stringResource(CommonR.string.diagnostics_legal_section)) {
             SettingsGroup {
                 row {
-                    com.erhu.erhu.feature.settings.component.SettingsNavigationRow(
-                        title = "Privacy Policy",
-                        summary = "How erhu handles local data and online services. Opens in your browser.",
+                    SettingsNavigationRow(
+                        title = stringResource(CommonR.string.diagnostics_privacy_title),
+                        summary = stringResource(CommonR.string.diagnostics_privacy_summary),
                         onClick = {
                             uriHandler.openUri("https://github.com/lochanpthakke/erhu/blob/master/docs/privacy-policy.md")
                         },
@@ -97,11 +103,11 @@ fun DiagnosticsScreen(
             }
         }
 
-        SettingsSection(title = "Local crash log history") {
+        SettingsSection(title = stringResource(CommonR.string.diagnostics_crash_logs_section)) {
             if (crashLogs.isEmpty()) {
                 SettingsPanel {
                     Text(
-                        text = "No crash logs recorded. App has been running stably!",
+                        text = stringResource(CommonR.string.diagnostics_crash_logs_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -137,7 +143,10 @@ private fun CrashLogRow(
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onCopy) {
-                Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy Stack Trace")
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = stringResource(CommonR.string.diagnostics_cd_copy_trace),
+                )
             }
         }
         Text(

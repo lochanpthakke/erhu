@@ -49,7 +49,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.designsystem.artwork.GlassArtworkBackdrop
@@ -69,10 +73,6 @@ import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.feature.library.components.rememberCoverVideoHost
 import kotlinx.coroutines.launch
-import java.util.Locale
-
-private const val MS_PER_SECOND = 1000
-private const val SECONDS_PER_MINUTE = 60
 
 /** The blurred artwork background is fully there over the first part of the expansion. */
 private const val BACKDROP_REVEAL_END = 0.4f
@@ -216,7 +216,7 @@ fun NowPlayingScreen(
             onAudioDetails = { showAudioDetails = true },
             onAddBookmark = {
                 extras.addBookmarkAtCurrentPosition { error ->
-                    Toast.makeText(context, error ?: "Bookmark added", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, error ?: context.getString(R.string.player_bookmark_added), Toast.LENGTH_SHORT).show()
                 }
             },
             onBookmarks = {
@@ -236,12 +236,10 @@ fun NowPlayingScreen(
                                 val result =
                                     snackbarHostState.showSnackbar(
                                         message =
-                                            if (hide) {
-                                                "Hidden from Smart Playlists. It stays in your library and playlists."
-                                            } else {
-                                                "Back in Smart Playlists"
-                                            },
-                                        actionLabel = "Undo",
+                                            context.getString(
+                                                if (hide) R.string.player_hidden_smart_playlists else R.string.player_shown_smart_playlists,
+                                            ),
+                                        actionLabel = context.getString(R.string.action_undo),
                                         duration = SnackbarDuration.Short,
                                     )
                                 if (result == SnackbarResult.ActionPerformed) setHidden(target, !hide)
@@ -284,7 +282,7 @@ fun NowPlayingScreen(
             topBar = {
                 AppTopBar(
                     navigation = TopBarNavigation.Detail(onBackClick),
-                    title = "Now Playing",
+                    title = stringResource(R.string.player_title),
                     actions = {
                         NowPlayingMenu(
                             actions = menuActions,
@@ -307,7 +305,7 @@ fun NowPlayingScreen(
                         .padding(innerPadding),
             ) {
                 if (song == null) {
-                    EmptyState(message = "Nothing is playing. Pick a song from your library.")
+                    EmptyState(message = stringResource(R.string.player_empty_message))
                 } else {
                     val totalDurationMs =
                         (if (playbackState.durationMs > 0) playbackState.durationMs else song.durationMs).coerceAtLeast(1L)
@@ -378,7 +376,12 @@ fun NowPlayingScreen(
                                         loop = playbackState.abLoop,
                                         queueLabel =
                                             if (playbackState.queue.size > 1) {
-                                                "${playbackState.currentIndex + 1} / ${playbackState.queue.size}"
+                                                val locale = AppLocaleManager.activeLocale(context)
+                                                stringResource(
+                                                    R.string.player_queue_position,
+                                                    LocaleFormatters.formatInteger(playbackState.currentIndex + 1, locale),
+                                                    LocaleFormatters.formatInteger(playbackState.queue.size, locale),
+                                                )
                                             } else {
                                                 null
                                             },
@@ -525,6 +528,7 @@ private fun PlaybackProgress(
             modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            val locale = AppLocaleManager.activeLocale(LocalContext.current)
             ElapsedTime(position = position, previewMs = previewMs, totalDurationMs = totalDurationMs)
             if (queueLabel != null) {
                 Text(
@@ -533,7 +537,7 @@ private fun PlaybackProgress(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(text = formatMs(totalDurationMs), style = TextStyles.metadata)
+            Text(text = LocaleFormatters.formatDurationClock(totalDurationMs, locale), style = TextStyles.metadata)
         }
         LinearSeekBar(
             position = position,
@@ -571,7 +575,9 @@ private fun ElapsedTime(
     previewMs: Long?,
     totalDurationMs: Long,
 ) {
-    Text(text = formatMs((previewMs ?: position.value).coerceIn(0L, totalDurationMs)), style = TextStyles.metadata)
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val clamped = (previewMs ?: position.value).coerceIn(0L, totalDurationMs)
+    Text(text = LocaleFormatters.formatDurationClock(clamped, locale), style = TextStyles.metadata)
 }
 
 private fun RepeatMode.next(): RepeatMode =
@@ -580,10 +586,3 @@ private fun RepeatMode.next(): RepeatMode =
         RepeatMode.ALL -> RepeatMode.ONE
         RepeatMode.ONE -> RepeatMode.OFF
     }
-
-private fun formatMs(ms: Long): String {
-    val totalSeconds = ms / MS_PER_SECOND
-    val minutes = totalSeconds / SECONDS_PER_MINUTE
-    val seconds = totalSeconds % SECONDS_PER_MINUTE
-    return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
-}

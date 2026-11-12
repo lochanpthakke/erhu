@@ -51,11 +51,23 @@ fun AppTopBar(
             when (navigation) {
                 is TopBarNavigation.TopLevel ->
                     IconButton(onClick = navigation.onOpenDrawer) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Open navigation drawer")
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription =
+                                androidx.compose.ui.res.stringResource(
+                                    com.erhu.erhu.core.common.R.string.cd_open_navigation_drawer,
+                                ),
+                        )
                     }
                 is TopBarNavigation.Detail ->
                     IconButton(onClick = navigation.onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription =
+                                androidx.compose.ui.res.stringResource(
+                                    com.erhu.erhu.core.common.R.string.cd_back,
+                                ),
+                        )
                     }
             }
         },

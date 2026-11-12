@@ -1,5 +1,6 @@
 package com.erhu.erhu.feature.library
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,10 +39,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
@@ -49,32 +54,23 @@ import com.erhu.erhu.core.model.AbLoopEdit
 import com.erhu.erhu.core.model.AbLoopState
 import com.erhu.erhu.core.model.TrackBookmark
 import java.util.Locale
-
-private const val MS_PER_SECOND = 1_000L
-private const val SECONDS_PER_MINUTE = 60L
-private const val SECONDS_PER_HOUR = 3_600L
+import com.erhu.erhu.core.common.R as CommonR
 
 /** m:ss (h:mm:ss for long tracks). */
-internal fun formatTimestamp(ms: Long): String {
-    val total = ms.coerceAtLeast(0L) / MS_PER_SECOND
-    val hours = total / SECONDS_PER_HOUR
-    val minutes = total % SECONDS_PER_HOUR / SECONDS_PER_MINUTE
-    val seconds = total % SECONDS_PER_MINUTE
-    return if (hours > 0) {
-        String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
-    }
-}
+internal fun formatTimestamp(
+    ms: Long,
+    locale: Locale = Locale.getDefault(),
+): String = LocaleFormatters.formatDurationClock(ms, locale)
 
-/** User-facing message for a loop command that did not apply, or null when it worked. */
-internal fun AbLoopEdit.message(): String? =
+/** User-facing message resource for a loop command that did not apply, or null when it worked. */
+@StringRes
+internal fun AbLoopEdit.messageRes(): Int? =
     when (this) {
         AbLoopEdit.OK -> null
-        AbLoopEdit.NO_TRACK -> "Nothing is playing"
-        AbLoopEdit.A_NOT_BEFORE_B -> "A must be at least a second before B"
-        AbLoopEdit.NOT_READY -> "Set A and B first"
-        AbLoopEdit.UNSUPPORTED -> "Looping is not available"
+        AbLoopEdit.NO_TRACK -> CommonR.string.marks_loop_no_track
+        AbLoopEdit.A_NOT_BEFORE_B -> CommonR.string.marks_loop_a_not_before_b
+        AbLoopEdit.NOT_READY -> CommonR.string.marks_loop_not_ready
+        AbLoopEdit.UNSUPPORTED -> CommonR.string.marks_loop_unsupported
     }
 
 /** Everything the marks tab can do; kept apart from the waveform's own drag state. */
@@ -100,13 +96,14 @@ internal fun MarksPage(
     position: State<Long>,
     actions: MarksActions,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     var renaming by remember { mutableStateOf<TrackBookmark?>(null) }
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item(key = "loop") {
             Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
-                MarksHeading("A–B loop")
+                MarksHeading(stringResource(CommonR.string.marks_ab_loop_title))
                 Text(
-                    text = "Set A and B while listening. Looping jumps back to A each time playback reaches B.",
+                    text = stringResource(CommonR.string.marks_ab_loop_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -115,18 +112,30 @@ internal fun MarksPage(
                     AssistChip(
                         onClick = actions.onSetA,
                         enabled = hasTrack,
-                        label = { Text(loop?.startMs?.let { "A · ${formatTimestamp(it)}" } ?: "Set A") },
+                        label = {
+                            Text(
+                                loop?.startMs?.let {
+                                    stringResource(CommonR.string.marks_point_a_set, formatTimestamp(it, locale))
+                                } ?: stringResource(CommonR.string.marks_set_a),
+                            )
+                        },
                     )
                     AssistChip(
                         onClick = actions.onSetB,
                         enabled = hasTrack,
-                        label = { Text(loop?.endMs?.let { "B · ${formatTimestamp(it)}" } ?: "Set B") },
+                        label = {
+                            Text(
+                                loop?.endMs?.let {
+                                    stringResource(CommonR.string.marks_point_b_set, formatTimestamp(it, locale))
+                                } ?: stringResource(CommonR.string.marks_set_b),
+                            )
+                        },
                     )
                     FilterChip(
                         selected = loop?.enabled == true,
                         onClick = { actions.onLoopEnabled(loop?.enabled != true) },
                         enabled = loop?.isComplete == true,
-                        label = { Text("Loop") },
+                        label = { Text(stringResource(CommonR.string.marks_loop)) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Repeat,
@@ -138,7 +147,7 @@ internal fun MarksPage(
                     AssistChip(
                         onClick = actions.onClearLoop,
                         enabled = loop != null,
-                        label = { Text("Clear") },
+                        label = { Text(stringResource(CommonR.string.action_clear)) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Close,
@@ -155,7 +164,7 @@ internal fun MarksPage(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MarksHeading("Bookmarks", modifier = Modifier.weight(1f))
+                MarksHeading(stringResource(CommonR.string.marks_bookmarks_title), modifier = Modifier.weight(1f))
                 AssistChip(
                     onClick = actions.onAddBookmark,
                     enabled = hasTrack,
@@ -173,7 +182,10 @@ internal fun MarksPage(
         if (bookmarks.isEmpty()) {
             item(key = "empty") {
                 Text(
-                    text = if (hasTrack) "No bookmarks for this track yet." else "Nothing is playing.",
+                    text =
+                        stringResource(
+                            if (hasTrack) CommonR.string.marks_bookmarks_empty else CommonR.string.marks_nothing_playing,
+                        ),
                     style = TextStyles.supporting,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
@@ -217,7 +229,8 @@ private fun MarksHeading(
 /** Reads the position on its own, so only this label recomposes with playback ticks. */
 @Composable
 private fun CurrentPositionLabel(position: State<Long>) {
-    Text("Add at ${formatTimestamp(position.value)}")
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    Text(stringResource(CommonR.string.marks_add_at, formatTimestamp(position.value, locale)))
 }
 
 @Composable
@@ -227,13 +240,15 @@ private fun BookmarkRow(
     onRename: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val time = formatTimestamp(bookmark.positionMs)
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val time = formatTimestamp(bookmark.positionMs, locale)
+    val playFromLabel = stringResource(CommonR.string.marks_cd_play_from, time)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 56.dp)
-                .clickable(onClickLabel = "Play from $time", onClick = onSeek)
+                .clickable(onClickLabel = playFromLabel, onClick = onSeek)
                 .padding(start = Spacing.lg, end = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -244,7 +259,7 @@ private fun BookmarkRow(
             modifier = Modifier.width(64.dp),
         )
         Text(
-            text = bookmark.label.ifBlank { "Bookmark" },
+            text = bookmark.label.ifBlank { stringResource(CommonR.string.marks_default_label) },
             style = MaterialTheme.typography.bodyLarge,
             color = if (bookmark.label.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
@@ -252,10 +267,10 @@ private fun BookmarkRow(
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onRename) {
-            Icon(Icons.Default.Edit, contentDescription = "Rename bookmark at $time")
+            Icon(Icons.Default.Edit, contentDescription = stringResource(CommonR.string.marks_cd_rename_bookmark, time))
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete bookmark at $time")
+            Icon(Icons.Default.Delete, contentDescription = stringResource(CommonR.string.marks_cd_delete_bookmark, time))
         }
     }
 }
@@ -269,17 +284,17 @@ private fun BookmarkNameDialog(
     var name by remember { mutableStateOf(initial) }
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Name bookmark") },
+        title = { Text(stringResource(CommonR.string.marks_rename_title)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it.take(BOOKMARK_LABEL_MAX) },
-                label = { Text("Name") },
+                label = { Text(stringResource(CommonR.string.field_name_label)) },
                 singleLine = true,
             )
         },
-        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(name) }) { Text(stringResource(CommonR.string.action_save)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.action_cancel)) } },
     )
 }
 

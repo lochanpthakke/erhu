@@ -31,21 +31,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.core.network.update.AutomaticUpdateRecord
 import com.erhu.erhu.core.network.update.UpdateCheck
 import com.erhu.erhu.core.network.update.UpdateDownloadState
 import com.erhu.erhu.feature.settings.component.SettingsIcon
 import com.erhu.erhu.feature.settings.component.SettingsPanel
 import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
     val context = LocalContext.current
+    val locale = rememberLocale(context)
     val check by viewModel.update.collectAsState()
     val error by viewModel.updateError.collectAsState()
     val checking by viewModel.isCheckingUpdate.collectAsState()
@@ -53,11 +56,12 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
     val installMessage by viewModel.installationMessage.collectAsState()
     val launch by viewModel.launchInstaller.collectAsState()
     val automatic by viewModel.automaticCheckSummary.collectAsState()
+    val automaticRecord by viewModel.automaticCheckRecord.collectAsState()
     var autoPrompt by rememberSaveable { mutableStateOf(false) }
     var permissionNeeded by rememberSaveable { mutableStateOf(false) }
     val installer =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            viewModel.installMessage(installationResultMessage(result.resultCode))
+            viewModel.installMessage(installationResultMessageRes(result.resultCode))
         }
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -66,10 +70,7 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
                 viewModel.requestInstall()
             } else {
                 permissionNeeded = true
-                viewModel.installMessage(
-                    "Installation permission was not granted. " +
-                        "Allow updates from erhu in Android settings, then retry.",
-                )
+                viewModel.installMessage(CommonR.string.update_install_permission_denied)
             }
         }
     LaunchedEffect(transfer, autoPrompt) {
@@ -82,19 +83,17 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
         val ready = launch ?: return@LaunchedEffect
         viewModel.installerLaunched()
         when (prepareUpdateInstall(ready.file.isFile, context.packageManager.canRequestPackageInstalls())) {
-            InstallPreparation.MISSING_FILE -> viewModel.installMessage("The downloaded APK was removed from cache. Download it again.")
+            InstallPreparation.MISSING_FILE -> viewModel.installMessage(CommonR.string.update_install_missing_file)
             InstallPreparation.PERMISSION_REQUIRED -> {
                 permissionNeeded = true
-                viewModel.installMessage(
-                    "Android needs permission to install updates from erhu. Installation always requires your confirmation.",
-                )
+                viewModel.installMessage(CommonR.string.update_install_permission_needed)
             }
             InstallPreparation.READY ->
                 try {
                     permissionNeeded = false
                     installer.launch(updateInstallerIntent(context, ready))
                 } catch (_: Exception) {
-                    viewModel.installMessage("Android could not open the package installer. Check installation permission and retry.")
+                    viewModel.installMessage(CommonR.string.update_install_installer_unavailable)
                 }
         }
     }
@@ -105,21 +104,39 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
             SettingsIcon(Icons.Default.SystemUpdate)
             Spacer(Modifier.width(Spacing.lg))
             Column(Modifier.weight(1f)) {
-                Text("App Update Checker", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(CommonR.string.update_panel_title), style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "Current Version: ${viewModel.installedVersion.versionName} (${viewModel.installedVersion.versionCode})",
+                    stringResource(
+                        CommonR.string.update_current_version,
+                        viewModel.installedVersion.versionName,
+                        LocaleFormatters.formatInteger(viewModel.installedVersion.versionCode, locale),
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "GitHub Releases (including beta) · Monthly automatic check",
+                    stringResource(CommonR.string.update_release_channel),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         Spacer(Modifier.height(Spacing.md))
-        automatic?.let {
+        val automaticText =
+            automaticRecord?.let { record ->
+                val datePart = LocaleFormatters.formatMediumDate(record.checkedAtMillis, locale)
+                val timePart = LocaleFormatters.formatShortTime(record.checkedAtMillis, locale)
+                val detail =
+                    when (record) {
+                        is AutomaticUpdateRecord.UpToDate ->
+                            stringResource(CommonR.string.update_up_to_date)
+                        is AutomaticUpdateRecord.Available ->
+                            stringResource(CommonR.string.update_auto_available_message, record.tagName)
+                        is AutomaticUpdateRecord.Error -> record.message
+                    }
+                stringResource(CommonR.string.update_auto_check_summary, "$datePart $timePart", detail)
+            } ?: automatic
+        automaticText?.let {
             Text(it, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(Spacing.sm))
         }
@@ -127,26 +144,40 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(Modifier.size(IconSize.small))
                 Spacer(Modifier.width(Spacing.sm))
-                Text("Checking GitHub…")
+                Text(stringResource(CommonR.string.update_checking_github))
             }
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-        if (check == UpdateCheck.UpToDate) Text("You're on the latest version.", style = MaterialTheme.typography.bodyMedium)
+        if (check == UpdateCheck.UpToDate) {
+            Text(stringResource(CommonR.string.update_up_to_date), style = MaterialTheme.typography.bodyMedium)
+        }
         ((check as? UpdateCheck.Available) ?: (transfer as? UpdateDownloadState.Ready)?.update)?.let { available ->
+            val versionHeader =
+                available.versionCode?.let { code ->
+                    stringResource(
+                        CommonR.string.update_new_version_with_code,
+                        available.release.tagName,
+                        LocaleFormatters.formatInteger(code, locale),
+                    )
+                } ?: stringResource(CommonR.string.update_new_version, available.release.tagName)
             Text(
-                "New version: ${available.release.tagName}" + (available.versionCode?.let { " ($it)" } ?: ""),
+                versionHeader,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
             )
             val date =
                 available.release.publishedAt?.let { value ->
-                    runCatching {
-                        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault()).format(Instant.parse(value))
-                    }.getOrDefault(value)
+                    runCatching { LocaleFormatters.formatMediumDate(Instant.parse(value), locale) }.getOrDefault(value)
                 }
-            Text("Released: ${date ?: "Date unavailable"}", style = MaterialTheme.typography.bodySmall)
             Text(
-                available.release.body?.takeIf(String::isNotBlank) ?: "No release notes provided.",
+                stringResource(
+                    CommonR.string.update_released_date,
+                    date ?: stringResource(CommonR.string.update_date_unavailable),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                available.release.body?.takeIf(String::isNotBlank) ?: stringResource(CommonR.string.update_no_release_notes),
                 style = MaterialTheme.typography.bodySmall,
             )
             if (!busy && transfer !is UpdateDownloadState.Ready) {
@@ -156,13 +187,15 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
                     viewModel.downloadUpdate()
                 }, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        if (transfer is UpdateDownloadState.Failed ||
-                            transfer == UpdateDownloadState.Cancelled
-                        ) {
-                            "Retry Download"
-                        } else {
-                            "Download Update"
-                        },
+                        stringResource(
+                            if (transfer is UpdateDownloadState.Failed ||
+                                transfer == UpdateDownloadState.Cancelled
+                            ) {
+                                CommonR.string.update_retry_download
+                            } else {
+                                CommonR.string.update_download_action
+                            },
+                        ),
                     )
                 }
             }
@@ -170,9 +203,7 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
         when (val state = transfer) {
             is UpdateDownloadState.Downloading -> {
                 val total = state.total
-                if (total !=
-                    null
-                ) {
+                if (total != null && total > 0L) {
                     LinearProgressIndicator(
                         progress = { (state.bytes.toFloat() / total).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth(),
@@ -181,29 +212,44 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                 }
                 Text(
-                    if (total !=
-                        null
-                    ) {
-                        "${state.bytes * 100 / total}% · ${state.bytes / 1024} / ${total / 1024} KB"
+                    if (total != null && total > 0L) {
+                        stringResource(
+                            CommonR.string.update_download_progress_total,
+                            LocaleFormatters.formatPercent(state.bytes.toDouble() / total, locale),
+                            LocaleFormatters.formatFileSize(context, state.bytes, locale),
+                            LocaleFormatters.formatFileSize(context, total, locale),
+                        )
                     } else {
-                        "${state.bytes / 1024} KB downloaded"
+                        stringResource(
+                            CommonR.string.update_download_progress_unknown,
+                            LocaleFormatters.formatFileSize(context, state.bytes, locale),
+                        )
                     },
                 )
                 TextButton(onClick = {
                     autoPrompt = false
                     viewModel.cancelDownload()
-                }) { Text("Cancel Download") }
+                }) { Text(stringResource(CommonR.string.update_cancel_download)) }
             }
-            UpdateDownloadState.Verifying -> Text("Verifying APK identity, version and signing certificate…")
+            UpdateDownloadState.Verifying -> Text(stringResource(CommonR.string.update_verifying_apk))
             is UpdateDownloadState.Ready -> {
-                Text("APK verified and ready to install.")
-                Button(onClick = viewModel::requestInstall, modifier = Modifier.fillMaxWidth()) { Text("Install Update") }
+                Text(stringResource(CommonR.string.update_ready_to_install))
+                Button(onClick = viewModel::requestInstall, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(CommonR.string.update_install_action))
+                }
             }
             is UpdateDownloadState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error)
-            UpdateDownloadState.Cancelled -> Text("Download cancelled.")
+            UpdateDownloadState.Cancelled -> Text(stringResource(CommonR.string.update_download_cancelled))
             UpdateDownloadState.Idle -> Unit
         }
-        installMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        installMessage?.let { message ->
+            val resolved =
+                when (message) {
+                    is UpdateInstallMessage.Resource -> stringResource(message.resId)
+                    is UpdateInstallMessage.Text -> message.text
+                }
+            Text(resolved, style = MaterialTheme.typography.bodyMedium)
+        }
         if (permissionNeeded) {
             FilledTonalButton(onClick = {
                 try {
@@ -211,21 +257,24 @@ internal fun UpdatePanel(viewModel: DiagnosticsViewModel) {
                 } catch (
                     _: Exception,
                 ) {
-                    viewModel.installMessage("Android installation settings are unavailable on this device.")
+                    viewModel.installMessage(CommonR.string.update_install_settings_unavailable)
                 }
-            }) { Text("Allow Installation") }
+            }) { Text(stringResource(CommonR.string.update_allow_installation)) }
         }
         Spacer(Modifier.height(Spacing.sm))
         FilledTonalButton(onClick = viewModel::checkForUpdates, enabled = !checking && !busy, modifier = Modifier.fillMaxWidth()) {
             Text(
-                if (checking) {
-                    "Checking GitHub…"
-                } else if (error != null) {
-                    "Retry Update Check"
-                } else {
-                    "Check for Updates Now"
-                },
+                stringResource(
+                    when {
+                        checking -> CommonR.string.update_checking_github
+                        error != null -> CommonR.string.update_retry_check
+                        else -> CommonR.string.update_check_now
+                    },
+                ),
             )
         }
     }
 }
+
+@Composable
+private fun rememberLocale(context: android.content.Context) = AppLocaleManager.activeLocale(context)

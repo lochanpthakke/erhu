@@ -1,5 +1,6 @@
 package com.erhu.erhu.feature.library.transition
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,16 +22,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.component.PressIconButton
 import com.erhu.erhu.core.designsystem.foundation.Spacing
@@ -44,12 +48,12 @@ import com.erhu.erhu.feature.library.formatTimestamp
 
 /** The editor's floating option panels. */
 internal enum class EditorSection(
-    val title: String,
+    @param:StringRes val titleRes: Int,
     val color: Color,
 ) {
-    VOLUME("Volume", AutomationColors.volume),
-    EQ("EQ", AutomationColors.eq),
-    FILTER("Filter", AutomationColors.filter),
+    VOLUME(R.string.transition_section_volume, AutomationColors.volume),
+    EQ(R.string.transition_section_eq, AutomationColors.eq),
+    FILTER(R.string.transition_section_filter, AutomationColors.filter),
 }
 
 @Composable
@@ -93,7 +97,7 @@ internal fun PreviewButton(
     PressIconButton(onClick = onToggle, modifier = modifier.size(PREVIEW_TOUCH)) {
         Icon(
             if (playing) Icons.Default.Stop else Icons.Default.PlayArrow,
-            contentDescription = if (playing) "Stop preview" else "Preview transition (your queue is not changed)",
+            contentDescription = stringResource(if (playing) R.string.transition_cd_stop_preview else R.string.transition_cd_start_preview),
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(PREVIEW_ICON),
         )
@@ -116,21 +120,26 @@ internal fun DurationPill(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
-            Text(TransitionSpec.durationLabel(durationMs), style = MaterialTheme.typography.titleMedium)
-            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Change duration")
+            Text(localizedDurationLabel(durationMs), style = MaterialTheme.typography.titleMedium)
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.transition_cd_change_duration))
         }
     }
 }
 
+@Composable
 internal fun sectionValue(
     section: EditorSection,
     spec: TransitionSpec?,
 ): String {
-    if (spec == null) return "None"
+    if (spec == null) return stringResource(R.string.transition_none)
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     return when (section) {
-        EditorSection.VOLUME -> VolumeShape.of(spec)?.label ?: "Custom curve"
-        EditorSection.EQ -> EqMove.of(spec)?.label ?: "Bass swap at ${percent(spec.bassSwapAt)} %"
-        EditorSection.FILTER -> spec.filter.label
+        EditorSection.VOLUME ->
+            VolumeShape.of(spec)?.labelRes()?.let { stringResource(it) } ?: stringResource(R.string.transition_custom_curve)
+        EditorSection.EQ ->
+            EqMove.of(spec)?.labelRes()?.let { stringResource(it) }
+                ?: stringResource(R.string.transition_bass_swap_at, LocaleFormatters.formatInteger(percent(spec.bassSwapAt), locale))
+        EditorSection.FILTER -> stringResource(spec.filter.labelRes())
     }
 }
 
@@ -140,17 +149,19 @@ internal fun SectionRow(
     value: String,
     onClick: () -> Unit,
 ) {
+    val title = stringResource(section.titleRes)
+    val clickLabel = stringResource(R.string.transition_cd_change_section, title)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClickLabel = "Change ${section.title}", onClick = onClick)
+                .clickable(onClickLabel = clickLabel, onClick = onClick)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
     ) {
         ColorBar(section.color)
         Spacer(Modifier.width(Spacing.md))
-        Text(section.title, style = MaterialTheme.typography.titleLarge)
+        Text(title, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.width(Spacing.lg))
         Text(
             value,
@@ -176,12 +187,12 @@ internal fun SectionRowUnavailable() {
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
             Text(
-                "Effects, looping, beatmatching",
+                stringResource(R.string.transition_unavailable_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Not available: the audio engine has no echo, reverb or loop stage, and your library has no BPM or beat data.",
+                stringResource(R.string.transition_unavailable_body),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -208,7 +219,12 @@ internal fun SheetTitle(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
         ColorBar(section.color)
         Spacer(Modifier.width(Spacing.md))
-        Text(section.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(
+            stringResource(section.titleRes),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
         action?.invoke()
     }
 }

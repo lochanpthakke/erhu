@@ -26,13 +26,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.MetadataCandidate
 import com.erhu.erhu.core.model.Song
 import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 @Suppress("MagicNumber", "LongMethod", "CyclomaticComplexMethod", "LongParameterList")
@@ -51,10 +56,11 @@ fun FixTagsDialog(
 
     val topCandidate = candidates.firstOrNull()
     val topScorePercent = topCandidate?.let { (it.confidenceScore * 100).roundToInt() } ?: 0
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Fix Tags & Metadata") },
+        title = { Text(stringResource(CommonR.string.fix_tags_title)) },
         text = {
             Column(
                 modifier =
@@ -64,7 +70,7 @@ fun FixTagsDialog(
             ) {
                 if (candidates.isNotEmpty()) {
                     Text(
-                        text = "Match Candidates (Tap to Auto-fill)",
+                        text = stringResource(CommonR.string.fix_tags_candidates_hint),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -72,7 +78,11 @@ fun FixTagsDialog(
 
                     if (topScorePercent < 85 && topScorePercent > 0) {
                         Text(
-                            text = "⚠️ Low confidence match ($topScorePercent%) — please review details carefully.",
+                            text =
+                                stringResource(
+                                    CommonR.string.fix_tags_low_confidence_warning,
+                                    LocaleFormatters.formatInteger(topScorePercent, locale),
+                                ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -105,11 +115,23 @@ fun FixTagsDialog(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(candidate.title, fontWeight = FontWeight.Bold)
-                                    Text("${candidate.artist} • ${candidate.album}", style = MaterialTheme.typography.bodySmall)
+                                    Text(
+                                        stringResource(
+                                            CommonR.string.fix_tags_candidate_subtitle,
+                                            candidate.artist,
+                                            candidate.album,
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
                                 }
                                 Spacer(modifier = Modifier.width(Spacing.xs))
                                 Text(
-                                    text = "$score% (${candidate.sourceName})",
+                                    text =
+                                        stringResource(
+                                            CommonR.string.fix_tags_candidate_score_source,
+                                            LocaleFormatters.formatInteger(score, locale),
+                                            candidate.sourceName,
+                                        ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
@@ -123,7 +145,7 @@ fun FixTagsDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
+                    label = { Text(stringResource(CommonR.string.fix_tags_field_title)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -132,7 +154,7 @@ fun FixTagsDialog(
                 OutlinedTextField(
                     value = artist,
                     onValueChange = { artist = it },
-                    label = { Text("Artist") },
+                    label = { Text(stringResource(CommonR.string.fix_tags_field_artist)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -141,18 +163,19 @@ fun FixTagsDialog(
                 OutlinedTextField(
                     value = album,
                     onValueChange = { album = it },
-                    label = { Text("Album") },
+                    label = { Text(stringResource(CommonR.string.fix_tags_field_album)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(Spacing.sm))
 
+                val keepPlaceholder = stringResource(CommonR.string.fix_tags_keep_current)
                 Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = yearStr,
                         onValueChange = { yearStr = it },
-                        label = { Text("Year") },
-                        placeholder = { Text("Keep") },
+                        label = { Text(stringResource(CommonR.string.fix_tags_field_year)) },
+                        placeholder = { Text(keepPlaceholder) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
@@ -160,8 +183,8 @@ fun FixTagsDialog(
                     OutlinedTextField(
                         value = genre,
                         onValueChange = { genre = it },
-                        label = { Text("Genre") },
-                        placeholder = { Text("Keep") },
+                        label = { Text(stringResource(CommonR.string.fix_tags_field_genre)) },
+                        placeholder = { Text(keepPlaceholder) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
@@ -169,15 +192,15 @@ fun FixTagsDialog(
                     OutlinedTextField(
                         value = bpmStr,
                         onValueChange = { bpmStr = it },
-                        label = { Text("BPM") },
-                        placeholder = { Text("Keep") },
+                        label = { Text(stringResource(CommonR.string.fix_tags_field_bpm)) },
+                        placeholder = { Text(keepPlaceholder) },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
                 }
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
-                    text = "Empty fields keep the file's current value. Android may ask you to allow erhu to modify the file.",
+                    text = stringResource(CommonR.string.fix_tags_empty_fields_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -192,12 +215,12 @@ fun FixTagsDialog(
                 },
                 enabled = title.isNotBlank() && artist.isNotBlank(),
             ) {
-                Text("Save & Write Tags")
+                Text(stringResource(CommonR.string.fix_tags_save_write))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(CommonR.string.action_cancel))
             }
         },
     )

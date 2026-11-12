@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
@@ -40,6 +41,7 @@ import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.core.designsystem.theme.LocalPopupGlassInMotion
 import com.erhu.erhu.core.designsystem.theme.PopupGlassTheme
 import kotlinx.coroutines.flow.first
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * Shared anchored action menu. Place inside the same Box as the trigger.
@@ -99,7 +101,7 @@ fun GlassMenu(
                 TextButton(
                     onClick = { confirmation = null },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
-                ) { Text("Cancel") }
+                ) { Text(stringResource(CommonR.string.action_cancel)) }
             },
         )
     }

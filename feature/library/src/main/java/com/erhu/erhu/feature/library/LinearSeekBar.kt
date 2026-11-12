@@ -33,12 +33,14 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.core.model.AbLoopState
 import com.erhu.erhu.core.model.WaveformTimeline
@@ -171,6 +173,7 @@ internal fun LinearSeekBar(
         onSeek(target)
     })
     val latestOnPreview by rememberUpdatedState(onPreview)
+    val seekDescription = stringResource(R.string.seekbar_cd_seek)
 
     Box(
         modifier =
@@ -178,7 +181,7 @@ internal fun LinearSeekBar(
                 .fillMaxWidth()
                 .height(TOUCH_HEIGHT)
                 .semantics {
-                    contentDescription = "Seek"
+                    contentDescription = seekDescription
                     progressBarRangeInfo = ProgressBarRangeInfo(position.value.toFloat(), 0f..latestDuration.coerceAtLeast(1L).toFloat())
                     setProgress { target ->
                         latestOnSeek(target.toLong().coerceIn(0L, latestDuration))

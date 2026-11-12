@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
@@ -141,8 +143,14 @@ internal fun VisualizerScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = Spacing.lg)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
-                IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Close visualizer") }
-                Text("Visualizer", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.visualizer_cd_close))
+                }
+                Text(
+                    stringResource(R.string.player_menu_visualizer),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
             }
             ModeChips(settings.mode, viewModel::setMode)
             BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -160,15 +168,19 @@ internal fun VisualizerScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onPrevious) { Icon(Icons.Default.SkipPrevious, "Previous", modifier = Modifier.size(IconSize.large)) }
+                IconButton(onClick = onPrevious) {
+                    Icon(Icons.Default.SkipPrevious, stringResource(R.string.cd_previous_track), modifier = Modifier.size(IconSize.large))
+                }
                 FilledIconButton(onClick = onPlayPause, modifier = Modifier.size(64.dp), shape = CircleShape) {
                     Icon(
                         if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        if (isPlaying) "Pause" else "Play",
+                        stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
                         modifier = Modifier.size(IconSize.hero),
                     )
                 }
-                IconButton(onClick = onNext) { Icon(Icons.Default.SkipNext, "Next", modifier = Modifier.size(IconSize.large)) }
+                IconButton(onClick = onNext) {
+                    Icon(Icons.Default.SkipNext, stringResource(R.string.cd_next_track), modifier = Modifier.size(IconSize.large))
+                }
             }
         }
     }
@@ -181,11 +193,11 @@ private fun ModeChips(
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm), modifier = Modifier.padding(bottom = Spacing.sm)) {
         listOf(
-            VisualizerMode.SPECTRUM_BARS to "Bars",
-            VisualizerMode.CIRCULAR_SPECTRUM to "Circle",
-            VisualizerMode.OSCILLOSCOPE to "Waveform",
-        ).forEach { (value, label) ->
-            FilterChip(selected = mode == value, onClick = { onSelect(value) }, label = { Text(label) })
+            VisualizerMode.SPECTRUM_BARS to R.string.visualizer_mode_bars,
+            VisualizerMode.CIRCULAR_SPECTRUM to R.string.visualizer_mode_circle,
+            VisualizerMode.OSCILLOSCOPE to R.string.visualizer_mode_waveform,
+        ).forEach { (value, labelRes) ->
+            FilterChip(selected = mode == value, onClick = { onSelect(value) }, label = { Text(stringResource(labelRes)) })
         }
     }
 }
@@ -195,16 +207,16 @@ private fun StatusMessage(
     status: VisualizerStatus,
     song: Song?,
 ) {
-    val text =
+    val textRes =
         when {
-            song == null -> "Play something to see it here."
-            status == VisualizerStatus.UNAVAILABLE -> "The visualizer cannot read this audio format. Playback is not affected."
-            status == VisualizerStatus.WAITING -> "Listening…"
-            status == VisualizerStatus.PAUSED -> "Paused"
+            song == null -> R.string.visualizer_empty
+            status == VisualizerStatus.UNAVAILABLE -> R.string.visualizer_unavailable
+            status == VisualizerStatus.WAITING -> R.string.visualizer_waiting
+            status == VisualizerStatus.PAUSED -> R.string.visualizer_paused
             else -> null
         } ?: return
     Text(
-        text = text,
+        text = stringResource(textRes),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
@@ -243,11 +255,13 @@ private fun VisualizerCanvas(
     val soft = MaterialTheme.colorScheme.onSurface.copy(alpha = UNPLAYED_ALPHA)
     val path = remember { Path() }
     val description =
-        when (mode) {
-            VisualizerMode.SPECTRUM_BARS -> "Spectrum of the music playing"
-            VisualizerMode.CIRCULAR_SPECTRUM -> "Circular spectrum of the music playing"
-            VisualizerMode.OSCILLOSCOPE -> "Waveform of the music playing"
-        }
+        stringResource(
+            when (mode) {
+                VisualizerMode.SPECTRUM_BARS -> R.string.visualizer_cd_bars
+                VisualizerMode.CIRCULAR_SPECTRUM -> R.string.visualizer_cd_circle
+                VisualizerMode.OSCILLOSCOPE -> R.string.visualizer_cd_waveform
+            },
+        )
     Canvas(modifier = modifier.semantics { contentDescription = description }) {
         frame.longValue // redraw on every analysed frame
         when (mode) {

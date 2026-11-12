@@ -14,9 +14,11 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.erhu.erhu.MainActivity
 import com.erhu.erhu.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.erhu.erhu.core.common.R as CommonR
 
 const val ANNOUNCEMENT_EXTRA = "erhu.announcement.id"
 private const val CHANNEL = "erhu_announcements"
@@ -44,11 +46,15 @@ class AnnouncementNotifications
             ) {
                 return
             }
+            val localizedContext = AppLocaleManager.localizedContext(context)
             val manager = context.getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Announcements", NotificationManager.IMPORTANCE_LOW).apply {
-                    description =
-                        "erhu news and important notices"
+                NotificationChannel(
+                    CHANNEL,
+                    localizedContext.getString(CommonR.string.announcements_channel_name),
+                    NotificationManager.IMPORTANCE_LOW,
+                ).apply {
+                    description = localizedContext.getString(CommonR.string.announcements_channel_description)
                 },
             )
             if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return

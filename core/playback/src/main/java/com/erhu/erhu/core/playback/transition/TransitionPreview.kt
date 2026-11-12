@@ -1,7 +1,9 @@
 package com.erhu.erhu.core.playback.transition
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.media3.common.Player
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.common.dispatcher.DispatcherProvider
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.model.TransitionRole
@@ -37,7 +39,7 @@ sealed interface PreviewState {
     ) : PreviewState
 
     data class Unavailable(
-        val reason: String,
+        @param:StringRes val reasonRes: Int,
     ) : PreviewState
 }
 
@@ -88,7 +90,7 @@ class TransitionPreview
             val clean = spec.sanitized()
             val duration = clean.effectiveDurationMs(from.durationMs, to.durationMs)
             if (from.uri.isBlank() || to.uri.isBlank() || duration < TransitionPlanner.MIN_EFFECTIVE_MS) {
-                _state.value = PreviewState.Unavailable("These tracks are too short or unavailable for a preview.")
+                _state.value = PreviewState.Unavailable(R.string.transition_preview_tracks_unavailable)
                 return
             }
             val startAt = clean.outgoingEndMs(from.durationMs) - duration
@@ -179,7 +181,7 @@ class TransitionPreview
 
         private fun fail() {
             stop()
-            _state.value = PreviewState.Unavailable("This preview could not be played (the file may be unavailable).")
+            _state.value = PreviewState.Unavailable(R.string.transition_preview_failed)
         }
 
         private companion object {

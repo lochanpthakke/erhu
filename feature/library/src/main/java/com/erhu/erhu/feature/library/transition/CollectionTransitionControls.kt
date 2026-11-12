@@ -26,10 +26,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.CollectionKind
@@ -47,21 +52,27 @@ internal fun CollectionTransitionRow(
     onOpen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val isAlbum = collection.kind == CollectionKind.ALBUM
     val choice = config.collection(collection)
+    val offForCollection = stringResource(if (isAlbum) R.string.transition_off_for_album else R.string.transition_off_for_playlist)
     val summary =
         when {
-            !config.collectionEnabled(collection) -> "Off for this ${noun(collection)}"
-            !config.global.masterEnabled -> "Automatic crossfades are off"
-            choice == TransitionChoice.Off -> "Off for this ${noun(collection)}"
-            choice is TransitionChoice.Custom -> specSummary(choice.spec)
-            else -> "Default · ${specSummary(config.global.default.specOrNull())}"
+            !config.collectionEnabled(collection) -> offForCollection
+            !config.global.masterEnabled -> stringResource(R.string.transition_master_off_summary)
+            choice == TransitionChoice.Off -> offForCollection
+            choice is TransitionChoice.Custom -> localizedSpecSummary(choice.spec)
+            else -> stringResource(R.string.transition_default_prefix, localizedSpecSummary(config.global.default.specOrNull()))
         }
     val custom = config.pairs.keys.count { it.collection == collection }
+    val openLabel = stringResource(R.string.transition_cd_open_studio)
+    val enableSwitchLabel =
+        stringResource(if (isAlbum) R.string.transition_cd_enable_for_album else R.string.transition_cd_enable_for_playlist)
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .clickable(onClickLabel = "Open Transition Studio", onClick = onOpen)
+                .clickable(onClickLabel = openLabel, onClick = onOpen)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -73,9 +84,13 @@ internal fun CollectionTransitionRow(
         )
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
-            Text("Transition Studio", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.menu_transition_studio), style = MaterialTheme.typography.titleSmall)
             Text(
-                summary + if (custom > 0) " · $custom custom" else "",
+                if (custom > 0) {
+                    stringResource(R.string.transition_summary_custom_count, summary, LocaleFormatters.formatInteger(custom, locale))
+                } else {
+                    summary
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -85,14 +100,12 @@ internal fun CollectionTransitionRow(
         Switch(
             checked = config.collectionEnabled(collection),
             onCheckedChange = onEnabledChange,
-            modifier = Modifier.semantics { contentDescription = "Enable transitions for this ${noun(collection)}" },
+            modifier = Modifier.semantics { contentDescription = enableSwitchLabel },
         )
         Spacer(Modifier.width(Spacing.xs))
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
-
-private fun noun(collection: CollectionRef) = if (collection.kind == CollectionKind.ALBUM) "album" else "playlist"
 
 /** One subscription per collection page, not one per visible track or playback position tick. */
 @Composable
@@ -123,15 +136,16 @@ internal fun CollectionTransitionConnector(
                 .width(1.dp)
                 .height(Spacing.xs)
                 .background(MaterialTheme.colorScheme.outlineVariant)
+        val editDescription = stringResource(R.string.transition_cd_edit_pair, pair.from.song.title, pair.to.song.title)
         Box(line)
         AssistChip(
             onClick = onOpen,
-            label = { Text(pairLabel(pair.choice)) },
+            label = { Text(localizedPairLabel(pair.choice)) },
             leadingIcon = { Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(IconSize.small)) },
             trailingIcon = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
             modifier =
                 Modifier.semantics {
-                    contentDescription = "Edit transition from ${pair.from.song.title} to ${pair.to.song.title}"
+                    contentDescription = editDescription
                 },
         )
         Box(line)

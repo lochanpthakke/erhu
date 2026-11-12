@@ -55,15 +55,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.network.tagger.BpmCorrection
 import com.erhu.erhu.core.network.tagger.PLAUSIBLE_BPM
 import com.erhu.erhu.core.network.tagger.parseBpmTag
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")
@@ -79,6 +83,7 @@ fun ViewMetadataScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(song.id) {
+        libraryViewModel.clearBpmMessage()
         viewModel.inspect(song)
     }
 
@@ -103,7 +108,7 @@ fun ViewMetadataScreen(
     var bpm by remember(uiState.tagData) { mutableStateOf(uiState.tagData?.bpm ?: "") }
     // A half / double time correction waiting for the user's confirmation: (from, to, kind).
     var pendingBpmCorrection by remember { mutableStateOf<Triple<Int, Int, BpmCorrection>?>(null) }
-    val libraryMessage by libraryViewModel.userMessage.collectAsState()
+    val bpmMessage by libraryViewModel.bpmMessage.collectAsState()
 
     val imagePickerLauncher =
         rememberLauncherForActivityResult(
@@ -115,10 +120,13 @@ fun ViewMetadataScreen(
                     val bytes = inputStream?.readBytes()
                     viewModel.setSelectedArtwork(bytes)
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Failed to read image", Toast.LENGTH_SHORT).show()
+                    val localized = AppLocaleManager.localizedContext(context)
+                    Toast.makeText(context, localized.getString(CommonR.string.inspector_image_read_failed), Toast.LENGTH_SHORT).show()
                 }
             }
         }
+
+    val locale = AppLocaleManager.activeLocale(context)
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
@@ -128,9 +136,13 @@ fun ViewMetadataScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Embedded Metadata Inspector", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(CommonR.string.inspector_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close Inspector")
+                    Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(CommonR.string.inspector_cd_close))
                 }
             }
         },
@@ -154,7 +166,7 @@ fun ViewMetadataScreen(
                 ) {
                     // 1. EMBEDDED ARTWORK SECTION
                     Text(
-                        "Embedded Album Cover",
+                        stringResource(CommonR.string.inspector_section_artwork),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -179,7 +191,7 @@ fun ViewMetadataScreen(
                             if (bitmap != null) {
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = "Embedded Cover Art",
+                                    contentDescription = stringResource(CommonR.string.inspector_cd_artwork),
                                     contentScale = ContentScale.Fit,
                                     modifier =
                                         Modifier
@@ -199,7 +211,7 @@ fun ViewMetadataScreen(
                                 )
                                 Spacer(modifier = Modifier.height(Spacing.xs))
                                 Text(
-                                    "No embedded artwork in file",
+                                    stringResource(CommonR.string.inspector_no_artwork),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -216,7 +228,7 @@ fun ViewMetadataScreen(
                             onClick = { imagePickerLauncher.launch("image/*") },
                             modifier = Modifier.weight(1f),
                         ) {
-                            Text("Replace Cover")
+                            Text(stringResource(CommonR.string.inspector_replace_cover))
                         }
                         if (artBytes != null && artBytes.isNotEmpty()) {
                             OutlinedButton(
@@ -225,7 +237,7 @@ fun ViewMetadataScreen(
                             ) {
                                 Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(Spacing.xs))
-                                Text("Remove")
+                                Text(stringResource(CommonR.string.action_remove))
                             }
                         }
                     }
@@ -234,7 +246,7 @@ fun ViewMetadataScreen(
 
                     // 2. BASIC METADATA SECTION
                     Text(
-                        "Basic Information",
+                        stringResource(CommonR.string.inspector_section_basic),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -244,7 +256,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Title") },
+                        label = { Text(stringResource(CommonR.string.fix_tags_field_title)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -253,7 +265,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = artist,
                         onValueChange = { artist = it },
-                        label = { Text("Artist") },
+                        label = { Text(stringResource(CommonR.string.fix_tags_field_artist)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -262,7 +274,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = albumArtist,
                         onValueChange = { albumArtist = it },
-                        label = { Text("Album Artist") },
+                        label = { Text(stringResource(CommonR.string.inspector_field_album_artist)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -271,7 +283,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = album,
                         onValueChange = { album = it },
-                        label = { Text("Album") },
+                        label = { Text(stringResource(CommonR.string.fix_tags_field_album)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -280,7 +292,7 @@ fun ViewMetadataScreen(
 
                     // 3. RELEASE & TRACK METADATA
                     Text(
-                        "Release & Track Info",
+                        stringResource(CommonR.string.inspector_section_release),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -291,14 +303,14 @@ fun ViewMetadataScreen(
                         OutlinedTextField(
                             value = trackNumber,
                             onValueChange = { trackNumber = it },
-                            label = { Text("Track #") },
+                            label = { Text(stringResource(CommonR.string.inspector_field_track_number)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
                         OutlinedTextField(
                             value = discNumber,
                             onValueChange = { discNumber = it },
-                            label = { Text("Disc #") },
+                            label = { Text(stringResource(CommonR.string.inspector_field_disc_number)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
@@ -309,21 +321,21 @@ fun ViewMetadataScreen(
                         OutlinedTextField(
                             value = year,
                             onValueChange = { year = it },
-                            label = { Text("Year") },
+                            label = { Text(stringResource(CommonR.string.fix_tags_field_year)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
                         OutlinedTextField(
                             value = genre,
                             onValueChange = { genre = it },
-                            label = { Text("Genre") },
+                            label = { Text(stringResource(CommonR.string.fix_tags_field_genre)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
                         OutlinedTextField(
                             value = bpm,
                             onValueChange = { bpm = it },
-                            label = { Text("BPM") },
+                            label = { Text(stringResource(CommonR.string.fix_tags_field_bpm)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
@@ -332,7 +344,7 @@ fun ViewMetadataScreen(
                         bpm = parseBpmTag(bpm),
                         onPropose = { from, to, kind -> pendingBpmCorrection = Triple(from, to, kind) },
                     )
-                    libraryMessage?.takeIf { it.startsWith("BPM") }?.let { message ->
+                    bpmMessage?.let { message ->
                         Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                     }
 
@@ -340,7 +352,7 @@ fun ViewMetadataScreen(
 
                     // 4. CREDITS & EXTRA TAGS
                     Text(
-                        "Credits & Lyrics",
+                        stringResource(CommonR.string.inspector_section_credits),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -350,7 +362,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = composer,
                         onValueChange = { composer = it },
-                        label = { Text("Composer") },
+                        label = { Text(stringResource(CommonR.string.inspector_field_composer)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -359,7 +371,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = comment,
                         onValueChange = { comment = it },
-                        label = { Text("Comment") },
+                        label = { Text(stringResource(CommonR.string.inspector_field_comment)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -368,7 +380,7 @@ fun ViewMetadataScreen(
                     OutlinedTextField(
                         value = lyrics,
                         onValueChange = { lyrics = it },
-                        label = { Text("Lyrics") },
+                        label = { Text(stringResource(CommonR.string.inspector_field_lyrics)) },
                         maxLines = 4,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -377,7 +389,7 @@ fun ViewMetadataScreen(
 
                     // 5. TECHNICAL FILE & AUDIO STREAM PROPERTIES (READ-ONLY)
                     Text(
-                        "File & Audio Stream Properties (Read-Only)",
+                        stringResource(CommonR.string.inspector_section_properties),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -390,15 +402,40 @@ fun ViewMetadataScreen(
                     ) {
                         Column(modifier = Modifier.padding(Spacing.sm)) {
                             val diag = uiState.sourceDiagnostics
-                            Text("File Path: ${uiState.filePath ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
+                            val unknown = stringResource(CommonR.string.common_unknown)
+                            Text(
+                                stringResource(CommonR.string.inspector_prop_file_path, uiState.filePath ?: unknown),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                             diag?.let {
-                                Text("Container: ${it.container?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Codec: ${it.codec?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Bitrate: ${it.bitrate?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Sample Rate: ${it.sampleRate?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Channels: ${it.channels?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
-                                Text("File Size: ${it.fileSize?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
-                                Text("Duration: ${it.duration?.value ?: "Unknown"}", style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_container, it.container?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_codec, it.codec?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_bitrate, it.bitrate?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_sample_rate, it.sampleRate?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_channels, it.channels?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_file_size, it.fileSize?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    stringResource(CommonR.string.inspector_prop_duration, it.duration?.value ?: unknown),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
                         }
                     }
@@ -413,7 +450,7 @@ fun ViewMetadataScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Build, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(Spacing.xs))
-                        Text("Force Reconstruct Tag Header")
+                        Text(stringResource(CommonR.string.inspector_force_reconstruct_button))
                     }
                 }
             }
@@ -434,12 +471,16 @@ fun ViewMetadataScreen(
                 },
                 enabled = !uiState.isSaving && !uiState.isLoading,
             ) {
-                Text(if (uiState.isSaving) "Saving..." else "Save & Verify Tags")
+                Text(
+                    stringResource(
+                        if (uiState.isSaving) CommonR.string.action_saving else CommonR.string.inspector_save_verify,
+                    ),
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(CommonR.string.action_cancel))
             }
         },
     )
@@ -449,12 +490,12 @@ fun ViewMetadataScreen(
         val bitmap = remember(bytes) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
         GlassAlertDialog(
             onDismissRequest = { viewModel.setEnlargedArtwork(null) },
-            title = { Text("Embedded Cover Art") },
+            title = { Text(stringResource(CommonR.string.inspector_artwork_dialog_title)) },
             text = {
                 bitmap?.let {
                     Image(
                         bitmap = it.asImageBitmap(),
-                        contentDescription = "Enlarged Cover Art",
+                        contentDescription = stringResource(CommonR.string.inspector_cd_enlarged_artwork),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxWidth().height(300.dp),
                     )
@@ -462,7 +503,7 @@ fun ViewMetadataScreen(
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.setEnlargedArtwork(null) }) {
-                    Text("Close")
+                    Text(stringResource(CommonR.string.action_close))
                 }
             },
         )
@@ -470,13 +511,21 @@ fun ViewMetadataScreen(
 
     // Half / double time: the proposed value is shown, and only written once confirmed.
     pendingBpmCorrection?.let { (from, to, kind) ->
+        val fromText = LocaleFormatters.formatInteger(from, locale)
+        val toText = LocaleFormatters.formatInteger(to, locale)
+        val kindLabel =
+            stringResource(
+                when (kind) {
+                    BpmCorrection.HALF_TIME -> CommonR.string.inspector_bpm_half
+                    BpmCorrection.DOUBLE_TIME -> CommonR.string.inspector_bpm_double
+                },
+            )
         GlassAlertDialog(
             onDismissRequest = { pendingBpmCorrection = null },
-            title = { Text("Change BPM to $to?") },
+            title = { Text(stringResource(CommonR.string.inspector_bpm_dialog_title, toText)) },
             text = {
                 Text(
-                    "${kind.label}: $from → $to BPM. Only the BPM tag of this file is written; the file is read back " +
-                        "to check it, then the library is updated. Other tags are not touched.",
+                    stringResource(CommonR.string.inspector_bpm_dialog_body, kindLabel, fromText, toText),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
@@ -488,12 +537,12 @@ fun ViewMetadataScreen(
                         pendingBpmCorrection = null
                     },
                 ) {
-                    Text("Save $to BPM")
+                    Text(stringResource(CommonR.string.inspector_bpm_dialog_confirm, toText))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingBpmCorrection = null }) {
-                    Text("Cancel")
+                    Text(stringResource(CommonR.string.action_cancel))
                 }
             },
         )
@@ -503,10 +552,10 @@ fun ViewMetadataScreen(
     if (uiState.showForceRepairConfirm) {
         GlassAlertDialog(
             onDismissRequest = { viewModel.setShowForceRepairConfirm(false) },
-            title = { Text("Force Tag Reconstruction?") },
+            title = { Text(stringResource(CommonR.string.inspector_force_dialog_title)) },
             text = {
                 Text(
-                    "This will clear malformed ID3 header wrappers and rebuild clean tag frames from scratch using your edited fields. Audio content will NOT be re-encoded.",
+                    stringResource(CommonR.string.inspector_force_dialog_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
@@ -532,12 +581,12 @@ fun ViewMetadataScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) {
-                    Text("Force Reconstruct Tags")
+                    Text(stringResource(CommonR.string.inspector_force_dialog_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.setShowForceRepairConfirm(false) }) {
-                    Text("Cancel")
+                    Text(stringResource(CommonR.string.action_cancel))
                 }
             },
         )
@@ -551,16 +600,30 @@ private fun BpmCorrectionRow(
     onPropose: (from: Int, to: Int, kind: BpmCorrection) -> Unit,
 ) {
     if (bpm == null || bpm !in PLAUSIBLE_BPM) return
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Tempo off by an octave?", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(CommonR.string.inspector_bpm_octave_prompt), style = MaterialTheme.typography.bodySmall)
         BpmCorrection.entries.forEach { kind ->
             kind.applyTo(bpm)?.let { proposed ->
+                val kindLabel =
+                    stringResource(
+                        when (kind) {
+                            BpmCorrection.HALF_TIME -> CommonR.string.inspector_bpm_half
+                            BpmCorrection.DOUBLE_TIME -> CommonR.string.inspector_bpm_double
+                        },
+                    )
                 TextButton(onClick = { onPropose(bpm, proposed, kind) }) {
-                    Text("${kind.label}: $proposed")
+                    Text(
+                        stringResource(
+                            CommonR.string.inspector_bpm_chip,
+                            kindLabel,
+                            LocaleFormatters.formatInteger(proposed, locale),
+                        ),
+                    )
                 }
             }
         }

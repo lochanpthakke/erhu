@@ -42,7 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
 import com.erhu.erhu.core.designsystem.component.GlassMenuItem
@@ -51,6 +55,7 @@ import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.designsystem.theme.GlassLevel
 import com.erhu.erhu.core.designsystem.theme.glassPanel
+import com.erhu.erhu.core.model.CollectionKind
 import com.erhu.erhu.core.model.TransitionCurve
 import com.erhu.erhu.core.model.TransitionSpec
 import com.erhu.erhu.core.playback.transition.PreviewState
@@ -66,7 +71,7 @@ import com.erhu.erhu.feature.library.formatTimestamp
 internal fun TransitionEditorScreen(
     viewModel: TransitionStudioViewModel,
     draft: EditorDraft,
-    collectionNoun: String,
+    collectionKind: CollectionKind,
     modifier: Modifier = Modifier,
 ) {
     BackHandler(onBack = viewModel::cancelEditor)
@@ -89,8 +94,12 @@ internal fun TransitionEditorScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
         LazyColumn(contentPadding = PaddingValues(bottom = Spacing.xl), modifier = Modifier.fillMaxSize()) {
-            item(key = "bar") { EditorTopBar(viewModel, draft, collectionNoun) }
-            pair?.let { item(key = "out") { TrackRow(it.from, "Outgoing", cueLabel(base, it, outgoing = true)) } }
+            item(key = "bar") { EditorTopBar(viewModel, draft, collectionKind) }
+            pair?.let {
+                item(key = "out") {
+                    TrackRow(it.from, stringResource(R.string.transition_role_outgoing), cueLabel(base, it, outgoing = true))
+                }
+            }
             item(key = "timeline") { TimelineBlock(viewModel, draft, waves, preview, effectiveMs) }
             item(key = "duration") {
                 DurationBlock(draft, preview, requestedMs, effectiveMs) {
@@ -98,7 +107,11 @@ internal fun TransitionEditorScreen(
                     durationSheet = true
                 }
             }
-            pair?.let { item(key = "in") { TrackRow(it.to, "Incoming", cueLabel(base, it, outgoing = false)) } }
+            pair?.let {
+                item(key = "in") {
+                    TrackRow(it.to, stringResource(R.string.transition_role_incoming), cueLabel(base, it, outgoing = false))
+                }
+            }
             item(key = "presets") { PresetCards(draft, viewModel::choose) }
             item(key = "status") { StatusLine(draft) }
             items(EditorSection.entries, key = { it.name }) { section ->
@@ -112,7 +125,7 @@ internal fun TransitionEditorScreen(
                 item(key = "hint") {
                     Column {
                         Text(
-                            "Drag the blue points · tap a lane to add one · hold a point to remove it",
+                            stringResource(R.string.transition_editor_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
@@ -122,7 +135,7 @@ internal fun TransitionEditorScreen(
                             enabled = effectiveMs > 0,
                             modifier = Modifier.padding(horizontal = Spacing.lg),
                         ) {
-                            Text("Edit exact time & gain")
+                            Text(stringResource(R.string.transition_edit_exact_point))
                         }
                     }
                 }
@@ -197,14 +210,14 @@ private fun DurationBlock(
         DurationPill(requestedMs, enabled = shown != null, onClick = onOpen)
         if (draft.target is EditorTarget.Pair && shown != null && effectiveMs < requestedMs) {
             Text(
-                "Shortened to ${TransitionSpec.durationLabel(effectiveMs)} for these tracks",
+                stringResource(R.string.transition_shortened_for_tracks, localizedDurationLabel(effectiveMs)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = Spacing.xs),
             )
         }
         (preview as? PreviewState.Unavailable)?.let {
-            Text(it.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text(stringResource(it.reasonRes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -244,66 +257,114 @@ private fun laneWave(
 private fun EditorTopBar(
     viewModel: TransitionStudioViewModel,
     draft: EditorDraft,
-    noun: String,
+    collectionKind: CollectionKind,
 ) {
-    var menu by remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm, vertical = Spacing.sm),
     ) {
-        IconButton(onClick = viewModel::cancelEditor) { Icon(Icons.Default.Close, contentDescription = "Cancel and discard changes") }
-        Spacer(Modifier.weight(1f))
-        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
-            Text(
-                when (draft.target) {
-                    EditorTarget.Global -> "All music"
-                    is EditorTarget.Collection -> "Whole $noun"
-                    is EditorTarget.Pair -> "This transition"
-                },
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
-            )
+        IconButton(onClick = viewModel::cancelEditor) {
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.transition_cd_cancel_discard))
         }
-        GlassMenuAnchor {
-            IconButton(modifier = Modifier.glassMenuTrigger(), onClick = {
-                menu = true
-            }) { Icon(Icons.Default.MoreVert, contentDescription = "More options") }
-            GlassMenu(label = "Transition editor options", expanded = menu, onDismissRequest = { menu = false }) {
-                GlassMenuItem(icon = Icons.AutoMirrored.Filled.Undo, text = { Text("Undo") }, enabled = draft.undo.isNotEmpty(), onClick = {
+        Spacer(Modifier.weight(1f))
+        EditorTargetBadge(draft.target, collectionKind)
+        EditorOverflowMenu(viewModel, draft)
+        Button(onClick = viewModel::save, enabled = draft.isDirty, modifier = Modifier.padding(start = Spacing.xs)) {
+            Text(stringResource(R.string.action_save))
+        }
+    }
+}
+
+@Composable
+private fun EditorTargetBadge(
+    target: EditorTarget,
+    collectionKind: CollectionKind,
+) {
+    val labelRes =
+        when (target) {
+            EditorTarget.Global -> R.string.transition_scope_all_music
+            is EditorTarget.Collection ->
+                if (collectionKind == CollectionKind.ALBUM) {
+                    R.string.transition_scope_whole_album
+                } else {
+                    R.string.transition_scope_whole_playlist
+                }
+            is EditorTarget.Pair -> R.string.transition_scope_this_pair
+        }
+    Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
+        Text(
+            stringResource(labelRes),
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+        )
+    }
+}
+
+@Composable
+private fun EditorOverflowMenu(
+    viewModel: TransitionStudioViewModel,
+    draft: EditorDraft,
+) {
+    var menu by remember { mutableStateOf(false) }
+    GlassMenuAnchor {
+        IconButton(modifier = Modifier.glassMenuTrigger(), onClick = {
+            menu = true
+        }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_cd_more_options)) }
+        GlassMenu(
+            label = stringResource(R.string.transition_menu_label),
+            expanded = menu,
+            onDismissRequest = { menu = false },
+        ) {
+            GlassMenuItem(
+                icon = Icons.AutoMirrored.Filled.Undo,
+                text = { Text(stringResource(R.string.action_undo)) },
+                enabled = draft.undo.isNotEmpty(),
+                onClick = {
                     menu = false
                     viewModel.undo()
-                })
-                if (draft.target is EditorTarget.Pair) {
-                    GlassMenuItem(icon = Icons.Default.RestartAlt, text = { Text("Reset cue points") }, onClick = {
+                },
+            )
+            if (draft.target is EditorTarget.Pair) {
+                GlassMenuItem(
+                    icon = Icons.Default.RestartAlt,
+                    text = { Text(stringResource(R.string.transition_reset_cues)) },
+                    onClick = {
                         menu = false
                         viewModel.resetCues()
-                    })
-                }
-                GlassMenuItem(icon = Icons.Default.RestartAlt, text = {
-                    Text(
-                        "Reset to preset",
-                    )
-                }, enabled = draft.mode == EditorMode.CUSTOM, onClick = {
+                    },
+                )
+            }
+            GlassMenuItem(
+                icon = Icons.Default.RestartAlt,
+                text = { Text(stringResource(R.string.transition_reset_to_preset)) },
+                enabled = draft.mode == EditorMode.CUSTOM,
+                onClick = {
                     menu = false
                     viewModel.resetToPreset()
-                })
-            }
+                },
+            )
         }
-        Button(onClick = viewModel::save, enabled = draft.isDirty, modifier = Modifier.padding(start = Spacing.xs)) { Text("Save") }
     }
 }
 
 /** Where the outgoing track hands over or the incoming one starts, when moved from the default. */
+@Composable
 private fun cueLabel(
     spec: TransitionSpec,
     pair: StudioPair,
     outgoing: Boolean,
-): String? =
-    if (outgoing) {
-        spec.outgoingCutMs.takeIf { it > 0 }?.let { "Hands over at ${formatTimestamp(spec.outgoingEndMs(pair.from.song.durationMs))}" }
+): String? {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    return if (outgoing) {
+        spec.outgoingCutMs.takeIf { it > 0 }?.let {
+            stringResource(R.string.transition_cue_hands_over, formatTimestamp(spec.outgoingEndMs(pair.from.song.durationMs), locale))
+        }
     } else {
-        spec.incomingStartMs.takeIf { it > 0 }?.let { "Starts at ${formatTimestamp(it.toLong())}" }
+        spec.incomingStartMs.takeIf { it > 0 }?.let {
+            stringResource(R.string.transition_cue_starts_at, formatTimestamp(it.toLong(), locale))
+        }
     }
+}
 
 private val TIMELINE_HEIGHT = 300.dp
 private val WINDOW_CORNER = 20.dp

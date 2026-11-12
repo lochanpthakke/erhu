@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -46,6 +47,7 @@ import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Playlist
 import com.erhu.erhu.core.model.Song
+import com.erhu.erhu.core.common.R as CommonR
 
 /*
  * Library content items (Tracks, Favorites, Albums, Artists). Rows share one
@@ -110,7 +112,7 @@ fun ArtistRow(
 ) {
     LibraryRow(
         title = artist.name,
-        subtitle = countLabel(artist.songCount, "song") + META_SEPARATOR + countLabel(artist.albumCount, "album"),
+        subtitle = "${songCountText(artist.songCount)}$META_SEPARATOR${albumCountText(artist.albumCount)}",
         isHighlighted = false,
         onClick = onClick,
         // No action buttons: the text keeps the same gutter as the leading side.
@@ -198,7 +200,7 @@ fun PlaylistTile(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = countLabel(playlist.songCount, "song"),
+            text = songCountText(playlist.songCount),
             style = TextStyles.tileSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -233,7 +235,7 @@ fun NewPlaylistTile(
             )
         }
         Spacer(modifier = Modifier.height(Spacing.sm))
-        Text(text = "New playlist", style = TextStyles.tileTitle, maxLines = 1)
+        Text(text = stringResource(CommonR.string.playlist_new), style = TextStyles.tileTitle, maxLines = 1)
     }
 }
 
@@ -271,7 +273,7 @@ fun ArtistTile(
             textAlign = TextAlign.Center,
         )
         Text(
-            text = countLabel(artist.songCount, "song") + META_SEPARATOR + countLabel(artist.albumCount, "album"),
+            text = "${songCountText(artist.songCount)}$META_SEPARATOR${albumCountText(artist.albumCount)}",
             style = TextStyles.tileSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -345,9 +347,3 @@ private fun ArtistMonogram(name: String) {
         )
     }
 }
-
-/** "1 song", "3 songs". */
-internal fun countLabel(
-    count: Int,
-    noun: String,
-): String = if (count == 1) "1 $noun" else "$count ${noun}s"

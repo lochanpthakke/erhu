@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +46,7 @@ import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Playlist
 import com.erhu.erhu.core.model.Song
+import com.erhu.erhu.core.common.R as CommonR
 
 /** How many items a section previews; the rest are one "More" away. */
 private const val PREVIEW_LIMIT = 15
@@ -99,10 +101,10 @@ internal fun LibraryOverview(
             item(key = "playlists", contentType = "section") { PlaylistsSection(playlists, actions, cardWidth) }
             item(key = "favorites", contentType = "section") {
                 LibraryPagedSection(
-                    title = LibraryShelf.FAVORITES.label,
+                    title = stringResource(LibraryShelf.FAVORITES.labelRes),
                     items = favoriteSongs,
                     itemKey = { it.id },
-                    emptyMessage = "No favorites yet. Tap the heart on any song to add it here.",
+                    emptyMessage = stringResource(CommonR.string.library_empty_favorites),
                     onMore = { actions.onMore(LibraryShelf.FAVORITES) },
                 ) { song ->
                     SongTile(song = song, onClick = { actions.onFavoriteClick(song) }, modifier = Modifier.width(cardWidth))
@@ -110,10 +112,10 @@ internal fun LibraryOverview(
             }
             item(key = "artists", contentType = "section") {
                 LibraryPagedSection(
-                    title = LibraryShelf.ARTISTS.label,
+                    title = stringResource(LibraryShelf.ARTISTS.labelRes),
                     items = artists,
                     itemKey = { it.id },
-                    emptyMessage = "No artists found. Pull down to rescan your device.",
+                    emptyMessage = stringResource(CommonR.string.library_empty_artists_rescan),
                     onMore = { actions.onMore(LibraryShelf.ARTISTS) },
                 ) { artist ->
                     ArtistTile(
@@ -126,10 +128,15 @@ internal fun LibraryOverview(
             }
             item(key = "songs", contentType = "section") {
                 LibraryPagedSection(
-                    title = "Songs",
+                    title = stringResource(CommonR.string.library_section_songs),
                     items = songs,
                     itemKey = { it.id },
-                    emptyMessage = if (isScanning) "Scanning your music…" else "No songs found. Pull down to rescan your device.",
+                    emptyMessage =
+                        if (isScanning) {
+                            stringResource(CommonR.string.library_scanning)
+                        } else {
+                            stringResource(CommonR.string.library_empty_songs_rescan)
+                        },
                     onMore = actions.onMoreSongs,
                 ) { song ->
                     SongTile(song = song, onClick = { actions.onSongClick(song) }, modifier = Modifier.width(cardWidth))
@@ -146,7 +153,10 @@ private fun PlaylistsSection(
     actions: LibraryOverviewActions,
     cardWidth: Dp,
 ) {
-    LibrarySectionRow(title = LibraryShelf.PLAYLISTS.label, onMore = { actions.onMore(LibraryShelf.PLAYLISTS) }) {
+    LibrarySectionRow(
+        title = stringResource(LibraryShelf.PLAYLISTS.labelRes),
+        onMore = { actions.onMore(LibraryShelf.PLAYLISTS) },
+    ) {
         item(key = "new_playlist", contentType = "new") {
             NewPlaylistTile(onClick = actions.onNewPlaylist, modifier = Modifier.width(cardWidth))
         }
@@ -222,8 +232,9 @@ internal fun LibrarySectionHeader(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onMore, modifier = Modifier.semantics { contentDescription = "More $title" }) {
-            Text("More", maxLines = 1)
+        val moreDescription = stringResource(CommonR.string.library_cd_more_section, title)
+        TextButton(onClick = onMore, modifier = Modifier.semantics { contentDescription = moreDescription }) {
+            Text(stringResource(CommonR.string.action_more), maxLines = 1)
             Spacer(modifier = Modifier.width(Spacing.xs))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(IconSize.small))
         }

@@ -55,6 +55,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,6 +92,7 @@ import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.RadioSeed
 import kotlinx.coroutines.flow.combine
+import com.erhu.erhu.core.common.R as CommonR
 
 private const val HERO_KEY = "artist_hero"
 private const val HERO_PARALLAX = 0.4f
@@ -188,18 +190,21 @@ fun ArtistDetailScreen(
                                         contentColor = MaterialTheme.colorScheme.onSurface,
                                     ),
                             ) {
-                                Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Artist options")
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = stringResource(CommonR.string.artist_cd_options),
+                                )
                             }
                             GlassMenu(
-                                label = "Artist options",
+                                label = stringResource(CommonR.string.artist_cd_options),
                                 albumMotionPilot = true,
                                 expanded = menuExpanded,
                                 onDismissRequest = { menuExpanded = false },
                             ) {
-                                GlassMenuSection("Playback")
+                                GlassMenuSection(stringResource(CommonR.string.menu_section_playback))
                                 GlassMenuItem(
                                     icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                                    text = { Text("Play Next") },
+                                    text = { Text(stringResource(CommonR.string.menu_play_next)) },
                                     onClick = {
                                         menuExpanded = false
                                         allSongs.asReversed().forEach { song -> viewModel.playNext(song) }
@@ -207,7 +212,7 @@ fun ArtistDetailScreen(
                                 )
                                 GlassMenuItem(
                                     icon = Icons.AutoMirrored.Filled.QueueMusic,
-                                    text = { Text("Add to Queue") },
+                                    text = { Text(stringResource(CommonR.string.menu_add_to_queue)) },
                                     onClick = {
                                         menuExpanded = false
                                         allSongs.forEach { song -> viewModel.addToQueue(song) }
@@ -216,7 +221,7 @@ fun ArtistDetailScreen(
                                 if (LocalVybeEnabled.current) {
                                     GlassMenuItem(
                                         icon = Icons.Default.Radio,
-                                        text = { Text("Start Radio") },
+                                        text = { Text(stringResource(CommonR.string.menu_start_radio)) },
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.startRadio(RadioSeed.Artist(artist.id))
@@ -224,10 +229,10 @@ fun ArtistDetailScreen(
                                     )
                                 }
                                 GlassMenuDivider()
-                                GlassMenuSection("Artist")
+                                GlassMenuSection(stringResource(CommonR.string.menu_section_artist))
                                 GlassMenuItem(
                                     icon = Icons.Default.AutoFixHigh,
-                                    text = { Text("Auto Fix Tags") },
+                                    text = { Text(stringResource(CommonR.string.menu_auto_fix_tags)) },
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.enqueueArtistForRepair(artist)
@@ -235,7 +240,7 @@ fun ArtistDetailScreen(
                                 )
                                 GlassMenuItem(
                                     icon = Icons.Default.ImageSearch,
-                                    text = { Text("Fetch Photo Online") },
+                                    text = { Text(stringResource(CommonR.string.menu_fetch_photo_online)) },
                                     onClick = {
                                         menuExpanded = false
                                         viewModel.enqueueArtistForArtwork(artist)
@@ -245,7 +250,7 @@ fun ArtistDetailScreen(
                                 artistArtworkSearchUrl(artist.name)?.let { searchUrl ->
                                     GlassMenuItem(
                                         icon = Icons.Default.ImageSearch,
-                                        text = { Text("Search images in browser") },
+                                        text = { Text(stringResource(CommonR.string.menu_search_images_browser)) },
                                         onClick = {
                                             menuExpanded = false
                                             openArtworkSearch(searchUrl)
@@ -254,7 +259,7 @@ fun ArtistDetailScreen(
                                 }
                                 GlassMenuItem(
                                     icon = Icons.Default.PhotoLibrary,
-                                    text = { Text("Set Custom Photo (Local File)") },
+                                    text = { Text(stringResource(CommonR.string.menu_set_custom_photo_local)) },
                                     onClick = {
                                         menuExpanded = false
                                         showImageDialog = true
@@ -275,7 +280,7 @@ fun ArtistDetailScreen(
             data == null -> Unit
             artist == null ->
                 EmptyState(
-                    message = "This artist is no longer in your library.",
+                    message = stringResource(CommonR.string.artist_missing),
                     icon = LibraryShelf.ARTISTS.icon,
                     modifier = Modifier.padding(innerPadding),
                 )
@@ -325,7 +330,7 @@ fun ArtistDetailScreen(
                     if (lps.isNotEmpty()) {
                         item(key = "lps_section") {
                             AlbumSectionRow(
-                                title = "Albums",
+                                title = stringResource(CommonR.string.artist_section_albums),
                                 albums = lps,
                                 onOpenAlbum = onOpenAlbum,
                             )
@@ -335,7 +340,7 @@ fun ArtistDetailScreen(
                     if (eps.isNotEmpty()) {
                         item(key = "eps_section") {
                             AlbumSectionRow(
-                                title = "EPs",
+                                title = stringResource(CommonR.string.artist_section_eps),
                                 albums = eps,
                                 onOpenAlbum = onOpenAlbum,
                             )
@@ -345,7 +350,7 @@ fun ArtistDetailScreen(
                     if (singles.isNotEmpty()) {
                         item(key = "singles_section") {
                             AlbumSectionRow(
-                                title = "Singles",
+                                title = stringResource(CommonR.string.artist_section_singles),
                                 albums = singles,
                                 onOpenAlbum = onOpenAlbum,
                             )
@@ -355,7 +360,7 @@ fun ArtistDetailScreen(
                     if (featuredSongs.isNotEmpty()) {
                         item(key = "features_header") {
                             Text(
-                                text = "Features",
+                                text = stringResource(CommonR.string.artist_section_features),
                                 style = TextStyles.sectionTitle,
                                 modifier =
                                     Modifier.padding(
@@ -379,7 +384,7 @@ fun ArtistDetailScreen(
                     if (data.unverifiedSongs.isNotEmpty()) {
                         item(key = "unverified_header") {
                             Text(
-                                text = "Credited",
+                                text = stringResource(CommonR.string.artist_section_credited),
                                 style = TextStyles.sectionTitle,
                                 modifier =
                                     Modifier.padding(
@@ -403,7 +408,7 @@ fun ArtistDetailScreen(
                     if (primarySongs.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
-                                text = "Tracks",
+                                text = stringResource(CommonR.string.artist_section_tracks),
                                 style = TextStyles.sectionTitle,
                                 modifier =
                                     Modifier.padding(
@@ -428,7 +433,7 @@ fun ArtistDetailScreen(
                     if (primarySongs.isEmpty() && featuredSongs.isEmpty()) {
                         item(key = "empty_tracks") {
                             EmptyState(
-                                message = "No tracks found for this artist.",
+                                message = stringResource(CommonR.string.artist_empty_tracks),
                                 modifier = Modifier.padding(top = Spacing.xl),
                             )
                         }
@@ -511,7 +516,7 @@ private fun ArtistHero(
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clipToBounds()
-                .clickable(onClickLabel = "Change artist image", onClick = onArtworkClick),
+                .clickable(onClickLabel = stringResource(CommonR.string.artist_cd_change_image), onClick = onArtworkClick),
     ) {
         ArtistArtwork(
             artworkUri = artist.artworkUri?.takeIf(ArtistArtworkCache::hasArtwork),
@@ -577,7 +582,7 @@ private fun ArtistTitleBlock(
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            text = countLabel(artist.songCount, "song") + " · " + countLabel(artist.albumCount, "album"),
+            text = "${songCountText(artist.songCount)} · ${albumCountText(artist.albumCount)}",
             style = TextStyles.metadata,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -623,7 +628,7 @@ private fun ArtistActions(
         ) {
             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
             Spacer(modifier = Modifier.width(Spacing.sm))
-            Text("Play")
+            Text(stringResource(CommonR.string.action_play))
         }
         FilledTonalButton(
             onClick = onShuffle,
@@ -633,7 +638,7 @@ private fun ArtistActions(
         ) {
             Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
             Spacer(modifier = Modifier.width(Spacing.sm))
-            Text("Shuffle")
+            Text(stringResource(CommonR.string.action_shuffle))
         }
     }
 }

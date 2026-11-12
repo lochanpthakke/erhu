@@ -35,10 +35,13 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
@@ -65,7 +68,10 @@ internal fun DetailSection(
                 IconButton(onClick = { explain = !explain }) {
                     Icon(
                         Icons.AutoMirrored.Filled.HelpOutline,
-                        contentDescription = if (explain) "Hide explanation" else "What does this mean?",
+                        contentDescription =
+                            stringResource(
+                                if (explain) R.string.audio_details_cd_hide_explanation else R.string.audio_details_cd_show_explanation,
+                            ),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -130,7 +136,7 @@ private fun DetailValue(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Text(
-            value ?: "Unavailable",
+            value ?: stringResource(R.string.audio_details_unavailable),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (value != null) FontWeight.Medium else FontWeight.Normal,
             color = if (value != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -154,9 +160,24 @@ internal fun SourceTag(source: Provenance) {
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
-        Text(source.label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+        Text(
+            stringResource(source.labelRes()),
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
     }
 }
+
+private fun Provenance.labelRes(): Int =
+    when (this) {
+        Provenance.FILE_HEADER -> R.string.audio_details_provenance_file_header
+        Provenance.CONTAINER -> R.string.audio_details_provenance_container
+        Provenance.LIBRARY -> R.string.audio_details_provenance_library
+        Provenance.PLAYER -> R.string.audio_details_provenance_player
+        Provenance.PLATFORM -> R.string.audio_details_provenance_platform
+        Provenance.MEASURED -> R.string.audio_details_provenance_measured
+        Provenance.ESTIMATE -> R.string.audio_details_provenance_estimate
+    }
 
 @Composable
 internal fun DetailNote(text: String) {
@@ -186,10 +207,11 @@ internal fun ChainStep(
         modifier =
             Modifier.fillMaxWidth().padding(horizontal = Spacing.lg).drawBehind {
                 if (!isLast) {
+                    val connectorX = if (layoutDirection == LayoutDirection.Rtl) size.width - 6.dp.toPx() else 6.dp.toPx()
                     drawLine(
                         connector,
-                        Offset(6.dp.toPx(), 18.dp.toPx()),
-                        Offset(6.dp.toPx(), size.height + 6.dp.toPx()),
+                        Offset(connectorX, 18.dp.toPx()),
+                        Offset(connectorX, size.height + 6.dp.toPx()),
                         1.dp.toPx(),
                     )
                 }
@@ -218,7 +240,7 @@ internal fun ChainStep(
                 )
             }
             Text(
-                (if (appControlled) "App · " else "System · ") + detail,
+                stringResource(if (appControlled) R.string.audio_details_prefix_app else R.string.audio_details_prefix_system, detail),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )

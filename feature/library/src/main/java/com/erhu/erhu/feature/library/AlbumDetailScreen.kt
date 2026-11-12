@@ -59,6 +59,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -108,6 +109,7 @@ import com.erhu.erhu.feature.library.transition.TransitionStudioRow
 import com.erhu.erhu.feature.library.transition.TransitionStudioViewModel
 import com.erhu.erhu.feature.library.transition.rememberCollectionTransitionPairs
 import kotlinx.coroutines.flow.combine
+import com.erhu.erhu.core.common.R as CommonR
 
 /** The hero artwork moves at this share of the scroll speed (parallax) as the page scrolls. */
 private const val HERO_PARALLAX = 0.5f
@@ -126,7 +128,6 @@ private const val HERO_FADE_LOWER_ALPHA = 0.75f
 private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
 
 private const val MS_PER_MINUTE = 60_000L
-private const val MINUTES_PER_HOUR = 60L
 
 /** What the album page shows: [album] is null once the album has left the library. */
 private class AlbumDetailData(
@@ -233,18 +234,21 @@ fun AlbumDetailScreen(
                                             contentColor = MaterialTheme.colorScheme.onSurface,
                                         ),
                                 ) {
-                                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Album options")
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = stringResource(CommonR.string.album_cd_options),
+                                    )
                                 }
                                 GlassMenu(
                                     albumMotionPilot = true,
-                                    label = "Album options",
+                                    label = stringResource(CommonR.string.album_cd_options),
                                     expanded = menuExpanded,
                                     onDismissRequest = { menuExpanded = false },
                                 ) {
-                                    GlassMenuSection("Playback")
+                                    GlassMenuSection(stringResource(CommonR.string.menu_section_playback))
                                     GlassMenuItem(
                                         icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                                        text = { Text("Play Next") },
+                                        text = { Text(stringResource(CommonR.string.menu_play_next)) },
                                         onClick = {
                                             menuExpanded = false
                                             songs.asReversed().forEach { song -> viewModel.playNext(song) }
@@ -252,7 +256,7 @@ fun AlbumDetailScreen(
                                     )
                                     GlassMenuItem(
                                         icon = Icons.AutoMirrored.Filled.QueueMusic,
-                                        text = { Text("Add to Queue") },
+                                        text = { Text(stringResource(CommonR.string.menu_add_to_queue)) },
                                         onClick = {
                                             menuExpanded = false
                                             songs.forEach { song -> viewModel.addToQueue(song) }
@@ -261,7 +265,7 @@ fun AlbumDetailScreen(
                                     if (LocalVybeEnabled.current) {
                                         GlassMenuItem(
                                             icon = Icons.Default.Radio,
-                                            text = { Text("Start Radio") },
+                                            text = { Text(stringResource(CommonR.string.menu_start_radio)) },
                                             onClick = {
                                                 menuExpanded = false
                                                 viewModel.startRadio(RadioSeed.Album(album.id))
@@ -269,10 +273,10 @@ fun AlbumDetailScreen(
                                         )
                                     }
                                     GlassMenuDivider()
-                                    GlassMenuSection("Album")
+                                    GlassMenuSection(stringResource(CommonR.string.menu_section_album))
                                     GlassMenuItem(
                                         icon = Icons.Default.AutoFixHigh,
-                                        text = { Text("Auto Fix Tags") },
+                                        text = { Text(stringResource(CommonR.string.menu_auto_fix_tags)) },
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.enqueueAlbumForRepair(album)
@@ -280,7 +284,7 @@ fun AlbumDetailScreen(
                                     )
                                     GlassMenuItem(
                                         icon = Icons.Default.ImageSearch,
-                                        text = { Text("Fetch Cover Online") },
+                                        text = { Text(stringResource(CommonR.string.menu_fetch_cover_online)) },
                                         onClick = {
                                             menuExpanded = false
                                             viewModel.enqueueAlbumForArtwork(album)
@@ -290,7 +294,7 @@ fun AlbumDetailScreen(
                                     albumArtworkSearchUrl(album.title, album.artist)?.let { searchUrl ->
                                         GlassMenuItem(
                                             icon = Icons.Default.ImageSearch,
-                                            text = { Text("Search images in browser") },
+                                            text = { Text(stringResource(CommonR.string.menu_search_images_browser)) },
                                             onClick = {
                                                 menuExpanded = false
                                                 openArtworkSearch(searchUrl)
@@ -299,7 +303,7 @@ fun AlbumDetailScreen(
                                     }
                                     GlassMenuItem(
                                         icon = Icons.Default.PhotoLibrary,
-                                        text = { Text("Set Custom Cover (Local File)") },
+                                        text = { Text(stringResource(CommonR.string.menu_set_custom_cover_local)) },
                                         onClick = {
                                             menuExpanded = false
                                             imagePickerLauncher.launch("image/*")
@@ -307,7 +311,7 @@ fun AlbumDetailScreen(
                                     )
                                     GlassMenuItem(
                                         icon = Icons.Default.Tune,
-                                        text = { Text("Transition Studio") },
+                                        text = { Text(stringResource(CommonR.string.menu_transition_studio)) },
                                         onClick = {
                                             menuExpanded = false
                                             showStudio = true
@@ -330,7 +334,7 @@ fun AlbumDetailScreen(
             data == null -> Unit
             album == null ->
                 EmptyState(
-                    message = "This album is no longer in your library.",
+                    message = stringResource(CommonR.string.album_missing),
                     icon = LibrarySection.ALBUMS.icon,
                     modifier = Modifier.padding(innerPadding),
                 )
@@ -394,7 +398,7 @@ fun AlbumDetailScreen(
                     }
                     if (songs.isEmpty() && data.loaded) {
                         item(key = "empty") {
-                            EmptyState(message = "This album has no tracks.", modifier = Modifier.padding(top = Spacing.xl))
+                            EmptyState(message = stringResource(CommonR.string.album_empty), modifier = Modifier.padding(top = Spacing.xl))
                         }
                     } else {
                         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
@@ -517,7 +521,11 @@ internal fun AlbumHero(
             isPlaying = true,
             modifier = coverModifier,
         ) {
-            AlbumArtwork(artworkUri = album.artworkUri, contentDescription = "Album artwork", modifier = Modifier.fillMaxSize())
+            AlbumArtwork(
+                artworkUri = album.artworkUri,
+                contentDescription = stringResource(CommonR.string.cd_album_artwork),
+                modifier = Modifier.fillMaxSize(),
+            )
         }
         AlbumTitleBlock(
             album = album,
@@ -618,7 +626,12 @@ private fun AlbumTitleBlock(
             modifier = Modifier.collapsingHeroDetails(header),
         ) {
             Text(
-                text = if (isLossless && factsText.isNotBlank()) "$factsText · Lossless" else factsText,
+                text =
+                    if (isLossless && factsText.isNotBlank()) {
+                        stringResource(CommonR.string.album_facts_lossless, factsText)
+                    } else {
+                        factsText
+                    },
                 style = TextStyles.metadata,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -646,14 +659,14 @@ private fun DolbyAtmosBadge() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "DD",
+                text = stringResource(CommonR.string.album_badge_dd),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Black,
                 letterSpacing = (-1).sp,
             )
             Spacer(modifier = Modifier.width(3.dp))
             Text(
-                text = "Atmos",
+                text = stringResource(CommonR.string.album_badge_atmos),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -696,7 +709,7 @@ private fun AlbumActions(
             ) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Play")
+                Text(stringResource(CommonR.string.action_play))
             }
             FilledTonalButton(
                 onClick = onShuffle,
@@ -706,28 +719,24 @@ private fun AlbumActions(
             ) {
                 Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Shuffle")
+                Text(stringResource(CommonR.string.action_shuffle))
             }
         }
     }
 }
 
 /** "2018 · 12 songs · 43 min" from the album's facts and tracks; unknown parts are left out. */
+@Composable
 private fun albumFacts(
     album: Album,
     songs: List<Song>,
 ): String {
     val yearStr = album.year.takeIf { it in 1900..2099 }?.toString()
     val totalMinutes = songs.sumOf { it.durationMs } / MS_PER_MINUTE
-    val duration =
-        when {
-            totalMinutes <= 0 -> null
-            totalMinutes < MINUTES_PER_HOUR -> "$totalMinutes min"
-            else -> "${totalMinutes / MINUTES_PER_HOUR} hr ${totalMinutes % MINUTES_PER_HOUR} min"
-        }
+    val duration = totalMinutes.takeIf { it > 0 }?.let { minutesDurationText(it) }
     return listOfNotNull(
         yearStr,
-        countLabel(songs.size, "song"),
+        songCountText(songs.size),
         duration,
     ).joinToString(" · ")
 }

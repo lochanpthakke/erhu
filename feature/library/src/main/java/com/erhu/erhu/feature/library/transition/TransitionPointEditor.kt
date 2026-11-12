@@ -22,9 +22,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassFloatingPanel
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
@@ -45,38 +50,88 @@ internal fun TransitionPointEditor(
 ) {
     var role by remember { mutableStateOf(TransitionRole.OUTGOING) }
     var index by remember { mutableStateOf(1) }
-    var menu by remember { mutableStateOf(false) }
     val points = TransitionEditing.curveOf(spec, role).points
     val handle = TransitionCurveHandle(role, index.coerceIn(points.indices))
     GlassFloatingPanel(onDismissRequest = onDismiss) {
-        Text("Exact point values", style = MaterialTheme.typography.titleLarge)
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
-            TransitionRole.entries.forEachIndexed { position, option ->
-                SegmentedButton(
-                    selected = role == option,
-                    onClick = {
-                        role = option
-                        index = 1
-                    },
-                    shape = SegmentedButtonDefaults.itemShape(position, TransitionRole.entries.size),
-                ) { Text(if (option == TransitionRole.OUTGOING) "Outgoing" else "Incoming") }
-            }
-        }
-        GlassMenuAnchor {
-            TextButton(onClick = { menu = true }, modifier = Modifier.glassMenuTrigger()) {
-                Text("Point " + (handle.index + 1) + " of " + points.size)
-            }
-            GlassMenu(label = "Volume point", expanded = menu, onDismissRequest = { menu = false }) {
-                points.indices.forEach { point ->
-                    GlassMenuItem(text = { Text("Point " + (point + 1)) }, onClick = {
-                        index = point
-                        menu = false
-                    })
-                }
-            }
-        }
+        Text(stringResource(R.string.transition_exact_points_title), style = MaterialTheme.typography.titleLarge)
+        RoleSegmentedButtons(
+            selectedRole = role,
+            onSelectRole = {
+                role = it
+                index = 1
+            },
+        )
+        PointSelectorMenu(
+            selectedIndex = handle.index,
+            pointCount = points.size,
+            onSelectPoint = { index = it },
+        )
         key(handle, spec, durationMs) {
             PointValueFields(spec, handle, durationMs, onApply, onDismiss)
+        }
+    }
+}
+
+@Composable
+private fun RoleSegmentedButtons(
+    selectedRole: TransitionRole,
+    onSelectRole: (TransitionRole) -> Unit,
+) {
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
+        TransitionRole.entries.forEachIndexed { position, option ->
+            SegmentedButton(
+                selected = selectedRole == option,
+                onClick = { onSelectRole(option) },
+                shape = SegmentedButtonDefaults.itemShape(position, TransitionRole.entries.size),
+            ) {
+                Text(
+                    stringResource(
+                        if (option == TransitionRole.OUTGOING) {
+                            R.string.transition_role_outgoing
+                        } else {
+                            R.string.transition_role_incoming
+                        },
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PointSelectorMenu(
+    selectedIndex: Int,
+    pointCount: Int,
+    onSelectPoint: (Int) -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    GlassMenuAnchor {
+        TextButton(onClick = { menu = true }, modifier = Modifier.glassMenuTrigger()) {
+            Text(
+                stringResource(
+                    R.string.transition_point_label,
+                    LocaleFormatters.formatInteger(selectedIndex + 1, locale),
+                    LocaleFormatters.formatInteger(pointCount, locale),
+                ),
+            )
+        }
+        GlassMenu(
+            label = stringResource(R.string.transition_point_menu_label),
+            expanded = menu,
+            onDismissRequest = { menu = false },
+        ) {
+            repeat(pointCount) { point ->
+                GlassMenuItem(
+                    text = {
+                        Text(stringResource(R.string.transition_point_item, LocaleFormatters.formatInteger(point + 1, locale)))
+                    },
+                    onClick = {
+                        onSelectPoint(point)
+                        menu = false
+                    },
+                )
+            }
         }
     }
 }
@@ -90,6 +145,7 @@ private fun PointValueFields(
     onApply: (TransitionPointEdit) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val initial = TransitionPointPrecision.values(spec, handle, durationMs) ?: return
     val count = TransitionEditing.curveOf(spec, handle.role).points.size
     val fixedTime = handle.index == 0 || handle.index == count - 1
@@ -102,43 +158,45 @@ private fun PointValueFields(
     val timeValue = if (time == initialTime) initial.timeMs else time.toDoubleOrNull()
     val gainValue = if (gain == initialGain) initial.gainDb else gain.toDoubleOrNull()
     val valid = timeValue?.isFinite() == true && (silence || gainValue?.isFinite() == true)
+    val cdTime = stringResource(R.string.transition_point_cd_time)
+    val cdGain = stringResource(R.string.transition_point_cd_gain)
+    val cdSilence = stringResource(R.string.transition_point_cd_silence)
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         OutlinedTextField(
             value = time,
             onValueChange = { time = it.take(MAX_POINT_INPUT_CHARS) },
-            label = { Text("Time in overlap · ms") },
+            label = { Text(stringResource(R.string.transition_point_time_label)) },
             enabled = !fixedTime,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             isError = timeValue?.isFinite() != true,
-            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Point time in milliseconds" },
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = cdTime },
         )
         OutlinedTextField(
             value = gain,
             onValueChange = { gain = it.take(MAX_POINT_INPUT_CHARS) },
-            label = { Text("Gain · dB") },
+            label = { Text(stringResource(R.string.transition_point_gain_label)) },
             enabled = !fixedGain && !silence,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
             isError = !silence && gainValue?.isFinite() != true,
-            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Point gain in decibels" },
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = cdGain },
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Silence · −∞ dB", Modifier.weight(1f))
+            Text(stringResource(R.string.transition_point_silence_label), Modifier.weight(1f))
             Switch(
                 checked = silence,
                 onCheckedChange = { silence = it },
                 enabled = !fixedGain,
-                modifier = Modifier.semantics { contentDescription = "Exact point silence" },
+                modifier = Modifier.semantics { contentDescription = cdSilence },
             )
         }
         Text(
-            "Time uses the actual overlap (" + durationMs + " ms) and stays between neighbouring points. " +
-                "Fixed endpoints are preserved. Gain is limited to −96…0 dB; Silence sets exact zero.",
+            stringResource(R.string.transition_point_help, LocaleFormatters.formatInteger(durationMs, locale)),
             style = MaterialTheme.typography.bodySmall,
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
             TextButton(
                 enabled = valid,
                 onClick = {
@@ -153,7 +211,7 @@ private fun PointValueFields(
                         ),
                     )
                 },
-            ) { Text("Apply") }
+            ) { Text(stringResource(R.string.action_apply)) }
         }
     }
 }

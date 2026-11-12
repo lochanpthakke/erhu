@@ -52,6 +52,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -70,6 +71,7 @@ import com.erhu.erhu.core.designsystem.theme.glassPanel
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Song
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Height of the floating search field (pill) and circular back bubble. */
 private val SEARCH_FIELD_HEIGHT = 52.dp
@@ -116,7 +118,10 @@ internal fun SearchHeader(
             contentAlignment = Alignment.Center,
         ) {
             PressIconButton(onClick = onClose) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close search")
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(CommonR.string.search_cd_close),
+                )
             }
         }
 
@@ -141,7 +146,7 @@ internal fun SearchHeader(
             Box(modifier = Modifier.weight(1f)) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "Songs, Artists, Albums or Playlists",
+                        text = stringResource(CommonR.string.search_placeholder),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -166,7 +171,10 @@ internal fun SearchHeader(
                 exit = fadeOut(Motion.fade(Motion.MICRO)) + scaleOut(Motion.fade(Motion.MICRO)),
             ) {
                 PressIconButton(onClick = { onQueryChange("") }) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(CommonR.string.cd_clear_search),
+                    )
                 }
             }
         }
@@ -229,8 +237,8 @@ internal fun SearchContent(
                 )
             SearchState.NOTHING ->
                 SearchMessage(
-                    title = "No matches",
-                    message = "Nothing in your library matches \"$query\".",
+                    title = stringResource(CommonR.string.search_no_matches_title),
+                    message = stringResource(CommonR.string.search_no_matches_body, query),
                     modifier = Modifier.padding(top = topInset, bottom = bottomInset),
                 )
             SearchState.RESULTS ->
@@ -240,7 +248,7 @@ internal fun SearchContent(
                 ) {
                     if (artists.isNotEmpty()) {
                         item(key = "artists") {
-                            ResultRow(title = "Artists") {
+                            ResultRow(title = stringResource(CommonR.string.library_shelf_artists)) {
                                 items(artists, key = { a -> a.id }) { artist ->
                                     ArtistTile(
                                         artist = artist,
@@ -254,7 +262,7 @@ internal fun SearchContent(
                     }
                     if (albums.isNotEmpty()) {
                         item(key = "albums") {
-                            ResultRow(title = "Albums") {
+                            ResultRow(title = stringResource(CommonR.string.library_section_albums)) {
                                 items(albums, key = { a -> a.id }) { album ->
                                     AlbumTile(
                                         album = album,
@@ -266,7 +274,7 @@ internal fun SearchContent(
                         }
                     }
                     if (songs.isNotEmpty()) {
-                        item(key = "songsHeader") { SectionTitle("Songs") }
+                        item(key = "songsHeader") { SectionTitle(stringResource(CommonR.string.library_section_songs)) }
                         itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                             LibrarySongRow(
                                 song = song,
@@ -330,7 +338,7 @@ private fun SearchStart(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(Spacing.md))
         Text(
-            text = "Find any song, artist or album on this device",
+            text = stringResource(CommonR.string.search_idle_hint),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
@@ -378,12 +386,12 @@ private fun RecentSearchesContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Recently Searched",
+                    text = stringResource(CommonR.string.search_recently_searched),
                     style = TextStyles.sectionTitle,
                     modifier = Modifier.semantics { heading() },
                 )
                 TextButton(onClick = onClearAll) {
-                    Text("Clear All", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(CommonR.string.search_clear_all), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -433,7 +441,7 @@ private fun RecentSearchesContent(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove item",
+                                    contentDescription = stringResource(CommonR.string.search_cd_remove_item),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(14.dp),
                                 )
@@ -447,7 +455,7 @@ private fun RecentSearchesContent(
 
         if (recentSongs.isNotEmpty()) {
             item(key = "songsHeader") {
-                SectionTitle("Songs")
+                SectionTitle(stringResource(CommonR.string.library_section_songs))
             }
             items(recentSongs, key = { it.key }) { item ->
                 Row(
@@ -471,7 +479,7 @@ private fun RecentSearchesContent(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Remove song",
+                            contentDescription = stringResource(CommonR.string.search_cd_remove_song),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),
                         )
@@ -519,7 +527,7 @@ private fun PlaylistTile(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = "$trackCount tracks",
+            text = trackCountText(trackCount),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

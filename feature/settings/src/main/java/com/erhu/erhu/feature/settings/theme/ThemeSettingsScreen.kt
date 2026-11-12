@@ -30,7 +30,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.theme.BuiltInThemes
@@ -42,10 +45,34 @@ import com.erhu.erhu.feature.settings.component.SettingsNavigationRow
 import com.erhu.erhu.feature.settings.component.SettingsPage
 import com.erhu.erhu.feature.settings.component.SettingsSection
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
-import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Theme preview swatch: the theme's background with its accent in the middle. */
 private val SWATCH_SIZE = 36.dp
+
+/** Displays localized feedback when a theme JSON import succeeds or fails. */
+@Composable
+private fun ImportMessageEffect(
+    importMessage: ThemeImportMessage?,
+    snackbarHostState: SnackbarHostState,
+    onConsumed: () -> Unit,
+) {
+    val context = LocalContext.current
+    LaunchedEffect(importMessage) {
+        importMessage?.let { message ->
+            val localizedContext = AppLocaleManager.localizedContext(context)
+            val text =
+                when (message) {
+                    is ThemeImportMessage.Success ->
+                        localizedContext.getString(CommonR.string.theme_import_success, message.themeName)
+                    is ThemeImportMessage.Failure ->
+                        localizedContext.getString(CommonR.string.theme_import_failed, message.reason)
+                }
+            snackbarHostState.showSnackbar(text)
+            onConsumed()
+        }
+    }
+}
 
 @Composable
 @Suppress("LongMethod")
@@ -56,6 +83,7 @@ fun ThemeSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val locale = AppLocaleManager.activeLocale(context)
     val currentAppThemeId by viewModel.appThemeId.collectAsState()
     val glassEffectEnabled by viewModel.glassEffectEnabled.collectAsState()
     val popupGlassOpacity by viewModel.popupGlassOpacity.collectAsState()
@@ -79,12 +107,11 @@ fun ThemeSettingsScreen(
             }
         }
 
-    LaunchedEffect(importMessage) {
-        importMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearImportMessage()
-        }
-    }
+    ImportMessageEffect(
+        importMessage = importMessage,
+        snackbarHostState = snackbarHostState,
+        onConsumed = viewModel::clearImportMessage,
+    )
 
     if (isRollbackActive) {
         ThemeRollbackDialog(onDismiss = { viewModel.acknowledgeRollback() })
@@ -96,12 +123,12 @@ fun ThemeSettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier,
     ) {
-        SettingsSection(title = "App theme") {
+        SettingsSection(title = stringResource(CommonR.string.theme_section_app_theme)) {
             SettingsGroup(selectable = true) {
                 row {
                     SettingsChoiceRow(
-                        title = "System Default",
-                        summary = "Light or Dark, following your device",
+                        title = stringResource(CommonR.string.theme_system_default_title),
+                        summary = stringResource(CommonR.string.theme_system_default_summary),
                         selected = currentAppSkin == null && currentAppThemeId == BuiltInThemes.SYSTEM_DEFAULT_ID,
                         onClick = { viewModel.selectAppTheme(BuiltInThemes.SYSTEM_DEFAULT_ID) },
                         leading = { SystemThemeSwatch(light = BuiltInThemes.DEFAULT_LIGHT, dark = BuiltInThemes.DEFAULT_DARK) },
@@ -110,7 +137,7 @@ fun ThemeSettingsScreen(
                 BuiltInThemes.ALL_BUILT_IN_THEMES.forEach { theme ->
                     row {
                         SettingsChoiceRow(
-                            title = theme.name,
+                            title = localizedThemeName(theme),
                             summary = themeSummary(theme),
                             selected = currentAppSkin == null && currentAppThemeId == theme.id,
                             onClick = { viewModel.selectAppTheme(theme.id) },
@@ -122,7 +149,7 @@ fun ThemeSettingsScreen(
                     row {
                         SettingsChoiceRow(
                             title = skin.name,
-                            summary = "3D VST Studio Skin",
+                            summary = stringResource(CommonR.string.theme_skin_vst_summary),
                             selected = currentAppSkin?.id == skin.id,
                             onClick = { viewModel.selectAppTheme(skin.id) },
                         )
@@ -133,12 +160,12 @@ fun ThemeSettingsScreen(
 
         val sidebarGlassyness by viewModel.sidebarGlassyness.collectAsState()
 
-        SettingsSection(title = "Material") {
+        SettingsSection(title = stringResource(CommonR.string.theme_section_material)) {
             SettingsGroup {
                 row {
                     SettingsSwitchRow(
-                        title = "Glass Effect",
-                        summary = "Clear glass on the mini-player, navigation, Search and popup surfaces.",
+                        title = stringResource(CommonR.string.theme_glass_effect_title),
+                        summary = stringResource(CommonR.string.theme_glass_effect_summary),
                         icon = Icons.Default.AutoAwesome,
                         checked = glassEffectEnabled,
                         onCheckedChange = viewModel::setGlassEffectEnabled,
@@ -153,8 +180,8 @@ fun ThemeSettingsScreen(
 
         if (glassEffectEnabled) {
             SettingsSection(
-                title = "Glass Frostiness",
-                footer = "Adjust the balance between clear translucent glass and frosted glass.",
+                title = stringResource(CommonR.string.theme_glass_frostiness_title),
+                footer = stringResource(CommonR.string.theme_glass_frostiness_footer),
             ) {
                 SettingsGroup {
                     row {
@@ -165,11 +192,20 @@ fun ThemeSettingsScreen(
                                     .padding(Spacing.md),
                         ) {
                             Text(
-                                text = "Main Sidebar Frostiness: ${(sidebarGlassyness * 100).roundToInt()}%",
+                                text =
+                                    stringResource(
+                                        CommonR.string.theme_sidebar_frostiness_label,
+                                        LocaleFormatters.formatPercent(sidebarGlassyness.toDouble(), locale),
+                                    ),
                                 style = MaterialTheme.typography.titleMedium,
                             )
                             Text(
-                                text = "0% = Clear Glass · 100% = Full Frosted Glass",
+                                text =
+                                    stringResource(
+                                        CommonR.string.theme_sidebar_frostiness_scale,
+                                        LocaleFormatters.formatPercentInt(0, locale),
+                                        LocaleFormatters.formatPercentInt(100, locale),
+                                    ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -184,16 +220,16 @@ fun ThemeSettingsScreen(
             }
         }
 
-        SettingsSection(title = "Library view mode") {
+        SettingsSection(title = stringResource(CommonR.string.theme_library_view_mode_title)) {
             SettingsGroup(selectable = true) {
                 listOf(
-                    Triple("GRID", "2-Column Grid", Icons.Default.GridView),
-                    Triple("LIST", "Single-Column List", Icons.AutoMirrored.Filled.ViewList),
-                    Triple("DRAWER", "Side Navigation Drawer", Icons.Default.Menu),
-                ).forEach { (mode, label, icon) ->
+                    Triple("GRID", CommonR.string.theme_view_mode_grid, Icons.Default.GridView),
+                    Triple("LIST", CommonR.string.theme_view_mode_list, Icons.AutoMirrored.Filled.ViewList),
+                    Triple("DRAWER", CommonR.string.theme_view_mode_drawer, Icons.Default.Menu),
+                ).forEach { (mode, labelRes, icon) ->
                     row {
                         SettingsChoiceRow(
-                            title = label,
+                            title = stringResource(labelRes),
                             selected = libraryLayout == mode,
                             onClick = { viewModel.selectLibraryLayout(mode) },
                             leading = { SettingsIcon(icon) },
@@ -203,12 +239,12 @@ fun ThemeSettingsScreen(
             }
         }
 
-        SettingsSection(title = "Home screen widget") {
+        SettingsSection(title = stringResource(CommonR.string.theme_widget_section_title)) {
             SettingsGroup(selectable = true) {
                 BuiltInThemes.ALL_BUILT_IN_THEMES.forEach { theme ->
                     row {
                         SettingsChoiceRow(
-                            title = theme.name,
+                            title = localizedThemeName(theme),
                             selected = currentWidgetTheme.id == theme.id,
                             onClick = { viewModel.selectWidgetTheme(theme.id) },
                             leading = { ThemeSwatch(theme) },
@@ -218,12 +254,12 @@ fun ThemeSettingsScreen(
             }
         }
 
-        SettingsSection(title = "Custom packages") {
+        SettingsSection(title = stringResource(CommonR.string.theme_custom_packages_title)) {
             SettingsGroup {
                 row {
                     SettingsNavigationRow(
-                        title = "Import theme or skin",
-                        summary = "Load a .mtheme or .mskin package",
+                        title = stringResource(CommonR.string.theme_import_package_title),
+                        summary = stringResource(CommonR.string.theme_import_package_summary),
                         icon = Icons.Default.FileUpload,
                         onClick = { fileLauncher.launch("*/*") },
                     )
@@ -233,12 +269,25 @@ fun ThemeSettingsScreen(
     }
 }
 
-private fun themeSummary(theme: ThemeManifest): String =
+@Composable
+private fun localizedThemeName(theme: ThemeManifest): String =
     when (theme.id) {
-        BuiltInThemes.DOMINANT_COLOR_ID -> "Accent colour from the current artwork"
-        BuiltInThemes.GRADIENT_UI_ID -> "Gradient from the current artwork's colours"
-        else -> "Built-in ${if (theme.isDark) "Dark" else "Light"} Theme"
+        BuiltInThemes.DEFAULT_LIGHT.id -> stringResource(CommonR.string.theme_name_light)
+        BuiltInThemes.DEFAULT_DARK.id -> stringResource(CommonR.string.theme_name_dark)
+        BuiltInThemes.DOMINANT_COLOR_ID -> stringResource(CommonR.string.theme_name_dominant_color)
+        BuiltInThemes.GRADIENT_UI_ID -> stringResource(CommonR.string.theme_name_gradient_ui)
+        else -> theme.name
     }
+
+@Composable
+private fun themeSummary(theme: ThemeManifest): String =
+    stringResource(
+        when (theme.id) {
+            BuiltInThemes.DOMINANT_COLOR_ID -> CommonR.string.theme_summary_dominant
+            BuiltInThemes.GRADIENT_UI_ID -> CommonR.string.theme_summary_gradient
+            else -> if (theme.isDark) CommonR.string.theme_summary_builtin_dark else CommonR.string.theme_summary_builtin_light
+        },
+    )
 
 /** The theme's own background with its accent; a thin ring keeps it visible on any surface. */
 @Composable

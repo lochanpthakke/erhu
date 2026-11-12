@@ -19,10 +19,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.database.library.ArtistArtworkCache
 import com.erhu.erhu.core.designsystem.artwork.AlbumArtwork
 import com.erhu.erhu.core.designsystem.artwork.ArtistArtwork
@@ -33,14 +37,16 @@ import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.RankedAlbum
 import com.erhu.erhu.core.model.RankedArtist
 import com.erhu.erhu.core.model.RankedSong
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 private fun RankNumber(
     rank: Int,
     modifier: Modifier = Modifier,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Text(
-        text = rank.toString(),
+        text = LocaleFormatters.formatInteger(rank, locale),
         style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
@@ -145,6 +151,7 @@ private fun RankBadge(
     rank: Int,
     modifier: Modifier = Modifier,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Box(
         modifier =
             modifier
@@ -154,7 +161,7 @@ private fun RankBadge(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = rank.toString(),
+            text = LocaleFormatters.formatInteger(rank, locale),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimary,
@@ -165,14 +172,18 @@ private fun RankBadge(
 @Composable
 internal fun PlaysText(plays: Int) {
     Text(
-        text = playsLabel(plays),
+        text = playsText(plays),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
     )
 }
 
-internal fun playsLabel(plays: Int): String = if (plays == 1) "1 play" else "$plays plays"
+@Composable
+internal fun playsText(plays: Int): String {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    return pluralStringResource(CommonR.plurals.capsule_plays_count, plays, LocaleFormatters.formatInteger(plays, locale))
+}
 
 private val RANK_WIDTH = 28.dp
 private val SONG_ARTWORK = 56.dp

@@ -33,9 +33,50 @@ enum class MixKind(
     FRESH("fresh", "Fresh in Your Library", personal = false),
     ;
 
+    val defaultNoteKey: MixNoteKey
+        get() =
+            when (this) {
+                ROTATION -> MixNoteKey.ROTATION
+                YOUR_SOUND -> MixNoteKey.YOUR_SOUND_TAGS
+                FORGOTTEN -> MixNoteKey.FORGOTTEN
+                DEEP_CUTS -> MixNoteKey.DEEP_CUTS
+                HIGH_ENERGY -> MixNoteKey.HIGH_ENERGY
+                CHILL -> MixNoteKey.CHILL
+                LATE_NIGHT -> MixNoteKey.LATE_NIGHT
+                A_LITTLE_DIFFERENT -> MixNoteKey.A_LITTLE_DIFFERENT
+                SPOTLIGHT -> MixNoteKey.SPOTLIGHT_SONGS
+                THROWBACKS -> MixNoteKey.THROWBACKS
+                QUICK_HITS -> MixNoteKey.QUICK_HITS
+                LONG_LISTENS -> MixNoteKey.LONG_LISTENS
+                YET_TO_HEAR -> MixNoteKey.YET_TO_HEAR
+                FAVOURITES -> MixNoteKey.FAVOURITES
+                FRESH -> MixNoteKey.FRESH
+            }
+
     companion object {
         fun fromKey(key: String): MixKind? = entries.firstOrNull { it.key == key }
     }
+}
+
+/** Identifies which localized description template applies to a [SmartMix]. */
+enum class MixNoteKey {
+    ROTATION,
+    YOUR_SOUND_VYBE,
+    YOUR_SOUND_TAGS,
+    FORGOTTEN,
+    DEEP_CUTS,
+    HIGH_ENERGY,
+    CHILL,
+    LATE_NIGHT,
+    A_LITTLE_DIFFERENT,
+    SPOTLIGHT_PLAYS,
+    SPOTLIGHT_SONGS,
+    THROWBACKS,
+    QUICK_HITS,
+    LONG_LISTENS,
+    YET_TO_HEAR,
+    FAVOURITES,
+    FRESH,
 }
 
 /**
@@ -47,6 +88,8 @@ data class SmartMix(
     val songIds: List<Long>,
     val description: String,
     val title: String = kind.title,
+    val noteKey: MixNoteKey = kind.defaultNoteKey,
+    val spotlightArtist: String? = null,
 )
 
 /**

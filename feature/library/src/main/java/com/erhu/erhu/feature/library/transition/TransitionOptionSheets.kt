@@ -28,8 +28,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassFloatingPanel
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.EqMove
@@ -53,7 +58,7 @@ internal fun TransitionOptionsSheet(
             EditorSection.EQ -> EqPage(draft.shown, viewModel)
             EditorSection.FILTER -> FilterPage(draft.shown, viewModel)
         }
-        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+        TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.action_close)) }
     }
 }
 
@@ -68,13 +73,15 @@ private fun VolumePage(
         TextButton(onClick = {
             viewModel.customizeVolume()
             onDismiss()
-        }) { Text("Customize") }
+        }) { Text(stringResource(R.string.transition_customize)) }
     }
     HorizontalDivider()
     VolumeShape.entries.forEach { shape ->
-        OptionRow(shape.label, selected = shape == current) { viewModel.setVolumeShape(shape) }
+        OptionRow(stringResource(shape.labelRes()), selected = shape == current) { viewModel.setVolumeShape(shape) }
     }
-    if (spec != null && current == null && spec.curve == TransitionCurve.CUSTOM) OptionRow("Custom curve", selected = true) {}
+    if (spec != null && current == null && spec.curve == TransitionCurve.CUSTOM) {
+        OptionRow(stringResource(R.string.transition_custom_curve), selected = true) {}
+    }
 }
 
 @Composable
@@ -82,17 +89,22 @@ private fun EqPage(
     spec: TransitionSpec?,
     viewModel: TransitionStudioViewModel,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val current = spec?.let { EqMove.of(it) }
     var customizing by remember { mutableStateOf(spec?.bassSwap == true && current == null) }
-    SheetTitle(EditorSection.EQ) { TextButton(onClick = { customizing = !customizing }) { Text(if (customizing) "Done" else "Customize") } }
+    SheetTitle(EditorSection.EQ) {
+        TextButton(onClick = { customizing = !customizing }) {
+            Text(stringResource(if (customizing) R.string.action_done else R.string.transition_customize))
+        }
+    }
     HorizontalDivider()
     EqMove.entries.forEach { move ->
-        OptionRow(move.label, selected = move == current) { viewModel.setEqMove(move) }
+        OptionRow(stringResource(move.labelRes()), selected = move == current) { viewModel.setEqMove(move) }
     }
     if (customizing) {
         var value by remember(spec?.bassSwapAt) { mutableFloatStateOf(spec?.bassSwapAt ?: TransitionSpec.DEFAULT_BASS_SWAP_AT) }
         Text(
-            "Bass swap at ${percent(value)} % of the transition",
+            stringResource(R.string.transition_bass_swap_slider_label, LocaleFormatters.formatInteger(percent(value), locale)),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = Spacing.md),
         )
@@ -107,8 +119,10 @@ private fun EqPage(
         )
     }
     Text(
-        "The incoming track's bass (below ${TransitionSpec.BASS_SHELF_HZ.roundToInt()} Hz) is held down until the swap point, " +
-            "then moves over from the outgoing track. Your equalizer settings are not changed.",
+        stringResource(
+            R.string.transition_bass_swap_explanation,
+            LocaleFormatters.formatInteger(TransitionSpec.BASS_SHELF_HZ.roundToInt(), locale),
+        ),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(vertical = Spacing.sm),
@@ -123,10 +137,10 @@ private fun FilterPage(
     SheetTitle(EditorSection.FILTER)
     HorizontalDivider()
     TransitionFilter.entries.forEach { filter ->
-        OptionRow(filter.label, selected = spec?.filter == filter) { viewModel.setFilter(filter) }
+        OptionRow(stringResource(filter.labelRes()), selected = spec?.filter == filter) { viewModel.setFilter(filter) }
     }
     Text(
-        "High-pass thins a track down to its top end; low-pass darkens it. Sweeps run over half of the transition.",
+        stringResource(R.string.transition_filter_explanation),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(vertical = Spacing.sm),
@@ -148,7 +162,13 @@ private fun OptionRow(
                 .padding(vertical = Spacing.md),
     ) {
         Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        if (selected) Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+        if (selected) {
+            Icon(
+                Icons.Default.Check,
+                contentDescription = stringResource(R.string.transition_cd_selected),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 
@@ -177,13 +197,16 @@ internal fun DurationSheet(
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
-                        ) { Text(TransitionSpec.durationLabel(ms), style = MaterialTheme.typography.titleSmall) }
+                        ) { Text(localizedDurationLabel(ms), style = MaterialTheme.typography.titleSmall) }
                     }
                 }
             }
             var custom by remember(durationMs) { mutableFloatStateOf(durationMs.toFloat()) }
             Text(
-                "Custom · ${TransitionSpec.durationLabel(TransitionSpec.clampDuration(custom.roundToInt()))}",
+                stringResource(
+                    R.string.transition_duration_custom,
+                    localizedDurationLabel(TransitionSpec.clampDuration(custom.roundToInt())),
+                ),
                 style = MaterialTheme.typography.titleSmall,
             )
             Slider(
@@ -193,9 +216,9 @@ internal fun DurationSheet(
                 valueRange = TransitionSpec.MIN_DURATION_MS.toFloat()..TransitionSpec.MAX_DURATION_MS.toFloat(),
                 steps = (TransitionSpec.MAX_DURATION_MS - TransitionSpec.MIN_DURATION_MS) / TransitionSpec.DURATION_STEP_MS - 1,
             )
-            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text("Close") }
+            TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.action_close)) }
             Text(
-                "Choose how long the tracks overlap. A transition never takes more than half of either track.",
+                stringResource(R.string.transition_duration_help),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

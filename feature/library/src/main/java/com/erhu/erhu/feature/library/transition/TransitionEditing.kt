@@ -1,5 +1,12 @@
 package com.erhu.erhu.feature.library.transition
 
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.model.CollectionRef
 import com.erhu.erhu.core.model.CurvePoint
 import com.erhu.erhu.core.model.EqMove
@@ -62,6 +69,86 @@ fun pairLabel(choice: TransitionChoice): String =
 
 fun specSummary(spec: TransitionSpec?): String =
     if (spec == null) "No crossfade" else "${spec.preset.label} · ${TransitionSpec.durationLabel(spec.durationMs)}"
+
+private const val MS_PER_SECOND_INT = 1_000
+
+@StringRes
+internal fun TransitionPreset.labelRes(): Int =
+    when (this) {
+        TransitionPreset.FADE -> R.string.transition_preset_fade
+        TransitionPreset.RISE -> R.string.transition_preset_rise
+        TransitionPreset.BASS_SWAP -> R.string.transition_preset_bass_swap
+        TransitionPreset.BLEND -> R.string.transition_preset_blend
+        TransitionPreset.MELT -> R.string.transition_preset_melt
+        TransitionPreset.SLAM -> R.string.transition_preset_slam
+        TransitionPreset.CUSTOM -> R.string.transition_preset_custom
+    }
+
+@StringRes
+internal fun VolumeShape.labelRes(): Int =
+    when (this) {
+        VolumeShape.CROSSFADE -> R.string.transition_volume_crossfade
+        VolumeShape.LINEAR -> R.string.transition_volume_linear
+        VolumeShape.OVERLAP -> R.string.transition_volume_overlap
+        VolumeShape.FADE_OUT_THEN_IN -> R.string.transition_volume_fade_out_then_in
+        VolumeShape.CUT_IN_FADE_OUT -> R.string.transition_volume_cut_in_fade_out
+        VolumeShape.FADE_IN_CUT_OUT -> R.string.transition_volume_fade_in_cut_out
+        VolumeShape.CENTER_CUT -> R.string.transition_volume_center_cut
+    }
+
+@StringRes
+internal fun EqMove.labelRes(): Int =
+    when (this) {
+        EqMove.NONE -> R.string.transition_eq_none
+        EqMove.START_BASS_SWAP -> R.string.transition_eq_start_bass_swap
+        EqMove.CENTER_BASS_SWAP -> R.string.transition_eq_center_bass_swap
+        EqMove.END_BASS_SWAP -> R.string.transition_eq_end_bass_swap
+    }
+
+@StringRes
+internal fun TransitionFilter.labelRes(): Int =
+    when (this) {
+        TransitionFilter.NONE -> R.string.transition_filter_none
+        TransitionFilter.HIGH_PASS_IN -> R.string.transition_filter_high_pass_in
+        TransitionFilter.HIGH_PASS_OUT -> R.string.transition_filter_high_pass_out
+        TransitionFilter.HIGH_PASS_IN_OUT -> R.string.transition_filter_high_pass_in_out
+        TransitionFilter.HIGH_PASS_IN_LOW_PASS_OUT -> R.string.transition_filter_high_pass_in_low_pass_out
+        TransitionFilter.LOW_PASS_OUT -> R.string.transition_filter_low_pass_out
+    }
+
+@Composable
+internal fun localizedDurationLabel(ms: Int): String {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val numberText =
+        if (ms % MS_PER_SECOND_INT == 0) {
+            LocaleFormatters.formatInteger(ms / MS_PER_SECOND_INT, locale)
+        } else {
+            LocaleFormatters.formatDecimal(ms.toDouble() / MS_PER_SECOND_INT, 1, locale)
+        }
+    return stringResource(R.string.transition_duration_seconds, numberText)
+}
+
+@Composable
+internal fun localizedPairLabel(choice: TransitionChoice): String =
+    stringResource(
+        when (choice) {
+            TransitionChoice.Inherit -> R.string.transition_auto
+            TransitionChoice.Off -> R.string.transition_off
+            is TransitionChoice.Custom -> choice.spec.preset.labelRes()
+        },
+    )
+
+@Composable
+internal fun localizedSpecSummary(spec: TransitionSpec?): String =
+    if (spec == null) {
+        stringResource(R.string.transition_summary_no_crossfade)
+    } else {
+        stringResource(
+            R.string.transition_summary_preset_duration,
+            stringResource(spec.preset.labelRes()),
+            localizedDurationLabel(spec.durationMs),
+        )
+    }
 
 /**
  * Edits of a [TransitionSpec] made in the editor. Every function returns a valid spec: times stay

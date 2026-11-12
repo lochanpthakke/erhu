@@ -45,8 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
@@ -71,12 +75,6 @@ internal fun TransitionStudioRow(
     CollectionTransitionRow(collection, config, { viewModel.setCollectionEnabled(collection, it) }, onOpen, modifier)
 }
 
-private fun noun(collection: CollectionRef) = if (collection.kind == CollectionKind.ALBUM) "album" else "playlist"
-
-/**
- * Transition Studio for one album or playlist, shown over its page: the app-wide switch and default,
- * this collection's setting, and the timeline of its tracks with the transition between each pair.
- */
 @Composable
 @Suppress("LongMethod")
 internal fun TransitionStudioScreen(
@@ -87,7 +85,7 @@ internal fun TransitionStudioScreen(
     val ui by viewModel.ui.collectAsState()
     val draft by viewModel.draft.collectAsState()
     val state = ui ?: return
-    val noun = noun(state.input.collection)
+    val isAlbum = state.input.collection.kind == CollectionKind.ALBUM
     BackHandler(enabled = draft == null, onBack = onClose)
 
     Box(
@@ -104,9 +102,11 @@ internal fun TransitionStudioScreen(
         ) {
             item(key = "header") {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
-                    IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Close Transition Studio") }
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.transition_cd_close_studio))
+                    }
                     Column(Modifier.weight(1f)) {
-                        Text("Transition Studio", style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.menu_transition_studio), style = MaterialTheme.typography.titleLarge)
                         Text(
                             state.input.title,
                             style = MaterialTheme.typography.bodySmall,
@@ -120,9 +120,9 @@ internal fun TransitionStudioScreen(
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Automatic crossfades", style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(R.string.transition_automatic_crossfades), style = MaterialTheme.typography.titleSmall)
                             Text(
-                                "Master switch for every transition in the app. Off keeps all settings but plays tracks back to back.",
+                                stringResource(R.string.transition_automatic_crossfades_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -130,73 +130,21 @@ internal fun TransitionStudioScreen(
                         Switch(checked = state.global.masterEnabled, onCheckedChange = viewModel::setMasterEnabled)
                     }
                     SettingLine(
-                        title = "Default for all music",
-                        value = specSummary(state.global.default.specOrNull()),
-                        action = "Edit",
+                        title = stringResource(R.string.transition_default_all_music),
+                        value = localizedSpecSummary(state.global.default.specOrNull()),
+                        action = stringResource(R.string.action_edit),
                         onAction = { viewModel.openEditor(EditorTarget.Global) },
                     )
                 }
             }
             item(key = "collection") {
-                Panel {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("This $noun", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        Switch(
-                            checked = state.collectionEnabled,
-                            onCheckedChange = { viewModel.setCollectionEnabled(state.input.collection, it) },
-                        )
-                    }
-                    if (!state.collectionEnabled) {
-                        Text(
-                            "Transitions are disabled for this $noun. Saved settings are kept.",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    val options = listOf(TransitionChoice.Inherit to "Default", TransitionChoice.Off to "Off")
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        options.forEachIndexed { index, (choice, label) ->
-                            SegmentedButton(
-                                selected = state.collectionChoice == choice,
-                                onClick = { viewModel.setCollectionChoice(choice) },
-                                shape = SegmentedButtonDefaults.itemShape(index, options.size + 1),
-                            ) { Text(label) }
-                        }
-                        SegmentedButton(
-                            selected = state.collectionChoice is TransitionChoice.Custom,
-                            onClick = { viewModel.openEditor(EditorTarget.Collection(state.input.collection)) },
-                            shape = SegmentedButtonDefaults.itemShape(options.size, options.size + 1),
-                        ) { Text("Custom") }
-                    }
-                    Text(
-                        when (state.collectionChoice) {
-                            TransitionChoice.Inherit -> "Uses the default: ${specSummary(state.global.default.specOrNull())}."
-                            TransitionChoice.Off -> "No crossfades in this $noun, whatever the default."
-                            is TransitionChoice.Custom -> "Its own transition: ${specSummary(state.collectionChoice.spec)}."
-                        } + if (state.isPlaying) " Playing now." else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (state.collectionChoice is TransitionChoice.Custom) {
-                        Row {
-                            TextButton(onClick = { viewModel.openEditor(EditorTarget.Collection(state.input.collection)) }) { Text("Edit") }
-                            TextButton(onClick = { viewModel.setCollectionChoice(TransitionChoice.Inherit) }) { Text("Reset to default") }
-                        }
-                    }
-                    if (!state.global.masterEnabled) {
-                        Text(
-                            "Automatic crossfades are off, so nothing here plays until the master switch is on.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
+                CollectionTransitionPanel(viewModel = viewModel, state = state, isAlbum = isAlbum)
             }
             item(key = "timeline-title") {
                 Column {
-                    Text("Transitions", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.transition_section_title), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        "Tap a transition to edit that exact pair. With shuffle, a pair's setting applies whenever those two tracks play " +
-                            "back to back; Auto follows the $noun's setting.",
+                        stringResource(if (isAlbum) R.string.transition_section_album_help else R.string.transition_section_playlist_help),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -218,7 +166,7 @@ internal fun TransitionStudioScreen(
             }
         }
     }
-    draft?.let { TransitionEditorScreen(viewModel, it, noun) }
+    draft?.let { TransitionEditorScreen(viewModel, it, state.input.collection.kind) }
 }
 
 @Composable
@@ -258,13 +206,14 @@ private fun TimelineTrack(
     onReset: (com.erhu.erhu.core.model.TransitionPairKey) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         SongArtwork(track.song, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)))
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
             Text(track.song.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                "${track.song.artist} · ${formatTimestamp(track.song.durationMs)}",
+                "${track.song.artist} · ${formatTimestamp(track.song.durationMs, locale)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -275,17 +224,30 @@ private fun TimelineTrack(
             GlassMenuAnchor {
                 IconButton(modifier = Modifier.glassMenuTrigger(), onClick = {
                     menu = true
-                }) { Icon(Icons.Default.MoreVert, contentDescription = "More for ${track.song.title}") }
-                GlassMenu(label = "Transition options", expanded = menu, onDismissRequest = { menu = false }) {
-                    GlassMenuItem(icon = Icons.Default.Tune, text = { Text("Edit transition to next") }, onClick = {
+                }) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.transition_cd_more_for_track, track.song.title),
+                    )
+                }
+                GlassMenu(
+                    label = stringResource(R.string.transition_options_label),
+                    expanded = menu,
+                    onDismissRequest = { menu = false },
+                ) {
+                    GlassMenuItem(icon = Icons.Default.Tune, text = { Text(stringResource(R.string.transition_edit_to_next)) }, onClick = {
                         menu = false
                         onEdit(pairAfter)
                     })
                     if (pairAfter.choice != TransitionChoice.Inherit) {
-                        GlassMenuItem(icon = Icons.Default.RestartAlt, text = { Text("Reset transition to Auto") }, onClick = {
-                            menu = false
-                            onReset(pairAfter.key)
-                        })
+                        GlassMenuItem(
+                            icon = Icons.Default.RestartAlt,
+                            text = { Text(stringResource(R.string.transition_reset_to_auto)) },
+                            onClick = {
+                                menu = false
+                                onReset(pairAfter.key)
+                            },
+                        )
                     }
                 }
             }
@@ -307,12 +269,113 @@ private fun PairConnector(
                 .background(MaterialTheme.colorScheme.outlineVariant),
         )
         Spacer(Modifier.width(Spacing.lg))
-        AssistChip(onClick = onClick, label = { Text(pairLabel(pair.choice)) }, enabled = true)
+        AssistChip(onClick = onClick, label = { Text(localizedPairLabel(pair.choice)) }, enabled = true)
         Spacer(Modifier.width(Spacing.sm))
         Text(
-            if (enabled) specSummary(pair.resolved) else "Off (master switch)",
+            if (enabled) localizedSpecSummary(pair.resolved) else stringResource(R.string.transition_off_master_switch),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+@Composable
+private fun CollectionTransitionPanel(
+    viewModel: TransitionStudioViewModel,
+    state: StudioUi,
+    isAlbum: Boolean,
+) {
+    Panel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                stringResource(if (isAlbum) R.string.transition_this_album else R.string.transition_this_playlist),
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = state.collectionEnabled,
+                onCheckedChange = { viewModel.setCollectionEnabled(state.input.collection, it) },
+            )
+        }
+        if (!state.collectionEnabled) {
+            Text(
+                stringResource(if (isAlbum) R.string.transition_disabled_album else R.string.transition_disabled_playlist),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        CollectionTransitionModeRow(
+            choice = state.collectionChoice,
+            onSelectChoice = viewModel::setCollectionChoice,
+            onOpenEditor = { viewModel.openEditor(EditorTarget.Collection(state.input.collection)) },
+        )
+        Text(
+            collectionTransitionSummary(state, isAlbum),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (state.collectionChoice is TransitionChoice.Custom) {
+            Row {
+                TextButton(onClick = { viewModel.openEditor(EditorTarget.Collection(state.input.collection)) }) {
+                    Text(stringResource(R.string.action_edit))
+                }
+                TextButton(onClick = { viewModel.setCollectionChoice(TransitionChoice.Inherit) }) {
+                    Text(stringResource(R.string.transition_reset_to_default))
+                }
+            }
+        }
+        if (!state.global.masterEnabled) {
+            Text(
+                stringResource(R.string.transition_master_off_collection_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CollectionTransitionModeRow(
+    choice: TransitionChoice,
+    onSelectChoice: (TransitionChoice) -> Unit,
+    onOpenEditor: () -> Unit,
+) {
+    val options =
+        listOf(
+            TransitionChoice.Inherit to stringResource(R.string.transition_default),
+            TransitionChoice.Off to stringResource(R.string.transition_off),
+        )
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (option, label) ->
+            SegmentedButton(
+                selected = choice == option,
+                onClick = { onSelectChoice(option) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size + 1),
+            ) { Text(label) }
+        }
+        SegmentedButton(
+            selected = choice is TransitionChoice.Custom,
+            onClick = onOpenEditor,
+            shape = SegmentedButtonDefaults.itemShape(options.size, options.size + 1),
+        ) { Text(stringResource(R.string.transition_custom)) }
+    }
+}
+
+@Composable
+private fun collectionTransitionSummary(
+    state: StudioUi,
+    isAlbum: Boolean,
+): String {
+    val summaryLine =
+        when (state.collectionChoice) {
+            TransitionChoice.Inherit ->
+                stringResource(
+                    R.string.transition_collection_uses_default,
+                    localizedSpecSummary(state.global.default.specOrNull()),
+                )
+            TransitionChoice.Off ->
+                stringResource(if (isAlbum) R.string.transition_collection_off_album else R.string.transition_collection_off_playlist)
+            is TransitionChoice.Custom ->
+                stringResource(R.string.transition_collection_custom, localizedSpecSummary(state.collectionChoice.spec))
+        }
+    return if (state.isPlaying) stringResource(R.string.transition_playing_now, summaryLine) else summaryLine
 }

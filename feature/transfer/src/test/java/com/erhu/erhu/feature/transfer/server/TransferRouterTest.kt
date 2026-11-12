@@ -260,4 +260,18 @@ class TransferRouterTest {
         assertEquals(431, parse("GET / HTTP/1.1\r\nX: " + "a".repeat(20_000) + "\r\n\r\n")?.status)
         assertEquals(400, parse("GET / HTTP/1.1\r\n")?.status) // never finished
     }
+
+    @Test
+    fun `upload page renders locale lang rtl dir and escapes html`() {
+        val html =
+            UploadPage.render(
+                TransferWebStrings(
+                    langTag = "ar",
+                    isRtl = true,
+                    title = "Transfer <script>&\"",
+                ),
+            )
+        assertTrue(html.contains("<html lang=\"ar\" dir=\"rtl\">"))
+        assertTrue(html.contains("<title>Transfer &lt;script&gt;&amp;&quot;</title>"))
+    }
 }

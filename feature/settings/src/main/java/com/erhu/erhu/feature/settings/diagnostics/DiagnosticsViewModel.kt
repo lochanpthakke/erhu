@@ -3,8 +3,10 @@ package com.erhu.erhu.feature.settings.diagnostics
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.logging.CrashLogEntry
 import com.erhu.erhu.core.common.logging.LocalCrashLogger
 import com.erhu.erhu.core.common.result.AppResult
@@ -25,6 +27,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
+
+sealed interface UpdateInstallMessage {
+    data class Resource(
+        @StringRes val resId: Int,
+    ) : UpdateInstallMessage
+
+    data class Text(
+        val text: String,
+    ) : UpdateInstallMessage
+}
 
 @HiltViewModel
 class DiagnosticsViewModel
@@ -51,7 +64,8 @@ class DiagnosticsViewModel
         val isCheckingUpdate = _isCheckingUpdate.asStateFlow()
         val downloadState = downloads.state
         val automaticCheckSummary = automaticStatus.summary
-        private val _installationMessage = MutableStateFlow<String?>(null)
+        val automaticCheckRecord = automaticStatus.record
+        private val _installationMessage = MutableStateFlow<UpdateInstallMessage?>(null)
         val installationMessage = _installationMessage.asStateFlow()
         private val _launchInstaller = MutableStateFlow<UpdateDownloadState.Ready?>(null)
         val launchInstaller = _launchInstaller.asStateFlow()
@@ -70,8 +84,9 @@ class DiagnosticsViewModel
         }
 
         fun copyLogToClipboard(entry: CrashLogEntry) {
+            val localized = AppLocaleManager.localizedContext(context)
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val clip = ClipData.newPlainText("Crash Log", entry.content)
+            val clip = ClipData.newPlainText(localized.getString(CommonR.string.diagnostics_crash_log_clip_label), entry.content)
             clipboard.setPrimaryClip(clip)
         }
 
@@ -124,7 +139,8 @@ class DiagnosticsViewModel
                     installPending = false
                     downloads.reset()
                     _installationMessage.value =
-                        e.message ?: "The downloaded APK is no longer available. Download it again."
+                        e.message?.let(UpdateInstallMessage::Text)
+                            ?: UpdateInstallMessage.Resource(CommonR.string.update_install_missing_file)
                 }
             }
         }
@@ -133,8 +149,10 @@ class DiagnosticsViewModel
             _launchInstaller.value = null
         }
 
-        fun installMessage(message: String) {
+        fun installMessage(
+            @StringRes resId: Int,
+        ) {
             installPending = false
-            _installationMessage.value = message
+            _installationMessage.value = UpdateInstallMessage.Resource(resId)
         }
     }

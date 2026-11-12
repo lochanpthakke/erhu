@@ -15,28 +15,46 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.PopupGlassPreview
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.theme.LocalPopupGlassOpacity
 import com.erhu.erhu.feature.settings.component.SettingsGroup
 import com.erhu.erhu.feature.settings.component.SettingsSection
-import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 internal fun PopupGlassControls(
     opacity: Float,
     onOpacityChange: (Float) -> Unit,
 ) {
+    val context = LocalContext.current
+    val locale = AppLocaleManager.activeLocale(context)
     var preview by remember { mutableFloatStateOf(opacity) }
     var dragging by remember { androidx.compose.runtime.mutableStateOf(false) }
     LaunchedEffect(opacity) { if (!dragging) preview = opacity }
-    SettingsSection(title = "Liquid Glass", footer = "Adjust clear glass on navigation, Search and popup surfaces.") {
+    SettingsSection(
+        title = stringResource(CommonR.string.theme_liquid_glass_title),
+        footer = stringResource(CommonR.string.theme_liquid_glass_footer),
+    ) {
         SettingsGroup {
             row {
                 Column(Modifier.fillMaxWidth().padding(Spacing.md)) {
                     CompositionLocalProvider(LocalPopupGlassOpacity provides preview) { PopupGlassPreview() }
-                    Text("Glass Strength: ${(preview * 100).roundToInt()}%", Modifier.padding(top = Spacing.md))
-                    Text("Less Glass · More Glass", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        stringResource(
+                            CommonR.string.theme_liquid_glass_strength,
+                            LocaleFormatters.formatPercent(preview.toDouble(), locale),
+                        ),
+                        Modifier.padding(top = Spacing.md),
+                    )
+                    Text(
+                        stringResource(CommonR.string.theme_liquid_glass_scale),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                     Slider(
                         value = preview,
                         onValueChange = {
@@ -53,7 +71,7 @@ internal fun PopupGlassControls(
                     TextButton(onClick = {
                         preview = 0.5f
                         onOpacityChange(0.5f)
-                    }) { Text("Reset to default") }
+                    }) { Text(stringResource(CommonR.string.action_reset_to_default)) }
                 }
             }
         }

@@ -20,11 +20,14 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.erhu.erhu.feature.library.titleRes
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * A smart mix's generated cover ([MixArt]), drawn with Compose primitives. The art is generated
@@ -37,7 +40,8 @@ fun MixArtwork(
     modifier: Modifier = Modifier,
 ) {
     val art = remember(kind) { MixArt.generate(kind) }
-    MixArtCanvas(art = art, description = "${kind.title} cover", modifier = modifier)
+    val description = stringResource(CommonR.string.mix_artwork_cd, stringResource(kind.titleRes()))
+    MixArtCanvas(art = art, description = description, modifier = modifier)
 }
 
 /** Draws already composed [art] (a cover, or a banner composed for its shape) at whatever size it is given. */

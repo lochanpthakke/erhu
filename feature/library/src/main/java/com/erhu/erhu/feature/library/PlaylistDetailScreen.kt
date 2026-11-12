@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -71,6 +72,7 @@ import com.erhu.erhu.feature.library.transition.TransitionStudioHost
 import com.erhu.erhu.feature.library.transition.TransitionStudioRow
 import com.erhu.erhu.feature.library.transition.TransitionStudioViewModel
 import com.erhu.erhu.feature.library.transition.rememberCollectionTransitionPairs
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Same proportions as the album page header. */
 private const val COVER_WIDTH_FRACTION = 0.62f
@@ -174,7 +176,7 @@ fun PlaylistDetailScreen(
             if (songs.isEmpty()) {
                 item(key = "empty") {
                     EmptyState(
-                        message = "This playlist is empty. Add songs with \"Add to playlist\" in any song's menu.",
+                        message = stringResource(CommonR.string.playlist_empty),
                         modifier = Modifier.padding(top = Spacing.xl),
                     )
                 }
@@ -219,16 +221,16 @@ fun PlaylistDetailScreen(
         if (confirmDelete) {
             GlassAlertDialog(
                 onDismissRequest = { confirmDelete = false },
-                title = { Text("Delete playlist?") },
-                text = { Text("\"${current.name}\" will be deleted. The songs stay in your library.") },
+                title = { Text(stringResource(CommonR.string.playlist_delete_title)) },
+                text = { Text(stringResource(CommonR.string.playlist_delete_body, current.name)) },
                 confirmButton = {
                     TextButton(onClick = {
                         confirmDelete = false
                         viewModel.deletePlaylist(current)
                         onBack()
-                    }) { Text("Delete") }
+                    }) { Text(stringResource(CommonR.string.action_delete)) }
                 },
-                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+                dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(CommonR.string.action_cancel)) } },
             )
         }
     }
@@ -319,12 +321,12 @@ private fun PlaylistHeader(
             Button(onClick = onPlay, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Play", maxLines = 1, softWrap = false)
+                Text(stringResource(CommonR.string.action_play), maxLines = 1, softWrap = false)
             }
             FilledTonalButton(onClick = onShuffle, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Shuffle", maxLines = 1, softWrap = false)
+                Text(stringResource(CommonR.string.action_shuffle), maxLines = 1, softWrap = false)
             }
         }
     }
@@ -338,12 +340,17 @@ private fun PlaylistMenu(
     var expanded by remember { mutableStateOf(false) }
     GlassMenuAnchor {
         IconButton(modifier = Modifier.glassMenuTrigger(), onClick = { expanded = true }) {
-            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "Playlist options")
+            Icon(imageVector = Icons.Default.MoreVert, contentDescription = stringResource(CommonR.string.playlist_cd_options))
         }
-        GlassMenu(label = "Playlist options", expanded = expanded, onDismissRequest = { expanded = false }, albumMotionPilot = true) {
+        GlassMenu(
+            label = stringResource(CommonR.string.playlist_cd_options),
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            albumMotionPilot = true,
+        ) {
             GlassMenuItem(
                 icon = Icons.Default.Edit,
-                text = { Text("Edit playlist") },
+                text = { Text(stringResource(CommonR.string.playlist_edit)) },
                 onClick = {
                     expanded = false
                     onEdit()
@@ -352,7 +359,7 @@ private fun PlaylistMenu(
             GlassMenuItem(
                 icon = Icons.Default.DeleteOutline,
                 destructive = true,
-                text = { Text("Delete playlist") },
+                text = { Text(stringResource(CommonR.string.playlist_delete)) },
                 onClick = {
                     expanded = false
                     onDelete()
@@ -363,7 +370,8 @@ private fun PlaylistMenu(
 }
 
 /** "12 songs · 43 min"; the duration is left out when unknown. */
+@Composable
 private fun playlistFacts(songs: List<Song>): String {
     val minutes = songs.sumOf { it.durationMs } / MS_PER_MINUTE
-    return listOfNotNull(countLabel(songs.size, "song"), minutes.takeIf { it > 0 }?.let { "$it min" }).joinToString(" · ")
+    return listOfNotNull(songCountText(songs.size), minutes.takeIf { it > 0 }?.let { minutesDurationText(it) }).joinToString(" · ")
 }

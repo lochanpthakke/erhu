@@ -62,12 +62,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.ActionButton
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
@@ -88,6 +92,7 @@ import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.ProviderStatus
+import com.erhu.erhu.core.common.R as CommonR
 
 /** The resolutions offered as the minimum artwork size, px. */
 private val RESOLUTION_TARGETS = listOf(300, 500, 1000)
@@ -165,13 +170,15 @@ fun ArtworkManagerScreen(
             }
     val progressFloat = if (activeQueueCount > 0) doneCount.toFloat() / activeQueueCount.toFloat() else 0f
 
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+
     // The page title merges into the header button as the page scrolls.
     val collapsingTitle = rememberCollapsingTitleState()
     AppScaffold(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                title = "Artwork Fetcher",
+                title = stringResource(CommonR.string.artwork_fetcher_title),
                 collapsingTitle = collapsingTitle,
             )
         },
@@ -191,7 +198,11 @@ fun ArtworkManagerScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.xl),
         ) {
             SegmentedSelector(
-                options = listOf("Albums", "Artists"),
+                options =
+                    listOf(
+                        stringResource(CommonR.string.artwork_tab_albums),
+                        stringResource(CommonR.string.artwork_tab_artists),
+                    ),
                 selectedIndex = selectedTab,
                 onSelect = { index ->
                     if (selectedTab != index) {
@@ -204,15 +215,13 @@ fun ArtworkManagerScreen(
 
             // ---- Find: where artwork comes from, and what to fetch it for.
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = "Find artwork")
+                SectionHeading(title = stringResource(CommonR.string.artwork_section_find))
                 Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
                     Text(
-                        if (selectedTab ==
-                            0
-                        ) {
-                            "MusicBrainz / Cover Art Archive → Deezer → iTunes → TheAudioDB"
+                        if (selectedTab == 0) {
+                            stringResource(CommonR.string.artwork_source_album_chain)
                         } else {
-                            "Deezer artist catalogue"
+                            stringResource(CommonR.string.artwork_source_deezer_artist)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(Spacing.lg),
@@ -229,12 +238,19 @@ fun ArtworkManagerScreen(
                                 searchQuery = it
                                 viewModel.searchLocalLibrary(it)
                             },
-                            placeholder = if (selectedTab == 0) "Search albums..." else "Search artists...",
+                            placeholder =
+                                stringResource(
+                                    if (selectedTab == 0) {
+                                        CommonR.string.artwork_search_albums_hint
+                                    } else {
+                                        CommonR.string.artwork_search_artists_hint
+                                    },
+                                ),
                         )
 
                         if (searchQuery.isNotBlank()) {
                             Text(
-                                text = "Search results · tap + to add to the queue",
+                                text = stringResource(CommonR.string.artwork_search_results_hint),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -242,11 +258,13 @@ fun ArtworkManagerScreen(
                             if (resultsEmpty) {
                                 Text(
                                     text =
-                                        if (selectedTab == 0) {
-                                            "No matching albums in your library."
-                                        } else {
-                                            "No matching artists in your library."
-                                        },
+                                        stringResource(
+                                            if (selectedTab == 0) {
+                                                CommonR.string.artwork_no_matching_albums
+                                            } else {
+                                                CommonR.string.artwork_no_matching_artists
+                                            },
+                                        ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -281,13 +299,13 @@ fun ArtworkManagerScreen(
 
                         ActionButton(
                             text =
-                                if (isScanning) {
-                                    "Scanning Storage..."
-                                } else if (selectedTab == 0) {
-                                    "Scan for Missing Album Covers"
-                                } else {
-                                    "Scan for Missing Artist Photos"
-                                },
+                                stringResource(
+                                    when {
+                                        isScanning -> CommonR.string.artwork_scanning_storage
+                                        selectedTab == 0 -> CommonR.string.artwork_scan_missing_covers
+                                        else -> CommonR.string.artwork_scan_missing_photos
+                                    },
+                                ),
                             onClick = {
                                 if (selectedTab == 0) {
                                     viewModel.scanForMissingCovers()
@@ -304,20 +322,30 @@ fun ArtworkManagerScreen(
 
             // ---- Resolution target.
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = "Improve existing artwork")
+                SectionHeading(title = stringResource(CommonR.string.artwork_section_improve))
                 Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
                     GroupRow(
-                        title = if (selectedTab == 0) "Upgrade album covers" else "Upgrade artist photos",
-                        summary = "Find a larger version of the same image; review before replacing.",
+                        title =
+                            stringResource(
+                                if (selectedTab == 0) CommonR.string.artwork_upgrade_covers else CommonR.string.artwork_upgrade_photos,
+                            ),
+                        summary = stringResource(CommonR.string.artwork_upgrade_summary),
                         onClick = { upgradeTab = selectedTab },
                     )
                 }
             }
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = "Resolution target", trailing = "$minResolution×$minResolution px")
+                val minResFormatted = LocaleFormatters.formatInteger(minResolution, locale)
+                SectionHeading(
+                    title = stringResource(CommonR.string.artwork_section_resolution_target),
+                    trailing = stringResource(CommonR.string.artwork_resolution_target_trailing, minResFormatted, minResFormatted),
+                )
                 SegmentedSelector(
-                    options = RESOLUTION_TARGETS.map { "$it px" },
+                    options =
+                        RESOLUTION_TARGETS.map {
+                            stringResource(CommonR.string.artwork_resolution_chip, LocaleFormatters.formatInteger(it, locale))
+                        },
                     selectedIndex = RESOLUTION_TARGETS.indexOf(minResolution),
                     onSelect = { index ->
                         val res = RESOLUTION_TARGETS[index]
@@ -332,14 +360,19 @@ fun ArtworkManagerScreen(
                 if (selectedTab == 0) {
                     currentProcessingAlbum?.artist.orEmpty()
                 } else {
-                    "${currentProcessingArtist?.songCount ?: 0} tracks"
+                    val songCount = currentProcessingArtist?.songCount ?: 0
+                    pluralStringResource(
+                        CommonR.plurals.library_tracks_count,
+                        songCount,
+                        LocaleFormatters.formatInteger(songCount, locale),
+                    )
                 }
             var showDiagnosticsExpanded by remember { mutableStateOf(false) }
             val diagnostics by viewModel.artworkSearchDiagnostics.collectAsState()
 
             if (currentContextTitle != null) {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    SectionHeading(title = "Artwork candidates")
+                    SectionHeading(title = stringResource(CommonR.string.artwork_section_candidates))
                     ArtworkWebSearchButton(
                         url =
                             if (selectedTab == 0) {
@@ -362,14 +395,18 @@ fun ArtworkManagerScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Provider Results & Diagnostics",
+                                        text = stringResource(CommonR.string.artwork_section_provider_diagnostics),
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
                                     if (diagnostics?.searchQuery.orEmpty().isNotBlank()) {
                                         Text(
-                                            text = "Search Query: ${diagnostics!!.searchQuery}",
+                                            text =
+                                                stringResource(
+                                                    CommonR.string.artwork_search_query_label,
+                                                    diagnostics!!.searchQuery,
+                                                ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -385,7 +422,14 @@ fun ArtworkManagerScreen(
                                 }
                                 Icon(
                                     imageVector = if (showDiagnosticsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = if (showDiagnosticsExpanded) "Hide provider results" else "Show provider results",
+                                    contentDescription =
+                                        stringResource(
+                                            if (showDiagnosticsExpanded) {
+                                                CommonR.string.artwork_cd_hide_provider_results
+                                            } else {
+                                                CommonR.string.artwork_cd_show_provider_results
+                                            },
+                                        ),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -397,7 +441,7 @@ fun ArtworkManagerScreen(
                                     verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                                 ) {
                                     Text(
-                                        "Provider Results",
+                                        stringResource(CommonR.string.artwork_provider_results),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -412,10 +456,13 @@ fun ArtworkManagerScreen(
                                             Text(
                                                 text =
                                                     when (outcome.status) {
-                                                        ProviderStatus.SUCCESS -> "✓ Found ${outcome.candidateCount} candidates"
-                                                        ProviderStatus.NOT_CONFIGURED -> "Not configured"
-                                                        ProviderStatus.UNAVAILABLE -> "Not available here"
-                                                        else -> outcome.status.label
+                                                        ProviderStatus.SUCCESS ->
+                                                            pluralStringResource(
+                                                                CommonR.plurals.artwork_provider_found_candidates,
+                                                                outcome.candidateCount,
+                                                                LocaleFormatters.formatInteger(outcome.candidateCount, locale),
+                                                            )
+                                                        else -> outcome.status.localizedLabel()
                                                     },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color =
@@ -456,14 +503,14 @@ fun ArtworkManagerScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                                 ProgressBar()
                                 Text(
-                                    "Searching artwork...",
+                                    stringResource(CommonR.string.artwork_searching),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         } else if (artworkCandidates.isNotEmpty()) {
                             Text(
-                                "Tap a candidate to inspect and apply it.",
+                                stringResource(CommonR.string.artwork_tap_candidate_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -490,7 +537,7 @@ fun ArtworkManagerScreen(
                             }
                         } else {
                             Text(
-                                text = "No artwork candidates found.",
+                                text = stringResource(CommonR.string.artwork_no_candidates),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -501,14 +548,28 @@ fun ArtworkManagerScreen(
 
             // ---- Queue: progress, the page's primary action, and the queued items.
             Column(modifier = Modifier.fillMaxWidth()) {
+                val doneFormatted = LocaleFormatters.formatInteger(doneCount, locale)
+                val totalFormatted = LocaleFormatters.formatInteger(activeQueueCount, locale)
                 SectionHeading(
-                    title = if (selectedTab == 0) "Queue for artwork" else "Queue for artist photos",
+                    title =
+                        stringResource(
+                            if (selectedTab == 0) {
+                                CommonR.string.artwork_queue_covers_title
+                            } else {
+                                CommonR.string.artwork_queue_photos_title
+                            },
+                        ),
                     trailing =
-                        if (selectedTab == 0) {
-                            "$doneCount / $activeQueueCount albums"
-                        } else {
-                            "$doneCount / $activeQueueCount artists"
-                        },
+                        pluralStringResource(
+                            if (selectedTab == 0) {
+                                CommonR.plurals.artwork_queue_albums_count
+                            } else {
+                                CommonR.plurals.artwork_queue_artists_count
+                            },
+                            activeQueueCount,
+                            doneFormatted,
+                            totalFormatted,
+                        ),
                 )
                 Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
                     Column(
@@ -519,7 +580,7 @@ fun ArtworkManagerScreen(
 
                         if (isQueueComplete) {
                             ActionButton(
-                                text = "Finish & Return to Library",
+                                text = stringResource(CommonR.string.artwork_finish_return),
                                 onClick = {
                                     if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
                                     onNavigateToLibrary()
@@ -529,7 +590,14 @@ fun ArtworkManagerScreen(
                             )
                         } else {
                             ActionButton(
-                                text = if (isSearchingArtwork) "Searching Artwork..." else "Search for Artwork",
+                                text =
+                                    stringResource(
+                                        if (isSearchingArtwork) {
+                                            CommonR.string.artwork_searching_button
+                                        } else {
+                                            CommonR.string.artwork_search_button
+                                        },
+                                    ),
                                 onClick = {
                                     if (selectedTab == 0) {
                                         val firstPending = artworkQueue.firstOrNull { it.status == "PENDING" }
@@ -556,7 +624,7 @@ fun ArtworkManagerScreen(
 
                     if (selectedTab == 0) {
                         if (artworkQueue.isEmpty()) {
-                            QueueEmpty("Queue is empty. Search for an album or scan for missing artwork to populate the queue.")
+                            QueueEmpty(stringResource(CommonR.string.artwork_queue_empty_album))
                         } else {
                             LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                                 items(artworkQueue, key = { it.album.id }) { queueItem ->
@@ -573,13 +641,18 @@ fun ArtworkManagerScreen(
                         }
                     } else {
                         if (artistArtworkQueue.isEmpty()) {
-                            QueueEmpty("Queue is empty. Search for an artist or scan for missing photos to populate the queue.")
+                            QueueEmpty(stringResource(CommonR.string.artwork_queue_empty_artist))
                         } else {
                             LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                                 items(artistArtworkQueue, key = { it.artist.id }) { queueItem ->
                                     AlbumQueueCard(
                                         title = queueItem.artist.name,
-                                        subtitle = "${queueItem.artist.songCount} tracks",
+                                        subtitle =
+                                            pluralStringResource(
+                                                CommonR.plurals.library_tracks_count,
+                                                queueItem.artist.songCount,
+                                                LocaleFormatters.formatInteger(queueItem.artist.songCount, locale),
+                                            ),
                                         status = queueItem.status,
                                         icon = Icons.Default.Person,
                                         onRemove = { viewModel.removeFromArtistArtworkQueue(queueItem.artist) },
@@ -594,12 +667,12 @@ fun ArtworkManagerScreen(
 
             // ---- More: a quiet row, not a competing button.
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = "More")
+                SectionHeading(title = stringResource(CommonR.string.artwork_more_section))
                 Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
                     GroupRow(
                         icon = Icons.Default.Settings,
-                        title = "Utility Settings",
-                        summary = "Metadata & artwork options",
+                        title = stringResource(CommonR.string.artwork_utility_settings_title),
+                        summary = stringResource(CommonR.string.artwork_utility_settings_summary),
                         onClick = onNavigateToMetadataSettings,
                         trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
@@ -612,7 +685,7 @@ fun ArtworkManagerScreen(
         val targetTitle = currentProcessingAlbum?.title ?: currentProcessingArtist?.name ?: ""
         GlassAlertDialog(
             onDismissRequest = { viewModel.selectEnlargedArtwork(null) },
-            title = { Text("Inspect Artwork: $targetTitle") },
+            title = { Text(stringResource(CommonR.string.artwork_inspect_title, targetTitle)) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AsyncImage(
@@ -623,7 +696,7 @@ fun ArtworkManagerScreen(
                                 .setHeader("User-Agent", USER_AGENT)
                                 .crossfade(true)
                                 .build(),
-                        contentDescription = "Enlarged Artwork",
+                        contentDescription = stringResource(CommonR.string.artwork_cd_enlarged),
                         contentScale = ContentScale.Fit,
                         modifier =
                             Modifier
@@ -645,10 +718,9 @@ fun ArtworkManagerScreen(
                             listOf(
                                 candidate.sourceProvider,
                                 candidate.edition,
-                                if (candidate.width >
-                                    0
-                                ) {
-                                    "${candidate.width}\u00d7${candidate.height}"
+                                if (candidate.width > 0) {
+                                    "${LocaleFormatters.formatInteger(candidate.width, locale)}\u00d7" +
+                                        LocaleFormatters.formatInteger(candidate.height, locale)
                                 } else {
                                     ""
                                 },
@@ -660,9 +732,9 @@ fun ArtworkManagerScreen(
                     Text(
                         text =
                             if (currentProcessingAlbum != null) {
-                                "Do you want to embed this cover art into all tracks of $targetTitle?"
+                                stringResource(CommonR.string.artwork_confirm_album, targetTitle)
                             } else {
-                                "Do you want to set this photo as $targetTitle's profile picture?"
+                                stringResource(CommonR.string.artwork_confirm_artist, targetTitle)
                             },
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -686,12 +758,12 @@ fun ArtworkManagerScreen(
                         appliedItemSuccessTitle = title
                     },
                 ) {
-                    Text("Apply Artwork")
+                    Text(stringResource(CommonR.string.artwork_apply))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.selectEnlargedArtwork(null) }) {
-                    Text("Cancel")
+                    Text(stringResource(CommonR.string.action_cancel))
                 }
             },
         )
@@ -701,10 +773,10 @@ fun ArtworkManagerScreen(
         val appliedTitle = appliedItemSuccessTitle.orEmpty()
         GlassAlertDialog(
             onDismissRequest = { appliedItemSuccessTitle = null },
-            title = { Text("Artwork Applied Successfully") },
+            title = { Text(stringResource(CommonR.string.artwork_applied_title)) },
             text = {
                 Text(
-                    text = "Artwork for \"$appliedTitle\" has been updated.",
+                    text = stringResource(CommonR.string.artwork_applied_body, appliedTitle),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             },
@@ -714,7 +786,7 @@ fun ArtworkManagerScreen(
                         appliedItemSuccessTitle = null
                     },
                 ) {
-                    Text("Fetch More Artwork")
+                    Text(stringResource(CommonR.string.artwork_fetch_more))
                 }
             },
             dismissButton = {
@@ -725,7 +797,7 @@ fun ArtworkManagerScreen(
                         onNavigateToLibrary()
                     },
                 ) {
-                    Text("Return to Library")
+                    Text(stringResource(CommonR.string.common_return_to_library))
                 }
             },
         )
@@ -767,6 +839,7 @@ private fun SquareArtworkCandidateCard(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
             modifier =
@@ -789,7 +862,7 @@ private fun SquareArtworkCandidateCard(
                         .setHeader("User-Agent", USER_AGENT)
                         .crossfade(true)
                         .build(),
-                contentDescription = "Artwork Candidate",
+                contentDescription = stringResource(CommonR.string.artwork_cd_candidate),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -803,7 +876,13 @@ private fun SquareArtworkCandidateCard(
                         .padding(horizontal = Spacing.sm, vertical = 2.dp),
             ) {
                 Text(
-                    text = if (detail != null && detail.width > 0) "${detail.width}×${detail.height}" else "Preview",
+                    text =
+                        if (detail != null && detail.width > 0) {
+                            "${LocaleFormatters.formatInteger(detail.width, locale)}\u00d7" +
+                                LocaleFormatters.formatInteger(detail.height, locale)
+                        } else {
+                            stringResource(CommonR.string.artwork_preview_badge)
+                        },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -821,12 +900,16 @@ private fun SquareArtworkCandidateCard(
             }
             val edition =
                 listOfNotNull(
-                    candidate.year.takeIf { it > 0 }?.toString(),
+                    candidate.year.takeIf { it > 0 }?.let { LocaleFormatters.formatInteger(it, locale) },
                     candidate.edition.takeIf(String::isNotBlank),
                 ).joinToString(" · ")
             if (edition.isNotBlank()) Text(edition, style = MaterialTheme.typography.labelSmall)
             Text(
-                if (candidate.recommended) "Recommended match" else candidate.reviewReasons.firstOrNull() ?: "Choose manually",
+                if (candidate.recommended) {
+                    stringResource(CommonR.string.artwork_recommended_match)
+                } else {
+                    candidate.reviewReasons.firstOrNull() ?: stringResource(CommonR.string.artwork_choose_manually)
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -875,24 +958,24 @@ private fun AlbumQueueCard(
                 "SEARCHING", "WRITING" ->
                     Icon(
                         imageVector = Icons.Default.HourglassTop,
-                        contentDescription = "Searching",
+                        contentDescription = stringResource(CommonR.string.artwork_status_searching),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 "COMPLETED", "DONE", "SUCCESS" ->
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Done",
+                        contentDescription = stringResource(CommonR.string.artwork_status_done),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 "FAILED" ->
                     Icon(
                         imageVector = Icons.Default.Error,
-                        contentDescription = "Failed",
+                        contentDescription = stringResource(CommonR.string.artwork_status_failed),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 else ->
                     Text(
-                        text = "Pending",
+                        text = stringResource(CommonR.string.artwork_status_pending),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -900,7 +983,7 @@ private fun AlbumQueueCard(
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Remove from Queue",
+                    contentDescription = stringResource(CommonR.string.artwork_cd_remove_queue),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -960,7 +1043,7 @@ private fun AlbumSearchCard(
         subtitle = album.artist,
         icon = Icons.Default.MusicNote,
         thumbShape = MaterialTheme.shapes.small,
-        addDescription = "Add Album",
+        addDescription = stringResource(CommonR.string.artwork_cd_add_album),
         onAdd = onAdd,
     )
 }
@@ -970,12 +1053,18 @@ private fun ArtistSearchCard(
     artist: Artist,
     onAdd: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     SearchResultRow(
         title = artist.name,
-        subtitle = "${artist.songCount} tracks",
+        subtitle =
+            pluralStringResource(
+                CommonR.plurals.library_tracks_count,
+                artist.songCount,
+                LocaleFormatters.formatInteger(artist.songCount, locale),
+            ),
         icon = Icons.Default.Person,
         thumbShape = CircleShape,
-        addDescription = "Add Artist",
+        addDescription = stringResource(CommonR.string.artwork_cd_add_artist),
         onAdd = onAdd,
     )
 }

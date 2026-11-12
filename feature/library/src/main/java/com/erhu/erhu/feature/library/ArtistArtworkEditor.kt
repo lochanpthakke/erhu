@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.database.library.ArtistArtworkCache
@@ -33,6 +34,7 @@ import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.common.R as CommonR
 
 private val ARTIST_PREVIEW_SIZE = 160.dp
 
@@ -58,7 +60,7 @@ internal fun ArtistImageDialog(
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Artist image") },
+        title = { Text(stringResource(CommonR.string.artist_image_title)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 val previewModifier = Modifier.size(ARTIST_PREVIEW_SIZE)
@@ -66,7 +68,7 @@ internal fun ArtistImageDialog(
                     is CoverChange.Replace ->
                         Image(
                             bitmap = pending.preview,
-                            contentDescription = "New artist image",
+                            contentDescription = stringResource(CommonR.string.artist_cd_new_image),
                             contentScale = ContentScale.Crop,
                             modifier = previewModifier.clip(CircleShape),
                         )
@@ -82,11 +84,13 @@ internal fun ArtistImageDialog(
                 Spacer(modifier = Modifier.height(Spacing.md))
                 Text(
                     text =
-                        if (hasCustomImage && change == CoverChange.None) {
-                            "You chose this image. It is never replaced automatically."
-                        } else {
-                            "Your own image replaces the automatic one and is never changed by scans."
-                        },
+                        stringResource(
+                            if (hasCustomImage && change == CoverChange.None) {
+                                CommonR.string.artist_image_custom_note
+                            } else {
+                                CommonR.string.artist_image_replace_note
+                            },
+                        ),
                     style = TextStyles.metadata,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -95,18 +99,22 @@ internal fun ArtistImageDialog(
                 ArtworkWebSearchButton(artistArtworkSearchUrl(artist.name), artist.name)
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     OutlinedButton(onClick = { picker.launch("image/*") }) {
-                        Text("Choose image")
+                        Text(stringResource(CommonR.string.playlist_choose_image))
                     }
                     if (hasCustomImage && change == CoverChange.None) {
-                        TextButton(onClick = { change = CoverChange.Remove }) { Text("Use automatic image") }
+                        TextButton(onClick = { change = CoverChange.Remove }) {
+                            Text(stringResource(CommonR.string.artist_image_use_automatic))
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(change) }, enabled = change != CoverChange.None) { Text("Save") }
+            TextButton(onClick = { onSave(change) }, enabled = change != CoverChange.None) {
+                Text(stringResource(CommonR.string.action_save))
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.action_cancel)) } },
     )
 
     pickedUri?.let { uri ->

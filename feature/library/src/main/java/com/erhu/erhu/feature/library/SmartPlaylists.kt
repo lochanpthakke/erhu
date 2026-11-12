@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -74,6 +75,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 /** A smart mix card: its generated cover, title and what it holds. */
 @Composable
@@ -92,9 +94,9 @@ internal fun SmartMixTile(
                     .clip(Radius.mediumShape),
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
-        Text(text = mix.title, style = TextStyles.tileTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = mix.localizedTitle(), style = TextStyles.tileTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
-            text = countLabel(mix.songIds.size, "song"),
+            text = songCountText(mix.songIds.size),
             style = TextStyles.tileSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -123,7 +125,7 @@ internal fun MoreListeningNote(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(Spacing.sm))
         Text(
-            text = "Keep listening and erhu will build mixes from your plays.",
+            text = stringResource(CommonR.string.smart_playlist_more_body),
             style = TextStyles.tileSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -238,8 +240,8 @@ fun SmartPlaylistDetailScreen(
             item(key = "header") {
                 SmartMixHeader(
                     kind = kind,
-                    title = content.mix?.title,
-                    description = content.mix?.description,
+                    title = content.mix?.localizedTitle(),
+                    description = content.mix?.localizedDescription(),
                     songs = songs,
                     onPlay = { libraryViewModel.playInOrder(songs) },
                     onShuffle = { libraryViewModel.playShuffled(songs) },
@@ -248,7 +250,7 @@ fun SmartPlaylistDetailScreen(
             if (songs.isEmpty()) {
                 item(key = "empty") {
                     EmptyState(
-                        message = "This mix isn't available right now. It comes back as your listening and library grow.",
+                        message = stringResource(CommonR.string.smart_playlist_unavailable),
                         modifier = Modifier.padding(top = Spacing.xl),
                     )
                 }
@@ -317,7 +319,12 @@ private fun SmartMixHeader(
                 .clip(Radius.largeShape)
         if (kind != null) MixArtwork(kind = kind, modifier = cover) else Spacer(modifier = cover)
         Spacer(modifier = Modifier.height(Spacing.lg))
-        Text(text = title ?: kind?.title ?: "Smart Playlist", style = TextStyles.pageTitle, textAlign = TextAlign.Center, maxLines = 1)
+        Text(
+            text = title ?: kind?.let { stringResource(it.titleRes()) } ?: stringResource(CommonR.string.smart_playlist_default_title),
+            style = TextStyles.pageTitle,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+        )
         if (description != null) {
             Spacer(modifier = Modifier.height(Spacing.xs))
             Text(
@@ -344,21 +351,22 @@ private fun SmartMixHeader(
             Button(onClick = onPlay, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Play", maxLines = 1, softWrap = false)
+                Text(stringResource(CommonR.string.action_play), maxLines = 1, softWrap = false)
             }
             FilledTonalButton(onClick = onShuffle, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
                 Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
                 Spacer(modifier = Modifier.width(Spacing.sm))
-                Text("Shuffle", maxLines = 1, softWrap = false)
+                Text(stringResource(CommonR.string.action_shuffle), maxLines = 1, softWrap = false)
             }
         }
     }
 }
 
 /** "12 songs · 43 min"; the duration is left out when unknown. */
+@Composable
 private fun smartPlaylistFacts(songs: List<Song>): String {
     val minutes = songs.sumOf { it.durationMs } / MS_PER_MINUTE
-    return listOfNotNull(countLabel(songs.size, "song"), minutes.takeIf { it > 0 }?.let { "$it min" }).joinToString(" · ")
+    return listOfNotNull(songCountText(songs.size), minutes.takeIf { it > 0 }?.let { minutesDurationText(it) }).joinToString(" · ")
 }
 
 private const val COVER_WIDTH_FRACTION = 0.62f

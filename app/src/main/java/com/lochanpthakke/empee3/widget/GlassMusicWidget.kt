@@ -56,6 +56,8 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.erhu.erhu.MainActivity
 import com.erhu.erhu.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
 import com.erhu.erhu.core.model.PlaybackStatus
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -80,10 +82,13 @@ class GlassMusicWidget : GlanceAppWidget() {
         context: Context,
         widgetCategory: Int,
     ) {
+        val localized =
+            com.erhu.erhu.core.common.locale.AppLocaleManager
+                .localizedContext(context)
         provideContent {
             WidgetContent(
-                title = "Nothing playing",
-                artist = "Choose music in erhu",
+                title = localized.getString(R.string.widget_idle_title),
+                artist = localized.getString(R.string.widget_idle_hint),
                 artwork = null,
                 isPlaying = false,
                 isFavorite = false,
@@ -144,7 +149,7 @@ class GlassMusicWidget : GlanceAppWidget() {
             }
 
             WidgetContent(
-                title = song?.title ?: "Nothing playing",
+                title = song?.title ?: AppLocaleManager.localizedContext(context).getString(R.string.widget_idle_title),
                 artist = song?.artist.orEmpty(),
                 artwork = artwork,
                 isPlaying =
@@ -183,7 +188,9 @@ class GlassMusicWidget : GlanceAppWidget() {
                 .clickable(actionStartActivity<MainActivity>()),
         ) {
             Column(GlanceModifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Text("erhu", style = TextStyle(color = muted, fontSize = 12.sp))
+                val localizedContext = AppLocaleManager.localizedContext(LocalContext.current)
+                val locale = AppLocaleManager.activeLocale(localizedContext)
+                Text(localizedContext.getString(R.string.app_name), style = TextStyle(color = muted, fontSize = 12.sp))
                 Spacer(GlanceModifier.defaultWeight())
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(GlanceModifier.size(artSide), contentAlignment = Alignment.Center) {
@@ -202,12 +209,16 @@ class GlassMusicWidget : GlanceAppWidget() {
                     }
                     Column(GlanceModifier.defaultWeight().padding(start = 10.dp)) {
                         MarqueeTitle(title, Color.White, GlanceModifier.fillMaxWidth())
-                        Text(artist.ifEmpty { "Choose music in erhu" }, style = TextStyle(color = muted, fontSize = 13.sp), maxLines = 1)
+                        Text(
+                            artist.ifEmpty { localizedContext.getString(R.string.widget_idle_hint) },
+                            style = TextStyle(color = muted, fontSize = 13.sp),
+                            maxLines = 1,
+                        )
                     }
                     if (hasSong) {
                         WidgetControl(
                             if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border,
-                            "Favorite",
+                            localizedContext.getString(R.string.widget_cd_favorite),
                             actionRunCallback<GlassToggleFavoriteAction>(),
                             white,
                         )
@@ -217,7 +228,7 @@ class GlassMusicWidget : GlanceAppWidget() {
                 if (!compact) {
                     val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
                     Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(formatTime(positionMs), style = TextStyle(color = muted, fontSize = 11.sp))
+                        Text(formatTime(positionMs, locale), style = TextStyle(color = muted, fontSize = 11.sp))
                         Box(GlanceModifier.defaultWeight().height(20.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
                             LinearProgressIndicator(
                                 progress,
@@ -239,21 +250,21 @@ class GlassMusicWidget : GlanceAppWidget() {
                                 }
                             }
                         }
-                        Text(formatTime(durationMs), style = TextStyle(color = muted, fontSize = 11.sp))
+                        Text(formatTime(durationMs, locale), style = TextStyle(color = muted, fontSize = 11.sp))
                     }
                 }
                 Spacer(GlanceModifier.defaultWeight())
                 Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     WidgetControl(
                         R.drawable.ic_widget_skip_previous,
-                        "Previous",
+                        localizedContext.getString(R.string.widget_cd_previous),
                         (if (hasSong) actionRunCallback<GlassSkipPreviousAction>() else actionStartActivity<MainActivity>()),
                         white,
                     )
                     Spacer(GlanceModifier.width(12.dp))
                     WidgetControl(
                         if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
-                        if (isPlaying) "Pause" else "Play",
+                        localizedContext.getString(if (isPlaying) R.string.widget_cd_pause else R.string.widget_cd_play),
                         (if (hasSong) actionRunCallback<GlassPlayPauseAction>() else actionStartActivity<MainActivity>()),
                         white,
                         iconSize = 36,
@@ -261,7 +272,7 @@ class GlassMusicWidget : GlanceAppWidget() {
                     Spacer(GlanceModifier.width(12.dp))
                     WidgetControl(
                         R.drawable.ic_widget_skip_next,
-                        "Next",
+                        localizedContext.getString(R.string.widget_cd_next),
                         (if (hasSong) actionRunCallback<GlassSkipNextAction>() else actionStartActivity<MainActivity>()),
                         white,
                     )
@@ -288,12 +299,10 @@ class GlassMusicWidget : GlanceAppWidget() {
         )
     }
 
-    private fun formatTime(ms: Long): String {
-        val totalSeconds = ms / 1000
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
-    }
+    private fun formatTime(
+        ms: Long,
+        locale: Locale,
+    ): String = LocaleFormatters.formatDurationClock(ms, locale)
 
     private fun Bitmap.toRoundedCorners(radiusPx: Float): Bitmap {
         val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)

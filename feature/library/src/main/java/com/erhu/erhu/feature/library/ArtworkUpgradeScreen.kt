@@ -31,9 +31,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.component.OverlayHeader
@@ -42,6 +47,8 @@ import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
 import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.core.network.artwork.ArtworkUpgradeMatch
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
@@ -52,6 +59,7 @@ internal fun ArtworkUpgradeScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by controller.state.collectAsState()
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     var selected by remember(kind) { mutableStateOf<ArtworkUpgradeResult?>(null) }
     val back = { if (!state.saving) onBack() }
     BackHandler(onBack = back)
@@ -64,7 +72,14 @@ internal fun ArtworkUpgradeScreen(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(back),
-                title = if (kind == ArtworkUpgradeKind.ALBUMS) "Upgrade album covers" else "Upgrade artist photos",
+                title =
+                    stringResource(
+                        if (kind == ArtworkUpgradeKind.ALBUMS) {
+                            CommonR.string.artwork_upgrade_covers
+                        } else {
+                            CommonR.string.artwork_upgrade_photos
+                        },
+                    ),
             )
         },
         modifier = modifier,
@@ -84,11 +99,14 @@ internal fun ArtworkUpgradeScreen(
             item {
                 Column(Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     Text(
-                        "Find a larger version of your existing image. Only likely same-image matches appear; review before replacing. " +
-                            "Your artwork stays unchanged until you apply a match. Saved images fit within 1,440 pixels. " +
-                            "Only album and artist names are searched; your images are compared on this device.",
+                        stringResource(
+                            CommonR.string.artwork_upgrade_intro,
+                            LocaleFormatters.formatInteger(ArtworkUpgradeMatch.MAX_SAVED_PIXELS, locale),
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    val checkedText = LocaleFormatters.formatInteger(state.checked, locale)
+                    val totalText = LocaleFormatters.formatInteger(state.total, locale)
                     if (state.scanning) {
                         LinearProgressIndicator(progress = {
                             if (state.total ==
@@ -99,27 +117,59 @@ internal fun ArtworkUpgradeScreen(
                                 state.checked.toFloat() / state.total
                             }
                         }, modifier = Modifier.fillMaxWidth())
-                        Text("Checked ${state.checked} of ${state.total}")
-                        TextButton(onClick = controller::stop) { Text("Stop search") }
+                        Text(stringResource(CommonR.string.artwork_upgrade_checked_progress, checkedText, totalText))
+                        TextButton(onClick = controller::stop) {
+                            Text(stringResource(CommonR.string.artwork_upgrade_stop_search))
+                        }
                     } else {
                         Button(onClick = {
                             selected = null
                             controller.search(kind)
                         }, enabled = !state.saving) {
-                            Text(if (state.checked > 0 || state.finished) "Search again" else "Find higher-resolution matches")
+                            Text(
+                                stringResource(
+                                    if (state.checked > 0 || state.finished) {
+                                        CommonR.string.artwork_upgrade_search_again
+                                    } else {
+                                        CommonR.string.artwork_upgrade_find_matches
+                                    },
+                                ),
+                            )
                         }
-                        if (state.finished) Text("Checked ${state.checked} of ${state.total}. ${state.results.size} upgrades to review.")
+                        if (state.finished) {
+                            val reviewCountText =
+                                pluralStringResource(
+                                    CommonR.plurals.artwork_upgrades_to_review,
+                                    state.results.size,
+                                    LocaleFormatters.formatInteger(state.results.size, locale),
+                                )
+                            Text(
+                                stringResource(
+                                    CommonR.string.artwork_upgrade_checked_summary,
+                                    checkedText,
+                                    totalText,
+                                    reviewCountText,
+                                ),
+                            )
+                        }
                     }
                     if (state.skipped >
                         0
                     ) {
-                        Text("${state.skipped} images or requests could not be checked.", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            pluralStringResource(
+                                CommonR.plurals.artwork_upgrade_skipped_count,
+                                state.skipped,
+                                LocaleFormatters.formatInteger(state.skipped, locale),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                     state.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-                    if (state.saving) Text("Saving artwork…")
+                    if (state.saving) Text(stringResource(CommonR.string.artwork_upgrade_saving))
                 }
             }
-            item { SectionHeading(title = "Higher-resolution matches") }
+            item { SectionHeading(title = stringResource(CommonR.string.artwork_upgrade_section_matches)) }
             items(state.results, key = { it.target.id }) { result ->
                 Row(
                     Modifier
@@ -139,51 +189,87 @@ internal fun ArtworkUpgradeScreen(
                     )
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(result.target.name, style = MaterialTheme.typography.titleMedium)
-                        Text(result.target.subtitle, style = MaterialTheme.typography.bodySmall)
                         Text(
-                            "${result.original.width} × ${result.original.height} → ${result.replacement.width} × ${result.replacement.height}",
+                            result.target.album?.artist ?: stringResource(CommonR.string.artwork_upgrade_artist_photo),
                             style = MaterialTheme.typography.bodySmall,
                         )
-                        Text("Likely same image · Review", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            stringResource(
+                                CommonR.string.artwork_upgrade_dims_arrow,
+                                LocaleFormatters.formatInteger(result.original.width, locale),
+                                LocaleFormatters.formatInteger(result.original.height, locale),
+                                LocaleFormatters.formatInteger(result.replacement.width, locale),
+                                LocaleFormatters.formatInteger(result.replacement.height, locale),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(stringResource(CommonR.string.artwork_upgrade_review_hint), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
             if (state.finished && state.results.isEmpty()) {
-                item { Text("No larger same-image matches to review. Some sources may not have a matching larger image.") }
+                item { Text(stringResource(CommonR.string.artwork_upgrade_none_found)) }
             }
         }
     }
     selected?.let { result ->
         GlassAlertDialog(
             onDismissRequest = { if (!state.saving) selected = null },
-            title = { Text("Review artwork upgrade") },
+            title = { Text(stringResource(CommonR.string.artwork_upgrade_dialog_title)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     Text(result.target.name, style = MaterialTheme.typography.titleMedium)
-                    Text("Current · ${result.original.width} × ${result.original.height}")
+                    Text(
+                        stringResource(
+                            CommonR.string.artwork_upgrade_current_dims,
+                            LocaleFormatters.formatInteger(result.original.width, locale),
+                            LocaleFormatters.formatInteger(result.original.height, locale),
+                        ),
+                    )
                     AsyncImage(
                         result.preview,
-                        "Current artwork",
+                        stringResource(CommonR.string.artwork_upgrade_cd_current),
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                         contentScale = ContentScale.Fit,
                     )
-                    Text("Replacement · ${result.replacement.width} × ${result.replacement.height} · ${result.source}")
+                    Text(
+                        stringResource(
+                            CommonR.string.artwork_upgrade_replacement_dims,
+                            LocaleFormatters.formatInteger(result.replacement.width, locale),
+                            LocaleFormatters.formatInteger(result.replacement.height, locale),
+                            result.source,
+                        ),
+                    )
                     AsyncImage(
                         result.file,
-                        "Higher-resolution artwork",
+                        stringResource(CommonR.string.artwork_upgrade_cd_replacement),
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                         contentScale = ContentScale.Fit,
                     )
-                    Text("Confirm this is the same image before replacing it. Other tags are left unchanged.")
+                    Text(stringResource(CommonR.string.artwork_upgrade_confirm_prompt))
                     state.message?.let { Text(it) }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
                     controller.apply(result)
-                }, enabled = !state.saving && !state.scanning) { Text(if (state.saving) "Saving…" else "Use higher-resolution image") }
+                }, enabled = !state.saving && !state.scanning) {
+                    Text(
+                        stringResource(
+                            if (state.saving) {
+                                CommonR.string.action_saving
+                            } else {
+                                CommonR.string.artwork_upgrade_use_image
+                            },
+                        ),
+                    )
+                }
             },
-            dismissButton = { TextButton(onClick = { selected = null }, enabled = !state.saving) { Text("Keep current") } },
+            dismissButton = {
+                TextButton(onClick = { selected = null }, enabled = !state.saving) {
+                    Text(stringResource(CommonR.string.artwork_upgrade_keep_current))
+                }
+            },
         )
     }
 }

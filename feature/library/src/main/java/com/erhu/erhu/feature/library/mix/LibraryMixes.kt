@@ -59,7 +59,11 @@ internal object LibraryMixes {
         val ranked = songs.map { it.songId to profile.history(it.songId).plays.toFloat() }
         return SmartMixEngine
             .finish(profile, MixKind.SPOTLIGHT, ranked, SPOTLIGHT_MIN, how, perArtist = Int.MAX_VALUE, perAlbum = Int.MAX_VALUE)
-            ?.copy(title = "Spotlight: $name")
+            ?.copy(
+                title = "Spotlight: $name",
+                noteKey = if (played != null) MixNoteKey.SPOTLIGHT_PLAYS else MixNoteKey.SPOTLIGHT_SONGS,
+                spotlightArtist = name,
+            )
     }
 
     /** Songs whose year tag says they are ten years old or more (placeholder and implausible years ignored). */

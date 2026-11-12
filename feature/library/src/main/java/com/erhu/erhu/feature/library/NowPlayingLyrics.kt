@@ -32,11 +32,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.component.PressIconButton
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Radius
@@ -81,7 +83,7 @@ internal fun LyricsPanel(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (plain) "Lyrics · not synced" else "Lyrics",
+                    text = stringResource(if (plain) R.string.lyrics_not_synced else R.string.queue_tab_lyrics),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.content,
@@ -90,7 +92,7 @@ internal fun LyricsPanel(
                 PressIconButton(onClick = onExpand) {
                     Icon(
                         imageVector = Icons.Default.OpenInFull,
-                        contentDescription = "Expand lyrics",
+                        contentDescription = stringResource(R.string.lyrics_cd_expand),
                         modifier = Modifier.size(IconSize.small),
                     )
                 }
@@ -139,16 +141,18 @@ private fun LookupLine(
     onClick: () -> Unit,
 ) {
     val text =
-        when (lyrics?.lookup) {
-            null, LyricsLookup.Idle -> "Lyrics unavailable"
-            LyricsLookup.Searching -> "Looking for lyrics…"
-            LyricsLookup.NotFound -> "No lyrics found · tap to search"
-            LyricsLookup.Instrumental -> "Instrumental"
-            LyricsLookup.Offline -> "Offline · lyrics will be looked up when you're back online"
-            is LyricsLookup.RateLimited -> "Lyrics lookup paused for a moment"
-            is LyricsLookup.Failed -> "Lyrics couldn't be loaded · tap to retry"
-            is LyricsLookup.NeedsChoice -> "Several lyrics found · tap to choose"
-        }
+        stringResource(
+            when (lyrics?.lookup) {
+                null, LyricsLookup.Idle -> R.string.lyrics_status_unavailable
+                LyricsLookup.Searching -> R.string.lyrics_status_searching
+                LyricsLookup.NotFound -> R.string.lyrics_status_not_found
+                LyricsLookup.Instrumental -> R.string.lyrics_status_instrumental
+                LyricsLookup.Offline -> R.string.lyrics_status_offline
+                is LyricsLookup.RateLimited -> R.string.lyrics_status_rate_limited
+                is LyricsLookup.Failed -> R.string.lyrics_status_failed
+                is LyricsLookup.NeedsChoice -> R.string.lyrics_status_needs_choice
+            },
+        )
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
@@ -156,7 +160,7 @@ private fun LookupLine(
         modifier =
             Modifier
                 .fillMaxSize()
-                .clickable(role = Role.Button, onClickLabel = "Open lyrics", onClick = onClick)
+                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.lyrics_cd_open), onClick = onClick)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
     )
 }
@@ -191,7 +195,7 @@ internal fun ExpandedLyrics(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PressIconButton(onClick = onCollapse) {
-                    Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "Close lyrics")
+                    Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.lyrics_cd_close))
                 }
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Column(modifier = Modifier.weight(1f)) {
@@ -239,24 +243,33 @@ private fun LyricsTransport(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
+    val playPauseDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play)
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PressIconButton(onClick = onPrevious, nudge = -1) {
-            Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "Previous", modifier = Modifier.size(IconSize.large))
+            Icon(
+                imageVector = Icons.Default.SkipPrevious,
+                contentDescription = stringResource(R.string.cd_previous_track),
+                modifier = Modifier.size(IconSize.large),
+            )
         }
         PressIconButton(
             onClick = onPlayPause,
-            modifier = Modifier.semantics { contentDescription = if (isPlaying) "Pause" else "Play" },
+            modifier = Modifier.semantics { contentDescription = playPauseDescription },
         ) {
             SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
                 Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(IconSize.large))
             }
         }
         PressIconButton(onClick = onNext, nudge = 1) {
-            Icon(imageVector = Icons.Default.SkipNext, contentDescription = "Next", modifier = Modifier.size(IconSize.large))
+            Icon(
+                imageVector = Icons.Default.SkipNext,
+                contentDescription = stringResource(R.string.cd_next_track),
+                modifier = Modifier.size(IconSize.large),
+            )
         }
     }
 }

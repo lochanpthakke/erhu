@@ -1,5 +1,6 @@
 package com.erhu.erhu.feature.library
 
+import android.content.Context
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -58,11 +59,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.designsystem.component.EmptyState
 import com.erhu.erhu.core.designsystem.component.PressIconButton
@@ -77,9 +82,8 @@ import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Tabs of the queue sheet, in pager order (Lyrics keeps its place next to the queue). */
 private const val PAGE_QUEUE = 0
@@ -97,16 +101,19 @@ internal val QUEUE_SHEET_ALL_PAGES = listOf(PAGE_QUEUE, PAGE_LYRICS, PAGE_HISTOR
 /** Just the queue and what has played: the player's Queue button. */
 internal val QUEUE_SHEET_QUEUE_PAGES = listOf(PAGE_QUEUE, PAGE_HISTORY)
 
+@Composable
 private fun pageLabel(
     page: Int,
     queueSize: Int,
-): String =
-    when (page) {
-        PAGE_QUEUE -> "Queue ($queueSize)"
-        PAGE_LYRICS -> "Lyrics"
-        PAGE_HISTORY -> "History"
-        else -> "Marks"
+): String {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    return when (page) {
+        PAGE_QUEUE -> stringResource(CommonR.string.queue_tab_count, LocaleFormatters.formatInteger(queueSize, locale))
+        PAGE_LYRICS -> stringResource(CommonR.string.queue_tab_lyrics)
+        PAGE_HISTORY -> stringResource(CommonR.string.queue_tab_history)
+        else -> stringResource(CommonR.string.queue_tab_marks)
     }
+}
 
 /** Entries already played (before the current one) are dimmed so they read as history, not as upcoming. */
 private const val PLAYED_ENTRY_ALPHA = 0.55f
@@ -128,12 +135,13 @@ internal fun QueueSheet(
     /** The tabs shown, in order (QUEUE_SHEET_* pages). */
     pages: List<Int> = QUEUE_SHEET_ALL_PAGES,
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val pagerState = rememberPagerState(initialPage = pages.indexOf(initialPage).coerceAtLeast(0), pageCount = { pages.size })
     // The sheet is its own window: its feedback is shown inside it, above the app's own snackbar.
     val snackbarHostState = remember { SnackbarHostState() }
-    val removalUndo = rememberQueueRemovalUndo(playbackRepository, snackbarHostState)
+    val removalUndo = rememberQueueRemovalUndo(context, playbackRepository, snackbarHostState)
     var showSaveDialog by remember { mutableStateOf(false) }
 
     fun showMessage(message: String) {
@@ -181,7 +189,13 @@ internal fun QueueSheet(
                                 playbackRepository = playbackRepository,
                                 onRemove = removalUndo::remove,
                                 onShuffleUpcoming = {
-                                    if (!playbackRepository.shuffleUpcoming()) showMessage("Need at least two upcoming tracks to shuffle")
+                                    if (!playbackRepository.shuffleUpcoming()) {
+                                        showMessage(
+                                            AppLocaleManager
+                                                .localizedContext(context)
+                                                .getString(CommonR.string.queue_need_two_tracks),
+                                        )
+                                    }
                                 },
                                 onSaveAsPlaylist = { showSaveDialog = true },
                             )
@@ -189,7 +203,10 @@ internal fun QueueSheet(
                         PAGE_MARKS -> {
                             val bookmarks by extras.bookmarks.collectAsState()
 
-                            fun report(edit: AbLoopEdit) = edit.message()?.let(::showMessage)
+                            fun report(edit: AbLoopEdit) =
+                                edit.messageRes()?.let { resId ->
+                                    showMessage(AppLocaleManager.localizedContext(context).getString(resId))
+                                }
                             MarksPage(
                                 hasTrack = playbackState.currentSong != null,
                                 loop = playbackState.abLoop,
@@ -226,7 +243,7 @@ internal fun QueueSheet(
 
     if (showSaveDialog) {
         PlaylistNameDialog(
-            title = "Save queue as playlist",
+            title = stringResource(CommonR.string.queue_save_as_playlist_title),
             onDismiss = { showSaveDialog = false },
             onConfirm = { name ->
                 showSaveDialog = false
@@ -243,6 +260,7 @@ internal fun QueueSheet(
  * its Undo puts all of them back, newest first, so every entry returns to its own position.
  */
 private class QueueRemovalUndo(
+    private val context: Context,
     private val playbackRepository: PlaybackRepository,
     private val snackbarHostState: SnackbarHostState,
     private val scope: CoroutineScope,
@@ -259,8 +277,24 @@ private class QueueRemovalUndo(
             burst++
             val mine = ++token
             snackbarHostState.currentSnackbarData?.dismiss()
-            val message = if (burst == 1) "Removed \u201c${song.title}\u201d" else "Removed $burst tracks"
-            val result = snackbarHostState.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Short)
+            val localized = AppLocaleManager.localizedContext(context)
+            val locale = AppLocaleManager.activeLocale(localized)
+            val message =
+                if (burst == 1) {
+                    localized.getString(CommonR.string.queue_removed_single, song.title)
+                } else {
+                    localized.resources.getQuantityString(
+                        CommonR.plurals.queue_removed_count,
+                        burst,
+                        LocaleFormatters.formatInteger(burst, locale),
+                    )
+                }
+            val result =
+                snackbarHostState.showSnackbar(
+                    message,
+                    actionLabel = localized.getString(CommonR.string.action_undo),
+                    duration = SnackbarDuration.Short,
+                )
             // A newer removal replaced this snackbar: that one now speaks for the whole burst.
             if (mine != token) return@launch
             if (result == SnackbarResult.ActionPerformed) repeat(burst) { playbackRepository.undoQueueRemoval() }
@@ -271,11 +305,14 @@ private class QueueRemovalUndo(
 
 @Composable
 private fun rememberQueueRemovalUndo(
+    context: Context,
     playbackRepository: PlaybackRepository,
     snackbarHostState: SnackbarHostState,
 ): QueueRemovalUndo {
     val scope = rememberCoroutineScope()
-    return remember(playbackRepository, snackbarHostState, scope) { QueueRemovalUndo(playbackRepository, snackbarHostState, scope) }
+    return remember(context, playbackRepository, snackbarHostState, scope) {
+        QueueRemovalUndo(context, playbackRepository, snackbarHostState, scope)
+    }
 }
 
 @Composable
@@ -303,7 +340,7 @@ private fun QueuePage(
     }
 
     if (queue.isEmpty()) {
-        EmptyState(message = "The queue is empty.", icon = Icons.AutoMirrored.Filled.QueueMusic)
+        EmptyState(message = stringResource(CommonR.string.queue_empty), icon = Icons.AutoMirrored.Filled.QueueMusic)
         return
     }
     Column(modifier = Modifier.fillMaxSize()) {
@@ -388,12 +425,12 @@ private fun QueuePage(
                     ) {
                         Icon(
                             imageVector = Icons.Default.DragHandle,
-                            contentDescription = "Drag to reorder",
+                            contentDescription = stringResource(CommonR.string.queue_cd_reorder),
                             tint = if (isDragging) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     PressIconButton(onClick = { onRemove(index, queuedSong) }, enabled = !drag.settling) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Remove from queue")
+                        Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(CommonR.string.queue_cd_remove))
                     }
                 }
             }
@@ -435,13 +472,13 @@ private fun QueueActions(
         AssistChip(
             onClick = onShuffleUpcoming,
             enabled = canShuffle,
-            label = { Text("Shuffle upcoming") },
+            label = { Text(stringResource(CommonR.string.queue_shuffle_upcoming)) },
             leadingIcon = { Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
         )
         AssistChip(
             onClick = onSaveAsPlaylist,
             enabled = canSave,
-            label = { Text("Save as playlist") },
+            label = { Text(stringResource(CommonR.string.queue_save_as_playlist)) },
             leadingIcon = {
                 Icon(
                     Icons.AutoMirrored.Filled.PlaylistAdd,
@@ -482,7 +519,7 @@ private fun LyricsPage(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "No track playing",
+                text = stringResource(CommonR.string.queue_no_track_playing),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -496,20 +533,23 @@ private fun HistoryPage(
     onPlayAgain: (QueueHistoryEntry) -> Unit,
 ) {
     if (history.isEmpty()) {
-        EmptyState(message = "Tracks you play in this session appear here.", icon = Icons.Default.History)
+        EmptyState(message = stringResource(CommonR.string.queue_history_empty), icon = Icons.Default.History)
         return
     }
-    val timeFormat = remember { DateFormat.getTimeInstance(DateFormat.SHORT) }
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(items = history, key = { it.entryId }) { entry ->
             SongRow(song = entry.song, onClick = { onPlayAgain(entry) }) {
                 Text(
-                    text = timeFormat.format(Date(entry.playedAtMs)),
+                    text = LocaleFormatters.formatShortTime(entry.playedAtMs, locale),
                     style = TextStyles.metadata,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 PressIconButton(onClick = { onPlayAgain(entry) }) {
-                    Icon(imageVector = Icons.Default.Replay, contentDescription = "Play ${entry.song.title} again")
+                    Icon(
+                        imageVector = Icons.Default.Replay,
+                        contentDescription = stringResource(CommonR.string.queue_history_cd_play_again, entry.song.title),
+                    )
                 }
             }
         }

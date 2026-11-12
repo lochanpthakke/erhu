@@ -30,15 +30,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.playback.diagnostics.DecoderInfo
 import com.erhu.erhu.core.playback.diagnostics.MediaFormats
+import com.erhu.erhu.core.playback.diagnostics.PlayerActivity
 import com.erhu.erhu.core.playback.diagnostics.PlayerDiagnostics
 import com.erhu.erhu.core.playback.diagnostics.Provenance
 import com.erhu.erhu.core.sound.dsp.StageStatus
-import java.util.Locale
 
 /**
  * Audio details for the playing track: the file, what the player reports, the app's processing,
@@ -76,17 +81,25 @@ internal fun AudioDetailsScreen(
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            val copiedMessage = stringResource(R.string.audio_details_copied)
+            val shareTitle = stringResource(R.string.audio_details_share_title)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
-                IconButton(onClick = onClose) { Icon(Icons.Default.Close, contentDescription = "Close audio details") }
-                Text("Audio details", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.audio_details_cd_close))
+                }
+                Text(
+                    stringResource(R.string.audio_details_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
                 IconButton(onClick = {
                     viewModel.copyReport()
-                    Toast.makeText(context, "Audio details copied", Toast.LENGTH_SHORT).show()
-                }) { Icon(Icons.Default.ContentCopy, contentDescription = "Copy audio details") }
+                    Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                }) { Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.audio_details_cd_copy)) }
                 IconButton(onClick = {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, viewModel.report())
-                    context.startActivity(Intent.createChooser(send, "Share audio details"))
-                }) { Icon(Icons.Default.Share, contentDescription = "Share audio details") }
+                    context.startActivity(Intent.createChooser(send, shareTitle))
+                }) { Icon(Icons.Default.Share, contentDescription = stringResource(R.string.audio_details_cd_share)) }
             }
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -97,7 +110,7 @@ internal fun AudioDetailsScreen(
                 item(key = "playback") { PlaybackSection(player, decoder, source) }
                 item(key = "chain") {
                     ChainSection(player, decoder, eq, output, viewModel.audioTap.isCollecting, viewModel.transitionFading) {
-                        TextButton(onClick = onOpenEqualizer) { Text("Equalizer settings") }
+                        TextButton(onClick = onOpenEqualizer) { Text(stringResource(R.string.audio_details_open_equalizer)) }
                     }
                 }
                 item(key = "output") { OutputSection(output) }
@@ -110,29 +123,26 @@ internal fun AudioDetailsScreen(
 @Composable
 private fun SourceSection(source: SourceState) {
     DetailSection(
-        title = "Source file",
-        explanation =
-            "Read from the file itself without decoding it. \"File header\" values are parsed from the audio header and are " +
-                "exact; \"Container\" values are what Android's extractor reports; \"Library index\" values were recorded when the " +
-                "library was scanned. Bit depth exists only for lossless formats that store it.",
+        title = stringResource(R.string.audio_details_source_title),
+        explanation = stringResource(R.string.audio_details_source_explanation),
     ) {
         when (source) {
-            SourceState.Loading -> DetailNote("Inspecting the file…")
-            SourceState.NothingPlaying -> DetailNote("Nothing is playing.")
+            SourceState.Loading -> DetailNote(stringResource(R.string.audio_details_inspecting))
+            SourceState.NothingPlaying -> DetailNote(stringResource(R.string.audio_details_nothing_playing))
             is SourceState.Ready -> {
                 val s = source.diagnostics
-                DetailRow("Title", s.title)
-                DetailRow("Artist", s.artist)
-                DetailRow("Album", s.album)
-                DetailRow("Container", s.container)
-                DetailRow("Codec", s.codec)
-                DetailRow("Sample rate", s.sampleRate)
-                DetailRow("Channels", s.channels)
-                DetailRow("Bit depth", s.bitDepth, s.bitDepthNote)
-                DetailRow("Bitrate", s.bitrate)
-                s.bitrateMode?.let { DetailRow("Bitrate mode", it) }
-                DetailRow("Duration", s.duration)
-                DetailRow("File size", s.fileSize)
+                DetailRow(stringResource(R.string.audio_details_label_title), s.title)
+                DetailRow(stringResource(R.string.audio_details_label_artist), s.artist)
+                DetailRow(stringResource(R.string.audio_details_label_album), s.album)
+                DetailRow(stringResource(R.string.audio_details_label_container), s.container)
+                DetailRow(stringResource(R.string.audio_details_label_codec), s.codec)
+                DetailRow(stringResource(R.string.audio_details_label_sample_rate), s.sampleRate)
+                DetailRow(stringResource(R.string.audio_details_label_channels), s.channels)
+                DetailRow(stringResource(R.string.audio_details_label_bit_depth), s.bitDepth, s.bitDepthNote)
+                DetailRow(stringResource(R.string.audio_details_label_bitrate), s.bitrate)
+                s.bitrateMode?.let { DetailRow(stringResource(R.string.audio_details_label_bitrate_mode), it) }
+                DetailRow(stringResource(R.string.audio_details_label_duration), s.duration)
+                DetailRow(stringResource(R.string.audio_details_label_file_size), s.fileSize)
                 s.problem?.let { DetailNote(it) }
             }
         }
@@ -147,19 +157,20 @@ private fun PlaybackSection(
     decoder: DecoderInfo?,
     source: SourceState,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     DetailSection(
-        title = "Playback",
-        explanation =
-            "What the player reports for the current track: the format going into the decoder, the decoder Android chose, and " +
-                "the PCM format the player configured on Android's audio output after the app's processing. Offload means a " +
-                "hardware DSP decodes the audio instead (the app's processing then does not run).",
+        title = stringResource(R.string.audio_details_playback_title),
+        explanation = stringResource(R.string.audio_details_playback_explanation),
     ) {
-        val state =
-            player.activity.name
-                .lowercase(Locale.ROOT)
-                .replaceFirstChar { it.uppercase() }
-        DetailRow("State", state, Provenance.PLAYER)
-        DetailRow("Speed", player.speed?.let { String.format(Locale.ROOT, "%.2f×", it) }, Provenance.PLAYER)
+        val state = stringResource(player.activity.labelRes())
+        DetailRow(stringResource(R.string.audio_details_label_state), state, Provenance.PLAYER)
+        DetailRow(
+            stringResource(R.string.audio_details_label_speed),
+            player.speed?.let {
+                stringResource(R.string.audio_details_speed_format, LocaleFormatters.formatDecimal(it.toDouble(), 2, locale))
+            },
+            Provenance.PLAYER,
+        )
         val input =
             player.inputFormat?.let {
                 formatLine(
@@ -170,27 +181,45 @@ private fun PlaybackSection(
                     it.averageBitrate?.let(MediaFormats::bitrateText),
                 )
             }
-        DetailRow("Decoder input", input, Provenance.PLAYER)
+        DetailRow(stringResource(R.string.audio_details_label_decoder_input), input, Provenance.PLAYER)
         DecoderRows(player, decoder)
         AudioTrackRows(player, source)
     }
 }
+
+private fun PlayerActivity.labelRes(): Int =
+    when (this) {
+        PlayerActivity.PLAYING -> R.string.audio_details_state_playing
+        PlayerActivity.PAUSED -> R.string.audio_details_state_paused
+        PlayerActivity.BUFFERING -> R.string.audio_details_state_buffering
+        PlayerActivity.IDLE -> R.string.audio_details_state_idle
+        PlayerActivity.ENDED -> R.string.audio_details_state_ended
+    }
 
 @Composable
 private fun DecoderRows(
     player: PlayerDiagnostics,
     decoder: DecoderInfo?,
 ) {
-    val pending = if (player.decoderName == null) "Reported when a track starts" else null
-    DetailRow("Decoder", decoder?.name ?: player.decoderName, Provenance.PLAYER, pending)
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val pending = if (player.decoderName == null) stringResource(R.string.audio_details_pending_decoder) else null
+    DetailRow(stringResource(R.string.audio_details_label_decoder), decoder?.name ?: player.decoderName, Provenance.PLAYER, pending)
     decoder?.let { d ->
         val kind =
             when {
-                d.hardwareAccelerated == true -> "Hardware accelerated"
-                d.softwareOnly == true -> "Software"
+                d.hardwareAccelerated == true -> stringResource(R.string.audio_details_decoder_hw)
+                d.softwareOnly == true -> stringResource(R.string.audio_details_decoder_sw)
                 else -> null
             }
-        DetailRow("Decoder type", formatLine(kind, d.maxInputChannels?.let { "up to $it channels" }), Provenance.PLATFORM)
+        val maxChannels =
+            d.maxInputChannels?.let {
+                pluralStringResource(R.plurals.audio_details_decoder_max_channels, it, LocaleFormatters.formatInteger(it, locale))
+            }
+        DetailRow(
+            stringResource(R.string.audio_details_label_decoder_type),
+            formatLine(kind, maxChannels),
+            Provenance.PLATFORM,
+        )
     }
 }
 
@@ -200,21 +229,34 @@ private fun AudioTrackRows(
     player: PlayerDiagnostics,
     source: SourceState,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val track = player.audioTrack
     val sent =
         track?.let {
             formatLine(it.encoding, it.sampleRateHz?.let(MediaFormats::sampleRateText), it.channelCount?.let(MediaFormats::channelsText))
         }
-    DetailRow("Sent to Android audio", sent, Provenance.PLAYER, if (track == null) "Reported once audio output starts" else null)
+    DetailRow(
+        stringResource(R.string.audio_details_label_sent_audio),
+        sent,
+        Provenance.PLAYER,
+        if (track == null) stringResource(R.string.audio_details_pending_audio) else null,
+    )
+    val yes = stringResource(R.string.audio_details_yes)
+    val no = stringResource(R.string.audio_details_no)
     track?.let {
-        DetailRow("Offload", if (it.offload) "Yes" else "No", Provenance.PLAYER)
-        if (it.tunneling) DetailRow("Tunneling", "Yes", Provenance.PLAYER)
+        DetailRow(stringResource(R.string.audio_details_label_offload), if (it.offload) yes else no, Provenance.PLAYER)
+        if (it.tunneling) DetailRow(stringResource(R.string.audio_details_label_tunneling), yes, Provenance.PLAYER)
     }
-    DetailRow("Underruns", player.underruns.toString(), Provenance.PLAYER, "Times the output ran out of audio (audible gaps)")
-    player.lastSinkError?.let { DetailRow("Last output error", it, Provenance.PLAYER) }
+    DetailRow(
+        stringResource(R.string.audio_details_label_underruns),
+        LocaleFormatters.formatInteger(player.underruns, locale),
+        Provenance.PLAYER,
+        stringResource(R.string.audio_details_underruns_note),
+    )
+    player.lastSinkError?.let { DetailRow(stringResource(R.string.audio_details_label_last_error), it, Provenance.PLAYER) }
     val sourceBits = ((source as? SourceState.Ready)?.diagnostics?.bitDepth?.value)?.removeSuffix("-bit")?.toIntOrNull()
     if (sourceBits != null && sourceBits > PCM_16_BITS && track?.encoding == "PCM 16-bit") {
-        DetailNote("The file stores $sourceBits-bit audio; the player sends 16-bit PCM to Android in this configuration.")
+        DetailNote(stringResource(R.string.audio_details_bit_depth_downconvert, LocaleFormatters.formatInteger(sourceBits, locale)))
     }
 }
 

@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
@@ -34,6 +35,7 @@ import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Playlist
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.SmartMixes
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * The Tracks destination as the home feed, top to bottom: the Smart Playlists as a hero banner
@@ -61,7 +63,7 @@ internal fun HomeFeed(
     actions: SongActions,
     topInset: Dp,
     bottomInset: Dp,
-    emptyMessage: String = "No songs found on this device",
+    emptyMessage: String = stringResource(CommonR.string.library_empty_songs_device),
 ) {
     val mixes = visibleHomeMixes(smartMixes?.mixes.orEmpty(), LocalVybeEnabled.current)
     val hasSongs = songs.itemCount > 0
@@ -97,13 +99,13 @@ internal fun HomeFeed(
                     onOpenRadio,
                     onPlaylistClick,
                 )
-                if (hasShelves) SectionHeading("Tracks")
+                if (hasShelves) SectionHeading(stringResource(CommonR.string.library_home_tracks))
             }
         }
         if (songs.itemCount == 0) {
             item(key = "empty", contentType = "empty") {
                 EmptyState(
-                    message = if (isScanning) "Scanning your music…" else emptyMessage,
+                    message = if (isScanning) stringResource(CommonR.string.library_scanning) else emptyMessage,
                     icon = LibrarySection.TRACKS.icon,
                 )
             }
@@ -137,7 +139,7 @@ private fun AlbumShelves(
     val radios = setlists.filterIsInstance<FeaturedSetlist.RadioPick>()
     val albums = setlists.filterIsInstance<FeaturedSetlist.AlbumPick>()
     if (LocalVybeEnabled.current && radios.isNotEmpty()) {
-        Shelf(title = "Featured Radio Stations") {
+        Shelf(title = stringResource(CommonR.string.library_home_featured_radios)) {
             items(radios, key = { it.key }, contentType = { "radio" }) { radio ->
                 RadioTile(
                     radio = radio,
@@ -148,7 +150,7 @@ private fun AlbumShelves(
         }
     }
     if (albums.isNotEmpty()) {
-        Shelf(title = "Featured Albums") {
+        Shelf(title = stringResource(CommonR.string.library_home_featured_albums)) {
             items(albums, key = { it.key }, contentType = { "album" }) { pick ->
                 AlbumTile(
                     album = pick.album,
@@ -159,16 +161,19 @@ private fun AlbumShelves(
         }
     }
     if (recentAlbums.isNotEmpty()) {
-        Shelf(title = "Recently played albums") {
+        Shelf(title = stringResource(CommonR.string.library_home_recent_albums)) {
             items(recentAlbums, key = { it.id }) { album ->
                 AlbumTile(album = album, onClick = { onAlbumClick(album) }, modifier = Modifier.width(ArtworkSize.shelf))
             }
         }
     } else if (showRecentNote) {
-        ShelfNote(title = "Recently played albums", note = "Albums you play show up here.")
+        ShelfNote(
+            title = stringResource(CommonR.string.library_home_recent_albums),
+            note = stringResource(CommonR.string.library_home_recent_albums_note),
+        )
     }
     if (recentPlaylists.isNotEmpty()) {
-        Shelf(title = "Recently played playlists") {
+        Shelf(title = stringResource(CommonR.string.library_home_recent_playlists)) {
             items(recentPlaylists, key = { it.id }) { playlist ->
                 PlaylistTile(
                     playlist = playlist,
@@ -260,7 +265,7 @@ internal fun LibraryHub(
                 topInset = topInset,
                 bottomInset = bottomInset,
                 emptyIcon = LibraryShelf.FAVORITES.icon,
-                emptyMessage = "No favorites yet. Tap the heart on any song to add it here.",
+                emptyMessage = stringResource(CommonR.string.library_empty_favorites),
                 onSongClick = onFavoriteClick,
                 actions = actions,
             )

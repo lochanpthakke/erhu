@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -68,6 +69,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -174,23 +176,24 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import com.erhu.erhu.core.common.R as CommonR
 
 private class DrawerDestination(
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector,
     val route: Any,
 )
 
 private val DRAWER_DESTINATIONS =
     listOf(
-        DrawerDestination("Library", Icons.AutoMirrored.Filled.LibraryBooks, Library),
-        DrawerDestination("Sound Capsule", Icons.Default.Insights, SoundCapsule),
-        DrawerDestination("Equalizer", Icons.Default.Equalizer, Equalizer),
-        DrawerDestination("Auto Fix Tags", Icons.Default.EditNote, MetadataEditor),
-        DrawerDestination("Library Builder", Icons.Default.Folder, LibraryBuilder),
-        DrawerDestination("Artwork Fetcher", Icons.Default.ImageSearch, ArtworkManager),
-        DrawerDestination("Wi-Fi Transfer", Icons.Default.Wifi, WifiTransfer),
-        DrawerDestination("Settings", Icons.Default.Settings, Settings),
+        DrawerDestination(CommonR.string.nav_library, Icons.AutoMirrored.Filled.LibraryBooks, Library),
+        DrawerDestination(CommonR.string.nav_sound_capsule, Icons.Default.Insights, SoundCapsule),
+        DrawerDestination(CommonR.string.nav_equalizer, Icons.Default.Equalizer, Equalizer),
+        DrawerDestination(CommonR.string.nav_auto_fix_tags, Icons.Default.EditNote, MetadataEditor),
+        DrawerDestination(CommonR.string.nav_library_builder, Icons.Default.Folder, LibraryBuilder),
+        DrawerDestination(CommonR.string.nav_artwork_fetcher, Icons.Default.ImageSearch, ArtworkManager),
+        DrawerDestination(CommonR.string.nav_wifi_transfer, Icons.Default.Wifi, WifiTransfer),
+        DrawerDestination(CommonR.string.nav_settings, Icons.Default.Settings, Settings),
     )
 
 @Composable
@@ -474,14 +477,14 @@ fun MainScaffold(
                                         .padding(Spacing.xl),
                             ) {
                                 Text(
-                                    text = "erhu",
+                                    text = stringResource(R.string.app_name),
                                     style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                                 Spacer(modifier = Modifier.height(Spacing.xs))
                                 Text(
-                                    text = "Local Music Engine",
+                                    text = stringResource(CommonR.string.app_engine_subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -506,7 +509,7 @@ fun MainScaffold(
                             DRAWER_DESTINATIONS.forEach { destination ->
                                 NavigationDrawerItem(
                                     icon = { Icon(destination.icon, contentDescription = null) },
-                                    label = { Text(destination.label, fontWeight = FontWeight.Medium) },
+                                    label = { Text(stringResource(destination.labelRes), fontWeight = FontWeight.Medium) },
                                     selected =
                                         currentDestination?.hasRoute(destination.route::class) == true ||
                                             (
@@ -708,7 +711,7 @@ fun MainScaffold(
                                                 ProvideMotionScope(this) {
                                                     SoundSettingsScreen(
                                                         viewModel = soundViewModel,
-                                                        title = "Equalizer",
+                                                        title = stringResource(CommonR.string.nav_equalizer),
                                                         navigation = TopBarNavigation.TopLevel(openDrawer),
                                                     )
                                                 }
@@ -1029,7 +1032,7 @@ private fun LibraryRoute(
                     } catch (_: Exception) {
                     }
                 }
-                val displayPath = parseFolderDisplayName(uri)
+                val displayPath = parseFolderDisplayName(context, uri)
                 libraryViewModel.setCustomScanLocation(uri.toString(), displayPath)
             } else {
                 libraryViewModel.setScanEntireDevice()
@@ -1094,35 +1097,40 @@ private fun PermissionRequestView(
             modifier = Modifier.padding(Spacing.xl),
         ) {
             Text(
-                text = "Music access needed",
+                text = stringResource(CommonR.string.permission_music_title),
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
                 text =
-                    if (permanentlyDenied) {
-                        "erhu can't read your music files. Enable the music/audio permission for erhu in system settings."
-                    } else {
-                        "erhu needs permission to read the audio files on this device to build your library."
-                    },
+                    stringResource(
+                        if (permanentlyDenied) {
+                            CommonR.string.permission_music_permanently_denied
+                        } else {
+                            CommonR.string.permission_music_rationale
+                        },
+                    ),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(Spacing.lg))
             if (permanentlyDenied) {
                 Button(onClick = onOpenSettings) {
-                    Text("Open settings")
+                    Text(stringResource(CommonR.string.action_open_settings))
                 }
             } else {
                 Button(onClick = onRequestPermission) {
-                    Text("Grant permission")
+                    Text(stringResource(CommonR.string.action_grant_permission))
                 }
             }
         }
     }
 }
 
-private fun parseFolderDisplayName(uri: Uri): String {
+private fun parseFolderDisplayName(
+    context: Context,
+    uri: Uri,
+): String {
     val treeId = Uri.decode(uri.toString()).substringAfter("/tree/", "").substringBefore("/document/")
     if (treeId.isNotBlank()) {
         val pathPart = treeId.substringAfter(':')
@@ -1130,10 +1138,11 @@ private fun parseFolderDisplayName(uri: Uri): String {
             return pathPart.trim('/')
         }
     }
+    val fallback = context.getString(CommonR.string.scan_location_selected_folder)
     return uri.lastPathSegment
         ?.substringAfter(':')
         ?.trim('/')
-        ?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+        ?.ifBlank { fallback } ?: fallback
 }
 
 @Composable
@@ -1143,11 +1152,17 @@ private fun ChooseScanLocationDialog(
 ) {
     GlassAlertDialog(
         onDismissRequest = {},
-        title = { Text("Choose Scan Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                stringResource(CommonR.string.scan_location_dialog_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        },
         text = {
             Column {
                 Text(
-                    "Choose where erhu should look for your music files.",
+                    stringResource(CommonR.string.scan_location_dialog_body),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(modifier = Modifier.height(Spacing.md))
@@ -1157,14 +1172,14 @@ private fun ChooseScanLocationDialog(
                 ) {
                     Icon(imageVector = Icons.Default.Folder, contentDescription = null)
                     Spacer(modifier = Modifier.width(Spacing.sm))
-                    Text("Set Custom Scan Location")
+                    Text(stringResource(CommonR.string.scan_location_set_custom))
                 }
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 androidx.compose.material3.TextButton(
                     onClick = onScanEntireDevice,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text("Scan Entire Device")
+                    Text(stringResource(CommonR.string.scan_location_scan_entire_device))
                 }
             }
         },

@@ -24,7 +24,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.TransitionPreset
 
@@ -34,14 +36,18 @@ internal fun PresetCards(
     draft: EditorDraft,
     onChoose: (PresetChoice) -> Unit,
 ) {
-    val autoLabel = if (draft.target is EditorTarget.Collection) "Default" else "Auto"
+    val autoLabel = stringResource(if (draft.target is EditorTarget.Collection) R.string.transition_default else R.string.transition_auto)
+    val offLabel = stringResource(R.string.transition_off)
+    val customLabel = stringResource(R.string.transition_custom)
     val cards =
         buildList {
             if (draft.target !is EditorTarget.Global) add(PresetChoice.Auto to autoLabel)
-            add(PresetChoice.Off to "Off")
-            TransitionPreset.entries.filter { it != TransitionPreset.CUSTOM }.forEach { add(PresetChoice.Preset(it) to it.label) }
+            add(PresetChoice.Off to offLabel)
+            TransitionPreset.entries
+                .filter { it != TransitionPreset.CUSTOM }
+                .forEach { add(PresetChoice.Preset(it) to stringResource(it.labelRes())) }
             if (draft.mode == EditorMode.CUSTOM && draft.spec.preset == TransitionPreset.CUSTOM) {
-                add(PresetChoice.Preset(TransitionPreset.CUSTOM) to "Custom")
+                add(PresetChoice.Preset(TransitionPreset.CUSTOM) to customLabel)
             }
         }
     val selected: PresetChoice =
@@ -54,7 +60,7 @@ internal fun PresetCards(
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = Spacing.lg)) {
             HorizontalDivider(Modifier.weight(1f))
             Text(
-                "Presets",
+                stringResource(R.string.transition_presets_heading),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.md),
@@ -103,9 +109,9 @@ internal fun PresetCard(
 internal fun StatusLine(draft: EditorDraft) {
     val text =
         when (draft.mode) {
-            EditorMode.INHERIT -> "Follows the level above: ${specSummary(draft.inherited)}. Change anything below to make it its own."
-            EditorMode.OFF -> "Off here, even if a more general setting has a crossfade: the tracks play back to back."
-            EditorMode.CUSTOM -> "Its own transition: ${specSummary(draft.spec)}."
+            EditorMode.INHERIT -> stringResource(R.string.transition_status_inherit, localizedSpecSummary(draft.inherited))
+            EditorMode.OFF -> stringResource(R.string.transition_status_off)
+            EditorMode.CUSTOM -> stringResource(R.string.transition_status_custom, localizedSpecSummary(draft.spec))
         }
     Text(
         text,

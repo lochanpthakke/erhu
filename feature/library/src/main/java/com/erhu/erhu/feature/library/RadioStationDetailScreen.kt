@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.EmptyState
@@ -45,6 +46,7 @@ import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.RadioSeed
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 @Suppress("LongMethod")
@@ -101,8 +103,8 @@ fun RadioStationDetailScreen(
             topBar = {
                 OverlayHeader(
                     navigation = TopBarNavigation.Detail(onBack),
-                    title = radio?.let { "${it.identity} Radio" },
-                    subtitle = content?.album?.let { "Based on ${it.title}" },
+                    title = radio?.let { stringResource(CommonR.string.radio_title_format, it.identity) },
+                    subtitle = content?.album?.let { stringResource(CommonR.string.radio_subtitle_based_on, it.title) },
                     collapsingTitle = collapsingTitle,
                 )
             },
@@ -115,11 +117,12 @@ fun RadioStationDetailScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    if (error == null) {
+                    val errorRes = error
+                    if (errorRes == null) {
                         CircularProgressIndicator()
                     } else {
-                        Text(error.orEmpty(), style = TextStyles.metadata)
-                        Button(onClick = { viewModel.open(albumId) }) { Text("Retry") }
+                        Text(stringResource(errorRes), style = TextStyles.metadata)
+                        Button(onClick = { viewModel.open(albumId) }) { Text(stringResource(CommonR.string.action_retry)) }
                     }
                 }
                 return@AppScaffold
@@ -143,7 +146,7 @@ fun RadioStationDetailScreen(
                         Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(countLabel(songs.size, "song"), style = TextStyles.metadata)
+                        Text(songCountText(songs.size), style = TextStyles.metadata)
                         Spacer(Modifier.height(Spacing.sm))
                         Button(
                             enabled = songs.isNotEmpty() && content.plan != null,
@@ -151,14 +154,14 @@ fun RadioStationDetailScreen(
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = null)
                             Spacer(Modifier.width(Spacing.sm))
-                            Text("Play Radio")
+                            Text(stringResource(CommonR.string.radio_play))
                         }
                     }
                 }
                 if (songs.isEmpty()) {
                     item(key = "empty") {
                         EmptyState(
-                            message = "No available songs for this station. Add more music to your library and reopen it.",
+                            message = stringResource(CommonR.string.radio_empty),
                             modifier = Modifier.padding(top = Spacing.xl),
                         )
                     }

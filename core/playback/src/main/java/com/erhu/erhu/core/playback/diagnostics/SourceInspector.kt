@@ -5,7 +5,10 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
 import android.provider.MediaStore
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.common.dispatcher.DispatcherProvider
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.model.Song
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.withContext
@@ -37,6 +40,7 @@ class SourceInspector
         @Suppress("TooGenericExceptionCaught")
         suspend fun inspect(song: Song): SourceDiagnostics =
             withContext(dispatchers.io) {
+                val localized = AppLocaleManager.localizedContext(context)
                 val uri = Uri.parse(song.uri)
                 var problem: String? = null
                 val header =
@@ -44,16 +48,16 @@ class SourceInspector
                         readPrefix(uri)?.let(SourceHeaders::parse)
                     } catch (e: Exception) {
                         // SecurityException (permission), IOException (missing file).
-                        problem = "The file could not be read (${e.javaClass.simpleName})."
+                        problem = localized.getString(R.string.audio_details_source_unreadable, e.javaClass.simpleName)
                         null
                     }
                 val extractor = runCatching { extract(uri) }.getOrNull()
                 val (size, storeMime) = runCatching { mediaStore(uri) }.getOrNull() ?: (null to null)
-                build(song, header, extractor, size, storeMime, problem)
+                build(localized, song, header, extractor, size, storeMime, problem)
             }
 
-        @Suppress("CyclomaticComplexMethod", "LongParameterList")
         private fun build(
+            localized: Context,
             song: Song,
             header: SourceHeader?,
             extractor: ExtractorFacts?,
@@ -61,41 +65,10 @@ class SourceInspector
             storeMime: String?,
             problem: String?,
         ): SourceDiagnostics {
+            val locale = AppLocaleManager.activeLocale(localized)
             val codecFromContainer = MediaFormats.codecName(extractor?.mime)
-            val codec =
-                header?.let { Fact(it.codec, Provenance.FILE_HEADER) }
-                    ?: codecFromContainer?.let { Fact(it, Provenance.CONTAINER) }
-            val container = containerOf(storeMime ?: song.mimeType, song.filePath ?: song.uri)?.let { Fact(it, Provenance.LIBRARY) }
-            val sampleRate =
-                header?.sampleRateHz?.let { Fact(MediaFormats.sampleRateText(it), Provenance.FILE_HEADER) }
-                    ?: extractor?.sampleRate?.let { Fact(MediaFormats.sampleRateText(it), Provenance.CONTAINER) }
-                    ?: song.sampleRate.takeIf { it > 0 }?.let { Fact(MediaFormats.sampleRateText(it), Provenance.LIBRARY) }
-            val channels =
-                header?.channels?.let { Fact(MediaFormats.channelsText(it), Provenance.FILE_HEADER) }
-                    ?: extractor?.channels?.let { Fact(MediaFormats.channelsText(it), Provenance.CONTAINER) }
             val lossless = MediaFormats.isLossless(header?.codec ?: codecFromContainer)
-            val bitDepth = header?.bitsPerSample?.let { Fact("$it-bit", Provenance.FILE_HEADER, "Stored in the file") }
-            val bitDepthNote =
-                when {
-                    bitDepth != null -> null
-                    !lossless -> "Lossy formats have no fixed bit depth"
-                    else -> "Not stated in a header the app can read"
-                }
-            val bitrate =
-                header?.firstFrameBitrateKbps?.let {
-                    Fact(
-                        "$it kbps",
-                        Provenance.FILE_HEADER,
-                        if (header.bitrateMode ==
-                            "VBR"
-                        ) {
-                            "First frame only; varies across the track"
-                        } else {
-                            null
-                        },
-                    )
-                } ?: extractor?.bitrate?.let { Fact(MediaFormats.bitrateText(it), Provenance.CONTAINER, "Nominal / average") }
-                    ?: song.bitrate.takeIf { it > 0 }?.let { Fact(MediaFormats.bitrateText(it), Provenance.LIBRARY, "Average") }
+            val bitDepth = buildBitDepthFact(localized, locale, header)
             val duration =
                 extractor?.durationUs?.let { Fact(formatDuration(it / US_PER_MS), Provenance.CONTAINER) }
                     ?: song.durationMs.takeIf { it > 0 }?.let { Fact(formatDuration(it), Provenance.LIBRARY) }
@@ -103,19 +76,84 @@ class SourceInspector
                 title = song.title,
                 artist = song.artist,
                 album = song.album,
-                container = container,
-                codec = codec,
-                sampleRate = sampleRate,
-                channels = channels,
+                container = containerOf(storeMime ?: song.mimeType, song.filePath ?: song.uri)?.let { Fact(it, Provenance.LIBRARY) },
+                codec =
+                    header?.let {
+                        Fact(
+                            it.codec,
+                            Provenance.FILE_HEADER,
+                        )
+                    } ?: codecFromContainer?.let { Fact(it, Provenance.CONTAINER) },
+                sampleRate = buildSampleRateFact(song, header, extractor),
+                channels = buildChannelsFact(header, extractor),
                 bitDepth = bitDepth,
-                bitDepthNote = bitDepthNote,
-                bitrate = bitrate,
+                bitDepthNote = buildBitDepthNote(localized, bitDepth != null, lossless),
+                bitrate = buildBitrateFact(localized, locale, song, header, extractor),
                 bitrateMode = header?.bitrateMode?.let { Fact(it, Provenance.FILE_HEADER) },
                 duration = duration,
                 fileSize = size?.let { Fact(formatSize(it), Provenance.LIBRARY) },
                 problem = problem,
             )
         }
+
+        private fun buildSampleRateFact(
+            song: Song,
+            header: SourceHeader?,
+            extractor: ExtractorFacts?,
+        ): Fact? =
+            header?.sampleRateHz?.let { Fact(MediaFormats.sampleRateText(it), Provenance.FILE_HEADER) }
+                ?: extractor?.sampleRate?.let { Fact(MediaFormats.sampleRateText(it), Provenance.CONTAINER) }
+                ?: song.sampleRate.takeIf { it > 0 }?.let { Fact(MediaFormats.sampleRateText(it), Provenance.LIBRARY) }
+
+        private fun buildChannelsFact(
+            header: SourceHeader?,
+            extractor: ExtractorFacts?,
+        ): Fact? =
+            header?.channels?.let { Fact(MediaFormats.channelsText(it), Provenance.FILE_HEADER) }
+                ?: extractor?.channels?.let { Fact(MediaFormats.channelsText(it), Provenance.CONTAINER) }
+
+        private fun buildBitDepthFact(
+            localized: Context,
+            locale: java.util.Locale,
+            header: SourceHeader?,
+        ): Fact? =
+            header?.bitsPerSample?.let {
+                Fact(
+                    localized.getString(R.string.audio_details_bit_depth_value, LocaleFormatters.formatInteger(it, locale)),
+                    Provenance.FILE_HEADER,
+                    localized.getString(R.string.audio_details_bit_depth_stored),
+                )
+            }
+
+        private fun buildBitDepthNote(
+            localized: Context,
+            hasBitDepth: Boolean,
+            lossless: Boolean,
+        ): String? =
+            when {
+                hasBitDepth -> null
+                !lossless -> localized.getString(R.string.audio_details_bit_depth_lossy)
+                else -> localized.getString(R.string.audio_details_bit_depth_not_stated)
+            }
+
+        private fun buildBitrateFact(
+            localized: Context,
+            locale: java.util.Locale,
+            song: Song,
+            header: SourceHeader?,
+            extractor: ExtractorFacts?,
+        ): Fact? =
+            header?.firstFrameBitrateKbps?.let {
+                Fact(
+                    localized.getString(R.string.audio_details_bitrate_kbps, LocaleFormatters.formatInteger(it, locale)),
+                    Provenance.FILE_HEADER,
+                    if (header.bitrateMode == "VBR") localized.getString(R.string.audio_details_bitrate_vbr_note) else null,
+                )
+            } ?: extractor?.bitrate?.let {
+                Fact(MediaFormats.bitrateText(it), Provenance.CONTAINER, localized.getString(R.string.audio_details_bitrate_nominal_note))
+            } ?: song.bitrate.takeIf { it > 0 }?.let {
+                Fact(MediaFormats.bitrateText(it), Provenance.LIBRARY, localized.getString(R.string.audio_details_bitrate_average_note))
+            }
 
         private fun readPrefix(uri: Uri): ByteArray? =
             context.contentResolver.openInputStream(uri)?.use { input ->

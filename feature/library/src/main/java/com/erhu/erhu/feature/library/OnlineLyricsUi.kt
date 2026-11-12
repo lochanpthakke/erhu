@@ -36,9 +36,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
@@ -72,40 +77,58 @@ internal fun LyricsSourceBar(
                 modifier = Modifier.glassMenuTrigger(),
                 enabled = !lyrics.saving,
                 onClick = { menu = true },
-            ) { Icon(Icons.Default.MoreVert, contentDescription = "Lyrics options") }
-            GlassMenu(label = "Lyrics options", expanded = menu, onDismissRequest = { menu = false }) {
+            ) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.lyrics_cd_options)) }
+            GlassMenu(label = stringResource(R.string.lyrics_cd_options), expanded = menu, onDismissRequest = { menu = false }) {
                 if (onAdjustTiming != null) {
-                    GlassMenuItem(icon = Icons.Default.Schedule, text = { Text("Adjust timing") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.Schedule, text = {
+                        Text(stringResource(R.string.lyrics_menu_adjust_timing))
+                    }, onClick = {
                         menu = false
                         onAdjustTiming()
                     })
                 }
                 if (online && lyrics.text != null && !lyrics.downloaded) {
-                    GlassMenuItem(icon = Icons.Default.Download, text = { Text("Download lyrics") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.Download, text = {
+                        Text(stringResource(R.string.lyrics_menu_download))
+                    }, onClick = {
                         menu = false
                         actions.download()
                     })
                 }
                 if (lyrics.saved != null) {
                     GlassMenuItem(icon = Icons.Default.DeleteOutline, destructive = true, text = {
-                        Text(if (lyrics.saved.explicitDownload) "Remove downloaded lyrics" else "Remove previously saved lyrics")
+                        Text(
+                            stringResource(
+                                if (lyrics.saved.explicitDownload) {
+                                    R.string.lyrics_menu_remove_downloaded
+                                } else {
+                                    R.string.lyrics_menu_remove_saved
+                                },
+                            ),
+                        )
                     }, onClick = {
                         menu = false
                         removal = lyrics.saved
                     })
                 }
                 if (online) {
-                    GlassMenuItem(icon = Icons.Default.Refresh, text = { Text("Refresh online lyrics") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.Refresh, text = {
+                        Text(stringResource(R.string.lyrics_menu_refresh))
+                    }, onClick = {
                         menu = false
                         actions.refresh()
                     })
                 }
-                GlassMenuItem(icon = Icons.Default.Search, text = { Text("Search online…") }, onClick = {
+                GlassMenuItem(icon = Icons.Default.Search, text = {
+                    Text(stringResource(R.string.lyrics_menu_search_online))
+                }, onClick = {
                     menu = false
                     onSearch()
                 })
                 if (online && lyrics.hasFileLyrics) {
-                    GlassMenuItem(icon = Icons.Default.Description, text = { Text("Use the file's lyrics") }, onClick = {
+                    GlassMenuItem(icon = Icons.Default.Description, text = {
+                        Text(stringResource(R.string.lyrics_menu_use_file))
+                    }, onClick = {
                         menu = false
                         actions.useFileLyrics()
                     })
@@ -123,8 +146,9 @@ internal fun LyricsSourceBar(
 
 @Composable
 private fun RowScope.LyricsSourceText(lyrics: SongLyrics) {
+    val savingText = if (lyrics.saving) stringResource(R.string.action_saving) else null
     Text(
-        listOfNotNull(lyricsSourceLabel(lyrics), if (lyrics.saving) "Saving…" else null, lyrics.saveError).joinToString("\n"),
+        listOfNotNull(lyricsSourceLabel(lyrics), savingText, lyrics.saveError).joinToString("\n"),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.weight(1f),
@@ -134,21 +158,38 @@ private fun RowScope.LyricsSourceText(lyrics: SongLyrics) {
     }
 }
 
+@Composable
 private fun lyricsSourceLabel(lyrics: SongLyrics): String? =
     when {
         lyrics.text == null -> null
-        lyrics.origin == LyricsOrigin.FILE -> "From the file's tags"
+        lyrics.origin == LyricsOrigin.FILE -> stringResource(R.string.lyrics_source_from_file)
         else -> {
-            val state =
+            val stateRes =
                 when {
-                    lyrics.downloaded -> " · downloaded"
-                    lyrics.saved?.explicitDownload == true -> " · downloaded version available"
-                    lyrics.saved != null -> " · previously saved"
-                    else -> ""
+                    lyrics.downloaded -> R.string.lyrics_source_downloaded_suffix
+                    lyrics.saved?.explicitDownload == true -> R.string.lyrics_source_downloaded_available_suffix
+                    lyrics.saved != null -> R.string.lyrics_source_previously_saved_suffix
+                    else -> null
                 }
-            "From ${lyrics.provider ?: "online"}${lyrics.timing?.let { " · ${it.label()}" }.orEmpty()}$state"
+            val provider = lyrics.provider ?: stringResource(R.string.lyrics_source_online_provider)
+            listOfNotNull(
+                stringResource(R.string.lyrics_source_from_provider, provider),
+                lyrics.timing?.localizedLabel(),
+                stateRes?.let { stringResource(it) },
+            ).joinToString(" · ")
         }
     }
+
+@Composable
+private fun LyricsTiming.localizedLabel(): String =
+    stringResource(
+        when (this) {
+            LyricsTiming.WORD -> R.string.lyrics_timing_word_synced
+            LyricsTiming.LINE -> R.string.lyrics_timing_line_synced
+            LyricsTiming.PLAIN -> R.string.lyrics_timing_plain_text
+            LyricsTiming.NONE -> R.string.lyrics_timing_none
+        },
+    )
 
 @Composable
 private fun LyricsRemovalDialog(
@@ -157,10 +198,10 @@ private fun LyricsRemovalDialog(
 ) {
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Remove saved lyrics?") },
-        text = { Text("Remove this song's saved online lyrics? Lyrics in the music file will be kept.") },
-        confirmButton = { TextButton(onClick = onRemove) { Text("Remove") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.lyrics_remove_dialog_title)) },
+        text = { Text(stringResource(R.string.lyrics_remove_dialog_body)) },
+        confirmButton = { TextButton(onClick = onRemove) { Text(stringResource(R.string.action_remove)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
 
@@ -176,18 +217,19 @@ internal fun LyricsLookupStatus(
         CandidateChoice(lookup.candidates, actions, onSearch)
         return
     }
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val (message, retry) =
         when (lookup) {
-            LyricsLookup.Searching -> "Looking for lyrics online…" to false
-            LyricsLookup.NotFound -> "No lyrics found for this song." to false
-            LyricsLookup.Instrumental -> "This track is instrumental." to false
-            LyricsLookup.Offline -> "You are offline. Lyrics will be looked up when you are back online." to true
+            LyricsLookup.Searching -> stringResource(R.string.lyrics_lookup_searching) to false
+            LyricsLookup.NotFound -> stringResource(R.string.lyrics_lookup_not_found) to false
+            LyricsLookup.Instrumental -> stringResource(R.string.lyrics_lookup_instrumental) to false
+            LyricsLookup.Offline -> stringResource(R.string.lyrics_lookup_offline) to true
             is LyricsLookup.RateLimited -> {
                 val seconds = ((lookup.retryAtMs - nowMs()) / MS_PER_SECOND.toDouble()).roundToLong().coerceAtLeast(1)
-                "A lyrics provider asked to wait ($seconds s). Try again shortly." to true
+                stringResource(R.string.lyrics_lookup_rate_limited, LocaleFormatters.formatInteger(seconds, locale)) to true
             }
-            is LyricsLookup.Failed -> "Could not look up lyrics (${lookup.reason})." to true
-            else -> "This file has no embedded lyrics." to false
+            is LyricsLookup.Failed -> stringResource(R.string.lyrics_lookup_failed, lookup.reason) to true
+            else -> stringResource(R.string.lyrics_no_embedded) to false
         }
     Column(
         modifier = Modifier.fillMaxSize().padding(Spacing.xl),
@@ -203,8 +245,8 @@ internal fun LyricsLookupStatus(
         )
         if (actions != null && lookup != LyricsLookup.Searching) {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                if (retry) FilledTonalButton(onClick = actions.refresh) { Text("Retry") }
-                TextButton(onClick = onSearch) { Text("Search online…") }
+                if (retry) FilledTonalButton(onClick = actions.refresh) { Text(stringResource(R.string.action_retry)) }
+                TextButton(onClick = onSearch) { Text(stringResource(R.string.lyrics_menu_search_online)) }
             }
         }
     }
@@ -218,14 +260,21 @@ private fun CandidateChoice(
     onSearch: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().padding(horizontal = Spacing.lg)) {
-        Text("Is it one of these?", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = Spacing.md))
         Text(
-            "These results might match, but none clearly does. Pick the right one, or search.",
+            stringResource(R.string.lyrics_candidates_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = Spacing.md),
+        )
+        Text(
+            stringResource(R.string.lyrics_candidates_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         LazyColumn(Modifier.weight(1f)) { items(candidates, key = { it.providerId }) { CandidateRow(it) { actions.choose(it) } } }
-        TextButton(onClick = onSearch, modifier = Modifier.align(Alignment.End)) { Text("Search online…") }
+        TextButton(
+            onClick = onSearch,
+            modifier = Modifier.align(Alignment.End),
+        ) { Text(stringResource(R.string.lyrics_menu_search_online)) }
     }
 }
 
@@ -234,6 +283,7 @@ private fun CandidateRow(
     candidate: LyricsCandidate,
     onClick: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Column(
         Modifier
             .fillMaxWidth()
@@ -241,12 +291,18 @@ private fun CandidateRow(
             .padding(vertical = Spacing.sm),
     ) {
         Text(candidate.trackName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val timingOrInstrumental =
+            if (candidate.instrumental) {
+                stringResource(R.string.lyrics_candidate_instrumental)
+            } else {
+                candidate.timing.takeIf { it != LyricsTiming.NONE }?.localizedLabel()
+            }
         val details =
             listOfNotNull(
                 candidate.artistName.takeIf { it.isNotBlank() },
                 candidate.albumName?.takeIf { it.isNotBlank() },
-                candidate.durationSec?.let { formatTimestamp((it * MS_PER_SECOND).roundToLong()) },
-                if (candidate.instrumental) "instrumental" else candidate.timing.takeIf { it != LyricsTiming.NONE }?.label(),
+                candidate.durationSec?.let { formatTimestamp((it * MS_PER_SECOND).roundToLong(), locale) },
+                timingOrInstrumental,
             ).joinToString(" · ")
         Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
     }
@@ -263,17 +319,22 @@ internal fun ManualLyricsSearchDialog(
     var query by remember { mutableStateOf(initialQuery) }
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Search lyrics online") },
+        title = { Text(stringResource(R.string.lyrics_search_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true, label = { Text("Title and artist") })
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.lyrics_search_query_label)) },
+                )
                 when (search) {
                     ManualLyricsSearch.Idle -> Unit
                     ManualLyricsSearch.Searching -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
                     is ManualLyricsSearch.Error -> Text(search.message, color = MaterialTheme.colorScheme.error)
                     is ManualLyricsSearch.Results ->
                         if (search.candidates.isEmpty()) {
-                            Text("No results.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.lyrics_search_no_results), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             LazyColumn(Modifier.heightIn(max = 320.dp)) {
                                 items(search.candidates, key = { it.providerId }) { CandidateRow(it) { actions.choose(it) } }
@@ -283,8 +344,12 @@ internal fun ManualLyricsSearchDialog(
                 Spacer(Modifier.size(0.dp))
             }
         },
-        confirmButton = { TextButton(onClick = { actions.search(query) }, enabled = query.isNotBlank()) { Text("Search") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = {
+            TextButton(onClick = { actions.search(query) }, enabled = query.isNotBlank()) {
+                Text(stringResource(R.string.lyrics_search_action))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) } },
     )
 }
 

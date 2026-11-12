@@ -1,10 +1,12 @@
 package com.erhu.erhu.feature.settings
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -51,15 +53,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.VisualizerMode
 import com.erhu.erhu.core.model.VisualizerSensitivity
 import com.erhu.erhu.core.model.VisualizerSmoothing
-import com.erhu.erhu.feature.library.FIELD_SELECTION_NOTE
 import com.erhu.erhu.feature.library.LibraryViewModel
 import com.erhu.erhu.feature.library.VisualizerViewModel
-import com.erhu.erhu.feature.library.summary
+import com.erhu.erhu.feature.library.localizedFieldSelectionNote
+import com.erhu.erhu.feature.library.localizedLabel
+import com.erhu.erhu.feature.library.localizedName
+import com.erhu.erhu.feature.library.localizedSummary
 import com.erhu.erhu.feature.settings.component.SettingsChoiceRow
 import com.erhu.erhu.feature.settings.component.SettingsGroup
 import com.erhu.erhu.feature.settings.component.SettingsIcon
@@ -76,85 +81,79 @@ import com.erhu.erhu.feature.settings.sound.SoundSettingsScreen
 import com.erhu.erhu.feature.settings.sound.SoundViewModel
 import com.erhu.erhu.feature.settings.theme.ThemeSettingsScreen
 import com.erhu.erhu.feature.settings.theme.ThemeViewModel
-import kotlin.math.roundToInt
 
 private data class SettingCategory(
     val id: String,
-    val title: String,
-    val description: String,
+    @param:StringRes val titleRes: Int,
+    @param:StringRes val descriptionRes: Int,
     val icon: ImageVector,
-    val section: String,
+    @param:StringRes val sectionRes: Int,
 )
-
-private const val SECTION_PERSONALIZE = "Personalize"
-private const val SECTION_SOUND = "Sound"
-private const val SECTION_LIBRARY = "Library"
-private const val SECTION_ABOUT = "About"
 
 private val SETTING_CATEGORIES =
     listOf(
         SettingCategory(
             "themes",
-            "Themes & Appearance",
-            "Theme, Glass Effect, library layout and widget",
+            R.string.settings_category_themes_title,
+            R.string.settings_category_themes_desc,
             Icons.Default.Palette,
-            SECTION_PERSONALIZE,
+            R.string.settings_section_personalize,
         ),
         SettingCategory(
             "navigation",
-            "Navigation & Home Page",
-            "Default landing page and its place in the navigation bar",
+            R.string.settings_category_navigation_title,
+            R.string.settings_category_navigation_desc,
             Icons.Default.Tune,
-            SECTION_PERSONALIZE,
+            R.string.settings_section_personalize,
         ),
         SettingCategory(
             "language",
-            "Language",
-            "App language and system default",
+            R.string.settings_language_title,
+            R.string.settings_language_summary,
             Icons.Default.Language,
-            SECTION_PERSONALIZE,
+            R.string.settings_section_personalize,
         ),
         SettingCategory(
             "audio",
-            "Audio & Equalizer",
-            "Parametric EQ, channels, level and normalization",
+            R.string.settings_category_audio_title,
+            R.string.settings_category_audio_desc,
             Icons.Default.Equalizer,
-            SECTION_SOUND,
+            R.string.settings_section_sound,
         ),
         SettingCategory(
             "playback",
-            "Playback",
-            "Crossfade, sleep timer, speed, pitch and silence skipping",
+            R.string.settings_category_playback_title,
+            R.string.settings_category_playback_desc,
             Icons.Default.Tune,
-            SECTION_SOUND,
+            R.string.settings_section_sound,
         ),
         SettingCategory(
             "visualizer",
-            "Visualizer",
-            "Style and feel of the Now Playing visualizer",
+            R.string.settings_category_visualizer_title,
+            R.string.settings_category_visualizer_desc,
             Icons.Default.GraphicEq,
-            SECTION_SOUND,
+            R.string.settings_section_sound,
         ),
         SettingCategory(
             "library",
-            "Library & Scan Location",
-            "Scan the whole device or a chosen folder",
+            R.string.settings_category_library_title,
+            R.string.settings_category_library_desc,
             Icons.Default.Folder,
-            SECTION_LIBRARY,
+            R.string.settings_section_library,
         ),
         SettingCategory(
             "metadata",
-            "Metadata & Artwork",
-            "Open the metadata / tag editor",
+            R.string.settings_category_metadata_title,
+            R.string.settings_category_metadata_desc,
             Icons.Default.Tag,
-            SECTION_LIBRARY,
+            R.string.settings_section_library,
         ),
         SettingCategory(
             "diagnostics",
-            "Diagnostics & About",
-            "Crash logs, update checker and version info",
+            R.string.settings_category_diagnostics_title,
+            R.string.settings_category_diagnostics_desc,
             Icons.Default.BugReport,
-            SECTION_ABOUT,
+            R.string.settings_section_about,
         ),
     )
 
@@ -166,7 +165,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     SettingsPage(
-        title = "Settings",
+        title = stringResource(R.string.settings_title),
         navigation = TopBarNavigation.TopLevel(onOpenDrawer),
         modifier = modifier,
     ) {
@@ -175,17 +174,21 @@ fun SettingsScreen(
         val activeLanguageLabel =
             AppLocaleManager.findLanguage(selectedTag)?.nativeName
                 ?: stringResource(R.string.settings_language_system_default)
-        val languageRowTitle = stringResource(R.string.settings_language_title)
         val languageRowSummary = stringResource(R.string.settings_language_summary_current, activeLanguageLabel)
 
-        SETTING_CATEGORIES.groupBy { it.section }.forEach { (section, categories) ->
-            SettingsSection(title = section) {
+        SETTING_CATEGORIES.groupBy { it.sectionRes }.forEach { (sectionRes, categories) ->
+            SettingsSection(title = stringResource(sectionRes)) {
                 SettingsGroup {
                     categories.forEach { category ->
                         row {
                             SettingsNavigationRow(
-                                title = if (category.id == "language") languageRowTitle else category.title,
-                                summary = if (category.id == "language") languageRowSummary else category.description,
+                                title = stringResource(category.titleRes),
+                                summary =
+                                    if (category.id == "language") {
+                                        languageRowSummary
+                                    } else {
+                                        stringResource(category.descriptionRes)
+                                    },
                                 icon = category.icon,
                                 onClick = { onOpenCategory(category.id) },
                             )
@@ -215,12 +218,8 @@ fun SettingsCategoryScreen(
     onOpenIntroduction: (() -> Unit)? = null,
     onOpenAnnouncements: (() -> Unit)? = null,
 ) {
-    val title =
-        if (categoryId == "language") {
-            stringResource(R.string.settings_language_title)
-        } else {
-            SETTING_CATEGORIES.find { it.id == categoryId }?.title ?: "Settings"
-        }
+    val titleRes = SETTING_CATEGORIES.find { it.id == categoryId }?.titleRes ?: R.string.settings_title
+    val title = stringResource(titleRes)
     when (categoryId) {
         "themes" -> ThemeSettingsScreen(viewModel = themeViewModel, title = title, onBack = onBack)
         "navigation" -> NavigationSettingsSubPage(viewModel = themeViewModel, title = title, onBack = onBack)
@@ -267,12 +266,12 @@ private fun NavigationSettingsSubPage(
     val vybeEnabled by viewModel.vybeEnabled.collectAsState()
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
-        SettingsSection(title = "Navigation & Home") {
+        SettingsSection(title = stringResource(R.string.settings_nav_section)) {
             SettingsGroup {
                 row {
                     SettingsSwitchRow(
-                        title = "Enable VYBE",
-                        summary = "Show VYBE in navigation and Home.",
+                        title = stringResource(R.string.settings_nav_enable_vybe_title),
+                        summary = stringResource(R.string.settings_nav_enable_vybe_summary),
                         checked = vybeEnabled != false,
                         onCheckedChange = viewModel::setVybeEnabled,
                     )
@@ -280,21 +279,31 @@ private fun NavigationSettingsSubPage(
             }
         }
         SettingsSection(
-            title = "Home page",
-            footer =
-                "The page erhu opens on. It is also placed as the leftmost icon in the bottom navigation bar.",
+            title = stringResource(R.string.settings_nav_home_page_title),
+            footer = stringResource(R.string.settings_nav_home_page_footer),
         ) {
             SettingsGroup(selectable = true) {
                 listOf(
-                    "TRACKS" to ("Tracks" to "Home: Smart Playlists, featured and recent albums, and every track"),
-                    "ALBUMS" to ("Albums" to "Grid of all your albums"),
-                    "LIBRARY" to ("Library" to "Playlists, favorites, artists and songs"),
-                ).forEach { (key, info) ->
-                    val (label, description) = info
+                    Triple(
+                        "TRACKS",
+                        R.string.settings_nav_home_tracks_title,
+                        R.string.settings_nav_home_tracks_summary,
+                    ),
+                    Triple(
+                        "ALBUMS",
+                        R.string.settings_nav_home_albums_title,
+                        R.string.settings_nav_home_albums_summary,
+                    ),
+                    Triple(
+                        "LIBRARY",
+                        R.string.settings_nav_home_library_title,
+                        R.string.settings_nav_home_library_summary,
+                    ),
+                ).forEach { (key, labelRes, descriptionRes) ->
                     row {
                         SettingsChoiceRow(
-                            title = label,
-                            summary = description,
+                            title = stringResource(labelRes),
+                            summary = stringResource(descriptionRes),
                             selected = defaultStartSection.equals(key, ignoreCase = true),
                             onClick = { viewModel.setDefaultStartSection(key) },
                         )
@@ -334,18 +343,18 @@ private fun LibrarySettingsSubPage(
                     } catch (_: Exception) {
                     }
                 }
-                val displayPath = parseFolderDisplayName(uri)
+                val displayPath = parseFolderDisplayName(context, uri)
                 viewModel.setCustomScanLocation(uri.toString(), displayPath)
             }
         }
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
-        SettingsSection(title = "Scan location") {
+        SettingsSection(title = stringResource(R.string.settings_scan_location_section)) {
             SettingsGroup(selectable = true) {
                 row {
                     SettingsChoiceRow(
-                        title = "Entire device",
-                        summary = "Scan all storage volumes for music files",
+                        title = stringResource(R.string.settings_scan_entire_device_title),
+                        summary = stringResource(R.string.settings_scan_entire_device_summary),
                         selected = !isCustomScanEnabled,
                         onClick = { viewModel.setScanEntireDevice() },
                         leading = { SettingsIcon(Icons.Default.PhoneAndroid) },
@@ -353,12 +362,12 @@ private fun LibrarySettingsSubPage(
                 }
                 row {
                     SettingsChoiceRow(
-                        title = "Custom folder",
+                        title = stringResource(R.string.settings_scan_custom_folder_title),
                         summary =
                             if (isCustomScanEnabled && customScanPath.isNotBlank()) {
-                                "Location: $customScanPath"
+                                stringResource(R.string.settings_scan_custom_folder_location, customScanPath)
                             } else {
-                                "Tap to choose a specific scan directory"
+                                stringResource(R.string.settings_scan_custom_folder_summary)
                             },
                         selected = isCustomScanEnabled,
                         onClick = { folderPickerLauncher.launch(null) },
@@ -368,12 +377,15 @@ private fun LibrarySettingsSubPage(
             }
         }
 
-        SettingsSection(title = "Scan") {
+        SettingsSection(title = stringResource(R.string.settings_scan_section)) {
             SettingsGroup {
                 row {
                     SettingsNavigationRow(
-                        title = if (isScanning) "Scanning library…" else "Rescan library now",
-                        summary = "Find new, changed and removed music",
+                        title =
+                            stringResource(
+                                if (isScanning) R.string.settings_scan_running else R.string.settings_scan_now,
+                            ),
+                        summary = stringResource(R.string.settings_scan_now_summary),
                         icon = Icons.Default.Refresh,
                         enabled = !isScanning,
                         onClick = { viewModel.triggerScan() },
@@ -391,23 +403,64 @@ private fun LibrarySettingsSubPage(
         val preferredResolution by viewModel.preferredLiveCoverResolution.collectAsState()
 
         SettingsSection(
-            title = "Live Artwork Quality",
-            footer = "Preferred default video stream resolution for live animated cover downloads.",
+            title = stringResource(R.string.settings_live_artwork_quality_title),
+            footer = stringResource(R.string.settings_live_artwork_quality_footer),
         ) {
             SettingsGroup(selectable = true) {
                 listOf(
-                    "1080p" to "1080p (Full HD — Recommended)",
-                    "720p" to "720p (HD)",
-                    "480p" to "480p (SD — Data Saver)",
-                    "Maximum" to "Maximum Available (Highest Quality)",
-                ).forEach { (resolutionKey, label) ->
+                    "1080p" to R.string.settings_live_artwork_1080p,
+                    "720p" to R.string.settings_live_artwork_720p,
+                    "480p" to R.string.settings_live_artwork_480p,
+                    "Maximum" to R.string.settings_live_artwork_max,
+                ).forEach { (resolutionKey, labelRes) ->
                     row {
                         SettingsChoiceRow(
-                            title = label,
+                            title = stringResource(labelRes),
                             selected = preferredResolution == resolutionKey,
                             onClick = { viewModel.setPreferredLiveCoverResolution(resolutionKey) },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Visualizer style picker section extracted to keep the visualizer subpage concise. */
+@Composable
+private fun VisualizerStyleSection(
+    selectedMode: VisualizerMode,
+    onSelectMode: (VisualizerMode) -> Unit,
+) {
+    SettingsSection(
+        title = stringResource(R.string.settings_visualizer_style_title),
+        footer = stringResource(R.string.settings_visualizer_style_footer),
+    ) {
+        SettingsGroup(selectable = true) {
+            listOf(
+                Triple(
+                    VisualizerMode.SPECTRUM_BARS,
+                    R.string.settings_visualizer_mode_bars_title,
+                    R.string.settings_visualizer_mode_bars_summary,
+                ),
+                Triple(
+                    VisualizerMode.CIRCULAR_SPECTRUM,
+                    R.string.settings_visualizer_mode_circle_title,
+                    R.string.settings_visualizer_mode_circle_summary,
+                ),
+                Triple(
+                    VisualizerMode.OSCILLOSCOPE,
+                    R.string.settings_visualizer_mode_waveform_title,
+                    R.string.settings_visualizer_mode_waveform_summary,
+                ),
+            ).forEach { (mode, labelRes, summaryRes) ->
+                row {
+                    SettingsChoiceRow(
+                        title = stringResource(labelRes),
+                        summary = stringResource(summaryRes),
+                        selected = selectedMode == mode,
+                        onClick = { onSelectMode(mode) },
+                    )
                 }
             }
         }
@@ -423,35 +476,39 @@ private fun VisualizerSettingsSubPage(
 ) {
     val settings by viewModel.settings.collectAsState()
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
-        SettingsSection(title = "Style", footer = "Open it from the visualizer button at the top of Now Playing.") {
-            SettingsGroup(selectable = true) {
-                listOf(
-                    Triple(VisualizerMode.SPECTRUM_BARS, "Bars", "Bass to treble, left to right"),
-                    Triple(VisualizerMode.CIRCULAR_SPECTRUM, "Circle", "The spectrum around the artwork"),
-                    Triple(VisualizerMode.OSCILLOSCOPE, "Waveform", "The sound wave itself"),
-                ).forEach { (mode, label, summary) ->
-                    row {
-                        SettingsChoiceRow(
-                            title = label,
-                            summary = summary,
-                            selected = settings.mode == mode,
-                            onClick = { viewModel.setMode(mode) },
-                        )
-                    }
-                }
+        VisualizerStyleSection(
+            selectedMode = settings.mode,
+            onSelectMode = viewModel::setMode,
+        )
+        val sensitivityOptions =
+            listOf(
+                stringResource(R.string.settings_visualizer_sensitivity_low),
+                stringResource(R.string.settings_visualizer_sensitivity_normal),
+                stringResource(R.string.settings_visualizer_sensitivity_high),
+            )
+        val sensitivityDescriptions =
+            sensitivityOptions.map {
+                stringResource(R.string.settings_visualizer_sensitivity_desc, it)
             }
-        }
-        SettingsSection(title = "Sensitivity", footer = "Higher shows more movement in quiet passages.") {
+        SettingsSection(
+            title = stringResource(R.string.settings_visualizer_sensitivity_title),
+            footer = stringResource(R.string.settings_visualizer_sensitivity_footer),
+        ) {
             SettingsSegmentedControl(
-                options = listOf("Low", "Normal", "High"),
+                options = sensitivityOptions,
                 selectedIndex = settings.sensitivity.ordinal,
                 onSelect = { viewModel.setSensitivity(VisualizerSensitivity.entries[it]) },
-                describe = { "Sensitivity " + listOf("low", "normal", "high")[it] },
+                describe = { sensitivityDescriptions[it] },
             )
         }
-        SettingsSection(title = "Movement") {
+        SettingsSection(title = stringResource(R.string.settings_visualizer_movement_title)) {
             SettingsSegmentedControl(
-                options = listOf("Responsive", "Balanced", "Smooth"),
+                options =
+                    listOf(
+                        stringResource(R.string.settings_visualizer_movement_responsive),
+                        stringResource(R.string.settings_visualizer_movement_balanced),
+                        stringResource(R.string.settings_visualizer_movement_smooth),
+                    ),
                 selectedIndex = settings.smoothing.ordinal,
                 onSelect = { viewModel.setSmoothing(VisualizerSmoothing.entries[it]) },
             )
@@ -459,8 +516,8 @@ private fun VisualizerSettingsSubPage(
         SettingsGroup {
             row {
                 SettingsSwitchRow(
-                    title = "Reduce motion",
-                    summary = "Fewer frames and gentler movement; also saves battery",
+                    title = stringResource(R.string.settings_visualizer_reduce_motion_title),
+                    summary = stringResource(R.string.settings_visualizer_reduce_motion_summary),
                     checked = settings.reduceMotion,
                     onCheckedChange = viewModel::setReduceMotion,
                 )
@@ -469,7 +526,10 @@ private fun VisualizerSettingsSubPage(
     }
 }
 
-private fun parseFolderDisplayName(uri: Uri): String {
+private fun parseFolderDisplayName(
+    context: Context,
+    uri: Uri,
+): String {
     val treeId = Uri.decode(uri.toString()).substringAfter("/tree/", "").substringBefore("/document/")
     if (treeId.isNotBlank()) {
         val pathPart = treeId.substringAfter(':')
@@ -480,7 +540,8 @@ private fun parseFolderDisplayName(uri: Uri): String {
     return uri.lastPathSegment
         ?.substringAfter(':')
         ?.trim('/')
-        ?.ifBlank { "Selected Folder" } ?: "Selected Folder"
+        ?.ifBlank { AppLocaleManager.localizedContext(context).getString(R.string.scan_location_selected_folder) }
+        ?: AppLocaleManager.localizedContext(context).getString(R.string.scan_location_selected_folder)
 }
 
 @Composable
@@ -504,17 +565,14 @@ private fun MetadataSettingsSubPage(
 
     SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
         SettingsSection(
-            title = "Tags",
-            footer =
-                "Tag fixes look up MusicBrainz and Deezer and write into the audio file itself; the library " +
-                    "updates after the rescan. Android asks before erhu may modify files other apps created. " +
-                    "Online lyrics (LRCLIB) are separate: they're found on the Lyrics page and never written to files.",
+            title = stringResource(R.string.settings_metadata_tags_title),
+            footer = stringResource(R.string.settings_metadata_tags_footer),
         ) {
             SettingsGroup {
                 row {
                     SettingsNavigationRow(
-                        title = "Metadata editor",
-                        summary = "Edit ID3 tags and clean watermarks",
+                        title = stringResource(R.string.settings_metadata_editor_title),
+                        summary = stringResource(R.string.settings_metadata_editor_summary),
                         icon = Icons.Default.EditNote,
                         onClick = onNavigateToMetadataEditor,
                     )
@@ -526,15 +584,15 @@ private fun MetadataSettingsSubPage(
         ConfidenceThresholdSection(threshold = confidenceThreshold, onChange = viewModel::setConfidenceThreshold)
 
         SettingsSection(
-            title = "Primary Source Provider",
-            footer = "Used for tag matching. Artwork Fetcher searches music catalogues in priority order.",
+            title = stringResource(R.string.settings_metadata_provider_title),
+            footer = stringResource(R.string.settings_metadata_provider_footer),
         ) {
             SettingsGroup(selectable = true) {
                 sourceOptions.forEach { option ->
                     row {
                         SettingsChoiceRow(
-                            title = option.label,
-                            summary = option.summary,
+                            title = option.localizedLabel(),
+                            summary = option.localizedSummary(),
                             selected = selectedProvider == option.key,
                             onClick = { viewModel.setSelectedProvider(option.key) },
                         )
@@ -564,8 +622,8 @@ private fun WatermarksBlocklistSection(
 ) {
     var textInput by remember { mutableStateOf("") }
     SettingsSection(
-        title = "Watermarks & Blocklist",
-        footer = "Tokens in this list are automatically stripped from filenames and metadata during Auto Fix Tags search.",
+        title = stringResource(R.string.settings_metadata_watermarks_title),
+        footer = stringResource(R.string.settings_metadata_watermarks_footer),
     ) {
         SettingsGroup {
             row {
@@ -578,8 +636,8 @@ private fun WatermarksBlocklistSection(
                         OutlinedTextField(
                             value = textInput,
                             onValueChange = { textInput = it },
-                            label = { Text("Add custom watermark token") },
-                            placeholder = { Text("e.g. pagalworld, djmaza") },
+                            label = { Text(stringResource(R.string.settings_metadata_watermark_label)) },
+                            placeholder = { Text(stringResource(R.string.settings_metadata_watermark_placeholder)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                         )
@@ -589,14 +647,14 @@ private fun WatermarksBlocklistSection(
                                 textInput = ""
                             },
                         ) {
-                            Text("Add")
+                            Text(stringResource(R.string.action_add))
                         }
                     }
 
                     if (activeWatermarks.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(Spacing.sm))
                         Text(
-                            text = "Stored Watermarks (${activeWatermarks.size}):",
+                            text = stringResource(R.string.settings_metadata_watermark_stored, activeWatermarks.size),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -614,7 +672,7 @@ private fun WatermarksBlocklistSection(
                                     trailingIcon = {
                                         Icon(
                                             imageVector = Icons.Default.Close,
-                                            contentDescription = "Remove watermark",
+                                            contentDescription = stringResource(R.string.settings_metadata_watermark_remove_cd),
                                             modifier = Modifier.size(14.dp),
                                         )
                                     },
@@ -633,13 +691,13 @@ private fun FieldsToFixSection(
     selectedFields: Set<com.erhu.erhu.core.model.MetadataField>,
     onToggle: (com.erhu.erhu.core.model.MetadataField) -> Unit,
 ) {
-    SettingsSection(title = "Fields to Fix", footer = FIELD_SELECTION_NOTE) {
+    SettingsSection(title = stringResource(R.string.settings_metadata_fields_title), footer = localizedFieldSelectionNote()) {
         SettingsGroup {
             com.erhu.erhu.core.model.MetadataField.supported.forEach { field ->
                 row {
                     SettingsSwitchRow(
-                        title = field.displayName,
-                        summary = field.summary(),
+                        title = field.localizedName(),
+                        summary = field.localizedSummary(),
                         checked = field in selectedFields,
                         onCheckedChange = { onToggle(field) },
                     )
@@ -656,24 +714,24 @@ private fun FieldsToFixSection(
 @Composable
 private fun StorageAccessSection(
     hasAllFilesAccess: Boolean,
-    context: android.content.Context,
+    context: Context,
 ) {
     SettingsSection(
-        title = "Storage Permissions",
-        footer =
-            "Granting Full Storage Access allows erhu to write ID3 tags and rename music files on external SD cards " +
-                "without permission errors.",
+        title = stringResource(R.string.settings_metadata_storage_title),
+        footer = stringResource(R.string.settings_metadata_storage_footer),
     ) {
         SettingsGroup {
             row {
                 SettingsNavigationRow(
-                    title = "Full Storage Access",
+                    title = stringResource(R.string.settings_metadata_full_storage_title),
                     summary =
-                        if (hasAllFilesAccess) {
-                            "Granted — full read/write access to internal & SD card storage"
-                        } else {
-                            "Tap to grant full device storage write permission in System Settings"
-                        },
+                        stringResource(
+                            if (hasAllFilesAccess) {
+                                R.string.settings_metadata_full_storage_granted
+                            } else {
+                                R.string.settings_metadata_full_storage_tap
+                            },
+                        ),
                     icon = Icons.Default.Folder,
                     onClick = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -701,11 +759,10 @@ private fun ConfidenceThresholdSection(
     threshold: Float,
     onChange: (Float) -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     SettingsSection(
-        title = "Confidence Threshold",
-        footer =
-            "Automated metadata fixes are accepted when search result confidence is at or above this threshold. " +
-                "Lower values write more matches but risk wrong ones; uncertain matches are always listed for review.",
+        title = stringResource(R.string.settings_metadata_confidence_title),
+        footer = stringResource(R.string.settings_metadata_confidence_footer),
     ) {
         SettingsGroup {
             row {
@@ -715,9 +772,9 @@ private fun ConfidenceThresholdSection(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Auto-Accept Threshold", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.settings_metadata_confidence_label), style = MaterialTheme.typography.bodyMedium)
                         Text(
-                            "${(threshold * PERCENT).roundToInt()}%",
+                            LocaleFormatters.formatPercent(threshold.toDouble(), locale),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                         )
@@ -735,5 +792,4 @@ private fun ConfidenceThresholdSection(
     }
 }
 
-private const val PERCENT = 100
 private const val THRESHOLD_STEPS = 8

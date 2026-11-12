@@ -4,6 +4,9 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.erhu.erhu.core.common.artwork.ArtworkLoader
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.getOrNull
 import com.erhu.erhu.core.database.library.ArtistArtworkCache
@@ -36,6 +39,7 @@ import kotlinx.coroutines.withTimeout
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.UUID
+import com.erhu.erhu.core.common.R as CommonR
 
 internal enum class ArtworkUpgradeKind { ALBUMS, ARTISTS }
 
@@ -130,7 +134,7 @@ internal class ArtworkUpgradeController(
                         if (cacheLimitReached()) {
                             mutableState.update {
                                 it.copy(
-                                    message = "Review these matches before searching again; the preview cache limit was reached.",
+                                    message = localized().getString(CommonR.string.artwork_upgrade_msg_cache_limit),
                                 )
                             }
                             break
@@ -139,10 +143,10 @@ internal class ArtworkUpgradeController(
                     }
                     mutableState.update { it.copy(finished = true) }
                 } catch (error: CancellationException) {
-                    mutableState.update { it.copy(message = "Search stopped. Matches already found remain available to review.") }
+                    mutableState.update { it.copy(message = localized().getString(CommonR.string.artwork_upgrade_msg_stopped)) }
                     throw error
                 } catch (_: Exception) {
-                    mutableState.update { it.copy(message = "Could not read the library. Please try again.") }
+                    mutableState.update { it.copy(message = localized().getString(CommonR.string.artwork_upgrade_msg_library_error)) }
                 } finally {
                     mutableState.update { it.copy(scanning = false) }
                 }
@@ -186,7 +190,8 @@ internal class ArtworkUpgradeController(
             val result =
                 metadata.fetchArtistArtworkCandidatesDetailed(target.artist!!.name).getOrNull()
                     ?: error("Artist search unavailable")
-            return result.candidates.map { it to "Deezer artist catalogue" }
+            val sourceLabel = localized().getString(CommonR.string.artwork_source_deezer_artist)
+            return result.candidates.map { it to sourceLabel }
         }
         val result =
             metadata.searchAlbumArtwork(AlbumArtworkQuery(album.title, album.artist, album.year)).getOrNull()
@@ -274,33 +279,35 @@ internal class ArtworkUpgradeController(
                 checkedBytes(result)
                 if (result.target.album != null) {
                     val songs = library.getSongsByAlbumId(result.target.album.id).first()
-                    require(songs.isNotEmpty()) { "This album is no longer in the library." }
+                    require(songs.isNotEmpty()) { localized().getString(CommonR.string.artwork_upgrade_msg_album_missing) }
                     writeAccess(songs.map { it.uri }, {
                         withContext(Dispatchers.IO) { saveAlbum(result, songs) }
-                    }, { complete("Storage permission denied. Your artwork was not changed.") })
+                    }, { complete(localized().getString(CommonR.string.artwork_upgrade_msg_permission_denied)) })
                 } else {
                     val bytes = checkedBytes(result)
+                    val localizedContext = localized()
                     when (val outcome = artists.setCustomArtwork(result.target.artist!!.id, bytes)) {
-                        is AppResult.Success -> saved(result, "Higher-resolution artist photo saved.")
-                        is AppResult.Error -> complete(outcome.error.message)
+                        is AppResult.Success ->
+                            saved(result, localizedContext.getString(CommonR.string.artwork_upgrade_msg_artist_saved))
+                        is AppResult.Error -> complete(outcome.error.localizedMessage(localizedContext))
                     }
                 }
             } catch (error: CancellationException) {
-                complete("Saving was cancelled.")
+                complete(localized().getString(CommonR.string.artwork_upgrade_msg_saving_cancelled))
                 throw error
             } catch (error: Exception) {
-                complete(error.message ?: "Could not save the artwork. Please try again.")
+                complete(error.message ?: localized().getString(CommonR.string.artwork_upgrade_msg_save_failed))
             }
         }
     }
 
     private suspend fun checkedBytes(result: ArtworkUpgradeResult): ByteArray {
         val current = readOriginal(result.target)?.let(ArtworkUpgradeImages::inspect)
-        check(current?.hash == result.original.hash) { "The current artwork changed. Search again before replacing it." }
+        check(current?.hash == result.original.hash) { localized().getString(CommonR.string.artwork_upgrade_msg_original_changed) }
         val bytes = result.file.readBytes()
         val facts = ArtworkUpgradeImages.inspect(bytes)
         check(facts != null && facts.hash == result.replacement.hash && matches(result.original, facts)) {
-            "The preview expired or changed. Search again."
+            localized().getString(CommonR.string.artwork_upgrade_msg_preview_expired)
         }
         return bytes
     }
@@ -330,22 +337,30 @@ internal class ArtworkUpgradeController(
             result.target.album
                 ?.artworkUri
                 ?.let(ArtworkLoader::invalidate)
+            val localizedContext = localized()
+            val locale = AppLocaleManager.activeLocale(localizedContext)
             if (written > 0) {
                 library.requestRescanAfterChange()
                 saved(
                     result,
-                    "Higher-resolution cover saved to $written of ${songs.size} tracks. Different, unreadable or unwritable artwork was left unchanged.",
+                    localizedContext.getString(
+                        CommonR.string.artwork_upgrade_msg_album_saved,
+                        LocaleFormatters.formatInteger(written, locale),
+                        LocaleFormatters.formatInteger(songs.size, locale),
+                    ),
                 )
             } else {
-                complete("No tracks could be upgraded. Check file access and search again; current artwork was left unchanged.")
+                complete(localizedContext.getString(CommonR.string.artwork_upgrade_msg_none_upgraded))
             }
         } catch (error: CancellationException) {
-            complete("Saving was cancelled.")
+            complete(localized().getString(CommonR.string.artwork_upgrade_msg_saving_cancelled))
             throw error
         } catch (error: Exception) {
-            complete(error.message ?: "Could not save the cover.")
+            complete(error.message ?: localized().getString(CommonR.string.artwork_upgrade_msg_cover_save_failed))
         }
     }
+
+    private fun localized(): Context = AppLocaleManager.localizedContext(context)
 
     private fun saved(
         result: ArtworkUpgradeResult,

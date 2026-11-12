@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 /** An immutable generation snapshot. Library changes update rows, never regenerate its queue. */
 data class RadioStationContent(
@@ -61,7 +62,7 @@ class RadioStationViewModel internal constructor(
 
     private val _content = MutableStateFlow<RadioStationContent?>(null)
     val content = _content.asStateFlow()
-    private val _error = MutableStateFlow<String?>(null)
+    private val _error = MutableStateFlow<Int?>(null)
     val error = _error.asStateFlow()
     private var openAlbum: Long? = null
     private var loading: Job? = null
@@ -77,7 +78,7 @@ class RadioStationViewModel internal constructor(
                 try {
                     val snapshot = loader.load(albumId)
                     if (snapshot == null) {
-                        _error.value = "This station's album is no longer available."
+                        _error.value = CommonR.string.radio_error_album_missing
                         return@launch
                     }
                     val plan = snapshot.plan
@@ -92,7 +93,7 @@ class RadioStationViewModel internal constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
-                    _error.value = "Could not load this radio station. Try again."
+                    _error.value = CommonR.string.radio_error_load_failed
                 }
             }
     }

@@ -51,6 +51,8 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -60,6 +62,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.LyricsTimingAdjustment
@@ -101,9 +106,13 @@ internal fun LyricsOverlay(
             modifier = Modifier.fillMaxWidth().padding(start = Spacing.xl, end = Spacing.sm, top = Spacing.lg),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "Lyrics", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.queue_tab_lyrics),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
             IconButton(onClick = onClose) {
-                Icon(imageVector = Icons.Default.Close, contentDescription = "Close lyrics")
+                Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.lyrics_cd_close))
             }
         }
         // Everything below is keyed by the song: a track change starts from a fresh state.
@@ -144,14 +153,17 @@ internal fun SongLyricsView(
                 }
             if (current != null && actions != null) LyricsSourceBar(current, actions, onAdjust) { searching = true }
             if (canAdjust) {
+                val locale = AppLocaleManager.activeLocale(LocalContext.current)
                 TextButton(onClick = { adjusting = true }, modifier = Modifier.padding(start = Spacing.lg)) {
                     Text(
-                        if (current.offsetMs ==
-                            0L
-                        ) {
-                            "Not synced? Adjust timing"
+                        if (current.offsetMs == 0L) {
+                            stringResource(R.string.lyrics_adjust_timing_prompt)
                         } else {
-                            "Adjust timing · ${if (current.offsetMs > 0) "+" else ""}${current.offsetMs} ms"
+                            val sign = if (current.offsetMs > 0) "+" else ""
+                            stringResource(
+                                R.string.lyrics_adjust_timing_offset,
+                                sign + LocaleFormatters.formatInteger(current.offsetMs, locale),
+                            )
                         },
                     )
                 }
@@ -251,7 +263,7 @@ data class SongLyrics(
 private fun NoLyrics() {
     Box(modifier = Modifier.fillMaxSize().padding(Spacing.xl), contentAlignment = Alignment.Center) {
         Text(
-            text = "This file has no embedded lyrics.",
+            text = stringResource(R.string.lyrics_no_embedded),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -335,7 +347,7 @@ private fun SyncedLyrics(
             modifier = Modifier.align(Alignment.BottomEnd).padding(Spacing.lg),
         ) {
             SmallFloatingActionButton(onClick = { following = true }) {
-                Icon(imageVector = Icons.Default.MyLocation, contentDescription = "Back to current lyric")
+                Icon(imageVector = Icons.Default.MyLocation, contentDescription = stringResource(R.string.lyrics_cd_back_to_current))
             }
         }
     }

@@ -1,7 +1,10 @@
 package com.erhu.erhu.feature.library
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.database.repository.PlaylistRepository
 import com.erhu.erhu.core.model.CollectionRef
@@ -10,6 +13,7 @@ import com.erhu.erhu.core.model.PlaylistEntry
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,12 +25,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 @HiltViewModel
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlaylistsViewModel
     @Inject
     constructor(
+        @param:ApplicationContext private val context: Context,
         private val playlistRepository: PlaylistRepository,
         private val playbackRepository: PlaybackRepository,
     ) : ViewModel() {
@@ -83,9 +89,9 @@ class PlaylistsViewModel
                             if (thenAddSongs.isNotEmpty()) {
                                 addSongsToPlaylist(result.data, name.trim(), thenAddSongs)
                             } else {
-                                "Created \"${name.trim()}\""
+                                localized().getString(CommonR.string.playlist_created_message, name.trim())
                             }
-                        is AppResult.Error -> result.error.message
+                        is AppResult.Error -> result.error.localizedMessage(localized())
                     }
                 report(message, onResult)
             }
@@ -103,8 +109,13 @@ class PlaylistsViewModel
             viewModelScope.launch {
                 val message =
                     when (val result = playlistRepository.createPlaylistWithSongs(name, songs.map { it.id })) {
-                        is AppResult.Success -> "Saved ${countLabel(songs.size, "song")} to \"${name.trim()}\""
-                        is AppResult.Error -> result.error.message
+                        is AppResult.Success ->
+                            localized().getString(
+                                CommonR.string.playlist_saved_songs_message,
+                                songCountText(context, songs.size),
+                                name.trim(),
+                            )
+                        is AppResult.Error -> result.error.localizedMessage(localized())
                     }
                 onResult(message)
             }
@@ -113,8 +124,9 @@ class PlaylistsViewModel
         fun deletePlaylist(playlist: Playlist) {
             viewModelScope.launch {
                 when (val result = playlistRepository.deletePlaylist(playlist.id)) {
-                    is AppResult.Success -> _userMessage.value = "Deleted \"${playlist.name}\""
-                    is AppResult.Error -> _userMessage.value = result.error.message
+                    is AppResult.Success ->
+                        _userMessage.value = localized().getString(CommonR.string.playlist_deleted_message, playlist.name)
+                    is AppResult.Error -> _userMessage.value = result.error.localizedMessage(localized())
                 }
             }
         }
@@ -127,6 +139,8 @@ class PlaylistsViewModel
         ) {
             viewModelScope.launch { report(addSongsToPlaylist(playlist.id, playlist.name, songs), onResult) }
         }
+
+        private fun localized(): Context = AppLocaleManager.localizedContext(context)
 
         private fun report(
             message: String,
@@ -148,20 +162,27 @@ class PlaylistsViewModel
             for (song in songs) {
                 when (val result = playlistRepository.addSong(playlistId, song.id)) {
                     is AppResult.Success -> if (result.data) added++
-                    is AppResult.Error -> return result.error.message
+                    is AppResult.Error -> return result.error.localizedMessage(localized())
                 }
             }
             return when {
-                added == 0 -> "Already in \"$playlistName\""
-                songs.size == 1 -> "Added to \"$playlistName\""
-                else -> "Added ${countLabel(added, "song")} to \"$playlistName\""
+                added == 0 -> localized().getString(CommonR.string.playlist_already_in_message, playlistName)
+                songs.size == 1 -> localized().getString(CommonR.string.playlist_added_single_message, playlistName)
+                else ->
+                    localized().getString(
+                        CommonR.string.playlist_added_multiple_message,
+                        songCountText(context, added),
+                        playlistName,
+                    )
             }
         }
 
         fun renameOpenPlaylist(name: String) {
             val playlistId = openPlaylistId.value ?: return
             viewModelScope.launch {
-                (playlistRepository.renamePlaylist(playlistId, name) as? AppResult.Error)?.let { _userMessage.value = it.error.message }
+                (playlistRepository.renamePlaylist(playlistId, name) as? AppResult.Error)?.let {
+                    _userMessage.value = it.error.localizedMessage(localized())
+                }
             }
         }
 
@@ -170,8 +191,7 @@ class PlaylistsViewModel
             val playlistId = openPlaylistId.value ?: return
             viewModelScope.launch {
                 (playlistRepository.setPlaylistArtwork(playlistId, imageBytes) as? AppResult.Error)?.let {
-                    _userMessage.value =
-                        it.error.message
+                    _userMessage.value = it.error.localizedMessage(localized())
                 }
             }
         }
@@ -179,7 +199,9 @@ class PlaylistsViewModel
         fun clearOpenPlaylistArtwork() {
             val playlistId = openPlaylistId.value ?: return
             viewModelScope.launch {
-                (playlistRepository.clearPlaylistArtwork(playlistId) as? AppResult.Error)?.let { _userMessage.value = it.error.message }
+                (playlistRepository.clearPlaylistArtwork(playlistId) as? AppResult.Error)?.let {
+                    _userMessage.value = it.error.localizedMessage(localized())
+                }
             }
         }
 

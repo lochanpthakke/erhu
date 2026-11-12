@@ -47,11 +47,13 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.R
 import com.erhu.erhu.core.designsystem.foundation.Motion
 import kotlin.math.PI
 import kotlin.math.sin
+import com.erhu.erhu.core.common.R as CommonR
 
 private val Pearl = Color(0xffd5dedf)
 private val Ocean = Color(0xff547586)
@@ -134,7 +136,7 @@ private fun IntroductionLogo(phase: State<Float>) {
     val logoShape = remember { RoundedCornerShape(28.dp) }
     Image(
         painterResource(R.drawable.erhu_logo),
-        "erhu",
+        stringResource(R.string.app_name),
         Modifier.fillMaxSize(.46f).graphicsLayer {
             val light = sin(phase.value * (2 * PI).toFloat())
             translationY = light * 2.dp.toPx()
@@ -154,10 +156,11 @@ private fun IntroductionArtwork(
 ) {
     val shape = remember { RoundedCornerShape(18.dp) }
     val painter = painterResource(preview.image)
+    val label = stringResource(preview.labelRes)
     val ratio = (painter.intrinsicSize.width / painter.intrinsicSize.height).takeIf { it.isFinite() && it > 0f } ?: 1f
     Image(
         painter,
-        "${preview.label} preview",
+        stringResource(CommonR.string.onboarding_cd_preview, label),
         Modifier
             .aspectRatio(ratio, matchHeightConstraintsFirst = true)
             .graphicsLayer {

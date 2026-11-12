@@ -250,7 +250,13 @@ fun SearchField(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (value.isNotEmpty()) {
                             IconButton(onClick = { onValueChange("") }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription =
+                                        androidx.compose.ui.res.stringResource(
+                                            com.erhu.erhu.core.common.R.string.cd_clear_search,
+                                        ),
+                                )
                             }
                         }
                         actions?.invoke(this)

@@ -4,8 +4,10 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.StringRes
 import androidx.core.content.FileProvider
 import com.erhu.erhu.core.network.update.UpdateDownloadState
+import com.erhu.erhu.core.common.R as CommonR
 
 internal enum class InstallPreparation { MISSING_FILE, PERMISSION_REQUIRED, READY }
 
@@ -19,11 +21,12 @@ internal fun prepareUpdateInstall(
         else -> InstallPreparation.READY
     }
 
-internal fun installationResultMessage(code: Int): String =
+@StringRes
+internal fun installationResultMessageRes(code: Int): Int =
     when (code) {
-        Activity.RESULT_OK -> "Update installed successfully."
-        Activity.RESULT_CANCELED -> "Installation cancelled. The verified APK is still ready; tap Install Update to retry."
-        else -> "Android could not install the update. Check installation permission and try again."
+        Activity.RESULT_OK -> CommonR.string.update_install_success
+        Activity.RESULT_CANCELED -> CommonR.string.update_install_cancelled
+        else -> CommonR.string.update_install_failed
     }
 
 @Suppress("DEPRECATION")

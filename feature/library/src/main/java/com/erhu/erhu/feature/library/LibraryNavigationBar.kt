@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -48,6 +49,7 @@ import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.designsystem.theme.liquidGlass
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Selected icon scale: a small lift, not a pop. */
 private const val SELECTED_ICON_SCALE = 1.08f
@@ -205,9 +207,15 @@ private fun CompactSectionButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        val sectionLabel = stringResource(section.labelRes)
         Icon(
             imageVector = if (!hasCurrentSong) Icons.Default.Shuffle else section.icon,
-            contentDescription = if (!hasCurrentSong) "Shuffle play library" else "Expand section bar (${section.label})",
+            contentDescription =
+                if (!hasCurrentSong) {
+                    stringResource(CommonR.string.library_cd_shuffle_play)
+                } else {
+                    stringResource(CommonR.string.library_cd_expand_section_bar, sectionLabel)
+                },
             tint = MaterialTheme.colorScheme.onSurface,
         )
     }
@@ -231,6 +239,7 @@ private fun LibraryNavigationItem(
     val accent = if (ErhuGlass.isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary
     val quiet = MaterialTheme.colorScheme.onSurfaceVariant
     val interactionSource = remember { MutableInteractionSource() }
+    val sectionLabel = stringResource(section.labelRes)
     Box(
         modifier =
             modifier
@@ -243,7 +252,7 @@ private fun LibraryNavigationItem(
                     role = Role.Tab,
                 ).padding(vertical = Spacing.xs)
                 .clearAndSetSemantics {
-                    contentDescription = section.label
+                    contentDescription = sectionLabel
                 },
         contentAlignment = Alignment.Center,
     ) {
@@ -256,35 +265,45 @@ private fun LibraryNavigationItem(
                     .selectionJiggle(selected, identity = section, kickWhen = { it == true }),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(ICON_BOX_WIDTH, ICON_BOX_HEIGHT)
-                        .graphicsLayer {
-                            val scale = 1f + (SELECTED_ICON_SCALE - 1f) * emphasis()
-                            scaleX = scale
-                            scaleY = scale
-                        },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = section.icon,
-                    contentDescription = null,
-                    tint = quiet,
-                    modifier = Modifier.graphicsLayer { alpha = 1f - emphasis() },
-                )
-                Icon(
-                    imageVector = section.selectedIcon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.graphicsLayer { alpha = emphasis() },
-                )
-            }
+            NavigationSectionIcon(section, quiet, accent, emphasis)
             Box(contentAlignment = Alignment.Center) {
-                NavigationLabel(section.label, quiet, Modifier.graphicsLayer { alpha = 1f - emphasis() })
-                NavigationLabel(section.label, accent, Modifier.graphicsLayer { alpha = emphasis() })
+                NavigationLabel(sectionLabel, quiet, Modifier.graphicsLayer { alpha = 1f - emphasis() })
+                NavigationLabel(sectionLabel, accent, Modifier.graphicsLayer { alpha = emphasis() })
             }
         }
+    }
+}
+
+@Composable
+private fun NavigationSectionIcon(
+    section: LibrarySection,
+    quiet: Color,
+    accent: Color,
+    emphasis: () -> Float,
+) {
+    Box(
+        modifier =
+            Modifier
+                .size(ICON_BOX_WIDTH, ICON_BOX_HEIGHT)
+                .graphicsLayer {
+                    val scale = 1f + (SELECTED_ICON_SCALE - 1f) * emphasis()
+                    scaleX = scale
+                    scaleY = scale
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = section.icon,
+            contentDescription = null,
+            tint = quiet,
+            modifier = Modifier.graphicsLayer { alpha = 1f - emphasis() },
+        )
+        Icon(
+            imageVector = section.selectedIcon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.graphicsLayer { alpha = emphasis() },
+        )
     }
 }
 

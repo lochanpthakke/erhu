@@ -58,8 +58,10 @@ class TransferRouter(
     private val registry: TransferRegistry,
     private val limits: TransferLimits = TransferLimits(),
     private val events: TransferEvents = TransferEvents.NONE,
+    private val strings: TransferStrings = TransferStrings(),
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
+    private val routerStrings = strings.router
     private val uploadSlots = Semaphore(limits.maxConcurrentUploads)
 
     /** The response to send, or null when the connection is already gone (nothing can be sent). */
@@ -73,18 +75,19 @@ class TransferRouter(
                     "host",
                 ).equals(hostPort, ignoreCase = true)
         ) {
-            return HttpResponse.error(HttpStatus.MISDIRECTED_REQUEST, "Wrong host")
+            return HttpResponse.error(HttpStatus.MISDIRECTED_REQUEST, routerStrings.wrongHost)
         }
         return when (request.path) {
             "/" -> if (request.method == "GET" || request.method == "HEAD") page() else methodNotAllowed()
             "/api/pair", "/api/check", "/api/upload" -> api(request, body)
-            else -> HttpResponse.error(HttpStatus.NOT_FOUND, "Not found")
+            else -> HttpResponse.error(HttpStatus.NOT_FOUND, routerStrings.notFound)
         }
     }
 
-    private fun page(): HttpResponse = HttpResponse(HttpStatus.OK, "text/html; charset=utf-8", UploadPage.HTML.toByteArray(Charsets.UTF_8))
+    private fun page(): HttpResponse =
+        HttpResponse(HttpStatus.OK, "text/html; charset=utf-8", UploadPage.render(strings.web).toByteArray(Charsets.UTF_8))
 
-    private fun methodNotAllowed() = HttpResponse.error(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed")
+    private fun methodNotAllowed() = HttpResponse.error(HttpStatus.METHOD_NOT_ALLOWED, routerStrings.methodNotAllowed)
 
     private fun api(
         request: HttpRequest,
@@ -93,13 +96,13 @@ class TransferRouter(
         val origin = request.header("origin")
         return when {
             request.method != "POST" -> methodNotAllowed()
-            origin != null && origin != "http://$hostPort" -> HttpResponse.error(HttpStatus.FORBIDDEN, "Cross-origin request refused")
-            request.header(CLIENT_HEADER) != CLIENT_VALUE -> HttpResponse.error(HttpStatus.FORBIDDEN, "Use the transfer page")
+            origin != null && origin != "http://$hostPort" -> HttpResponse.error(HttpStatus.FORBIDDEN, routerStrings.crossOriginRefused)
+            request.header(CLIENT_HEADER) != CLIENT_VALUE -> HttpResponse.error(HttpStatus.FORBIDDEN, routerStrings.useTransferPage)
             request.path == "/api/pair" -> pair(request)
             !session.isAuthorized(
                 request.header(TOKEN_HEADER),
                 clock(),
-            ) -> HttpResponse.error(HttpStatus.UNAUTHORIZED, "This transfer session has ended or the link is wrong")
+            ) -> HttpResponse.error(HttpStatus.UNAUTHORIZED, routerStrings.sessionEndedOrWrongLink)
             request.path == "/api/check" -> check(request)
             else -> upload(request, body)
         }
@@ -108,13 +111,13 @@ class TransferRouter(
     private fun pair(request: HttpRequest): HttpResponse =
         when (val result = session.pair(request.header(CODE_HEADER), clock())) {
             is PairResult.Paired -> HttpResponse.json(HttpStatus.OK, "status" to "ok", "token" to result.token)
-            PairResult.WrongCode -> HttpResponse.error(HttpStatus.FORBIDDEN, "Wrong code. Check the code shown on the phone.")
+            PairResult.WrongCode -> HttpResponse.error(HttpStatus.FORBIDDEN, routerStrings.wrongCode)
             PairResult.Locked ->
                 HttpResponse.error(
                     HttpStatus.TOO_MANY_REQUESTS,
-                    "Too many wrong codes. Scan the QR code, or stop and start the transfer on the phone.",
+                    routerStrings.tooManyWrongCodes,
                 )
-            PairResult.Closed -> HttpResponse.error(HttpStatus.UNAUTHORIZED, "This transfer session has ended")
+            PairResult.Closed -> HttpResponse.error(HttpStatus.UNAUTHORIZED, routerStrings.sessionEnded)
         }
 
     @Suppress("ReturnCount")
@@ -122,11 +125,11 @@ class TransferRouter(
         val name = TransferFiles.sanitize(decodedName(request)) ?: return unsupported()
         val size =
             request.header(SIZE_HEADER)?.toLongOrNull()?.takeIf { it > 0 }
-                ?: return HttpResponse.error(HttpStatus.BAD_REQUEST, "Missing file size")
+                ?: return HttpResponse.error(HttpStatus.BAD_REQUEST, routerStrings.missingFileSize)
         if (size > limits.maxFileBytes) return tooLarge()
         return when (val result = sink.check(name, size)) {
             is UploadCheck.Accept -> HttpResponse.json(HttpStatus.OK, "status" to "ok", "savedName" to result.savedName)
-            UploadCheck.Duplicate -> HttpResponse.json(HttpStatus.OK, "status" to "duplicate", "message" to DUPLICATE_MESSAGE)
+            UploadCheck.Duplicate -> HttpResponse.json(HttpStatus.OK, "status" to "duplicate", "message" to routerStrings.duplicateMessage)
             UploadCheck.InsufficientSpace -> noSpace()
         }
     }
@@ -136,14 +139,14 @@ class TransferRouter(
         request: HttpRequest,
         body: InputStream,
     ): HttpResponse? {
-        val length = request.contentLength ?: return HttpResponse.error(HttpStatus.LENGTH_REQUIRED, "Content-Length required")
+        val length = request.contentLength ?: return HttpResponse.error(HttpStatus.LENGTH_REQUIRED, routerStrings.contentLengthRequired)
         if (length > limits.maxFileBytes) return tooLarge()
-        if (length == 0L) return HttpResponse.error(HttpStatus.BAD_REQUEST, "Empty file")
+        if (length == 0L) return HttpResponse.error(HttpStatus.BAD_REQUEST, routerStrings.emptyFile)
         val name = TransferFiles.sanitize(decodedName(request)) ?: return unsupported()
         if (!uploadSlots.tryAcquire()) {
             return HttpResponse.error(
                 HttpStatus.TOO_MANY_REQUESTS,
-                "Busy: the phone is already receiving files, this one will be retried",
+                routerStrings.busyRetry,
             )
         }
         events.onUploadStarted()
@@ -158,21 +161,21 @@ class TransferRouter(
                             length,
                         )
                     ) {
-                        HttpResponse.json(HttpStatus.OK, "status" to "duplicate", "message" to DUPLICATE_MESSAGE)
+                        HttpResponse.json(HttpStatus.OK, "status" to "duplicate", "message" to routerStrings.duplicateMessage)
                     } else {
                         null
                     }
                 }
                 PendingUploadOrDuplicate.InsufficientSpace -> {
-                    registry.failed(registry.begin(name, length), NO_SPACE_MESSAGE)
+                    registry.failed(registry.begin(name, length), routerStrings.noSpaceMessage)
                     noSpace()
                 }
             }
         } catch (
             @Suppress("SwallowedException") e: IOException,
         ) {
-            registry.failed(registry.begin(name, length), "Could not create the file on the phone: ${e.message}")
-            return HttpResponse.error(HttpStatus.INTERNAL_ERROR, "Could not create the file on the phone")
+            registry.failed(registry.begin(name, length), routerStrings.createFailedWithReason(e.message.orEmpty()))
+            return HttpResponse.error(HttpStatus.INTERNAL_ERROR, routerStrings.createFailed)
         } finally {
             uploadSlots.release()
             events.onUploadFinished()
@@ -196,7 +199,7 @@ class TransferRouter(
             if (headerLength < 0) return cancelled(upload, id)
             if (!TransferFiles.looksLikeAudio(upload.savedName, buffer, headerLength)) {
                 upload.abort()
-                registry.failed(id, "Not a valid ${TransferFiles.extensionOf(upload.savedName).uppercase()} audio file")
+                registry.failed(id, routerStrings.invalidAudioFormat(TransferFiles.extensionOf(upload.savedName).uppercase()))
                 return if (skip(body, length - headerLength)) unsupported() else null
             }
             if (!writeOrFail(upload, id, buffer, headerLength)) return writeFailed(body, length - headerLength)
@@ -225,8 +228,8 @@ class TransferRouter(
             HttpResponse.json(HttpStatus.OK, "status" to "saved", "savedName" to upload.savedName)
         } catch (e: IOException) {
             upload.abort()
-            registry.failed(id, "Received, but the phone could not finish saving it: ${e.message}")
-            HttpResponse.error(HttpStatus.INTERNAL_ERROR, "The phone could not finish saving the file")
+            registry.failed(id, routerStrings.finishSaveFailedWithReason(e.message.orEmpty()))
+            HttpResponse.error(HttpStatus.INTERNAL_ERROR, routerStrings.finishSaveFailed)
         }
     }
 
@@ -241,15 +244,14 @@ class TransferRouter(
             true
         } catch (e: IOException) {
             upload.abort()
-            registry.failed(id, "Could not write to the phone's storage (full or unavailable): ${e.message}")
+            registry.failed(id, routerStrings.writeFailedWithReason(e.message.orEmpty()))
             false
         }
 
     private fun writeFailed(
         body: InputStream,
         remaining: Long,
-    ): HttpResponse? =
-        if (skip(body, remaining)) HttpResponse.error(HttpStatus.INSUFFICIENT_STORAGE, "The phone could not store the file") else null
+    ): HttpResponse? = if (skip(body, remaining)) HttpResponse.error(HttpStatus.INSUFFICIENT_STORAGE, routerStrings.storeFailed) else null
 
     private fun cancelled(
         upload: PendingUpload,
@@ -270,13 +272,11 @@ class TransferRouter(
             }
         }
 
-    private fun unsupported() =
-        HttpResponse.error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Not a supported audio file (MP3, FLAC, M4A, AAC, OGG, Opus or WAV)")
+    private fun unsupported() = HttpResponse.error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, routerStrings.unsupportedFormat)
 
-    private fun tooLarge() =
-        HttpResponse.error(HttpStatus.PAYLOAD_TOO_LARGE, "File is larger than ${limits.maxFileBytes / BYTES_PER_MB} MB")
+    private fun tooLarge() = HttpResponse.error(HttpStatus.PAYLOAD_TOO_LARGE, routerStrings.tooLargeMb(limits.maxFileBytes / BYTES_PER_MB))
 
-    private fun noSpace() = HttpResponse.error(HttpStatus.INSUFFICIENT_STORAGE, NO_SPACE_MESSAGE)
+    private fun noSpace() = HttpResponse.error(HttpStatus.INSUFFICIENT_STORAGE, routerStrings.noSpaceMessage)
 
     companion object {
         const val TOKEN_HEADER = "X-Transfer-Token"
@@ -291,8 +291,6 @@ class TransferRouter(
         private const val BUFFER_BYTES = 64 * 1024
         private const val PROGRESS_STEP_BYTES = 256L * 1024
         private const val BYTES_PER_MB = 1024L * 1024
-        private const val DUPLICATE_MESSAGE = "Already on the phone: skipped, nothing was overwritten"
-        private const val NO_SPACE_MESSAGE = "Not enough free space on the phone"
 
         /** Reads up to [count] bytes into [buffer]; returns how many, or -1 if the stream ended first. */
         internal fun readAtMost(

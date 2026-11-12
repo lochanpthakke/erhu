@@ -1,5 +1,6 @@
 package com.erhu.erhu.feature.library
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import com.erhu.erhu.core.designsystem.R
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * The primary destinations, switched by [LibraryNavigationBar] (Search is the
@@ -21,13 +23,15 @@ import com.erhu.erhu.core.designsystem.R
  */
 enum class LibrarySection(
     val label: String,
+    @param:StringRes val labelRes: Int,
     /** The page's own title in its header; the navigation keeps [label]. */
     val pageTitle: String = label,
+    @param:StringRes val pageTitleRes: Int = labelRes,
 ) {
-    TRACKS("Home"),
-    ALBUMS("Albums"),
-    LIBRARY("Library"),
-    VYBE("VYBE"),
+    TRACKS("Home", CommonR.string.library_section_home),
+    ALBUMS("Albums", CommonR.string.library_section_albums),
+    LIBRARY("Library", CommonR.string.library_section_library),
+    VYBE("VYBE", CommonR.string.library_section_vybe),
     ;
 
     val icon: ImageVector
@@ -52,10 +56,11 @@ enum class LibrarySection(
 /** The full shelves the Library overview opens with "More". */
 enum class LibraryShelf(
     val label: String,
+    @param:StringRes val labelRes: Int,
 ) {
-    PLAYLISTS("Playlists"),
-    FAVORITES("Favorites"),
-    ARTISTS("Artists"),
+    PLAYLISTS("Playlists", CommonR.string.library_shelf_playlists),
+    FAVORITES("Favorites", CommonR.string.library_shelf_favorites),
+    ARTISTS("Artists", CommonR.string.library_shelf_artists),
     ;
 
     val icon: ImageVector

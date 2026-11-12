@@ -14,6 +14,7 @@ import androidx.annotation.RequiresApi
 import com.erhu.erhu.feature.transfer.server.PendingUpload
 import com.erhu.erhu.feature.transfer.server.PendingUploadOrDuplicate
 import com.erhu.erhu.feature.transfer.server.TransferFiles
+import com.erhu.erhu.feature.transfer.server.TransferSinkStrings
 import com.erhu.erhu.feature.transfer.server.UploadCheck
 import com.erhu.erhu.feature.transfer.server.UploadSink
 import java.io.File
@@ -36,6 +37,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 internal class MediaStoreUploadSink(
     private val context: Context,
+    private val strings: TransferSinkStrings = TransferSinkStrings(),
 ) : UploadSink {
     private val resolver: ContentResolver = context.contentResolver
     private val reserved = mutableSetOf<String>()
@@ -69,7 +71,7 @@ internal class MediaStoreUploadSink(
                     throw e
                 } catch (e: SecurityException) {
                     reserved -= check.savedName.lowercase()
-                    throw IOException("No permission to write to Music/$FOLDER", e)
+                    throw IOException(strings.noWritePermission(FOLDER), e)
                 }
             }
         }
@@ -143,10 +145,10 @@ internal class MediaStoreUploadSink(
                 put(MediaStore.MediaColumns.RELATIVE_PATH, RELATIVE_PATH)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
-        val uri = resolver.insert(collection(), values) ?: throw IOException("The phone refused to create the file")
+        val uri = resolver.insert(collection(), values) ?: throw IOException(strings.createRefused)
         val stream =
             try {
-                resolver.openOutputStream(uri, "w") ?: throw IOException("Could not open the file for writing")
+                resolver.openOutputStream(uri, "w") ?: throw IOException(strings.openFailed)
             } catch (e: IOException) {
                 resolver.delete(uri, null, null)
                 throw e
@@ -159,7 +161,7 @@ internal class MediaStoreUploadSink(
         return object : StreamUpload(actualName, stream) {
             override fun publish() {
                 val done = ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
-                if (resolver.update(uri, done, null, null) != 1) throw IOException("Could not publish the file")
+                if (resolver.update(uri, done, null, null) != 1) throw IOException(strings.publishFailed)
             }
 
             override fun discard() {
@@ -177,13 +179,13 @@ internal class MediaStoreUploadSink(
 
     private fun openLegacy(name: String): PendingUpload {
         val dir = legacyDir()
-        if (!dir.isDirectory && !dir.mkdirs()) throw IOException("Could not create Music/$FOLDER")
+        if (!dir.isDirectory && !dir.mkdirs()) throw IOException(strings.mkdirFailed(FOLDER))
         val part = File(dir, ".$name.${System.nanoTime()}$PART_SUFFIX")
         val stream = FileOutputStream(part)
         return object : StreamUpload(name, stream) {
             override fun publish() {
                 val target = File(dir, name)
-                if (target.exists() || !part.renameTo(target)) throw IOException("Could not finish the file")
+                if (target.exists() || !part.renameTo(target)) throw IOException(strings.finishFailed)
                 MediaScannerConnection.scanFile(context, arrayOf(target.path), arrayOf(TransferFiles.mimeTypeOf(name)), null)
             }
 

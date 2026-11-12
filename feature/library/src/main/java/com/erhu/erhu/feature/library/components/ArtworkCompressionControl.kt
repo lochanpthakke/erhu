@@ -12,7 +12,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.model.ArtworkCompressionState
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 internal fun ArtworkCompressionControl(
@@ -21,45 +25,76 @@ internal fun ArtworkCompressionControl(
     onCancel: () -> Unit,
 ) {
     val context = LocalContext.current
+    val localizedContext = AppLocaleManager.localizedContext(context)
+    val locale = AppLocaleManager.activeLocale(localizedContext)
     val compressedBytes = state.compressedBytes
     Column {
         when {
             state.running -> {
-                Text("${state.message} ${state.progress}%", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(
+                        CommonR.string.live_cover_compress_progress_percent,
+                        state.message,
+                        LocaleFormatters.formatInteger(state.progress, locale),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Row {
                     LinearProgressIndicator(
                         progress = { state.progress.coerceIn(0, 100) / 100f },
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onCancel) { Text("Cancel") }
+                    TextButton(onClick = onCancel) { Text(stringResource(CommonR.string.action_cancel)) }
                 }
             }
             compressedBytes != null -> {
-                val saved = state.originalBytes - compressedBytes
-                val percent = if (state.originalBytes > 0) 100.0 * saved / state.originalBytes else 0.0
-                Text(
-                    "${Formatter.formatShortFileSize(context, state.originalBytes)} → " +
-                        Formatter.formatShortFileSize(context, compressedBytes),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    "Saved ${Formatter.formatShortFileSize(context, saved)} (${"%.1f".format(percent)}%)",
-                    style = MaterialTheme.typography.bodySmall,
+                ArtworkCompressionSummary(
+                    localizedContext = localizedContext,
+                    locale = locale,
+                    originalBytes = state.originalBytes,
+                    compressedBytes = compressedBytes,
                 )
             }
             else -> {
                 if (state.message.isNotBlank()) Text(state.message, style = MaterialTheme.typography.bodySmall)
                 if (state.available) {
                     Text(
-                        "Optional: smaller HEVC video at the same resolution. The square cover is replaced only after validation.",
+                        stringResource(CommonR.string.live_cover_compress_full_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     FilledTonalButton(onClick = onCompress, modifier = Modifier.fillMaxWidth()) {
-                        Text("Compress square cover")
+                        Text(stringResource(CommonR.string.live_cover_compress_action))
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ArtworkCompressionSummary(
+    localizedContext: android.content.Context,
+    locale: java.util.Locale,
+    originalBytes: Long,
+    compressedBytes: Long,
+) {
+    val saved = originalBytes - compressedBytes
+    val percent = if (originalBytes > 0) 100.0 * saved / originalBytes else 0.0
+    Text(
+        stringResource(
+            CommonR.string.live_cover_compress_progress,
+            Formatter.formatShortFileSize(localizedContext, originalBytes),
+            Formatter.formatShortFileSize(localizedContext, compressedBytes),
+        ),
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Text(
+        stringResource(
+            CommonR.string.live_cover_compress_saved,
+            Formatter.formatShortFileSize(localizedContext, saved),
+            LocaleFormatters.formatDecimal(percent, 1, locale),
+        ),
+        style = MaterialTheme.typography.bodySmall,
+    )
 }

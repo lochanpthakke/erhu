@@ -141,7 +141,10 @@ fun MiniPlayer(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SongArtwork(
                             song = track,
-                            contentDescription = "Album artwork",
+                            contentDescription =
+                                androidx.compose.ui.res.stringResource(
+                                    com.erhu.erhu.core.common.R.string.cd_album_artwork,
+                                ),
                             modifier =
                                 Modifier
                                     .onGloballyPositioned { coordinates -> transition?.miniArtworkBounds = coordinates.boundsInRoot() }
@@ -184,7 +187,9 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Previous track",
+                        contentDescription =
+                            androidx.compose.ui.res
+                                .stringResource(com.erhu.erhu.core.common.R.string.cd_previous_track),
                     )
                 }
 
@@ -200,7 +205,14 @@ fun MiniPlayer(
                     SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
                         Icon(
                             imageVector = icon,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            contentDescription =
+                                androidx.compose.ui.res.stringResource(
+                                    if (isPlaying) {
+                                        com.erhu.erhu.core.common.R.string.cd_pause
+                                    } else {
+                                        com.erhu.erhu.core.common.R.string.cd_play
+                                    },
+                                ),
                         )
                     }
                 }
@@ -212,7 +224,9 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next track",
+                        contentDescription =
+                            androidx.compose.ui.res
+                                .stringResource(com.erhu.erhu.core.common.R.string.cd_next_track),
                     )
                 }
             }

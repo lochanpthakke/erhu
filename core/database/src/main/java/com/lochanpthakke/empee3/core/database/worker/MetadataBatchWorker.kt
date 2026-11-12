@@ -14,6 +14,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.database.dao.MetadataProcessingDao
 import com.erhu.erhu.core.database.dao.SongDao
@@ -23,6 +24,7 @@ import com.erhu.erhu.core.database.usecase.ProcessSingleTrackUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import com.erhu.erhu.core.common.R as CommonR
 
 @HiltWorker
 class MetadataBatchWorker
@@ -171,11 +173,17 @@ class MetadataBatchWorker
                         android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
                     )
                 }
-            val text = "Metadata repair finished ($successCount of $totalCount fixed). Tap to view and apply."
+            val localizedContext = AppLocaleManager.localizedContext(appContext)
+            val text =
+                localizedContext.getString(
+                    CommonR.string.metadata_worker_complete_text,
+                    successCount,
+                    totalCount,
+                )
             val notification =
                 NotificationCompat
                     .Builder(appContext, CHANNEL_ID)
-                    .setContentTitle("Metadata Repair Complete")
+                    .setContentTitle(localizedContext.getString(CommonR.string.metadata_worker_complete_title))
                     .setContentText(text)
                     .setSmallIcon(android.R.drawable.ic_popup_sync)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -195,22 +203,29 @@ class MetadataBatchWorker
             totalCount: Int,
             title: String,
         ): ForegroundInfo {
+            val localizedContext = AppLocaleManager.localizedContext(appContext)
             val cancelIntent =
                 androidx.work.WorkManager
                     .getInstance(appContext)
                     .createCancelPendingIntent(id)
-            val text = "Processed $processedCount of $totalCount tracks"
+            val text =
+                localizedContext.resources.getQuantityString(
+                    CommonR.plurals.metadata_worker_progress_text,
+                    totalCount,
+                    processedCount,
+                    totalCount,
+                )
             val notification =
                 NotificationCompat
                     .Builder(appContext, CHANNEL_ID)
-                    .setContentTitle("Metadata Editor Repair")
+                    .setContentTitle(localizedContext.getString(CommonR.string.metadata_worker_progress_title))
                     .setContentText(text)
                     .setSubText(title)
                     .setSmallIcon(android.R.drawable.ic_popup_sync)
                     .setOngoing(true)
                     .setOnlyAlertOnce(true)
                     .setProgress(totalCount, processedCount, totalCount == 0)
-                    .addAction(android.R.drawable.ic_delete, "Cancel", cancelIntent)
+                    .addAction(android.R.drawable.ic_delete, localizedContext.getString(CommonR.string.action_cancel), cancelIntent)
                     .build()
 
             return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -226,13 +241,14 @@ class MetadataBatchWorker
 
         private fun createNotificationChannel() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val localizedContext = AppLocaleManager.localizedContext(appContext)
                 val channel =
                     NotificationChannel(
                         CHANNEL_ID,
-                        "Metadata Editor Progress",
+                        localizedContext.getString(CommonR.string.metadata_worker_channel_name),
                         NotificationManager.IMPORTANCE_LOW,
                     ).apply {
-                        description = "Shows progress during batch metadata cleaning"
+                        description = localizedContext.getString(CommonR.string.metadata_worker_channel_description)
                     }
                 val notificationManager =
                     appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

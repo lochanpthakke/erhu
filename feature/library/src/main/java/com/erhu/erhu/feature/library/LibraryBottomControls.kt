@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.component.BottomChrome
@@ -33,6 +34,7 @@ import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.designsystem.theme.glassIndication
 import com.erhu.erhu.core.designsystem.theme.glassPressEffect
 import com.erhu.erhu.core.designsystem.theme.liquidGlass
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * The library's bottom control row: the section navigation and, beside it, a
@@ -104,7 +106,11 @@ internal fun LibrarySearchButton(
                     ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(imageVector = Icons.Default.Search, contentDescription = "Search library", tint = iconColor)
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = stringResource(CommonR.string.library_cd_search),
+                tint = iconColor,
+            )
         }
     }
 }

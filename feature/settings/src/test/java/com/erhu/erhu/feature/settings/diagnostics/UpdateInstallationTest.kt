@@ -1,8 +1,8 @@
 package com.erhu.erhu.feature.settings.diagnostics
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.erhu.erhu.core.common.R as CommonR
 
 class UpdateInstallationTest {
     @Test fun `permission denial and a missing cached APK cannot launch installation`() {
@@ -10,10 +10,10 @@ class UpdateInstallationTest {
         assertEquals(InstallPreparation.MISSING_FILE, prepareUpdateInstall(false, true))
         assertEquals(InstallPreparation.READY, prepareUpdateInstall(true, true))
     }
+
     @Test fun `user cancellation offers another explicit install attempt`() {
-        assertTrue(installationResultMessage(0).contains("cancelled"))
-        assertTrue(installationResultMessage(0).contains("retry"))
-        assertTrue(installationResultMessage(-1).contains("successfully"))
-        assertTrue(installationResultMessage(1).contains("permission"))
+        assertEquals(CommonR.string.update_install_cancelled, installationResultMessageRes(0))
+        assertEquals(CommonR.string.update_install_success, installationResultMessageRes(-1))
+        assertEquals(CommonR.string.update_install_failed, installationResultMessageRes(1))
     }
 }

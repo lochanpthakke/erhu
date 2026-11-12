@@ -46,9 +46,12 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +67,7 @@ import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
+import com.erhu.erhu.core.common.R as CommonR
 
 private val QR_SIZE = 220.dp
 private const val QR_PIXELS = 512
@@ -92,7 +96,7 @@ fun WifiTransferScreen(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                title = "Wi-Fi Transfer",
+                title = stringResource(CommonR.string.transfer_title),
                 collapsingTitle = collapsingTitle,
             )
         },
@@ -177,15 +181,13 @@ private fun StartCard(
 ) {
     Panel {
         Text(
-            text =
-                "Starting opens a temporary, private transfer page on this Wi-Fi network only. It stops when you stop it, " +
-                    "when Wi-Fi disconnects, or after 10 minutes without activity.",
+            text = stringResource(CommonR.string.transfer_start_card_description),
             style = MaterialTheme.typography.bodyMedium,
         )
         if (Build.VERSION.SDK_INT >= WifiTransferCoordinator.ANDROID_17) {
             Spacer(Modifier.height(Spacing.sm))
             Text(
-                "Android asks for the Nearby devices permission so your computer can reach the phone on your network.",
+                stringResource(CommonR.string.transfer_nearby_permission_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -195,10 +197,10 @@ private fun StartCard(
             Button(onClick = onStart, enabled = !starting) {
                 Icon(Icons.Default.Wifi, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(Spacing.sm))
-                Text(if (starting) "Starting…" else "Start transfer")
+                Text(stringResource(if (starting) CommonR.string.transfer_starting else CommonR.string.transfer_start_button))
             }
             if (status == TransferScreenStatus.PERMISSION_DENIED) {
-                OutlinedButton(onClick = onOpenSettings) { Text("App settings") }
+                OutlinedButton(onClick = onOpenSettings) { Text(stringResource(CommonR.string.transfer_app_settings)) }
             }
         }
     }
@@ -210,6 +212,8 @@ private fun ConnectCard(
     onStop: () -> Unit,
 ) {
     val qr = rememberQrBitmap(running.pairingUrl)
+    val qrDescription = stringResource(CommonR.string.transfer_qr_content_description)
+    val pairingCodeDescription = stringResource(CommonR.string.transfer_pairing_code_cd, running.pairingCode.toList().joinToString(" "))
     Panel {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             // Always dark on white with a quiet zone, whatever the theme: that is what scanners read reliably.
@@ -220,25 +224,33 @@ private fun ConnectCard(
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.White)
                             .padding(Spacing.sm)
-                            .semantics { contentDescription = "QR code for the transfer page" },
+                            .semantics { contentDescription = qrDescription },
                 ) {
                     Image(bitmap = qr, contentDescription = null, filterQuality = FilterQuality.None, modifier = Modifier.size(QR_SIZE))
                 }
             }
             Spacer(Modifier.height(Spacing.md))
-            Text("Scan with your computer's camera app, or open:", style = MaterialTheme.typography.bodyMedium)
-            SelectionContainer {
-                Text(running.address, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(CommonR.string.transfer_scan_or_open), style = MaterialTheme.typography.bodyMedium)
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                SelectionContainer {
+                    Text(running.address, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                }
             }
-            Text("and enter the code", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                running.pairingCode.chunked(3).joinToString(" "),
-                style = MaterialTheme.typography.headlineMedium,
-                fontFamily = FontFamily.Monospace,
-                modifier = Modifier.semantics { contentDescription = "Pairing code ${running.pairingCode.toList().joinToString(" ")}" },
+                stringResource(CommonR.string.transfer_enter_code),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                Text(
+                    running.pairingCode.chunked(3).joinToString(" "),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.semantics { contentDescription = pairingCodeDescription },
+                )
+            }
             Spacer(Modifier.height(Spacing.md))
-            OutlinedButton(onClick = onStop) { Text("Stop transfer") }
+            OutlinedButton(onClick = onStop) { Text(stringResource(CommonR.string.transfer_stop_button)) }
         }
     }
 }

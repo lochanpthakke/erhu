@@ -3,7 +3,7 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="12dp">
         <TextView android:layout_width="match_parent" android:layout_height="16dp" android:text="@string/app_name" android:textSize="12sp" android:textColor="#BBFFFFFF" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal" android:gravity="center_vertical">
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="8dp" android:src="@drawable/ic_widget_thumb" android:tint="#DDFFFFFF" android:contentDescription="Album artwork" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="8dp" android:src="@drawable/ic_widget_thumb" android:tint="#DDFFFFFF" android:contentDescription="@string/widget_cd_artwork" />
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:paddingStart="10dp">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
                     <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/widget_idle_title" android:textColor="#FFFFFF" android:textSize="18sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
@@ -12,9 +12,9 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:gravity="center">
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_previous" android:tint="#FFFFFF" android:contentDescription="Previous" />
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_play" android:tint="#FFFFFF" android:contentDescription="Play" />
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_next" android:tint="#FFFFFF" android:contentDescription="Next" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_previous" android:tint="#FFFFFF" android:contentDescription="@string/widget_cd_previous" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_play" android:tint="#FFFFFF" android:contentDescription="@string/widget_cd_play" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_next" android:tint="#FFFFFF" android:contentDescription="@string/widget_cd_next" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

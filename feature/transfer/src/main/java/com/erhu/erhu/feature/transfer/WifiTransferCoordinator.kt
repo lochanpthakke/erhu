@@ -20,6 +20,7 @@ import com.erhu.erhu.feature.transfer.server.TransferRegistry
 import com.erhu.erhu.feature.transfer.server.TransferRouter
 import com.erhu.erhu.feature.transfer.server.TransferServer
 import com.erhu.erhu.feature.transfer.server.TransferSession
+import com.erhu.erhu.feature.transfer.server.TransferStrings
 import com.lochanpthakke.empee3.feature.transfer.WifiTransferService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -146,11 +147,13 @@ class WifiTransferCoordinator
             }
             val wifi = currentWifi() ?: return finish(StopReason.NO_WIFI)
             val newSession = TransferSession.create(System.currentTimeMillis())
-            val newSink = MediaStoreUploadSink(context)
+            val strings = TransferStrings.from(context)
+            val newSink = MediaStoreUploadSink(context, strings.sink)
+            registry.updateStrings(strings.registry)
             registry.clear()
             val newServer =
                 TransferServer(wifi.address, limits, { hostPort ->
-                    TransferRouter(newSession, hostPort, newSink, registry, limits, events)
+                    TransferRouter(newSession, hostPort, newSink, registry, limits, events, strings)
                 }) { message, error -> logger.w(TAG, message, error) }
             val port =
                 try {

@@ -38,10 +38,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
@@ -61,8 +66,7 @@ import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.RankedSong
 import com.erhu.erhu.core.model.SoundCapsule
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * Sound Capsule: a month of listening. The month's top song leads as a large cover,
@@ -86,7 +90,7 @@ fun SoundCapsuleScreen(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                title = "Sound Capsule",
+                title = stringResource(CommonR.string.nav_sound_capsule),
                 collapsingTitle = collapsingTitle,
             )
         },
@@ -122,13 +126,13 @@ private fun LazyListScope.capsuleContent(
     }
     item(key = "summary") { MonthSummary(capsule) }
     if (capsule.topSongs.isNotEmpty()) {
-        item(key = "songs-title") { SectionTitle("Top songs") }
+        item(key = "songs-title") { SectionTitle(stringResource(CommonR.string.capsule_top_songs)) }
         itemsIndexed(capsule.topSongs, key = { _, ranked -> "song-${ranked.song.id}" }) { index, ranked ->
             TopSongRow(rank = index + 1, ranked = ranked, onClick = { onPlaySong(index) })
         }
     }
     if (capsule.topAlbums.isNotEmpty()) {
-        item(key = "albums-title") { SectionTitle("Top albums") }
+        item(key = "albums-title") { SectionTitle(stringResource(CommonR.string.capsule_top_albums)) }
         item(key = "albums") {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = Spacing.screenGutter),
@@ -141,7 +145,7 @@ private fun LazyListScope.capsuleContent(
         }
     }
     if (capsule.topArtists.isNotEmpty()) {
-        item(key = "artists-title") { SectionTitle("Top artists") }
+        item(key = "artists-title") { SectionTitle(stringResource(CommonR.string.capsule_top_artists)) }
         item(key = "artists") {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = Spacing.screenGutter),
@@ -160,24 +164,25 @@ private fun MonthHeader(
     month: CapsuleMonth,
     onShowMonth: (YearMonth) -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.sm, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = { month.previous?.let(onShowMonth) }, enabled = month.previous != null) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(CommonR.string.capsule_cd_previous_month))
         }
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "YOUR MONTH",
+                text = stringResource(CommonR.string.capsule_your_month),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
-            Text(text = month.month.format(MONTH_FORMAT), style = TextStyles.pageTitle)
+            Text(text = LocaleFormatters.formatMonthYear(month.month, locale), style = TextStyles.pageTitle)
         }
         IconButton(onClick = { month.next?.let(onShowMonth) }, enabled = month.next != null) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(CommonR.string.capsule_cd_next_month))
         }
     }
 }
@@ -188,6 +193,7 @@ private fun TopSongHero(
     top: RankedSong,
     onClick: () -> Unit,
 ) {
+    val playLabel = stringResource(CommonR.string.action_play)
     Box(
         modifier =
             Modifier
@@ -195,7 +201,7 @@ private fun TopSongHero(
                 .fillMaxWidth()
                 .aspectRatio(HERO_ASPECT)
                 .clip(Radius.largeShape)
-                .clickable(onClickLabel = "Play", onClick = onClick),
+                .clickable(onClickLabel = playLabel, onClick = onClick),
     ) {
         SongArtwork(song = top.song, modifier = Modifier.fillMaxSize())
         Box(
@@ -205,7 +211,11 @@ private fun TopSongHero(
                     .background(Brush.verticalGradient(0.35f to Color.Transparent, 1f to Color.Black.copy(alpha = SCRIM_ALPHA))),
         )
         Column(modifier = Modifier.align(Alignment.BottomStart).padding(Spacing.lg)) {
-            Text(text = "Your top song", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = SECONDARY_ALPHA))
+            Text(
+                text = stringResource(CommonR.string.capsule_your_top_song),
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = SECONDARY_ALPHA),
+            )
             Text(
                 text = top.song.title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -215,7 +225,7 @@ private fun TopSongHero(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "${top.song.artist} · ${playsLabel(top.plays)}",
+                text = "${top.song.artist} · ${playsText(top.plays)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = SECONDARY_ALPHA),
                 maxLines = 1,
@@ -227,15 +237,27 @@ private fun TopSongHero(
 
 @Composable
 private fun MonthSummary(capsule: SoundCapsule) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         val minutes = capsule.listenedMs / MS_PER_MINUTE
-        val playsLabel = if (capsule.totalPlays == 1) "play" else "plays"
-        SummaryTile(value = capsule.totalPlays.toString(), label = playsLabel, modifier = Modifier.weight(1f))
-        SummaryTile(value = minutes.toString(), label = if (minutes == 1L) "minute" else "minutes", modifier = Modifier.weight(1f))
-        SummaryTile(value = capsule.longestStreakDays.toString(), label = "day streak", modifier = Modifier.weight(1f))
+        SummaryTile(
+            value = LocaleFormatters.formatInteger(capsule.totalPlays, locale),
+            label = pluralStringResource(CommonR.plurals.capsule_plays_unit, capsule.totalPlays),
+            modifier = Modifier.weight(1f),
+        )
+        SummaryTile(
+            value = LocaleFormatters.formatInteger(minutes, locale),
+            label = pluralStringResource(CommonR.plurals.capsule_minutes_unit, minutes.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()),
+            modifier = Modifier.weight(1f),
+        )
+        SummaryTile(
+            value = LocaleFormatters.formatInteger(capsule.longestStreakDays, locale),
+            label = stringResource(CommonR.string.capsule_day_streak_unit),
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -275,6 +297,7 @@ private fun SectionTitle(text: String) {
 
 @Composable
 private fun EmptyMonth(month: YearMonth) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -287,22 +310,19 @@ private fun EmptyMonth(month: YearMonth) {
         )
         Spacer(modifier = Modifier.height(Spacing.lg))
         Text(
-            text = "Nothing played in ${month.format(MONTH_NAME_FORMAT)} yet",
+            text = stringResource(CommonR.string.capsule_empty_month_title, LocaleFormatters.formatMonthName(month, locale)),
             style = TextStyles.sectionTitle,
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            text = "Songs you play this month show up here: your top songs, albums and artists.",
+            text = stringResource(CommonR.string.capsule_empty_month_body),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
     }
 }
-
-private val MONTH_FORMAT = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
-private val MONTH_NAME_FORMAT = DateTimeFormatter.ofPattern("MMMM", Locale.getDefault())
 
 private const val MS_PER_MINUTE = 60_000L
 private const val HERO_ASPECT = 1.4f

@@ -8,7 +8,9 @@ import android.os.Environment
 import android.provider.DocumentsContract
 import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.annotation.StringRes
 import androidx.documentfile.provider.DocumentFile
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.database.builder.ProposedMove
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +18,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.erhu.erhu.core.common.R as CommonR
 
 data class ExecutionResult(
     val successCount: Int,
@@ -30,23 +33,43 @@ data class ExecutionResult(
 enum class MoveOutcome(
     val isSuccess: Boolean,
     val label: String,
+    @param:StringRes val labelRes: Int,
 ) {
-    SUCCESS_PHYSICAL(true, "Moved"),
-    SUCCESS_SAF_RENAME(true, "Renamed"),
-    SUCCESS_SAF_MOVE(true, "Moved"),
-    SUCCESS_SAF_COPY_DELETE(true, "Copied, then original removed"),
-    ALREADY_AT_DESTINATION(false, "Already in place"),
-    SKIPPED_STATE(false, "Skipped"),
-    FAILED_SOURCE_NOT_FOUND(false, "Source file not found"),
-    FAILED_DESTINATION_EXISTS(false, "A file with that name is already there"),
-    FAILED_DIRECTORY_CREATION(false, "Could not create the folder"),
-    FAILED_NO_WRITE_PERMISSION(false, "No write access to the folder: choose it again in Settings > Scan location"),
-    FAILED_RENAME(false, "Rename failed"),
-    FAILED_MOVED_NOT_RENAMED(false, "Moved, but the file name could not be changed"),
-    FAILED_COPY(false, "Copy failed (original kept)"),
-    FAILED_DELETE_SOURCE(false, "Original could not be removed (copy undone, original kept)"),
-    FAILED_AMBIGUOUS(false, "Storage gave an unclear answer (nothing else was changed)"),
-    FAILED_UNKNOWN(false, "Unexpected error"),
+    SUCCESS_PHYSICAL(true, "Moved", CommonR.string.builder_outcome_moved),
+    SUCCESS_SAF_RENAME(true, "Renamed", CommonR.string.builder_outcome_renamed),
+    SUCCESS_SAF_MOVE(true, "Moved", CommonR.string.builder_outcome_moved),
+    SUCCESS_SAF_COPY_DELETE(true, "Copied, then original removed", CommonR.string.builder_outcome_copied_removed),
+    ALREADY_AT_DESTINATION(false, "Already in place", CommonR.string.builder_outcome_already_in_place),
+    SKIPPED_STATE(false, "Skipped", CommonR.string.builder_outcome_skipped),
+    FAILED_SOURCE_NOT_FOUND(false, "Source file not found", CommonR.string.builder_outcome_source_not_found),
+    FAILED_DESTINATION_EXISTS(false, "A file with that name is already there", CommonR.string.builder_outcome_dest_exists),
+    FAILED_DIRECTORY_CREATION(false, "Could not create the folder", CommonR.string.builder_outcome_dir_create),
+    FAILED_NO_WRITE_PERMISSION(
+        false,
+        "No write access to the folder: choose it again in Settings > Scan location",
+        CommonR.string.builder_outcome_no_write,
+    ),
+    FAILED_RENAME(false, "Rename failed", CommonR.string.builder_outcome_rename_failed),
+    FAILED_MOVED_NOT_RENAMED(
+        false,
+        "Moved, but the file name could not be changed",
+        CommonR.string.builder_outcome_moved_not_renamed,
+    ),
+    FAILED_COPY(false, "Copy failed (original kept)", CommonR.string.builder_outcome_copy_failed),
+    FAILED_DELETE_SOURCE(
+        false,
+        "Original could not be removed (copy undone, original kept)",
+        CommonR.string.builder_outcome_delete_source_failed,
+    ),
+    FAILED_AMBIGUOUS(
+        false,
+        "Storage gave an unclear answer (nothing else was changed)",
+        CommonR.string.builder_outcome_ambiguous,
+    ),
+    FAILED_UNKNOWN(false, "Unexpected error", CommonR.string.builder_outcome_unknown),
+    ;
+
+    fun localizedLabel(context: Context): String = AppLocaleManager.localizedContext(context).getString(labelRes)
 }
 
 @Singleton

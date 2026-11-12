@@ -69,9 +69,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.component.ActionButton
 import com.erhu.erhu.core.designsystem.component.AppScaffold
@@ -96,7 +101,10 @@ import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.model.ProviderStatus
 import com.erhu.erhu.core.model.Song
+import java.util.Locale
+import com.erhu.erhu.core.common.R as CommonR
 
 /** The search results' own scroll area inside the page. */
 private val SEARCH_RESULTS_MAX_HEIGHT = 280.dp
@@ -180,17 +188,23 @@ fun MetadataEditorScreen(
     var providerExpanded by remember { mutableStateOf(false) }
     var actionExpanded by remember { mutableStateOf(false) }
     var modeExpanded by remember { mutableStateOf(false) }
+    val locale = AppLocaleManager.activeLocale(notificationContext)
     val selectedProvider by viewModel.selectedProvider.collectAsState()
     val selectedFields by viewModel.selectedFields.collectAsState()
     val repairMode by viewModel.repairMode.collectAsState()
-    val providerOptions = sourceOptions.map { it.key to it.label }
+    val providerOptions = sourceOptions.map { it.key to it.localizedLabel() }
     // Lochan's multi-select: every field can be switched on or off; all tag fields = "All Fields".
     val allFields = com.erhu.erhu.core.model.MetadataField.supported
     val fieldsLabel =
         when {
-            selectedFields.containsAll(allFields) -> "All Fields"
-            selectedFields.size == 1 -> selectedFields.first().displayName
-            else -> "${selectedFields.size} Fields"
+            selectedFields.containsAll(allFields) -> stringResource(CommonR.string.repair_fields_all)
+            selectedFields.size == 1 -> selectedFields.first().localizedName()
+            else ->
+                pluralStringResource(
+                    CommonR.plurals.repair_fields_count,
+                    selectedFields.size,
+                    LocaleFormatters.formatInteger(selectedFields.size, locale),
+                )
         }
 
     // The app's floating header (round glass drawer button); the title merges into it on scroll.
@@ -199,7 +213,7 @@ fun MetadataEditorScreen(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                title = "Auto Fix Tags",
+                title = stringResource(CommonR.string.repair_title),
                 collapsingTitle = collapsingTitle,
             )
         },
@@ -223,7 +237,7 @@ fun MetadataEditorScreen(
             // ---- Find: search the library or scan it for tracks with bad tags.
             item(key = "find") {
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl)) {
-                    SectionHeading(title = "Find tracks")
+                    SectionHeading(title = stringResource(CommonR.string.repair_section_find))
                     Column(
                         modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -234,7 +248,7 @@ fun MetadataEditorScreen(
                                 searchQuery = it
                                 viewModel.searchLocalLibrary(it)
                             },
-                            placeholder = "Search tracks, albums, or artists",
+                            placeholder = stringResource(CommonR.string.repair_search_hint),
                             actions = {
                                 // Selects everything available: the search's songs, albums and artists, or the whole library.
                                 IconToggleButton(
@@ -245,7 +259,13 @@ fun MetadataEditorScreen(
                                     Icon(
                                         imageVector = Icons.Default.DoneAll,
                                         contentDescription =
-                                            if (searchQuery.isBlank()) "Select all songs to fix" else "Select all results to fix",
+                                            stringResource(
+                                                if (searchQuery.isBlank()) {
+                                                    CommonR.string.repair_cd_select_all_songs
+                                                } else {
+                                                    CommonR.string.repair_cd_select_all_results
+                                                },
+                                            ),
                                         tint =
                                             if (selectAll != null) {
                                                 MaterialTheme.colorScheme.primary
@@ -259,7 +279,7 @@ fun MetadataEditorScreen(
 
                         selectAll?.let { selection ->
                             Text(
-                                text = selectAllSummary(selection),
+                                text = selectAllSummary(selection, locale),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -267,7 +287,7 @@ fun MetadataEditorScreen(
 
                         if (searchQuery.isNotBlank()) {
                             Text(
-                                text = "Search results · tap + to add to the queue",
+                                text = stringResource(CommonR.string.repair_search_results_hint),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -275,6 +295,7 @@ fun MetadataEditorScreen(
                                 items(searchArtists) { artist ->
                                     ArtistSquareRow(
                                         artist = artist,
+                                        locale = locale,
                                         onAdd = {
                                             viewModel.enqueueArtistForRepair(artist)
                                             searchQuery = ""
@@ -306,7 +327,14 @@ fun MetadataEditorScreen(
                         }
 
                         ActionButton(
-                            text = if (isScanning) "Finding tracks..." else "Scan for Bad / Incomplete Tracks",
+                            text =
+                                stringResource(
+                                    if (isScanning) {
+                                        CommonR.string.repair_finding_tracks
+                                    } else {
+                                        CommonR.string.repair_scan_bad_tracks
+                                    },
+                                ),
                             onClick = { viewModel.scanForBadTracks() },
                             icon = Icons.Default.AutoFixHigh,
                             enabled = !isScanning && !isFixingQueue,
@@ -318,11 +346,11 @@ fun MetadataEditorScreen(
             // ---- Options: how the fix runs.
             item(key = "options") {
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl)) {
-                    SectionHeading(title = "Fix options")
+                    SectionHeading(title = stringResource(CommonR.string.repair_section_options))
                     Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
                         Box {
                             GroupRow(
-                                title = "Source",
+                                title = stringResource(CommonR.string.repair_option_source),
                                 summary = providerOptions.find { it.first == selectedProvider }?.second ?: selectedProvider,
                                 icon = Icons.Default.Cloud,
                                 trailing = Icons.Default.ArrowDropDown,
@@ -346,7 +374,7 @@ fun MetadataEditorScreen(
                         GroupDivider()
                         Box {
                             GroupRow(
-                                title = "Fields to fix",
+                                title = stringResource(CommonR.string.repair_option_fields),
                                 summary = fieldsLabel,
                                 icon = Icons.Default.Tag,
                                 trailing = Icons.Default.ArrowDropDown,
@@ -358,7 +386,12 @@ fun MetadataEditorScreen(
                                 onDismissRequest = { actionExpanded = false },
                             ) {
                                 GlassMenuItem(
-                                    text = { Text("Select All Fields", fontWeight = FontWeight.Bold) },
+                                    text = {
+                                        Text(
+                                            stringResource(CommonR.string.repair_select_all_fields),
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    },
                                     onClick = { viewModel.selectAllFields() },
                                 )
                                 allFields.forEach { field ->
@@ -367,7 +400,7 @@ fun MetadataEditorScreen(
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Checkbox(checked = field in selectedFields, onCheckedChange = null)
                                                 Spacer(modifier = Modifier.width(Spacing.xs))
-                                                Text(field.displayName)
+                                                Text(field.localizedName())
                                             }
                                         },
                                         onClick = { viewModel.toggleField(field) },
@@ -378,13 +411,15 @@ fun MetadataEditorScreen(
                         GroupDivider()
                         Box {
                             GroupRow(
-                                title = "Mode",
+                                title = stringResource(CommonR.string.repair_option_mode),
                                 summary =
-                                    if (repairMode == LibraryViewModel.RepairMode.AUTOMATIC) {
-                                        "Automatic Tagging"
-                                    } else {
-                                        "Manual Selection"
-                                    },
+                                    stringResource(
+                                        if (repairMode == LibraryViewModel.RepairMode.AUTOMATIC) {
+                                            CommonR.string.repair_mode_automatic
+                                        } else {
+                                            CommonR.string.repair_mode_manual
+                                        },
+                                    ),
                                 icon = Icons.Default.Tune,
                                 trailing = Icons.Default.ArrowDropDown,
                                 onClick = { modeExpanded = true },
@@ -394,14 +429,14 @@ fun MetadataEditorScreen(
                                 onDismissRequest = { modeExpanded = false },
                             ) {
                                 GlassMenuItem(
-                                    text = { Text("Automatic Tagging") },
+                                    text = { Text(stringResource(CommonR.string.repair_mode_automatic)) },
                                     onClick = {
                                         viewModel.setRepairMode(LibraryViewModel.RepairMode.AUTOMATIC)
                                         modeExpanded = false
                                     },
                                 )
                                 GlassMenuItem(
-                                    text = { Text("Manual Selection") },
+                                    text = { Text(stringResource(CommonR.string.repair_mode_manual)) },
                                     onClick = {
                                         viewModel.setRepairMode(LibraryViewModel.RepairMode.MANUAL)
                                         modeExpanded = false
@@ -411,8 +446,8 @@ fun MetadataEditorScreen(
                         }
                         GroupDivider()
                         GroupToggleRow(
-                            title = "Force Fix Tags",
-                            summary = "Re-evaluate already fixed files",
+                            title = stringResource(CommonR.string.repair_force_fix_title),
+                            summary = stringResource(CommonR.string.repair_force_fix_summary),
                             checked = forceFixTags,
                             onCheckedChange = { viewModel.setForceFixTags(it) },
                         )
@@ -423,7 +458,16 @@ fun MetadataEditorScreen(
             // ---- Queue: progress and the page's primary action, then every queued track.
             item(key = "queue-header") {
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm)) {
-                    SectionHeading(title = "Queue for fixing", trailing = "$processedCount / $totalCount tracks")
+                    SectionHeading(
+                        title = stringResource(CommonR.string.repair_queue_title),
+                        trailing =
+                            pluralStringResource(
+                                CommonR.plurals.repair_queue_progress_trailing,
+                                totalCount,
+                                LocaleFormatters.formatInteger(processedCount, locale),
+                                LocaleFormatters.formatInteger(totalCount, locale),
+                            ),
+                    )
                     Column(
                         modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
@@ -432,10 +476,23 @@ fun MetadataEditorScreen(
 
                         batchPause?.let { pause ->
                             if (!isFixingQueue && toProcessCount > 0) {
+                                val detail =
+                                    stringResource(
+                                        if (pause.kind.resumesWithNetwork) {
+                                            CommonR.string.repair_pause_fixed_remaining_resumes
+                                        } else {
+                                            CommonR.string.repair_pause_fixed_remaining
+                                        },
+                                        LocaleFormatters.formatInteger(summary.fixed, locale),
+                                        LocaleFormatters.formatInteger(toProcessCount, locale),
+                                    )
                                 Text(
                                     text =
-                                        "Paused: ${pause.reason}. ${summary.fixed} fixed so far, $toProcessCount still to check" +
-                                            if (pause.kind.resumesWithNetwork) " (resumes when the connection is back)." else ".",
+                                        stringResource(
+                                            CommonR.string.repair_pause_banner,
+                                            localizedPauseReason(pause),
+                                            detail,
+                                        ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -450,12 +507,15 @@ fun MetadataEditorScreen(
                                 ) {
                                     ActionButton(
                                         text =
-                                            if (isReverting) {
-                                                "Reverting..."
-                                            } else if (selectedRevertIds.isEmpty()) {
-                                                "Revert Changes"
-                                            } else {
-                                                "Revert (${selectedRevertIds.size})"
+                                            when {
+                                                isReverting -> stringResource(CommonR.string.repair_reverting)
+                                                selectedRevertIds.isEmpty() ->
+                                                    stringResource(CommonR.string.repair_revert_changes)
+                                                else ->
+                                                    stringResource(
+                                                        CommonR.string.repair_revert_count,
+                                                        LocaleFormatters.formatInteger(selectedRevertIds.size, locale),
+                                                    )
                                             },
                                         onClick = {
                                             viewModel.revertSelectedChanges(selectedRevertIds)
@@ -465,7 +525,7 @@ fun MetadataEditorScreen(
                                         modifier = Modifier.weight(1f),
                                     )
                                     ActionButton(
-                                        text = "Return to Library",
+                                        text = stringResource(CommonR.string.common_return_to_library),
                                         onClick = {
                                             viewModel.clearRepairQueue()
                                             onNavigateToLibrary()
@@ -477,7 +537,14 @@ fun MetadataEditorScreen(
                                 val revertableQueue = repairQueue.filter { it.successDetails != null }
                                 val isAllSelected = revertableQueue.isNotEmpty() && selectedRevertIds.size == revertableQueue.size
                                 ActionButton(
-                                    text = if (isAllSelected) "Deselect All Tracks" else "Select All Tracks",
+                                    text =
+                                        stringResource(
+                                            if (isAllSelected) {
+                                                CommonR.string.repair_deselect_all_tracks
+                                            } else {
+                                                CommonR.string.repair_select_all_tracks
+                                            },
+                                        ),
                                     onClick = {
                                         selectedRevertIds =
                                             if (isAllSelected) {
@@ -492,14 +559,14 @@ fun MetadataEditorScreen(
                             }
                         } else if (pendingApproval && !isFixingQueue) {
                             ActionButton(
-                                text = "Allow changes",
+                                text = stringResource(CommonR.string.metadata_service_action_allow_changes),
                                 onClick = { viewModel.metadataRepair.approvePending() },
                                 icon = Icons.Default.CheckCircle,
                                 primary = true,
                             )
                         } else if (isFixingQueue) {
                             ActionButton(
-                                text = "Pause after this track",
+                                text = stringResource(CommonR.string.repair_pause_after_track),
                                 onClick = { viewModel.pauseFixingQueue() },
                                 icon = Icons.Default.Pause,
                             )
@@ -508,9 +575,12 @@ fun MetadataEditorScreen(
                                 ActionButton(
                                     text =
                                         if (processedCount > 0 && toProcessCount > 0) {
-                                            "Resume ($toProcessCount left)"
+                                            stringResource(
+                                                CommonR.string.repair_resume_count,
+                                                LocaleFormatters.formatInteger(toProcessCount, locale),
+                                            )
                                         } else {
-                                            "Start Fixing Queue / Fix Tags"
+                                            stringResource(CommonR.string.repair_start_fixing)
                                         },
                                     onClick = startFetching,
                                     icon = Icons.Default.AutoFixHigh,
@@ -519,7 +589,7 @@ fun MetadataEditorScreen(
                                 )
                                 if (repairQueue.isNotEmpty()) {
                                     ActionButton(
-                                        text = "Clear Queue",
+                                        text = stringResource(CommonR.string.repair_clear_queue),
                                         onClick = { viewModel.clearRepairQueue() },
                                         icon = Icons.Default.DeleteOutline,
                                     )
@@ -533,7 +603,7 @@ fun MetadataEditorScreen(
             if (repairQueue.isEmpty()) {
                 item(key = "queue-empty") {
                     Text(
-                        text = "Queue is empty. Tap scan or search for tracks to populate the repair queue.",
+                        text = stringResource(CommonR.string.repair_queue_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
@@ -545,13 +615,14 @@ fun MetadataEditorScreen(
                 if (needsReview.isNotEmpty()) {
                     item(key = "needs-review-header") {
                         Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm, top = Spacing.md)) {
-                            SectionHeading(title = "Requires Manual Selection")
+                            SectionHeading(title = stringResource(CommonR.string.repair_section_needs_review))
                         }
                     }
                     items(needsReview, key = { it.song.id }) { queueItem ->
                         RepairQueueCard(
                             queueItem = queueItem,
                             selectedForRevert = queueItem.song.id in selectedRevertIds,
+                            locale = locale,
                             onSelectForRevert = { checked ->
                                 selectedRevertIds =
                                     if (checked) {
@@ -574,13 +645,14 @@ fun MetadataEditorScreen(
                 if (others.isNotEmpty()) {
                     item(key = "others-header") {
                         Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm, top = Spacing.md)) {
-                            SectionHeading(title = "Processed / Pending")
+                            SectionHeading(title = stringResource(CommonR.string.repair_section_others))
                         }
                     }
                     items(others, key = { it.song.id }) { queueItem ->
                         RepairQueueCard(
                             queueItem = queueItem,
                             selectedForRevert = queueItem.song.id in selectedRevertIds,
+                            locale = locale,
                             onSelectForRevert = { checked ->
                                 selectedRevertIds =
                                     if (checked) {
@@ -604,11 +676,11 @@ fun MetadataEditorScreen(
             // ---- More: a quiet row, not a competing button.
             item(key = "more") {
                 Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl)) {
-                    SectionHeading(title = "More")
+                    SectionHeading(title = stringResource(CommonR.string.artwork_more_section))
                     Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
                         GroupRow(
-                            title = "Utility Settings",
-                            summary = "Metadata & artwork options",
+                            title = stringResource(CommonR.string.artwork_utility_settings_title),
+                            summary = stringResource(CommonR.string.artwork_utility_settings_summary),
                             icon = Icons.Default.Settings,
                             trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             onClick = onNavigateToMetadataSettings,
@@ -625,7 +697,13 @@ fun MetadataEditorScreen(
                 viewModel.dismissRevertCompletionMessage()
                 selectedRevertIds = emptySet()
             },
-            title = { Text("Revert Complete", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
+            title = {
+                Text(
+                    stringResource(CommonR.string.repair_dialog_revert_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
             text = { Text(msg, style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
                 Button(
@@ -636,7 +714,7 @@ fun MetadataEditorScreen(
                         onNavigateToLibrary()
                     },
                 ) {
-                    Text("Return to Library")
+                    Text(stringResource(CommonR.string.common_return_to_library))
                 }
             },
             dismissButton = {
@@ -646,7 +724,7 @@ fun MetadataEditorScreen(
                         selectedRevertIds = emptySet()
                     },
                 ) {
-                    Text("Keep Inspecting Queue")
+                    Text(stringResource(CommonR.string.repair_keep_inspecting))
                 }
             },
         )
@@ -655,43 +733,97 @@ fun MetadataEditorScreen(
     if (showCompletionDialog) {
         GlassAlertDialog(
             onDismissRequest = { showCompletionDialog = false },
-            title = { Text(if (toProcessCount > 0) "Metadata Repair Paused" else "Metadata Repair Complete") },
+            title = {
+                Text(
+                    stringResource(
+                        if (toProcessCount > 0) {
+                            CommonR.string.repair_dialog_paused_title
+                        } else {
+                            CommonR.string.repair_dialog_complete_title
+                        },
+                    ),
+                )
+            },
             text = {
                 Column {
-                    Text("✓ ${summary.fixed} tracks fixed successfully", fontWeight = FontWeight.Bold)
+                    Text(
+                        pluralStringResource(
+                            CommonR.plurals.repair_summary_fixed,
+                            summary.fixed,
+                            LocaleFormatters.formatInteger(summary.fixed, locale),
+                        ),
+                        fontWeight = FontWeight.Bold,
+                    )
                     if (summary.unchanged > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("• ${summary.unchanged} tracks matched but nothing was written (see each track)")
+                        Text(
+                            pluralStringResource(
+                                CommonR.plurals.repair_summary_unchanged,
+                                summary.unchanged,
+                                LocaleFormatters.formatInteger(summary.unchanged, locale),
+                            ),
+                        )
                     }
                     if (summary.needsReview > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("🔍 ${summary.needsReview} tracks need manual review")
+                        Text(
+                            pluralStringResource(
+                                CommonR.plurals.repair_summary_needs_review,
+                                summary.needsReview,
+                                LocaleFormatters.formatInteger(summary.needsReview, locale),
+                            ),
+                        )
                     }
                     if (summary.noMatch > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("• ${summary.noMatch} tracks had no online match")
+                        Text(
+                            pluralStringResource(
+                                CommonR.plurals.repair_summary_no_match,
+                                summary.noMatch,
+                                LocaleFormatters.formatInteger(summary.noMatch, locale),
+                            ),
+                        )
                     }
-                    if (summary.networkFailures + summary.notChecked > 0) {
+                    val networkPending = summary.networkFailures + summary.notChecked
+                    if (networkPending > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
-                            "📡 ${summary.networkFailures + summary.notChecked} tracks not checked yet (connection): " +
-                                "they stay in the queue for Resume",
+                            pluralStringResource(
+                                CommonR.plurals.repair_summary_network_pending,
+                                networkPending,
+                                LocaleFormatters.formatInteger(networkPending, locale),
+                            ),
                             fontWeight = FontWeight.Bold,
                         )
                         batchPause?.let { pause ->
-                            Text(pause.reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            Text(
+                                localizedPauseReason(pause),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                         }
                     }
                     if (summary.otherFailures > 0) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text("❌ ${summary.otherFailures} tracks failed:", fontWeight = FontWeight.Bold)
+                        Text(
+                            pluralStringResource(
+                                CommonR.plurals.repair_summary_failed,
+                                summary.otherFailures,
+                                LocaleFormatters.formatInteger(summary.otherFailures, locale),
+                            ),
+                            fontWeight = FontWeight.Bold,
+                        )
                         val failedReasons =
                             repairQueue
                                 .filter { it.status == RepairStatus.FAILED }
                                 .groupBy { formatFailureReason(it.failureReason) }
                         failedReasons.forEach { (reason, items) ->
                             Text(
-                                "  • ${items.size} × $reason",
+                                stringResource(
+                                    CommonR.string.repair_summary_failed_reason_line,
+                                    LocaleFormatters.formatInteger(items.size, locale),
+                                    reason,
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
@@ -707,7 +839,12 @@ fun MetadataEditorScreen(
                             viewModel.startFixingQueue()
                         },
                     ) {
-                        Text("Resume ($toProcessCount left)")
+                        Text(
+                            stringResource(
+                                CommonR.string.repair_resume_count,
+                                LocaleFormatters.formatInteger(toProcessCount, locale),
+                            ),
+                        )
                     }
                 } else if (summary.needsReview > 0) {
                     Button(
@@ -715,7 +852,7 @@ fun MetadataEditorScreen(
                             showCompletionDialog = false
                         },
                     ) {
-                        Text("Review Ambiguous Tracks")
+                        Text(stringResource(CommonR.string.repair_review_ambiguous))
                     }
                 } else {
                     Button(
@@ -725,13 +862,13 @@ fun MetadataEditorScreen(
                             onNavigateToLibrary()
                         },
                     ) {
-                        Text("Finish & Return to Library")
+                        Text(stringResource(CommonR.string.repair_finish_return))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCompletionDialog = false }) {
-                    Text("Keep Inspecting Queue")
+                    Text(stringResource(CommonR.string.repair_keep_inspecting))
                 }
             },
         )
@@ -754,11 +891,22 @@ fun MetadataEditorScreen(
     if (showAmbiguousFixedDialog) {
         GlassAlertDialog(
             onDismissRequest = { showAmbiguousFixedDialog = false },
-            title = { Text("Success", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
-            text = { Text("Ambiguous track fixed", style = MaterialTheme.typography.bodyMedium) },
+            title = {
+                Text(
+                    stringResource(CommonR.string.repair_success_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            },
+            text = {
+                Text(
+                    stringResource(CommonR.string.repair_ambiguous_fixed),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
             confirmButton = {
                 Button(onClick = { showAmbiguousFixedDialog = false }) {
-                    Text("OK")
+                    Text(stringResource(CommonR.string.action_ok))
                 }
             },
         )
@@ -770,6 +918,7 @@ fun MetadataEditorScreen(
 private fun RepairQueueCard(
     queueItem: RepairQueueItem,
     selectedForRevert: Boolean,
+    locale: Locale,
     onSelectForRevert: (Boolean) -> Unit,
     onReviewMatches: () -> Unit,
     onRetry: () -> Unit,
@@ -829,7 +978,12 @@ private fun RepairQueueCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${queueItem.song.artist} • ${queueItem.song.album}",
+                        text =
+                            stringResource(
+                                CommonR.string.repair_item_subtitle,
+                                queueItem.song.artist,
+                                queueItem.song.album,
+                            ),
                         modifier = Modifier.basicMarquee(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -839,7 +993,11 @@ private fun RepairQueueCard(
                     if (queueItem.status == "UNCHANGED") {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Not changed: ${queueItem.failureReason.orEmpty()}",
+                            text =
+                                stringResource(
+                                    CommonR.string.repair_item_not_changed,
+                                    queueItem.failureReason.orEmpty(),
+                                ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 3,
@@ -851,7 +1009,11 @@ private fun RepairQueueCard(
                     ) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Partly fixed: ${queueItem.failureReason}",
+                            text =
+                                stringResource(
+                                    CommonR.string.repair_item_partly_fixed,
+                                    queueItem.failureReason,
+                                ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 3,
@@ -861,7 +1023,11 @@ private fun RepairQueueCard(
                     if (queueItem.status == RepairStatus.NETWORK_FAILED) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Not checked (network): ${queueItem.failureReason.orEmpty()}",
+                            text =
+                                stringResource(
+                                    CommonR.string.repair_item_not_checked_network,
+                                    queueItem.failureReason.orEmpty(),
+                                ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error,
                             maxLines = 2,
@@ -871,7 +1037,7 @@ private fun RepairQueueCard(
                     if (queueItem.status == RepairStatus.FAILED || queueItem.status == RepairStatus.NO_MATCH) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "⚠️ ${formatFailureReason(queueItem.failureReason)}",
+                            text = formatFailureReason(queueItem.failureReason),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error,
                             maxLines = 2,
@@ -883,29 +1049,33 @@ private fun RepairQueueCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 when (queueItem.status) {
-                    RepairStatus.READY -> Text("Waiting for file approval", style = MaterialTheme.typography.bodySmall)
+                    RepairStatus.READY ->
+                        Text(
+                            stringResource(CommonR.string.repair_waiting_file_approval),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     "FIXING" ->
                         Icon(
                             imageVector = Icons.Default.HourglassTop,
-                            contentDescription = "Fixing",
+                            contentDescription = stringResource(CommonR.string.repair_cd_fixing),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     "DONE", "SUCCESS", "PARTIAL_SUCCESS" ->
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Done",
+                            contentDescription = stringResource(CommonR.string.repair_cd_done),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     "UNCHANGED" ->
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Not changed",
+                            contentDescription = stringResource(CommonR.string.repair_cd_not_changed),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     "NEEDS_REVIEW" ->
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "Needs Review",
+                            contentDescription = stringResource(CommonR.string.repair_cd_needs_review),
                             tint = MaterialTheme.colorScheme.secondary,
                         )
                     RepairStatus.FAILED, RepairStatus.NO_MATCH, RepairStatus.NETWORK_FAILED ->
@@ -918,11 +1088,13 @@ private fun RepairQueueCard(
                                         Icons.Default.Error
                                     },
                                 contentDescription =
-                                    when (queueItem.status) {
-                                        RepairStatus.NETWORK_FAILED -> "Network failure"
-                                        RepairStatus.NO_MATCH -> "No match"
-                                        else -> "Failed"
-                                    },
+                                    stringResource(
+                                        when (queueItem.status) {
+                                            RepairStatus.NETWORK_FAILED -> CommonR.string.repair_cd_network_failure
+                                            RepairStatus.NO_MATCH -> CommonR.string.repair_cd_no_match
+                                            else -> CommonR.string.repair_cd_failed
+                                        },
+                                    ),
                                 tint = MaterialTheme.colorScheme.error,
                             )
                             IconButton(
@@ -930,14 +1102,14 @@ private fun RepairQueueCard(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
-                                    contentDescription = "Retry track repair",
+                                    contentDescription = stringResource(CommonR.string.repair_cd_retry),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
                     else ->
                         Text(
-                            text = "Pending",
+                            text = stringResource(CommonR.string.repair_status_pending),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -950,7 +1122,7 @@ private fun RepairQueueCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Remove from Queue",
+                        contentDescription = stringResource(CommonR.string.repair_cd_remove),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -975,7 +1147,12 @@ private fun RepairQueueCard(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(modifier = Modifier.width(Spacing.xs))
-                    Text(if (expanded) "Show less" else "Show more", style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        stringResource(
+                            if (expanded) CommonR.string.repair_show_less else CommonR.string.repair_show_more,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
             } else {
                 Spacer(modifier = Modifier.weight(1f))
@@ -987,7 +1164,7 @@ private fun RepairQueueCard(
                     contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 0.dp),
                     modifier = Modifier.height(32.dp),
                 ) {
-                    Text("Review Matches", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(CommonR.string.repair_review_matches), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -1006,16 +1183,16 @@ private fun RepairQueueCard(
                             .padding(bottom = Spacing.md),
                 ) {
                     Text(
-                        "Search Details",
+                        stringResource(CommonR.string.repair_search_details),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     // One text per field: a value can never run into the next label.
-                    searchDetailLines(diag).forEach { line ->
+                    localizedSearchDetailLines(diag).forEach { line ->
                         Row(modifier = Modifier.fillMaxWidth().padding(start = (line.indent * 12).dp)) {
                             Text(
-                                "${line.label}: ",
+                                stringResource(CommonR.string.repair_detail_label_colon, line.label),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
                             )
@@ -1030,7 +1207,7 @@ private fun RepairQueueCard(
                     Spacer(modifier = Modifier.height(Spacing.xs))
 
                     Text(
-                        "Provider Results",
+                        stringResource(CommonR.string.repair_provider_results),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -1041,18 +1218,16 @@ private fun RepairQueueCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                "• ${outcome.providerName}",
+                                stringResource(CommonR.string.repair_provider_name_bullet, outcome.providerName),
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Medium,
                             )
-                            val statusText = providerStatusText(outcome)
+                            val statusText = localizedProviderStatusText(outcome)
                             Text(
                                 statusText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color =
-                                    if (outcome.status ==
-                                        com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                    ) {
+                                    if (outcome.status == ProviderStatus.SUCCESS) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
                                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -1064,7 +1239,7 @@ private fun RepairQueueCard(
                     if (diag.topCandidates.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(Spacing.xs))
                         Text(
-                            "Candidates Returned",
+                            stringResource(CommonR.string.repair_candidates_returned),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -1077,12 +1252,20 @@ private fun RepairQueueCard(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
-                                    candidateLine(candidate),
+                                    localizedCandidateLine(candidate),
                                     style = MaterialTheme.typography.bodySmall,
                                     modifier = Modifier.weight(1f),
                                 )
                                 Text(
-                                    "$scorePct% (${candidate.sourceName}) ${if (isAccepted) "✓" else "✗"}",
+                                    stringResource(
+                                        if (isAccepted) {
+                                            CommonR.string.repair_candidate_accepted
+                                        } else {
+                                            CommonR.string.repair_candidate_rejected
+                                        },
+                                        LocaleFormatters.formatInteger(scorePct, locale),
+                                        candidate.sourceName,
+                                    ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (isAccepted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                                 )
@@ -1092,7 +1275,7 @@ private fun RepairQueueCard(
 
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
-                        "Final Outcome",
+                        stringResource(CommonR.string.repair_final_outcome),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -1120,7 +1303,9 @@ private fun RepairQueueCard(
                 )
                 Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(
-                    if (showChangesExpanded) "Show less" else "Show changes",
+                    stringResource(
+                        if (showChangesExpanded) CommonR.string.repair_show_less else CommonR.string.repair_show_changes,
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -1138,22 +1323,31 @@ private fun RepairQueueCard(
                             .padding(bottom = Spacing.md),
                 ) {
                     Text(
-                        "Metadata Changes",
+                        stringResource(CommonR.string.repair_metadata_changes),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     if (succ.changes.isEmpty()) {
                         Text(
-                            "• Tags already up to date (no tag changes needed)",
+                            stringResource(CommonR.string.repair_tags_already_up_to_date),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     } else {
                         succ.changes.forEach { change ->
+                            val oldDisplay =
+                                change.oldValue?.takeIf { it.isNotBlank() }
+                                    ?: stringResource(CommonR.string.repair_change_blank)
+                            val newDisplay =
+                                change.newValue?.takeIf { it.isNotBlank() }
+                                    ?: stringResource(CommonR.string.repair_change_blank)
                             Text(
-                                "• ${change.fieldName}: ${change.oldValue?.takeIf {
-                                    it.isNotBlank()
-                                } ?: "Blank"} → ${change.newValue}",
+                                stringResource(
+                                    CommonR.string.repair_change_line,
+                                    localizedTagChangeField(change.fieldName),
+                                    oldDisplay,
+                                    newDisplay,
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -1161,26 +1355,33 @@ private fun RepairQueueCard(
 
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
-                        "File Renaming Result",
+                        stringResource(CommonR.string.repair_file_renaming_result),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    if (succ.isRenamed && succ.newFilename != null) {
+                    val newFilename = succ.newFilename
+                    val renameError = succ.renameError
+                    val oldFilename = succ.oldFilename.orEmpty()
+                    if (succ.isRenamed && newFilename != null) {
                         Text(
-                            "✓ Renamed: ${succ.oldFilename} → ${succ.newFilename}",
+                            stringResource(
+                                CommonR.string.repair_renamed_line,
+                                oldFilename,
+                                newFilename,
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
-                    } else if (succ.renameError != null) {
+                    } else if (renameError != null) {
                         Text(
-                            "⚠️ Rename skipped: ${succ.renameError}",
+                            stringResource(CommonR.string.repair_rename_skipped_line, renameError),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
                     } else {
                         Text(
-                            "• Filename unchanged: ${succ.oldFilename}",
+                            stringResource(CommonR.string.repair_filename_unchanged_line, oldFilename),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -1190,33 +1391,84 @@ private fun RepairQueueCard(
     }
 }
 
+@Composable
+private fun localizedPauseReason(pause: BatchPause): String =
+    when (pause.kind) {
+        BatchPause.Kind.OFFLINE -> stringResource(CommonR.string.repair_pause_offline)
+        BatchPause.Kind.BLOCKED -> stringResource(CommonR.string.repair_pause_blocked)
+        BatchPause.Kind.USER ->
+            if (pause.reason == "Paused") {
+                stringResource(CommonR.string.metadata_service_pause_default)
+            } else {
+                pause.reason
+            }
+        BatchPause.Kind.UNREACHABLE -> pause.reason
+    }
+
+@Composable
+private fun localizedTagChangeField(fieldName: String): String =
+    when (fieldName) {
+        "Title" -> stringResource(CommonR.string.fix_tags_field_title)
+        "Artist" -> stringResource(CommonR.string.fix_tags_field_artist)
+        "Album" -> stringResource(CommonR.string.fix_tags_field_album)
+        "Year" -> stringResource(CommonR.string.fix_tags_field_year)
+        "Genre" -> stringResource(CommonR.string.fix_tags_field_genre)
+        "BPM" -> stringResource(CommonR.string.fix_tags_field_bpm)
+        "Artwork" -> stringResource(CommonR.string.metadata_field_artwork_name)
+        else -> fieldName
+    }
+
 /** e.g. "All 153 songs in your library selected" or "12 songs matching “igor” selected (3 already queued)". */
-private fun selectAllSummary(selection: SelectAllSelection): String {
-    val scope = if (selection.query.isEmpty()) "in your library" else "matching “${selection.query}”"
+@Composable
+private fun selectAllSummary(
+    selection: SelectAllSelection,
+    locale: Locale,
+): String {
+    val matchedFormatted = LocaleFormatters.formatInteger(selection.matched, locale)
+    val base =
+        if (selection.query.isEmpty()) {
+            pluralStringResource(CommonR.plurals.repair_select_all_library, selection.matched, matchedFormatted)
+        } else {
+            pluralStringResource(
+                CommonR.plurals.repair_select_all_query,
+                selection.matched,
+                matchedFormatted,
+                selection.query,
+            )
+        }
     val already = selection.matched - selection.songIds.size
-    val count = if (selection.query.isEmpty()) "All ${selection.matched}" else "${selection.matched}"
-    val note = if (already > 0) " ($already already queued)" else ""
-    return "$count ${if (selection.matched == 1) "song" else "songs"} $scope selected$note"
+    return if (already > 0) {
+        stringResource(
+            CommonR.string.repair_select_all_already_queued,
+            base,
+            LocaleFormatters.formatInteger(already, locale),
+        )
+    } else {
+        base
+    }
 }
 
+@Composable
 private fun formatFailureReason(reason: String?): String =
     when {
-        reason.isNullOrBlank() -> "No online match found"
-        reason == "NO_MATCH" -> "No online match found"
-        reason == "FILE_NOT_FOUND" -> "File not found on storage"
-        reason == "NETWORK_ERROR" -> "Network error / Offline"
+        reason.isNullOrBlank() -> stringResource(CommonR.string.repair_failure_no_match)
+        reason == "NO_MATCH" -> stringResource(CommonR.string.repair_failure_no_match)
+        reason == "FILE_NOT_FOUND" -> stringResource(CommonR.string.repair_failure_file_not_found)
+        reason == "NETWORK_ERROR" -> stringResource(CommonR.string.repair_failure_network)
         reason.contains(
             "permission",
             ignoreCase = true,
         ) ||
-            reason.contains("writeAccess", ignoreCase = true) -> "Storage write permission denied"
-        reason.contains("read-only", ignoreCase = true) -> "File is read-only"
+            reason.contains("writeAccess", ignoreCase = true) ->
+            stringResource(CommonR.string.repair_failure_permission)
+        reason.contains("read-only", ignoreCase = true) -> stringResource(CommonR.string.repair_failure_read_only)
         else -> reason
     }
 
 @Composable
 private fun ArtistSquareRow(
     artist: Artist,
+    locale: Locale,
     onAdd: () -> Unit,
 ) {
     Box {
@@ -1252,7 +1504,12 @@ private fun ArtistSquareRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = "Artist • ${artist.songCount} tracks",
+                        text =
+                            pluralStringResource(
+                                CommonR.plurals.repair_search_artist_subtitle,
+                                artist.songCount,
+                                LocaleFormatters.formatInteger(artist.songCount, locale),
+                            ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -1261,7 +1518,11 @@ private fun ArtistSquareRow(
                 }
             }
             IconButton(onClick = onAdd) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Artist", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(CommonR.string.repair_cd_add_artist),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
@@ -1309,7 +1570,7 @@ private fun AlbumSquareRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = "Album • ${album.artist}",
+                        text = stringResource(CommonR.string.repair_search_album_subtitle, album.artist),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -1318,7 +1579,11 @@ private fun AlbumSquareRow(
                 }
             }
             IconButton(onClick = onAdd) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Album", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(CommonR.string.repair_cd_add_album),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
@@ -1347,7 +1612,7 @@ private fun TrackRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "${song.artist} • ${song.album}",
+                    text = stringResource(CommonR.string.repair_item_subtitle, song.artist, song.album),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -1355,7 +1620,11 @@ private fun TrackRow(
                 )
             }
             IconButton(onClick = onAdd) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Add Track", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(CommonR.string.repair_cd_add_track),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }

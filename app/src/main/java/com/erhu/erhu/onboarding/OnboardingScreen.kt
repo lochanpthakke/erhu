@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -77,6 +78,7 @@ import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.findActivity
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import com.erhu.erhu.core.common.R as CommonR
 
 @Suppress("MagicNumber") // Onboarding palette, isolated from the app theme.
 private val IntroductionBackground = Color(0xff0b0e11)
@@ -222,9 +224,13 @@ fun OnboardingScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Image(painterResource(R.drawable.erhu_logo), null, Modifier.size(32.dp))
-                            Image(painterResource(R.drawable.onb_wordmark), "erhu", Modifier.width(82.dp).height(32.dp))
+                            Image(
+                                painterResource(R.drawable.onb_wordmark),
+                                stringResource(R.string.app_name),
+                                Modifier.width(82.dp).height(32.dp),
+                            )
                         }
-                        TextButton(onClick = finish, enabled = !finishing) { Text("Skip") }
+                        TextButton(onClick = finish, enabled = !finishing) { Text(stringResource(CommonR.string.action_skip)) }
                     }
                     HorizontalPager(
                         state = pager,
@@ -285,14 +291,14 @@ fun OnboardingScreen(
                                     }
                                 }
                                 Text(
-                                    "${pager.currentPage + 1} / ${pages.size}",
+                                    stringResource(CommonR.string.onboarding_page_indicator, pager.currentPage + 1, pages.size),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             if (saveError) {
                                 Text(
-                                    "Couldn't save your setup. Try again.",
+                                    stringResource(CommonR.string.onboarding_save_error),
                                     color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.padding(top = 8.dp),
                                 )
@@ -302,7 +308,7 @@ fun OnboardingScreen(
                                 TextButton(
                                     onClick = previous,
                                     enabled = pager.targetPage > 0 && !finishing,
-                                ) { Text("Back") }
+                                ) { Text(stringResource(CommonR.string.action_back)) }
                                 Spacer(Modifier.weight(1f))
                                 Button(
                                     onClick = {
@@ -321,13 +327,13 @@ fun OnboardingScreen(
                                     modifier = Modifier.heightIn(min = 48.dp),
                                 ) {
                                     Text(
-                                        if (finishing) {
-                                            "Saving…"
-                                        } else if (pager.settledPage == pages.lastIndex) {
-                                            "Start Listening"
-                                        } else {
-                                            "Next"
-                                        },
+                                        stringResource(
+                                            when {
+                                                finishing -> CommonR.string.action_saving
+                                                pager.settledPage == pages.lastIndex -> CommonR.string.onboarding_start_listening
+                                                else -> CommonR.string.action_next
+                                            },
+                                        ),
                                     )
                                 }
                             }
@@ -369,7 +375,7 @@ private fun IntroductionContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(
-            page.title,
+            stringResource(page.titleRes),
             style =
                 if (page == IntroductionPage.WELCOME ||
                     page == IntroductionPage.READY
@@ -385,13 +391,15 @@ private fun IntroductionContent(
                 },
         )
         Text(
-            if (page == IntroductionPage.READY &&
-                !mediaGranted
-            ) {
-                "You can add music access later. Make yourself at home."
-            } else {
-                page.description
-            },
+            stringResource(
+                if (page == IntroductionPage.READY &&
+                    !mediaGranted
+                ) {
+                    CommonR.string.onboarding_library_later_hint
+                } else {
+                    page.descriptionRes
+                },
+            ),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -401,27 +409,40 @@ private fun IntroductionContent(
         if (page == IntroductionPage.LIBRARY) {
             Surface(shape = RoundedCornerShape(20.dp), color = Color(0xff212426)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (mediaGranted) "Music access allowed" else "Your files stay yours", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        when {
-                            mediaGranted -> "Choose a scan location when you open the library."
-                            permanentlyDenied -> "Music access is off in Android settings. Enable it there, then return."
-                            requested -> "Music access wasn't granted. Retry, or continue and add it later."
-                            else -> "Allow audio-file access so erhu can build your library. You can continue without it."
-                        },
+                        stringResource(
+                            if (mediaGranted) {
+                                CommonR.string.onboarding_permission_allowed
+                            } else {
+                                CommonR.string.onboarding_permission_private_title
+                            },
+                        ),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        stringResource(
+                            when {
+                                mediaGranted -> CommonR.string.onboarding_permission_summary_granted
+                                permanentlyDenied -> CommonR.string.onboarding_permission_summary_denied
+                                requested -> CommonR.string.onboarding_permission_summary_retry
+                                else -> CommonR.string.onboarding_permission_summary_default
+                            },
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (!mediaGranted) {
                         OutlinedButton(onClick = if (permanentlyDenied) onOpenSettings else onRequestPermission) {
                             Text(
-                                if (permanentlyDenied) {
-                                    "Open Android settings"
-                                } else if (requested) {
-                                    "Retry music access"
-                                } else {
-                                    "Allow music access"
-                                },
+                                stringResource(
+                                    if (permanentlyDenied) {
+                                        CommonR.string.onboarding_permission_open_settings
+                                    } else if (requested) {
+                                        CommonR.string.onboarding_permission_retry
+                                    } else {
+                                        CommonR.string.onboarding_permission_allow
+                                    },
+                                ),
                             )
                         }
                     }
@@ -430,40 +451,42 @@ private fun IntroductionContent(
         }
         if (page == IntroductionPage.VYBE || page == IntroductionPage.READY) {
             SettingsSwitchRow(
-                title = "Enable VYBE",
-                summary = "Show VYBE in navigation and Home.",
+                title = stringResource(CommonR.string.onboarding_vybe_title),
+                summary = stringResource(CommonR.string.onboarding_vybe_summary),
                 checked = vybeEnabled,
                 onCheckedChange = onVybeEnabledChange,
             )
         }
         if (page == IntroductionPage.READY) {
             SettingsSwitchRow(
-                title = "Glass Effect",
-                summary =
-                    "Backdrop blur requires Android 12 or later. Glass effects may reduce performance on some devices. " +
-                        "Older devices use a simplified appearance.",
+                title = stringResource(CommonR.string.onboarding_glass_title),
+                summary = stringResource(CommonR.string.onboarding_glass_summary),
                 checked = glassEffectEnabled,
                 onCheckedChange = onGlassEffectEnabledChange,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Outlined.CheckCircle, null)
                 Text(
-                    if (mediaGranted) "Music access allowed" else "Music access can be added later",
+                    stringResource(
+                        if (mediaGranted) {
+                            CommonR.string.onboarding_permission_allowed
+                        } else {
+                            CommonR.string.onboarding_permission_badge_later
+                        },
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
             Text(
-                "Choose a song when you are ready.",
+                stringResource(CommonR.string.onboarding_ready_choose_song),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
             Surface(shape = RoundedCornerShape(20.dp), color = Color(0xff212426)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Beta release", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(CommonR.string.onboarding_beta_title), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "erhu is currently in beta. You may encounter bugs or inconsistent behavior. " +
-                            "VYBE recommendations are still being refined, with further improvements planned " +
-                            "for model tuning, matching parameters and overall accuracy.",
+                        stringResource(CommonR.string.onboarding_beta_body),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -477,7 +500,7 @@ private fun IntroductionContent(
         }
         if (page == IntroductionPage.VYBE) {
             Text(
-                "VYBE search needs the separate model pack. You can set it up later.",
+                stringResource(CommonR.string.onboarding_vybe_pack_later),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -497,13 +520,17 @@ private fun PreviewGallery(
     if (previews.size > 1) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             previews.forEachIndexed { index, preview ->
-                FilterChip(selected = selected == index, onClick = { selected = index }, label = { Text(preview.label) })
+                FilterChip(
+                    selected = selected == index,
+                    onClick = { selected = index },
+                    label = { Text(stringResource(preview.labelRes)) },
+                )
             }
         }
     }
     IntroductionVisual(page, shown, active, motionEnabled)
     Text(
-        "Preview from an existing erhu library.",
+        stringResource(CommonR.string.onboarding_preview_existing_library),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

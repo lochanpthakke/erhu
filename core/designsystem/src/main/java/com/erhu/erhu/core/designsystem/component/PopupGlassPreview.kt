@@ -18,11 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.theme.LocalPopupGlassBackdrop
 import com.erhu.erhu.core.designsystem.theme.PopupGlassSurface
 import com.erhu.erhu.core.designsystem.theme.glassBackdropSource
 import com.erhu.erhu.core.designsystem.theme.rememberGlassBackdrop
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 fun PopupGlassPreview(modifier: Modifier = Modifier) {
@@ -39,9 +41,9 @@ fun PopupGlassPreview(modifier: Modifier = Modifier) {
         CompositionLocalProvider(LocalPopupGlassBackdrop provides backdrop) {
             PopupGlassSurface(Modifier.align(Alignment.CenterEnd).padding(16.dp).width(200.dp)) {
                 Column(Modifier.padding(20.dp)) {
-                    Text("Liquid Glass")
-                    Text("Play next", Modifier.padding(top = 12.dp))
-                    Text("Add to queue", Modifier.padding(top = 12.dp))
+                    Text(stringResource(CommonR.string.theme_popup_preview_title))
+                    Text(stringResource(CommonR.string.theme_popup_preview_play_next), Modifier.padding(top = 12.dp))
+                    Text(stringResource(CommonR.string.theme_popup_preview_add_to_queue), Modifier.padding(top = 12.dp))
                 }
             }
         }

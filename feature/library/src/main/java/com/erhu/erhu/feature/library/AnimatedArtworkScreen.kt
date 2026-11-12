@@ -58,11 +58,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuItem
@@ -70,6 +73,7 @@ import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.AnimatedArtOrientation
 import com.erhu.erhu.core.model.AnimatedArtStatus
 import com.erhu.erhu.feature.library.components.AnimatedAlbumCoverPlayer
+import com.erhu.erhu.core.common.R as CommonR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,14 +100,15 @@ fun AnimatedArtworkScreen(
     var resolutionDropdownExpanded by remember { mutableStateOf(false) }
 
     val selectedDiagnosticItem = queueItems.find { it.album.id == selectedDiagnosticId }
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Animated Artwork Fetcher") },
+                title = { Text(stringResource(CommonR.string.anim_art_title)) },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
+                        Icon(imageVector = Icons.Default.Menu, contentDescription = stringResource(CommonR.string.cd_open_drawer))
                     }
                 },
             )
@@ -122,7 +127,7 @@ fun AnimatedArtworkScreen(
 
             // Target Aspect Ratio Switcher
             Text(
-                text = "Target Aspect Ratio:",
+                text = stringResource(CommonR.string.anim_art_target_ratio),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -134,14 +139,14 @@ fun AnimatedArtworkScreen(
                     onClick = { viewModel.setOrientation(AnimatedArtOrientation.SQUARE_1_1) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                 ) {
-                    Text("Square (1:1)")
+                    Text(stringResource(CommonR.string.anim_art_ratio_square))
                 }
                 SegmentedButton(
                     selected = orientation == AnimatedArtOrientation.TALL_3_4,
                     onClick = { viewModel.setOrientation(AnimatedArtOrientation.TALL_3_4) },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                 ) {
-                    Text("Tall (3:4)")
+                    Text(stringResource(CommonR.string.anim_art_ratio_tall))
                 }
             }
 
@@ -152,7 +157,7 @@ fun AnimatedArtworkScreen(
                 value = searchQuery,
                 onValueChange = viewModel::onSearchQueryChanged,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search local albums...") },
+                placeholder = { Text(stringResource(CommonR.string.anim_art_search_albums)) },
                 leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
             )
 
@@ -160,7 +165,7 @@ fun AnimatedArtworkScreen(
 
             if (searchQuery.isNotBlank()) {
                 Text(
-                    text = "SEARCH RESULTS (Tap + to select Album)",
+                    text = stringResource(CommonR.string.anim_art_search_results_hint),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -214,7 +219,11 @@ fun AnimatedArtworkScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Selected Target Album:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                stringResource(CommonR.string.anim_art_selected_album),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
                             Text(album.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(album.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
@@ -231,7 +240,11 @@ fun AnimatedArtworkScreen(
             ) {
                 Icon(imageVector = Icons.Default.AutoFixHigh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isFetchingMaster) "Fetching Stream Options..." else "Fetch Motion Artwork")
+                Text(
+                    stringResource(
+                        if (isFetchingMaster) CommonR.string.anim_art_fetching_streams else CommonR.string.anim_art_fetch_motion,
+                    ),
+                )
             }
 
             if (isFetchingMaster) {
@@ -244,7 +257,7 @@ fun AnimatedArtworkScreen(
             // Resolution Dropdown & Live HLS Stream Preview (Step 2)
             if (availableVariants.isNotEmpty() || previewStreamUrl != null) {
                 Text(
-                    text = "RESOLUTION & PREVIEW",
+                    text = stringResource(CommonR.string.anim_art_section_resolution_preview),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -263,7 +276,7 @@ fun AnimatedArtworkScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Select Stream Resolution:",
+                                    text = stringResource(CommonR.string.anim_art_select_stream_resolution),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                 )
@@ -272,12 +285,17 @@ fun AnimatedArtworkScreen(
                                     TextButton(onClick = { resolutionDropdownExpanded = true }) {
                                         val label =
                                             selectedVariant?.let {
-                                                "${it.resolutionText} (${String.format(
-                                                    "%.1f MB",
-                                                    it.estimatedSizeMb,
-                                                )})"
-                                            }
-                                                ?: "Select Resolution"
+                                                val formattedMb =
+                                                    stringResource(
+                                                        CommonR.string.format_size_mb,
+                                                        LocaleFormatters.formatDecimal(
+                                                            it.estimatedSizeMb.toDouble(),
+                                                            decimals = 1,
+                                                            locale = locale,
+                                                        ),
+                                                    )
+                                                stringResource(CommonR.string.anim_art_resolution_with_size, it.resolutionText, formattedMb)
+                                            } ?: stringResource(CommonR.string.anim_art_select_resolution)
                                         Text(label, fontWeight = FontWeight.Medium)
                                         Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
                                     }
@@ -288,8 +306,21 @@ fun AnimatedArtworkScreen(
                                         availableVariants.forEach { variant ->
                                             GlassMenuItem(
                                                 text = {
+                                                    val formattedMb =
+                                                        stringResource(
+                                                            CommonR.string.format_size_mb,
+                                                            LocaleFormatters.formatDecimal(
+                                                                variant.estimatedSizeMb.toDouble(),
+                                                                decimals = 1,
+                                                                locale = locale,
+                                                            ),
+                                                        )
                                                     Text(
-                                                        "${variant.resolutionText} — ${String.format("%.1f MB", variant.estimatedSizeMb)}",
+                                                        stringResource(
+                                                            CommonR.string.anim_art_variant_with_size,
+                                                            variant.resolutionText,
+                                                            formattedMb,
+                                                        ),
                                                     )
                                                 },
                                                 onClick = {
@@ -345,7 +376,15 @@ fun AnimatedArtworkScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Download, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (isDownloadingFile) "Downloading & Saving..." else "Download & Save Artwork")
+                            Text(
+                                stringResource(
+                                    if (isDownloadingFile) {
+                                        CommonR.string.anim_art_downloading_saving
+                                    } else {
+                                        CommonR.string.anim_art_download_save
+                                    },
+                                ),
+                            )
                         }
 
                         if (isDownloadingFile) {
@@ -359,7 +398,11 @@ fun AnimatedArtworkScreen(
 
             // Processing Queue List
             Text(
-                text = "PROCESSING QUEUE (${queueItems.size})",
+                text =
+                    stringResource(
+                        CommonR.string.anim_art_section_queue,
+                        LocaleFormatters.formatInteger(queueItems.size, locale),
+                    ),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -372,7 +415,7 @@ fun AnimatedArtworkScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 ) {
                     Text(
-                        text = "Queue is empty. Select an album above and tap Fetch Motion Artwork.",
+                        text = stringResource(CommonR.string.anim_art_queue_empty),
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -395,7 +438,7 @@ fun AnimatedArtworkScreen(
             // Diagnostics / Preview Panel
             if (selectedDiagnosticItem != null) {
                 Text(
-                    text = "DIAGNOSTICS & PREVIEW",
+                    text = stringResource(CommonR.string.anim_art_section_diagnostics),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -463,13 +506,35 @@ fun AnimatedArtworkScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         val art = selectedDiagnosticItem.artwork
-                        Text("Status: ${art?.status ?: "UNCHECKED"}", style = MaterialTheme.typography.labelSmall)
-                        Text("Catalog ID: ${art?.catalogAlbumId ?: "N/A"}", style = MaterialTheme.typography.labelSmall)
-                        Text("Storefront: ${art?.storefront ?: "N/A"}", style = MaterialTheme.typography.labelSmall)
-                        Text("Has Square: ${art?.hasSquare ?: "Unknown"}", style = MaterialTheme.typography.labelSmall)
-                        Text("Has Tall: ${art?.hasTall ?: "Unknown"}", style = MaterialTheme.typography.labelSmall)
+                        val naText = stringResource(CommonR.string.common_na)
+                        Text(
+                            stringResource(
+                                CommonR.string.anim_art_diag_status,
+                                art?.status?.localizedLabel() ?: stringResource(CommonR.string.common_unchecked),
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Text(
+                            stringResource(CommonR.string.anim_art_diag_catalog_id, art?.catalogAlbumId ?: naText),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Text(
+                            stringResource(CommonR.string.anim_art_diag_storefront, art?.storefront ?: naText),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Text(
+                            stringResource(CommonR.string.anim_art_diag_has_square, art?.hasSquare.localizedYesNoUnknown()),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Text(
+                            stringResource(CommonR.string.anim_art_diag_has_tall, art?.hasTall.localizedYesNoUnknown()),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                         if (activeFilePath != null) {
-                            Text("Local File: $activeFilePath", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                stringResource(CommonR.string.anim_art_diag_local_file, activeFilePath),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         }
                     }
                 }
@@ -483,11 +548,11 @@ fun AnimatedArtworkScreen(
     errorMessage?.let { message ->
         GlassAlertDialog(
             onDismissRequest = viewModel::dismissErrorMessage,
-            title = { Text("Notice") },
+            title = { Text(stringResource(CommonR.string.dialog_notice)) },
             text = { Text(message) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissErrorMessage) {
-                    Text("OK")
+                    Text(stringResource(CommonR.string.action_ok))
                 }
             },
         )
@@ -495,15 +560,19 @@ fun AnimatedArtworkScreen(
 
     // Success Completion Dialog Popup
     successDialogArtwork?.let { artwork ->
-        val filePath = artwork.squareFilePath ?: artwork.tallFilePath ?: "App Internal Storage"
+        val filePath = artwork.squareFilePath ?: artwork.tallFilePath ?: stringResource(CommonR.string.anim_art_internal_storage)
         GlassAlertDialog(
             onDismissRequest = viewModel::dismissSuccessDialog,
-            title = { Text("Artwork Successfully Fetched") },
+            title = { Text(stringResource(CommonR.string.anim_art_success_title)) },
             text = {
                 Column {
-                    Text("Motion cover downloaded and linked.", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(CommonR.string.anim_art_success_body), style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Saved to:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(CommonR.string.anim_art_saved_to),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
                     Text(filePath, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
@@ -511,7 +580,7 @@ fun AnimatedArtworkScreen(
                 TextButton(onClick = {
                     viewModel.resetSearchAndQueue()
                 }) {
-                    Text("Fetch More Artwork")
+                    Text(stringResource(CommonR.string.artwork_fetch_more))
                 }
             },
             dismissButton = {
@@ -519,12 +588,32 @@ fun AnimatedArtworkScreen(
                     viewModel.dismissSuccessDialog()
                     onNavigateToLibrary()
                 }) {
-                    Text("Return to Library")
+                    Text(stringResource(CommonR.string.common_return_to_library))
                 }
             },
         )
     }
 }
+
+@Composable
+private fun Boolean?.localizedYesNoUnknown(): String =
+    when (this) {
+        true -> stringResource(CommonR.string.common_yes)
+        false -> stringResource(CommonR.string.common_no)
+        null -> stringResource(CommonR.string.common_unknown)
+    }
+
+@Composable
+private fun AnimatedArtStatus.localizedLabel(): String =
+    when (this) {
+        AnimatedArtStatus.UNCHECKED -> stringResource(CommonR.string.anim_art_status_pending)
+        AnimatedArtStatus.DOWNLOADING -> stringResource(CommonR.string.anim_art_status_downloading)
+        AnimatedArtStatus.AVAILABLE -> stringResource(CommonR.string.anim_art_status_available)
+        AnimatedArtStatus.FOUND -> stringResource(CommonR.string.anim_art_status_found)
+        AnimatedArtStatus.NO_MATCH -> stringResource(CommonR.string.anim_art_status_no_match)
+        AnimatedArtStatus.NO_ANIMATION -> stringResource(CommonR.string.anim_art_status_no_video)
+        AnimatedArtStatus.FAILED -> stringResource(CommonR.string.anim_art_status_failed)
+    }
 
 @Composable
 private fun AlbumSearchCard(
@@ -568,7 +657,7 @@ private fun AlbumSearchCard(
             }
 
             IconButton(onClick = onAdd) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = "Select Album")
+                Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(CommonR.string.anim_art_cd_select_album))
             }
         }
     }
@@ -630,12 +719,12 @@ private fun AnimatedQueueItemCard(
                     status == AnimatedArtStatus.NO_ANIMATION
                 ) {
                     IconButton(onClick = onRetry) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Retry")
+                        Icon(imageVector = Icons.Default.Refresh, contentDescription = stringResource(CommonR.string.action_retry))
                     }
                 }
 
                 IconButton(onClick = onRemove) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Remove")
+                    Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(CommonR.string.action_remove))
                 }
             }
 
@@ -651,13 +740,20 @@ private fun AnimatedQueueItemCard(
 private fun StatusBadge(status: AnimatedArtStatus) {
     val (icon, color, text) =
         when (status) {
-            AnimatedArtStatus.UNCHECKED -> Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.outline, "Pending")
-            AnimatedArtStatus.DOWNLOADING -> Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.primary, "Downloading...")
-            AnimatedArtStatus.AVAILABLE -> Triple(Icons.Default.CheckCircle, MaterialTheme.colorScheme.primary, "Available")
-            AnimatedArtStatus.FOUND -> Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.primary, "Found")
-            AnimatedArtStatus.NO_MATCH -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.outline, "No Match")
-            AnimatedArtStatus.NO_ANIMATION -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.outline, "No Video")
-            AnimatedArtStatus.FAILED -> Triple(Icons.Default.Error, MaterialTheme.colorScheme.error, "Failed")
+            AnimatedArtStatus.UNCHECKED ->
+                Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.outline, status.localizedLabel())
+            AnimatedArtStatus.DOWNLOADING ->
+                Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.primary, status.localizedLabel())
+            AnimatedArtStatus.AVAILABLE ->
+                Triple(Icons.Default.CheckCircle, MaterialTheme.colorScheme.primary, status.localizedLabel())
+            AnimatedArtStatus.FOUND ->
+                Triple(Icons.Default.MovieFilter, MaterialTheme.colorScheme.primary, status.localizedLabel())
+            AnimatedArtStatus.NO_MATCH ->
+                Triple(Icons.Default.Error, MaterialTheme.colorScheme.outline, status.localizedLabel())
+            AnimatedArtStatus.NO_ANIMATION ->
+                Triple(Icons.Default.Error, MaterialTheme.colorScheme.outline, status.localizedLabel())
+            AnimatedArtStatus.FAILED ->
+                Triple(Icons.Default.Error, MaterialTheme.colorScheme.error, status.localizedLabel())
         }
 
     Row(verticalAlignment = Alignment.CenterVertically) {

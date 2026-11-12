@@ -1,7 +1,10 @@
 package com.erhu.erhu.feature.library
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.database.repository.TrackBookmarkRepository
 import com.erhu.erhu.core.model.Song
@@ -10,6 +13,7 @@ import com.erhu.erhu.core.model.WaveformLoad
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.core.playback.waveform.WaveformRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,6 +37,7 @@ import javax.inject.Inject
 class PlayerExtrasViewModel
     @Inject
     constructor(
+        @param:ApplicationContext private val appContext: Context,
         private val playbackRepository: PlaybackRepository,
         private val waveformRepository: WaveformRepository,
         private val bookmarkRepository: TrackBookmarkRepository,
@@ -58,7 +63,8 @@ class PlayerExtrasViewModel
             val song = state.currentSong ?: return
             val position = state.positionMs
             viewModelScope.launch {
-                onResult((bookmarkRepository.addBookmark(song.id, position) as? AppResult.Error)?.error?.message)
+                val localized = AppLocaleManager.localizedContext(appContext)
+                onResult((bookmarkRepository.addBookmark(song.id, position) as? AppResult.Error)?.error?.localizedMessage(localized))
             }
         }
 

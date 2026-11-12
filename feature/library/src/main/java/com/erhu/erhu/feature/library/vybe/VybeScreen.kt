@@ -51,12 +51,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.BUTTON_PRESSED_SCALE
 import com.erhu.erhu.core.designsystem.component.ReportTitleScroll
 import com.erhu.erhu.core.designsystem.component.pressScale
@@ -64,15 +69,16 @@ import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.feature.library.SongRow
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Prompts the library's tags can answer (genre, tempo, artist): offered as starting points. */
-private val SUGGESTIONS =
+private val SUGGESTION_RES =
     listOf(
-        "Dark, atmospheric hip-hop",
-        "High-energy music for the gym",
-        "Mellow tracks with warm production",
-        "Late-night Frank Ocean vibes",
-        "Southern rap",
+        CommonR.string.vybe_suggestion_1,
+        CommonR.string.vybe_suggestion_2,
+        CommonR.string.vybe_suggestion_3,
+        CommonR.string.vybe_suggestion_4,
+        CommonR.string.vybe_suggestion_5,
     )
 
 /**
@@ -123,9 +129,9 @@ fun VybeScreen(
     ) {
         item(key = "header") {
             Column(modifier = Modifier.padding(horizontal = Spacing.screenGutter)) {
-                Text("VYBE", style = TextStyles.screenTitle)
+                Text(stringResource(CommonR.string.vybe_title), style = TextStyles.screenTitle)
                 Text(
-                    "Find music in your library by mood, genre, tempo or artist. Runs on this phone.",
+                    stringResource(CommonR.string.vybe_subtitle),
                     style = TextStyles.supporting,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -134,14 +140,19 @@ fun VybeScreen(
                     value = text,
                     onValueChange = { text = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Describe what you want to hear") },
+                    placeholder = { Text(stringResource(CommonR.string.vybe_search_hint)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (text.isNotEmpty()) {
                             IconButton(onClick = {
                                 text = ""
                                 viewModel.clear()
-                            }) { Icon(Icons.Default.Clear, contentDescription = "Clear") }
+                            }) {
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = stringResource(CommonR.string.action_clear),
+                                )
+                            }
                         }
                     },
                     singleLine = true,
@@ -178,13 +189,13 @@ fun VybeScreen(
                     ) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.size(Spacing.sm))
-                        Text("Searching on this phone…", style = TextStyles.supporting)
+                        Text(stringResource(CommonR.string.vybe_searching), style = TextStyles.supporting)
                     }
                 }
             is VybeQueryState.Error ->
                 item(key = "error") {
                     Text(
-                        "Couldn't search: ${state.message}",
+                        stringResource(CommonR.string.vybe_error_prefix, state.message),
                         style = TextStyles.supporting,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(Spacing.screenGutter),
@@ -204,7 +215,7 @@ fun VybeScreen(
             results.references.filter { it.matches.size > 1 }.forEach { reference ->
                 item(key = "reference-title-" + reference.id) {
                     Text(
-                        "Choose a match for " + reference.text,
+                        stringResource(CommonR.string.vybe_choose_match_for, reference.text),
                         style = TextStyles.itemTitle,
                         modifier = Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
                     )
@@ -218,13 +229,15 @@ fun VybeScreen(
             if (results.songs.isEmpty()) {
                 item(key = "empty") {
                     Text(
-                        when {
-                            results.waitingForIndex -> "Waiting for reference indexing to finish."
-                            results.references.any {
-                                it.selected == null && !it.filteredOut
-                            } -> "Resolve the references above or edit your query."
-                            else -> "Nothing in your library matched these filters."
-                        },
+                        stringResource(
+                            when {
+                                results.waitingForIndex -> CommonR.string.vybe_empty_waiting_index
+                                results.references.any {
+                                    it.selected == null && !it.filteredOut
+                                } -> CommonR.string.vybe_empty_resolve_references
+                                else -> CommonR.string.vybe_empty_no_matches
+                            },
+                        ),
                         style = TextStyles.supporting,
                         modifier = Modifier.padding(Spacing.screenGutter),
                     )
@@ -260,42 +273,85 @@ private fun StatusLine(
     onPickModel: () -> Unit,
     onRetry: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     when (status) {
-        VybeStatus.NoModel ->
-            Surface(shape = Radius.largeShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-                Column(modifier = Modifier.padding(Spacing.lg)) {
-                    Text("VYBE needs its model", style = TextStyles.itemTitle)
-                    Spacer(Modifier.height(Spacing.xs))
-                    Text(
-                        "VYBE uses Google's EmbeddingGemma (embedding_gemma.task, about 184 MB) on this phone. " +
-                            "Download it after accepting the Gemma terms (ai.google.dev/gemma/terms), then choose the file. " +
-                            "It is copied into erhu's storage; nothing is uploaded.",
-                        style = TextStyles.supporting,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(Spacing.sm))
-                    Button(onClick = onPickModel) { Text("Choose model file") }
-                }
-            }
-        VybeStatus.LoadingModel -> ProgressLine("Loading the model…", null)
-        is VybeStatus.Indexing ->
-            ProgressLine(
-                "Indexing ${status.done} of ${status.total} songs on this phone" +
-                    (timings.averageEmbedMs?.let { " (~${it / MS_PER_S}.${it % MS_PER_S / TENTHS} s per description)" } ?: ""),
-                status.done.toFloat() / status.total.coerceAtLeast(1),
-            )
-        is VybeStatus.Ready ->
-            Text(
-                "${status.songs} songs indexed" + (timings.lastQueryMs?.let { " · last search $it ms" } ?: ""),
-                style = TextStyles.metadata,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        VybeStatus.NoModel -> NoModelStatusCard(onPickModel)
+        VybeStatus.LoadingModel -> ProgressLine(stringResource(CommonR.string.vybe_loading_model), null)
+        is VybeStatus.Indexing -> IndexingProgressStatus(status, timings, locale)
+        is VybeStatus.Ready -> ReadyStatusText(status.songs, timings.lastQueryMs, locale)
         is VybeStatus.Failed ->
             Column {
                 Text(status.message, style = TextStyles.supporting, color = MaterialTheme.colorScheme.error)
-                OutlinedButton(onClick = onRetry) { Text("Try again") }
+                OutlinedButton(onClick = onRetry) { Text(stringResource(CommonR.string.action_try_again)) }
             }
     }
+}
+
+@Composable
+private fun NoModelStatusCard(onPickModel: () -> Unit) {
+    Surface(shape = Radius.largeShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
+            Text(stringResource(CommonR.string.vybe_no_model_title), style = TextStyles.itemTitle)
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                stringResource(CommonR.string.vybe_no_model_body),
+                style = TextStyles.supporting,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            Button(onClick = onPickModel) { Text(stringResource(CommonR.string.vybe_choose_model_file)) }
+        }
+    }
+}
+
+@Composable
+private fun IndexingProgressStatus(
+    status: VybeStatus.Indexing,
+    timings: VybeTimings,
+    locale: java.util.Locale,
+) {
+    val base =
+        stringResource(
+            CommonR.string.vybe_indexing_songs,
+            LocaleFormatters.formatInteger(status.done, locale),
+            LocaleFormatters.formatInteger(status.total, locale),
+        )
+    val label =
+        timings.averageEmbedMs?.let { avgMs ->
+            stringResource(
+                CommonR.string.vybe_indexing_timing_suffix,
+                base,
+                LocaleFormatters.formatDecimal(avgMs.toDouble() / MS_PER_S, decimals = 1, locale = locale),
+            )
+        } ?: base
+    ProgressLine(label, status.done.toFloat() / status.total.coerceAtLeast(1))
+}
+
+@Composable
+private fun ReadyStatusText(
+    songs: Int,
+    lastQueryMs: Long?,
+    locale: java.util.Locale,
+) {
+    val base =
+        pluralStringResource(
+            CommonR.plurals.vybe_ready_songs_indexed,
+            songs,
+            LocaleFormatters.formatInteger(songs, locale),
+        )
+    val label =
+        lastQueryMs?.let { queryMs ->
+            stringResource(
+                CommonR.string.vybe_ready_with_timing,
+                base,
+                LocaleFormatters.formatInteger(queryMs, locale),
+            )
+        } ?: base
+    Text(
+        label,
+        style = TextStyles.metadata,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
@@ -323,7 +379,7 @@ private fun Suggestions(
     onCurrent: () -> Unit,
 ) {
     Spacer(Modifier.height(Spacing.md))
-    Text("Try", style = TextStyles.sectionTitle)
+    Text(stringResource(CommonR.string.vybe_suggestions_heading), style = TextStyles.sectionTitle)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (canMatchCurrent) {
             val press = remember { MutableInteractionSource() }
@@ -331,11 +387,18 @@ private fun Suggestions(
                 onClick = onCurrent,
                 interactionSource = press,
                 modifier = Modifier.pressScale(press, BUTTON_PRESSED_SCALE),
-                label = { Text("Like \"${currentTitle.orEmpty()}\"", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                label = {
+                    Text(
+                        stringResource(CommonR.string.vybe_like_song, currentTitle.orEmpty()),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
             )
         }
-        SUGGESTIONS.forEach { suggestion ->
+        SUGGESTION_RES.forEach { suggestionRes ->
+            val suggestion = stringResource(suggestionRes)
             val press = remember { MutableInteractionSource() }
             AssistChip(
                 onClick = { onSuggestion(suggestion) },
@@ -354,6 +417,7 @@ private fun ResultsHeader(
     onShuffle: () -> Unit,
     onQueue: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Column(modifier = Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm)) {
         Text(results.title, style = TextStyles.sectionTitle)
         results.note?.let {
@@ -367,21 +431,29 @@ private fun ResultsHeader(
                 val queuePress = remember { MutableInteractionSource() }
                 Button(onClick = onPlay, interactionSource = playPress, modifier = Modifier.pressScale(playPress, BUTTON_PRESSED_SCALE)) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Text("Play ${results.songs.size}")
+                    Text(
+                        stringResource(
+                            CommonR.string.vybe_play_count,
+                            LocaleFormatters.formatInteger(results.songs.size, locale),
+                        ),
+                    )
                 }
                 FilledTonalButton(
                     onClick = onShuffle,
                     interactionSource = shufflePress,
                     modifier = Modifier.pressScale(shufflePress, BUTTON_PRESSED_SCALE),
                 ) {
-                    Icon(Icons.Default.Shuffle, contentDescription = "Shuffle")
+                    Icon(Icons.Default.Shuffle, contentDescription = stringResource(CommonR.string.action_shuffle))
                 }
                 FilledTonalButton(
                     onClick = onQueue,
                     interactionSource = queuePress,
                     modifier = Modifier.pressScale(queuePress, BUTTON_PRESSED_SCALE),
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Add all to queue")
+                    Icon(
+                        Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = stringResource(CommonR.string.vybe_cd_add_all_to_queue),
+                    )
                 }
             }
         }
@@ -390,5 +462,4 @@ private fun ResultsHeader(
 
 private const val MESSAGE_MS = 2_500L
 private const val MS_PER_S = 1000
-private const val TENTHS = 100
 private val REASON_INDENT = 64.dp

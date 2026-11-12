@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
@@ -84,10 +85,11 @@ fun AnnouncementHost(
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var actionError by remember { mutableStateOf<String?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
+    val notificationsEnabledMsg = stringResource(com.erhu.erhu.core.common.R.string.announcements_notifications_enabled)
+    val notificationsDisabledMsg = stringResource(com.erhu.erhu.core.common.R.string.announcements_notifications_disabled)
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
-            permissionMessage =
-                if (allowed) "Announcement notifications enabled." else "Notifications are disabled. In-app announcements still work."
+            permissionMessage = if (allowed) notificationsEnabledMsg else notificationsDisabledMsg
         }
     LaunchedEffect(foreground) {
         if (!foreground) automaticShown = false
@@ -169,17 +171,28 @@ fun AnnouncementHost(
         AnnouncementPanel(onDismiss = dismiss) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    when (selected.type) {
-                        "feature" -> "NEW FEATURE"
-                        "important_update" -> "IMPORTANT UPDATE"
-                        "maintenance" -> "MAINTENANCE"
-                        else -> "ERHU NEWS"
-                    },
+                    androidx.compose.ui.res.stringResource(
+                        when (selected.type) {
+                            "feature" -> com.erhu.erhu.core.common.R.string.announcements_type_feature
+                            "important_update" -> com.erhu.erhu.core.common.R.string.announcements_type_important_update
+                            "maintenance" -> com.erhu.erhu.core.common.R.string.announcements_type_maintenance
+                            else -> com.erhu.erhu.core.common.R.string.announcements_type_news
+                        },
+                    ),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color(0xffc8ced8),
                     modifier = Modifier.weight(1f),
                 )
-                IconButton(onClick = dismiss) { Icon(Icons.Default.Close, contentDescription = "Dismiss announcement", tint = Color.White) }
+                IconButton(onClick = dismiss) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription =
+                            androidx.compose.ui.res.stringResource(
+                                com.erhu.erhu.core.common.R.string.announcements_cd_dismiss,
+                            ),
+                        tint = Color.White,
+                    )
+                }
             }
             Text(selected.title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
             if (selected.imageUrl !=
@@ -200,17 +213,25 @@ fun AnnouncementHost(
             Text(selected.body, style = MaterialTheme.typography.bodyLarge, color = Color(0xffd7dbe2))
             actionError?.let { Text(it, color = Color(0xffffb4ab)) }
             if (selected.actionUrl != null) {
+                val openLinkFailedMsg = stringResource(com.erhu.erhu.core.common.R.string.announcements_open_link_failed)
                 Button(onClick = {
                     if (selected.eligible(controller.installed, System.currentTimeMillis())) {
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(selected.actionUrl))) }
                             .onSuccess { dismiss() }
-                            .onFailure { actionError = "This link could not be opened. Try again." }
+                            .onFailure {
+                                actionError = openLinkFailedMsg
+                            }
                     } else {
                         dismiss()
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text(selected.actionLabel) }
             }
-            TextButton(onClick = dismiss, modifier = Modifier.align(Alignment.End)) { Text("Dismiss") }
+            TextButton(onClick = dismiss, modifier = Modifier.align(Alignment.End)) {
+                Text(
+                    androidx.compose.ui.res
+                        .stringResource(com.erhu.erhu.core.common.R.string.action_dismiss),
+                )
+            }
         }
     } else if (history) {
         AnnouncementPanel(onDismiss = {
@@ -218,15 +239,42 @@ fun AnnouncementHost(
             selectedId = null
         }) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Announcements", style = MaterialTheme.typography.headlineSmall, color = Color.White, modifier = Modifier.weight(1f))
+                Text(
+                    androidx.compose.ui.res
+                        .stringResource(com.erhu.erhu.core.common.R.string.announcements_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f),
+                )
                 IconButton(onClick = {
                     history =
                         false
-                }) { Icon(Icons.Default.Close, contentDescription = "Close announcements", tint = Color.White) }
+                }) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription =
+                            androidx.compose.ui.res.stringResource(
+                                com.erhu.erhu.core.common.R.string.announcements_cd_close,
+                            ),
+                        tint = Color.White,
+                    )
+                }
             }
             if (refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
-            error?.let { Text(it, color = Color(0xffd7dbe2)) }
-            if (active.isEmpty() && !refreshing) Text("No active announcements.", color = Color(0xffc8ced8))
+            error?.let {
+                Text(
+                    androidx.compose.ui.res
+                        .stringResource(it),
+                    color = Color(0xffd7dbe2),
+                )
+            }
+            if (active.isEmpty() && !refreshing) {
+                Text(
+                    androidx.compose.ui.res
+                        .stringResource(com.erhu.erhu.core.common.R.string.announcements_empty),
+                    color = Color(0xffc8ced8),
+                )
+            }
             active.forEach { item ->
                 Column(
                     Modifier
@@ -242,16 +290,34 @@ fun AnnouncementHost(
                 ) {
                     Text(item.title, style = MaterialTheme.typography.titleMedium, color = Color.White)
                     Text(item.body.take(160), style = MaterialTheme.typography.bodyMedium, color = Color(0xffc8ced8))
-                    if (item.id in memory.read) Text("Read", style = MaterialTheme.typography.labelSmall, color = Color(0xffa3adbc))
+                    if (item.id in memory.read) {
+                        Text(
+                            androidx.compose.ui.res
+                                .stringResource(com.erhu.erhu.core.common.R.string.announcements_status_read),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xffa3adbc),
+                        )
+                    }
                 }
             }
-            TextButton(onClick = controller::retry, enabled = controller.configured && !refreshing) { Text("Refresh announcements") }
+            TextButton(onClick = controller::retry, enabled = controller.configured && !refreshing) {
+                Text(
+                    androidx.compose.ui.res
+                        .stringResource(com.erhu.erhu.core.common.R.string.announcements_action_refresh),
+                )
+            }
             if (Build.VERSION.SDK_INT >= 33 &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
                 TextButton(
                     onClick = { permission.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                ) { Text("Enable announcement notifications") }
+                ) {
+                    Text(
+                        androidx.compose.ui.res.stringResource(
+                            com.erhu.erhu.core.common.R.string.announcements_action_enable_notifications,
+                        ),
+                    )
+                }
             }
             permissionMessage?.let { Text(it, color = Color(0xffc8ced8)) }
         }

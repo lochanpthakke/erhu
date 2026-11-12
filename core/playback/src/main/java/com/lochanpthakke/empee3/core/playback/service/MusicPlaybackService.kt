@@ -15,6 +15,7 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
 import com.erhu.erhu.core.common.dispatcher.DispatcherProvider
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.database.repository.RecentlyPlayedRecorder
@@ -226,9 +227,11 @@ class MusicPlaybackService : MediaLibraryService() {
             params: MediaLibraryService.LibraryParams?,
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> =
             runAsync {
+                val localizedContext = AppLocaleManager.localizedContext(this@MusicPlaybackService)
                 val children: List<MediaItem> =
                     when {
-                        parentId == MediaId.ROOT -> MediaId.ROOT_CHILDREN.map { BrowseTree.getCategoryFolder(it) }
+                        parentId == MediaId.ROOT ->
+                            MediaId.ROOT_CHILDREN.map { BrowseTree.getCategoryFolder(it, localizedContext) }
                         parentId == MediaId.SONGS -> libraryRepository.getAllSongs().first().map { it.toMediaItem() }
                         parentId == MediaId.ALBUMS -> libraryRepository.getAllAlbums().first().map { BrowseTree.albumFolder(it) }
                         parentId.startsWith(MediaId.ALBUM_PREFIX) -> {

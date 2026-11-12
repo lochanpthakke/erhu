@@ -3,17 +3,28 @@ package com.erhu.erhu.feature.library
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.playback.diagnostics.DecoderInfo
 import com.erhu.erhu.core.playback.diagnostics.MediaFormats
 import com.erhu.erhu.core.playback.diagnostics.OutputDevice
 import com.erhu.erhu.core.playback.diagnostics.OutputDiagnostics
+import com.erhu.erhu.core.playback.diagnostics.OutputKind
 import com.erhu.erhu.core.playback.diagnostics.PlayerDiagnostics
 import com.erhu.erhu.core.playback.diagnostics.Provenance
+import com.erhu.erhu.core.sound.dsp.ClippingRisk
 import com.erhu.erhu.core.sound.dsp.EqStage
 import com.erhu.erhu.core.sound.dsp.HeadroomEstimate
 import com.erhu.erhu.core.sound.dsp.StageStatus
 import com.erhu.erhu.core.sound.visualizer.PeakReading
 import java.util.Locale
+import kotlin.math.roundToInt
+
+private const val HZ_PER_KHZ = 1000f
 
 /**
  * The app-side signal path as it is implemented, in order: decoder, the EQ processor, the
@@ -31,68 +42,82 @@ internal fun ChainSection(
     transitionFading: Boolean,
     equalizerLink: @Composable () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val offloaded = player.audioTrack?.offload == true
     DetailSection(
-        title = "Processing (app side)",
-        explanation =
-            "A logical view of the processing erhu itself performs, in its real order. After the app, Android mixes, may " +
-                "resample, and may apply system or device effects (and Bluetooth re-encodes); that part is hidden from apps, so it " +
-                "is shown as one step. The app has no preamp, bass boost, virtualizer, loudness or limiter stage. During a " +
-                "Smooth Transition the outgoing track's last seconds play in a separate, private player that is not shown here.",
+        title = stringResource(R.string.audio_details_chain_title),
+        explanation = stringResource(R.string.audio_details_chain_explanation),
     ) {
         ChainStep(
-            title = "Decoder",
-            state = if (player.inputFormat != null) "Running" else "Idle",
+            title = stringResource(R.string.audio_details_step_decoder),
+            state =
+                stringResource(
+                    if (player.inputFormat !=
+                        null
+                    ) {
+                        R.string.audio_details_step_running
+                    } else {
+                        R.string.audio_details_step_idle
+                    },
+                ),
             active = player.inputFormat != null,
-            detail = decoder?.name ?: player.decoderName ?: "Not reported yet",
+            detail = decoder?.name ?: player.decoderName ?: stringResource(R.string.audio_details_step_not_reported),
             isLast = false,
             appControlled = false,
         )
         ChainStep(
-            title = "Transition fade",
-            state = if (transitionFading) "Fading in" else "Unity",
+            title = stringResource(R.string.audio_details_step_transition),
+            state = stringResource(if (transitionFading) R.string.audio_details_step_fading_in else R.string.audio_details_step_unity),
             active = transitionFading,
-            detail = "Changes the level only while Smooth Transitions fades the next track of an album or playlist in",
+            detail = stringResource(R.string.audio_details_step_transition_detail),
             isLast = false,
             appControlled = true,
         )
         ChainStep(
-            title = "Equalizer",
-            state = if (offloaded) "Skipped (offload)" else eq.status.label,
+            title = stringResource(R.string.audio_details_step_equalizer),
+            state = stringResource(if (offloaded) R.string.audio_details_step_skipped_offload else eq.status.labelRes()),
             active = eq.status == StageStatus.ACTIVE && !offloaded,
-            detail = eq.reason + (if (eq.status == StageStatus.ACTIVE) "; samples beyond full scale are clipped" else ""),
+            detail = localizedEqReason(eq, locale),
             isLast = false,
             appControlled = true,
             action = equalizerLink,
         )
         ChainStep(
-            title = "Visualizer tap",
-            state = if (tapCollecting) "Reading" else "Idle",
+            title = stringResource(R.string.audio_details_step_visualizer),
+            state = stringResource(if (tapCollecting) R.string.audio_details_step_reading else R.string.audio_details_step_idle),
             active = tapCollecting,
-            detail = "Read-only copy for the visualizer and the peak meter below; never changes the audio",
+            detail = stringResource(R.string.audio_details_step_visualizer_detail),
             isLast = false,
             appControlled = true,
         )
         ChainStep(
-            title = "Android audio system",
-            state = "Not visible",
+            title = stringResource(R.string.audio_details_step_android_system),
+            state = stringResource(R.string.audio_details_step_not_visible),
             active = false,
             detail =
-                "Mixing, possible resampling, system and device effects" +
-                    (output?.spatializer?.takeIf { it.enabled }?.let { "; spatial audio on" } ?: ""),
+                stringResource(
+                    if (output?.spatializer?.enabled == true) {
+                        R.string.audio_details_step_android_detail_spatial
+                    } else {
+                        R.string.audio_details_step_android_detail
+                    },
+                ),
             isLast = false,
             appControlled = false,
         )
         ChainStep(
-            title = "Output",
+            title = stringResource(R.string.audio_details_step_output),
             state =
-                output
-                    ?.route
-                    ?.firstOrNull()
-                    ?.kind
-                    ?.label ?: "Unknown",
+                stringResource(
+                    output
+                        ?.route
+                        ?.firstOrNull()
+                        ?.kind
+                        ?.labelRes() ?: R.string.audio_details_output_unknown,
+                ),
             active = output?.route?.isNotEmpty() == true,
-            detail = output?.route?.joinToString { it.typeName }?.ifEmpty { null } ?: "Route not reported",
+            detail =
+                output?.route?.joinToString { it.typeName }?.ifEmpty { null } ?: stringResource(R.string.audio_details_route_not_reported),
             isLast = true,
             appControlled = false,
         )
@@ -100,36 +125,74 @@ internal fun ChainSection(
 }
 
 @Composable
+private fun localizedEqReason(
+    eq: EqStage,
+    locale: Locale,
+): String =
+    when (eq.status) {
+        StageStatus.OFF -> stringResource(R.string.audio_details_eq_off)
+        StageStatus.IDLE -> stringResource(R.string.audio_details_eq_idle)
+        StageStatus.BYPASSED -> stringResource(R.string.audio_details_eq_bypassed)
+        StageStatus.ACTIVE ->
+            pluralStringResource(
+                R.plurals.audio_details_eq_active,
+                eq.activeBands.size,
+                LocaleFormatters.formatInteger(eq.activeBands.size, locale),
+            )
+    }
+
+private fun StageStatus.labelRes(): Int =
+    when (this) {
+        StageStatus.ACTIVE -> R.string.audio_details_stage_active
+        StageStatus.BYPASSED -> R.string.audio_details_stage_bypassed
+        StageStatus.OFF -> R.string.audio_details_stage_off
+        StageStatus.IDLE -> R.string.audio_details_stage_idle
+    }
+
+private fun OutputKind.labelRes(): Int =
+    when (this) {
+        OutputKind.SPEAKER -> R.string.audio_details_output_kind_speaker
+        OutputKind.EARPIECE -> R.string.audio_details_output_kind_earpiece
+        OutputKind.WIRED -> R.string.audio_details_output_kind_wired
+        OutputKind.BLUETOOTH -> R.string.audio_details_output_kind_bluetooth
+        OutputKind.USB -> R.string.audio_details_output_kind_usb
+        OutputKind.HDMI -> R.string.audio_details_output_kind_hdmi
+        OutputKind.HEARING_AID -> R.string.audio_details_output_kind_hearing_aid
+        OutputKind.OTHER -> R.string.audio_details_output_kind_other
+    }
+
+@Composable
 internal fun OutputSection(output: OutputDiagnostics?) {
     DetailSection(
-        title = "Output",
-        explanation =
-            "Devices as Android describes them. Sample rates, channels and encodings are what a device advertises it can accept, " +
-                "not the exact format it receives now. On Android 13 and later the route for music is reported by Android; on " +
-                "earlier versions it is estimated from the connected devices.",
+        title = stringResource(R.string.audio_details_output_title),
+        explanation = stringResource(R.string.audio_details_output_explanation),
     ) {
         if (output == null) {
-            DetailNote("Reading output devices…")
+            DetailNote(stringResource(R.string.audio_details_reading_devices))
             return@DetailSection
         }
         val route = output.route
-        if (route.isEmpty()) DetailRow("Route", null as String?)
+        if (route.isEmpty()) DetailRow(stringResource(R.string.audio_details_label_route), null as String?)
         route.forEach { device -> DeviceRows(device, output.routeSource) }
         output.spatializer?.let {
             DetailRow(
-                "Spatial audio",
-                if (it.enabled) {
-                    "On"
-                } else if (it.available) {
-                    "Available, off"
-                } else {
-                    "Not available"
-                },
+                stringResource(R.string.audio_details_label_spatial),
+                stringResource(
+                    if (it.enabled) {
+                        R.string.audio_details_spatial_on
+                    } else if (it.available) {
+                        R.string.audio_details_spatial_off
+                    } else {
+                        R.string.audio_details_spatial_unavailable
+                    },
+                ),
                 Provenance.PLATFORM,
             )
         }
         val others = output.connected.filter { c -> route.none { it.typeName == c.typeName && it.productName == c.productName } }
-        if (others.isNotEmpty()) DetailRow("Also connected", others.joinToString { it.typeName }, Provenance.PLATFORM)
+        if (others.isNotEmpty()) {
+            DetailRow(stringResource(R.string.audio_details_label_also_connected), others.joinToString { it.typeName }, Provenance.PLATFORM)
+        }
     }
 }
 
@@ -139,29 +202,30 @@ private fun DeviceRows(
     source: Provenance,
 ) {
     DetailRow(
-        "Route",
-        device.kind.label,
+        stringResource(R.string.audio_details_label_route),
+        stringResource(device.kind.labelRes()),
         source,
-        if (source ==
-            Provenance.ESTIMATE
-        ) {
-            "Estimated: this Android version does not report the route"
-        } else {
-            null
-        },
+        if (source == Provenance.ESTIMATE) stringResource(R.string.audio_details_route_estimated_note) else null,
     )
-    DetailRow("Device", listOfNotNull(device.productName, device.typeName).distinct().joinToString(" · "), Provenance.PLATFORM)
     DetailRow(
-        "Advertised sample rates",
-        device.sampleRatesHz.takeIf { it.isNotEmpty() }?.joinToString { MediaFormats.sampleRateText(it) } ?: "Not listed (any)",
+        stringResource(R.string.audio_details_label_device),
+        listOfNotNull(device.productName, device.typeName).distinct().joinToString(" · "),
         Provenance.PLATFORM,
     )
     DetailRow(
-        "Advertised channels",
-        device.channelCounts.takeIf { it.isNotEmpty() }?.joinToString() ?: "Not listed (any)",
+        stringResource(R.string.audio_details_label_sample_rates),
+        device.sampleRatesHz.takeIf { it.isNotEmpty() }?.joinToString { MediaFormats.sampleRateText(it) }
+            ?: stringResource(R.string.audio_details_not_listed_any),
         Provenance.PLATFORM,
     )
-    if (device.encodings.isNotEmpty()) DetailRow("Advertised encodings", device.encodings.joinToString(), Provenance.PLATFORM)
+    DetailRow(
+        stringResource(R.string.audio_details_label_advertised_channels),
+        device.channelCounts.takeIf { it.isNotEmpty() }?.joinToString() ?: stringResource(R.string.audio_details_not_listed_any),
+        Provenance.PLATFORM,
+    )
+    if (device.encodings.isNotEmpty()) {
+        DetailRow(stringResource(R.string.audio_details_label_encodings), device.encodings.joinToString(), Provenance.PLATFORM)
+    }
 }
 
 @Composable
@@ -171,38 +235,82 @@ internal fun AnalysisSection(
     peak: PeakReading?,
     onResetPeak: () -> Unit,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     DetailSection(
-        title = "Headroom",
-        explanation =
-            "The estimate comes from the EQ settings: any boost can push loud music past full scale (0 dBFS), where the EQ clips. " +
-                "The measurement shows the largest sample after the EQ while this screen is open. It cannot see peaks between samples " +
-                "(true peak) or what Android does afterwards, and full-scale samples may already be in the recording.",
+        title = stringResource(R.string.audio_details_headroom_title),
+        explanation = stringResource(R.string.audio_details_headroom_explanation),
     ) {
         if (headroom != null) {
+            val riskLabel = stringResource(headroom.risk.labelRes())
             DetailRow(
-                "Clipping risk from EQ",
+                stringResource(R.string.audio_details_label_clipping_risk),
                 if (eqActive) {
-                    String.format(
-                        Locale.ROOT,
-                        "%s (max boost %+.1f dB)",
-                        headroom.risk.label,
-                        headroom.maxBoostDb,
+                    stringResource(
+                        R.string.audio_details_risk_with_boost,
+                        riskLabel,
+                        String.format(locale, "%+.1f", headroom.maxBoostDb),
                     )
                 } else {
-                    headroom.risk.label
+                    riskLabel
                 },
                 Provenance.ESTIMATE,
             )
-            DetailNote(headroom.advice)
+            DetailNote(localizedHeadroomAdvice(eqActive, headroom, locale))
         }
         val reading = peak?.takeIf { it.frames > 0 }
         DetailRow(
-            "Sample peak after EQ",
-            reading?.peakDbfs?.let { String.format(Locale.ROOT, "%.1f dBFS", it) },
+            stringResource(R.string.audio_details_label_sample_peak),
+            reading?.peakDbfs?.let {
+                stringResource(R.string.audio_details_peak_dbfs, LocaleFormatters.formatDecimal(it.toDouble(), 1, locale))
+            },
             Provenance.MEASURED,
-            reading?.let { String.format(Locale.ROOT, "Over %.0f s · %d samples at full scale", it.secondsMeasured, it.fullScaleSamples) }
-                ?: "Measured while music plays with this screen open",
+            reading?.let {
+                pluralStringResource(
+                    R.plurals.audio_details_peak_note,
+                    it.fullScaleSamples.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                    LocaleFormatters.formatInteger(it.secondsMeasured.roundToInt(), locale),
+                    LocaleFormatters.formatInteger(it.fullScaleSamples, locale),
+                )
+            } ?: stringResource(R.string.audio_details_peak_measuring_note),
         )
-        TextButton(onClick = onResetPeak) { Text("Reset measurement") }
+        TextButton(onClick = onResetPeak) { Text(stringResource(R.string.audio_details_reset_measurement)) }
     }
 }
+
+@Composable
+private fun localizedHeadroomAdvice(
+    eqActive: Boolean,
+    headroom: HeadroomEstimate,
+    locale: Locale,
+): String {
+    val freqHz = headroom.atFrequencyHz
+    return when {
+        !eqActive -> stringResource(R.string.audio_details_advice_inactive)
+        headroom.risk == ClippingRisk.NONE || freqHz == null -> stringResource(R.string.audio_details_advice_cut_only)
+        else -> {
+            val freqText =
+                if (freqHz >= HZ_PER_KHZ) {
+                    stringResource(
+                        R.string.audio_details_khz,
+                        LocaleFormatters.formatDecimal((freqHz / HZ_PER_KHZ).toDouble(), 1, locale),
+                    )
+                } else {
+                    stringResource(R.string.audio_details_hz, LocaleFormatters.formatInteger(freqHz.toInt(), locale))
+                }
+            stringResource(
+                R.string.audio_details_advice_boost,
+                String.format(locale, "%+.1f", headroom.maxBoostDb),
+                freqText,
+                LocaleFormatters.formatDecimal(headroom.maxBoostDb.toDouble(), 1, locale),
+            )
+        }
+    }
+}
+
+private fun ClippingRisk.labelRes(): Int =
+    when (this) {
+        ClippingRisk.NONE -> R.string.audio_details_risk_none
+        ClippingRisk.LOW -> R.string.audio_details_risk_low
+        ClippingRisk.MODERATE -> R.string.audio_details_risk_moderate
+        ClippingRisk.HIGH -> R.string.audio_details_risk_high
+    }

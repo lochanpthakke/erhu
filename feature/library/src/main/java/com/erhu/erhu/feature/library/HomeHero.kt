@@ -42,6 +42,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -59,6 +60,7 @@ import com.erhu.erhu.feature.library.mix.MixArtCanvas
 import com.erhu.erhu.feature.library.mix.MixKind
 import com.erhu.erhu.feature.library.mix.SmartMix
 import kotlin.random.Random
+import com.erhu.erhu.core.common.R as CommonR
 
 /*
  * The home screen's hero: the Smart Playlists as one large banner, a mix at a time, swiped
@@ -202,7 +204,7 @@ private fun MixBanner(
                 .clickable(
                     interactionSource = press,
                     indication = LocalIndication.current,
-                    onClickLabel = "Open ${mix.title}",
+                    onClickLabel = stringResource(CommonR.string.smart_playlist_cd_open, mix.localizedTitle()),
                     onClick = onOpen,
                 ),
     ) {
@@ -236,6 +238,8 @@ private fun BannerText(
 ) {
     val text = Color(look.text)
     val quiet = text.copy(alpha = BannerLook.SECONDARY_ALPHA)
+    val displayTitle = mix.localizedTitle()
+    val displayDescription = mix.localizedDescription()
     Column(
         modifier =
             Modifier
@@ -245,10 +249,10 @@ private fun BannerText(
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         Column {
-            Text(text = "SMART PLAYLIST", style = MaterialTheme.typography.labelSmall, color = quiet)
+            Text(text = stringResource(CommonR.string.smart_playlist_badge), style = MaterialTheme.typography.labelSmall, color = quiet)
             Spacer(modifier = Modifier.height(Spacing.xs))
             Text(
-                text = mix.title,
+                text = displayTitle,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = text,
@@ -256,11 +260,11 @@ private fun BannerText(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(Spacing.xs))
-            Text(text = mix.description, style = TextStyles.tileSubtitle, color = quiet, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(text = displayDescription, style = TextStyles.tileSubtitle, color = quiet, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-            PlayPill(title = mix.title, look = look, onClick = onPlay)
-            Text(text = countLabel(mix.songIds.size, "song"), style = TextStyles.tileSubtitle, color = quiet, maxLines = 1)
+            PlayPill(title = displayTitle, look = look, onClick = onPlay)
+            Text(text = songCountText(mix.songIds.size), style = TextStyles.tileSubtitle, color = quiet, maxLines = 1)
         }
     }
 }
@@ -273,13 +277,13 @@ private fun MoreListeningBanner(modifier: Modifier = Modifier) {
             Icon(imageVector = Icons.Default.GraphicEq, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(Spacing.sm))
             Text(
-                text = "More mixes are on the way",
+                text = stringResource(CommonR.string.smart_playlist_more_title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "Keep listening and erhu will build mixes from your plays.",
+                text = stringResource(CommonR.string.smart_playlist_more_body),
                 style = TextStyles.tileSubtitle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -329,6 +333,7 @@ private fun PlayPill(
     onClick: () -> Unit,
 ) {
     val press = remember { MutableInteractionSource() }
+    val playDescription = stringResource(CommonR.string.smart_playlist_cd_play, title)
     Row(
         modifier =
             Modifier
@@ -337,7 +342,7 @@ private fun PlayPill(
                 .clip(Radius.pillShape)
                 .background(Color(look.text))
                 .clickable(interactionSource = press, indication = LocalIndication.current, role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = "Play $title" }
+                .semantics { contentDescription = playDescription }
                 .padding(start = Spacing.md, end = Spacing.lg),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -348,7 +353,12 @@ private fun PlayPill(
             modifier = Modifier.size(PLAY_ICON),
         )
         Spacer(modifier = Modifier.width(Spacing.xs))
-        Text(text = "Play", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = Color(look.onText))
+        Text(
+            text = stringResource(CommonR.string.action_play),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color(look.onText),
+        )
     }
 }
 

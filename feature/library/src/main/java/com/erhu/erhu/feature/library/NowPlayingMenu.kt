@@ -23,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
 import com.erhu.erhu.core.designsystem.component.GlassMenuDivider
@@ -46,10 +48,10 @@ internal fun NowPlayingMenu(
     var open by remember { mutableStateOf(false) }
     GlassMenuAnchor {
         PressIconButton(modifier = Modifier.glassMenuTrigger(), onClick = { open = true }, enabled = enabled) {
-            Icon(imageVector = Icons.Default.MoreVert, contentDescription = "More options")
+            Icon(imageVector = Icons.Default.MoreVert, contentDescription = stringResource(R.string.player_cd_more_options))
         }
         GlassMenu(
-            label = "Now Playing options",
+            label = stringResource(R.string.player_menu_label),
             expanded = open,
             onDismissRequest = { open = false },
         ) {
@@ -59,32 +61,36 @@ internal fun NowPlayingMenu(
                     action()
                 }
             }
-            Group("Track")
-            MenuItem("Music information", Icons.Outlined.Info, close(actions.onMusicInfo))
-            MenuItem("Audio details", Icons.Outlined.Tune, close(actions.onAudioDetails))
+            Group(stringResource(R.string.player_menu_group_track))
+            MenuItem(stringResource(R.string.player_menu_music_info), Icons.Outlined.Info, close(actions.onMusicInfo))
+            MenuItem(stringResource(R.string.player_menu_audio_details), Icons.Outlined.Tune, close(actions.onAudioDetails))
             GroupDivider()
-            Group("Library")
-            MenuItem("Bookmark this moment", Icons.Default.BookmarkAdd, close(actions.onAddBookmark))
+            Group(stringResource(R.string.player_menu_group_library))
+            MenuItem(stringResource(R.string.player_menu_bookmark_moment), Icons.Default.BookmarkAdd, close(actions.onAddBookmark))
             MenuItem(
-                if (loopOn) "Bookmarks & A-B loop (on)" else "Bookmarks & A-B loop",
+                stringResource(if (loopOn) R.string.player_menu_bookmarks_ab_loop_on else R.string.player_menu_bookmarks_ab_loop),
                 Icons.Default.Bookmarks,
                 close(actions.onBookmarks),
             )
-            MenuItem("Add to playlist", Icons.AutoMirrored.Filled.PlaylistAdd, close(actions.onAddToPlaylist))
+            MenuItem(
+                stringResource(R.string.song_menu_add_to_playlist),
+                Icons.AutoMirrored.Filled.PlaylistAdd,
+                close(actions.onAddToPlaylist),
+            )
             actions.onToggleHidden?.let { toggle ->
                 if (isHidden) {
-                    MenuItem("Show in Smart Playlists again", Icons.Default.Visibility, close(toggle))
+                    MenuItem(stringResource(R.string.player_menu_show_smart_playlists), Icons.Default.Visibility, close(toggle))
                 } else {
-                    MenuItem("Hide from Smart Playlists", Icons.Default.VisibilityOff, close(toggle))
+                    MenuItem(stringResource(R.string.player_menu_hide_smart_playlists), Icons.Default.VisibilityOff, close(toggle))
                 }
             }
             GroupDivider()
-            Group("Playback & display")
-            actions.onStartRadio?.let { MenuItem("Start radio", Icons.Default.Radio, close(it)) }
-            actions.onRefreshRadio?.let { MenuItem("New radio picks", Icons.Default.Refresh, close(it)) }
-            MenuItem("Queue", Icons.AutoMirrored.Filled.QueueMusic, close(actions.onQueue))
-            MenuItem("Visualizer", Icons.Default.GraphicEq, close(actions.onVisualizer))
-            MenuItem("Equalizer", Icons.Default.Equalizer, close(actions.onEqualizer))
+            Group(stringResource(R.string.player_menu_group_playback_display))
+            actions.onStartRadio?.let { MenuItem(stringResource(R.string.song_menu_start_radio), Icons.Default.Radio, close(it)) }
+            actions.onRefreshRadio?.let { MenuItem(stringResource(R.string.player_menu_new_radio_picks), Icons.Default.Refresh, close(it)) }
+            MenuItem(stringResource(R.string.player_menu_queue), Icons.AutoMirrored.Filled.QueueMusic, close(actions.onQueue))
+            MenuItem(stringResource(R.string.player_menu_visualizer), Icons.Default.GraphicEq, close(actions.onVisualizer))
+            MenuItem(stringResource(R.string.nav_equalizer), Icons.Default.Equalizer, close(actions.onEqualizer))
         }
     }
 }

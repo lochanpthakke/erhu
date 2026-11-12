@@ -36,8 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.database.builder.ProposedMove
 import com.erhu.erhu.core.designsystem.component.ActionButton
 import com.erhu.erhu.core.designsystem.component.AppScaffold
@@ -53,6 +56,7 @@ import com.erhu.erhu.core.designsystem.component.forScrollingContent
 import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * Library Builder, styled like the Settings pages: the app's floating header (round glass back
@@ -84,7 +88,7 @@ fun LibraryBuilderScreen(
         topBar = {
             OverlayHeader(
                 navigation = TopBarNavigation.Detail(onBack = onNavigateBack),
-                title = "Library Builder",
+                title = stringResource(CommonR.string.builder_title),
                 collapsingTitle = collapsingTitle,
             )
         },
@@ -128,7 +132,7 @@ private fun LazyListScope.stateItems(
         is LibraryBuilderState.Idle ->
             item(key = "idle") { IdleActions(onScan = viewModel::startScanning) }
         is LibraryBuilderState.Scanning ->
-            item(key = "scanning") { WorkingGroup(text = "Scanning library files…") }
+            item(key = "scanning") { WorkingGroup(text = stringResource(CommonR.string.builder_scanning_files)) }
         is LibraryBuilderState.Review ->
             reviewItems(
                 moves = state.moves,
@@ -138,8 +142,14 @@ private fun LazyListScope.stateItems(
             )
         is LibraryBuilderState.Executing ->
             item(key = "executing") {
+                val locale = AppLocaleManager.activeLocale(LocalContext.current)
                 WorkingGroup(
-                    text = "Organizing files (${state.progress} / ${state.total})…",
+                    text =
+                        stringResource(
+                            CommonR.string.builder_organizing_progress,
+                            LocaleFormatters.formatInteger(state.progress, locale),
+                            LocaleFormatters.formatInteger(state.total, locale),
+                        ),
                     progress = if (state.total > 0) state.progress.toFloat() / state.total else null,
                 )
             }
@@ -155,7 +165,7 @@ private fun IntroGroup(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "Organises your audio files into hierarchical folders automatically",
+            text = stringResource(CommonR.string.builder_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -171,7 +181,7 @@ private fun OptionsGroup(
 ) {
     Column(modifier = Modifier.fillMaxWidth().groupSurface(CircleShape)) {
         GroupToggleRow(
-            title = "Force Re-organize",
+            title = stringResource(CommonR.string.builder_force_reorganize),
             checked = forceReorganize,
             onCheckedChange = onForceReorganizeChange,
         )
@@ -196,8 +206,17 @@ private fun IdleActions(onScan: (String) -> Unit) {
             }
         }
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        ActionButton(text = "Start Scanning Files", onClick = { onScan("") }, icon = Icons.Default.Search, primary = true)
-        ActionButton(text = "Scan another folder…", onClick = { otherFolderPicker.launch(null) }, icon = Icons.Default.FolderOpen)
+        ActionButton(
+            text = stringResource(CommonR.string.builder_start_scanning),
+            onClick = { onScan("") },
+            icon = Icons.Default.Search,
+            primary = true,
+        )
+        ActionButton(
+            text = stringResource(CommonR.string.builder_scan_another_folder),
+            onClick = { otherFolderPicker.launch(null) },
+            icon = Icons.Default.FolderOpen,
+        )
     }
 }
 
@@ -220,24 +239,47 @@ private fun CompleteGroup(
     result: ExecutionResult,
     onDone: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val locale = AppLocaleManager.activeLocale(context)
     val colors = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-        SectionHeading(title = "Organization complete")
+        SectionHeading(title = stringResource(CommonR.string.builder_complete_heading))
         Column(modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg)) {
             val lines =
                 listOfNotNull(
-                    "Successfully Moved: ${result.successCount}" to colors.primary,
-                    "Failed: ${result.failedCount}" to colors.error,
-                    "Skipped: ${result.skippedCount}" to colors.onSurfaceVariant,
-                    ("Already in place: ${result.alreadyOrganizedCount}" to colors.onSurfaceVariant)
-                        .takeIf { result.alreadyOrganizedCount > 0 },
+                    stringResource(
+                        CommonR.string.builder_stat_moved,
+                        LocaleFormatters.formatInteger(result.successCount, locale),
+                    ) to colors.primary,
+                    stringResource(
+                        CommonR.string.builder_stat_failed,
+                        LocaleFormatters.formatInteger(result.failedCount, locale),
+                    ) to colors.error,
+                    stringResource(
+                        CommonR.string.builder_stat_skipped,
+                        LocaleFormatters.formatInteger(result.skippedCount, locale),
+                    ) to colors.onSurfaceVariant,
+                    (
+                        stringResource(
+                            CommonR.string.builder_stat_already_organized,
+                            LocaleFormatters.formatInteger(result.alreadyOrganizedCount, locale),
+                        ) to colors.onSurfaceVariant
+                    ).takeIf { result.alreadyOrganizedCount > 0 },
                 )
             lines.forEach { (text, color) -> Text(text = text, style = MaterialTheme.typography.bodyLarge, color = color) }
             result.failureReasons.forEach { (reason, count) ->
-                Text("$count × ${reason.label}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                Text(
+                    stringResource(
+                        CommonR.string.builder_failure_reason_count,
+                        LocaleFormatters.formatInteger(count, locale),
+                        reason.localizedLabel(context),
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
-        ActionButton(text = "Return to Library", onClick = onDone, primary = true)
+        ActionButton(text = stringResource(CommonR.string.common_return_to_library), onClick = onDone, primary = true)
     }
 }
 
@@ -248,15 +290,24 @@ private fun LazyListScope.reviewItems(
     onExecuteClick: () -> Unit,
 ) {
     item(key = "review-heading") {
+        val locale = AppLocaleManager.activeLocale(LocalContext.current)
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            SectionHeading(title = "Proposed moves", trailing = moves.size.toString())
-            ActionButton(text = "Execute Moves", onClick = onExecuteClick, primary = true, enabled = moves.isNotEmpty())
+            SectionHeading(
+                title = stringResource(CommonR.string.builder_proposed_moves),
+                trailing = LocaleFormatters.formatInteger(moves.size, locale),
+            )
+            ActionButton(
+                text = stringResource(CommonR.string.builder_execute_moves),
+                onClick = onExecuteClick,
+                primary = true,
+                enabled = moves.isNotEmpty(),
+            )
         }
     }
     if (moves.isEmpty()) {
         item(key = "review-empty") {
             Text(
-                text = "No files need organizing. Enable 'Force Re-organize' to re-scan all files.",
+                text = stringResource(CommonR.string.builder_no_files_need_organizing),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = Spacing.lg),
@@ -280,16 +331,25 @@ private fun ProposedMoveItem(
     onResolveClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg)) {
-        Text(text = move.title.ifBlank { "Unknown Title" }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         Text(
-            text = "${move.artist.ifBlank { "Unknown Artist" }} - ${move.album.ifBlank { "Unknown Album" }}",
+            text = move.title.ifBlank { stringResource(CommonR.string.builder_unknown_title) },
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            text =
+                stringResource(
+                    CommonR.string.builder_artist_album,
+                    move.artist.ifBlank { stringResource(CommonR.string.builder_unknown_artist) },
+                    move.album.ifBlank { stringResource(CommonR.string.fix_tags_unknown_album) },
+                ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(Spacing.xs))
         Text(
-            text = "→ ${move.destinationPath}",
+            text = stringResource(CommonR.string.builder_destination_arrow, move.destinationPath),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -303,9 +363,16 @@ private fun ProposedMoveItem(
                 ProposedMove.State.MISSING_METADATA -> MaterialTheme.colorScheme.error
                 ProposedMove.State.COLLISION -> MaterialTheme.colorScheme.error
             }
+        val stateLabelRes =
+            when (move.state) {
+                ProposedMove.State.VALID -> CommonR.string.builder_state_valid
+                ProposedMove.State.ALREADY_ORGANIZED -> CommonR.string.builder_state_already_organized
+                ProposedMove.State.MISSING_METADATA -> CommonR.string.builder_state_missing_metadata
+                ProposedMove.State.COLLISION -> CommonR.string.builder_state_collision
+            }
 
         Text(
-            text = move.state.name,
+            text = stringResource(stateLabelRes),
             style = MaterialTheme.typography.labelMedium,
             color = statusColor,
         )
@@ -316,10 +383,10 @@ private fun ProposedMoveItem(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 TextButton(onClick = onSkipClick) {
-                    Text("Skip")
+                    Text(stringResource(CommonR.string.action_skip))
                 }
                 TextButton(onClick = onResolveClick) {
-                    Text("Resolve")
+                    Text(stringResource(CommonR.string.builder_action_resolve))
                 }
             }
         }
@@ -336,23 +403,23 @@ private fun ResolveDialog(
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Resolve Move") },
+        title = { Text(stringResource(CommonR.string.builder_resolve_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("Destination Path") },
+                label = { Text(stringResource(CommonR.string.builder_destination_path_label)) },
                 modifier = Modifier.fillMaxWidth(),
             )
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(text) }) {
-                Text("Confirm")
+                Text(stringResource(CommonR.string.action_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(CommonR.string.action_cancel))
             }
         },
     )

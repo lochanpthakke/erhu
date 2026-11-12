@@ -8,6 +8,8 @@
 
 package com.erhu.erhu.feature.library
 
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.getOrDefault
@@ -63,6 +65,7 @@ import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * One operation shared by the service and every LibraryViewModel instance. No Activity is retained.
@@ -152,7 +155,11 @@ class MetadataRepairOperation
                     pause.value = saved?.pauseReason?.let { BatchPause(BatchPause.Kind.USER, it) }
                 } catch (e: Exception) {
                     restorationFailed = true
-                    messages.value = "Could not restore metadata repair: ${e.message}. Existing results were kept."
+                    messages.value =
+                        localized().getString(
+                            CommonR.string.repair_op_restore_failed,
+                            e.message.orEmpty(),
+                        )
                     logger.w("MetadataRepair", "Could not restore repair", e)
                 }
                 restoration.complete(Unit)
@@ -161,6 +168,8 @@ class MetadataRepairOperation
                 }
             }
         }
+
+        private fun localized(): android.content.Context = AppLocaleManager.localizedContext(appContext)
 
         // Restoration is a finite prerequisite; the persistence observer above remains application-scoped.
         suspend fun ready() {
@@ -181,7 +190,7 @@ class MetadataRepairOperation
         ): Boolean {
             if (busy.value || awaitingApproval.value || restorationFailed) return false
             if (selection.fields.isEmpty() && !selection.rename) {
-                messages.value = "Choose at least one field to fix"
+                messages.value = localized().getString(CommonR.string.repair_op_choose_field)
                 return false
             }
             if (queue.value.none { it.status in RepairStatus.TO_PROCESS }) return false
@@ -223,7 +232,7 @@ class MetadataRepairOperation
             try {
                 ready()
                 if (restorationFailed) {
-                    startFailed("Pending metadata could not be restored. No files were changed.")
+                    startFailed(localized().getString(CommonR.string.repair_op_pending_restore_failed))
                     return
                 }
                 val config =
@@ -247,7 +256,9 @@ class MetadataRepairOperation
                     progress.value = progress.value.copy(phase = RepairPhase.PAUSED, reason = reason.reason)
                     awaitNetworkOrPause()
                 } while (!pauseRequested.value)
-                if (pauseRequested.value) pause.value = BatchPause(BatchPause.Kind.USER, "Paused by you")
+                if (pauseRequested.value) {
+                    pause.value = BatchPause(BatchPause.Kind.USER, localized().getString(CommonR.string.repair_op_paused_by_user))
+                }
                 awaitingApproval.value = pending.ids.isNotEmpty()
                 progress.value =
                     RepairProgress(
@@ -262,7 +273,7 @@ class MetadataRepairOperation
                 throw e
             } catch (e: Exception) {
                 awaitingApproval.value = pending.ids.isNotEmpty()
-                messages.value = "Metadata fetching stopped: ${e.message}"
+                messages.value = localized().getString(CommonR.string.repair_op_fetching_stopped, e.message.orEmpty())
                 progress.value = RepairProgress(RepairPhase.FAILED, processedCount(), queue.value.size, pending.ids.size, messages.value)
                 logger.w("MetadataRepair", "Metadata fetching failed", e)
             } finally {
@@ -273,12 +284,13 @@ class MetadataRepairOperation
 
         private suspend fun retainInterruptedResults() {
             withContext(NonCancellable) {
-                pause.value = BatchPause(BatchPause.Kind.USER, "Fetching interrupted; completed results kept")
+                val interrupted = localized().getString(CommonR.string.repair_op_interrupted)
+                pause.value = BatchPause(BatchPause.Kind.USER, interrupted)
                 queue.value = queue.value.map { if (it.status == RepairStatus.FIXING) it.copy(status = RepairStatus.PENDING) else it }
                 try {
                     checkpoint()
                 } catch (failure: Exception) {
-                    messages.value = "Could not save interrupted metadata work: ${failure.message}"
+                    messages.value = localized().getString(CommonR.string.repair_op_save_interrupted_failed, failure.message.orEmpty())
                 }
                 awaitingApproval.value = pending.ids.isNotEmpty()
                 progress.value =
@@ -287,7 +299,7 @@ class MetadataRepairOperation
                         processedCount(),
                         queue.value.size,
                         pending.ids.size,
-                        "Fetching interrupted; completed results kept",
+                        interrupted,
                     )
             }
         }
@@ -358,7 +370,7 @@ class MetadataRepairOperation
                 } catch (e: Exception) {
                     applying = false
                     busy.value = false
-                    messages.value = "Could not apply metadata: ${e.message}. Pending changes were kept."
+                    messages.value = localized().getString(CommonR.string.repair_op_apply_failed, e.message.orEmpty())
                 }
             }
         }
@@ -470,8 +482,10 @@ class MetadataRepairOperation
                                         item.copy(
                                             status = RepairStatus.PARTIAL_SUCCESS,
                                             failureReason =
-                                                (unfilled + listOfNotNull((renameRes as? AppResult.Error)?.error?.message))
-                                                    .joinToString("; "),
+                                                (
+                                                    unfilled +
+                                                        listOfNotNull((renameRes as? AppResult.Error)?.error?.localizedMessage(localized()))
+                                                ).joinToString("; "),
                                             successDetails = successDetails,
                                         )
                                     else -> item.copy(status = RepairStatus.DONE, successDetails = successDetails)
@@ -484,15 +498,16 @@ class MetadataRepairOperation
                     } catch (e: Exception) {
                         applying = false
                         busy.value = false
-                        messages.value = "Could not finish applying metadata: ${e.message}. Remaining edits were kept."
+                        messages.value = localized().getString(CommonR.string.repair_op_finish_apply_failed, e.message.orEmpty())
                     }
                 },
                 onDenied = {
+                    val deniedReason = localized().getString(CommonR.string.repair_op_write_denied)
                     for (index in indices) {
                         queue[index] =
                             queue[index].copy(
                                 status = RepairStatus.FAILED,
-                                failureReason = "Write access not granted; changes were not applied",
+                                failureReason = deniedReason,
                             )
                     }
                     queueState.value = queue.toList()
@@ -585,7 +600,10 @@ class MetadataRepairOperation
                         if (providerFailure != null) {
                             concluded(RepairStatus.FAILED, providerFailure)
                         } else {
-                            concluded(RepairStatus.NO_MATCH, decision.reason ?: "No online match found")
+                            concluded(
+                                RepairStatus.NO_MATCH,
+                                decision.reason ?: localized().getString(CommonR.string.repair_failure_no_match),
+                            )
                         }
                     }
                     decision is MatchDecision.LowConfidence -> concluded(RepairStatus.NEEDS_REVIEW, decision.reason)
@@ -607,7 +625,10 @@ class MetadataRepairOperation
                             }
                         if (request == null && renameTo == null) {
                             // Nothing to write is not a fix: say why instead of reporting success.
-                            val why = plan.notes.joinToString("; ").ifBlank { "The tags already match the online match" }
+                            val why =
+                                plan.notes.joinToString("; ").ifBlank {
+                                    localized().getString(CommonR.string.repair_op_tags_already_match)
+                                }
                             concluded(RepairStatus.UNCHANGED, why)
                         } else {
                             concluded(RepairStatus.READY, null, request, renameTo)
@@ -708,7 +729,12 @@ class MetadataRepairOperation
         ): ReleaseDate? =
             when (val decision = releaseDateFor(match, candidates, LocalDate.now(), acceptAt)) {
                 is ReleaseDateDecision.Found -> decision.date
-                is ReleaseDateDecision.Rejected -> null.also { notes[NO_YEAR_NOTE] = "No year: ${decision.reason}" }
+                is ReleaseDateDecision.Rejected ->
+                    null.also {
+                        val localizedContext = localized()
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_year_key)] =
+                            localizedContext.getString(CommonR.string.repair_op_no_year, decision.reason)
+                    }
             }
 
         /** The match's genre, or null with the reason in [notes]. */
@@ -719,8 +745,18 @@ class MetadataRepairOperation
         ): String? =
             when (val lookup = metadataRepository.lookupGenre(match, candidates)) {
                 is GenreLookup.Found -> lookup.genre
-                is GenreLookup.NotFound -> null.also { notes[NO_GENRE_NOTE] = "No genre: ${lookup.reason}" }
-                is GenreLookup.Failed -> null.also { notes[NO_GENRE_NOTE] = "Genre lookup failed: ${lookup.reason}" }
+                is GenreLookup.NotFound ->
+                    null.also {
+                        val localizedContext = localized()
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_genre_key)] =
+                            localizedContext.getString(CommonR.string.repair_op_no_genre, lookup.reason)
+                    }
+                is GenreLookup.Failed ->
+                    null.also {
+                        val localizedContext = localized()
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_genre_key)] =
+                            localizedContext.getString(CommonR.string.repair_op_genre_failed, lookup.reason)
+                    }
             }
 
         /** The track's tempo (AcousticBrainz, else estimated on this device), or null with the reason in [notes]. */
@@ -732,8 +768,18 @@ class MetadataRepairOperation
         ): BpmLookup.Found? =
             when (val lookup = bpmFinder.find(match, filePath, candidates)) {
                 is BpmLookup.Found -> lookup
-                is BpmLookup.NotFound -> null.also { notes[NO_BPM_NOTE] = "No BPM: ${lookup.reason}" }
-                is BpmLookup.Failed -> null.also { notes[NO_BPM_NOTE] = "BPM lookup failed: ${lookup.reason}" }
+                is BpmLookup.NotFound ->
+                    null.also {
+                        val localizedContext = localized()
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_bpm_key)] =
+                            localizedContext.getString(CommonR.string.repair_op_no_bpm, lookup.reason)
+                    }
+                is BpmLookup.Failed ->
+                    null.also {
+                        val localizedContext = localized()
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_bpm_key)] =
+                            localizedContext.getString(CommonR.string.repair_op_bpm_failed, lookup.reason)
+                    }
             }
 
         /** The match's cover image, or null with the reason in [notes]. */
@@ -741,12 +787,23 @@ class MetadataRepairOperation
             match: MetadataCandidate,
             notes: MutableMap<String, String>,
         ): ByteArray? {
+            val localizedContext = localized()
             val url =
                 match.coverArtUrl
-                    ?: return null.also { notes[NO_ARTWORK_NOTE] = "No cover: ${match.sourceName} gave none for this match" }
+                    ?: return null.also {
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_artwork_key)] =
+                            localizedContext.getString(CommonR.string.repair_op_no_cover_provider, match.sourceName)
+                    }
             return when (val download = metadataRepository.downloadArtwork(url)) {
                 is AppResult.Success -> download.data
-                is AppResult.Error -> null.also { notes[NO_ARTWORK_NOTE] = "No cover: ${download.error.message}" }
+                is AppResult.Error ->
+                    null.also {
+                        notes[localizedContext.getString(CommonR.string.repair_op_no_artwork_key)] =
+                            localizedContext.getString(
+                                CommonR.string.repair_op_no_cover_detail,
+                                download.error.localizedMessage(localizedContext),
+                            )
+                    }
             }
         }
 
@@ -768,20 +825,23 @@ class MetadataRepairOperation
         private fun providerFailureSummary(outcomes: List<com.erhu.erhu.core.model.ProviderOutcome>): String? {
             val considered = outcomes.filter { it.status != ProviderStatus.SKIPPED }
             val failed = considered.filter { it.status !in ANSWERED_STATUSES }
+            val localizedContext = localized()
             return when {
-                considered.isEmpty() -> "No provider could be queried for this source"
+                considered.isEmpty() -> localizedContext.getString(CommonR.string.repair_op_no_provider_queried)
                 failed.size != considered.size -> null
-                else -> "Lookup failed: " + failed.joinToString("; ") { "${it.providerName}: ${it.errorMessage ?: it.status.label}" }
+                else ->
+                    localizedContext.getString(
+                        CommonR.string.repair_op_lookup_failed,
+                        failed.joinToString("; ") {
+                            "${it.providerName}: ${it.errorMessage ?: it.status.localizedLabel(localizedContext)}"
+                        },
+                    )
             }
         }
 
         companion object {
             private const val PERSIST_DEBOUNCE_MS = 500L
             private const val REPAIR_DELAY_MS = 600L
-            private const val NO_GENRE_NOTE = "No genre found online"
-            private const val NO_ARTWORK_NOTE = "No artwork found online"
-            private const val NO_YEAR_NOTE = "No release year found online"
-            private const val NO_BPM_NOTE = "No BPM found"
             private val NON_TEXT_FIELDS = setOf(FixField.YEAR, FixField.GENRE, FixField.ARTWORK, FixField.BPM)
             private const val TOP_CANDIDATES_SHOWN = 3
         }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -21,9 +20,11 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.model.BandWaveformLoad
 import com.erhu.erhu.core.model.TransitionRole
 import com.erhu.erhu.core.model.TransitionSpec
@@ -138,13 +139,10 @@ internal fun TransitionTimelineCanvas(
     val currentEditable by rememberUpdatedState(editablePoints)
     val currentDraggable by rememberUpdatedState(lanesDraggable)
     val description =
-        remember(spec, durationMs) {
-            if (spec == null) {
-                "No transition: the tracks play back to back."
-            } else {
-                "Transition of ${TransitionSpec.durationLabel(durationMs)}: outgoing track on top, incoming below. " +
-                    "Use the presets and the Volume, EQ and Filter options below to change it."
-            }
+        if (spec == null) {
+            stringResource(R.string.transition_timeline_cd_none)
+        } else {
+            stringResource(R.string.transition_timeline_cd_active, localizedDurationLabel(durationMs))
         }
     Canvas(
         modifier =

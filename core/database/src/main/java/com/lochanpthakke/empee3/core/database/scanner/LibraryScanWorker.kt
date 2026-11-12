@@ -11,6 +11,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.database.scanner.JAudioTaggerEnricher
 import com.erhu.erhu.core.database.scanner.MediaStoreScanner
@@ -20,6 +21,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import com.erhu.erhu.core.common.R as CommonR
 
 @HiltWorker
 class LibraryScanWorker
@@ -35,8 +37,15 @@ class LibraryScanWorker
         override suspend fun doWork(): Result {
             createNotificationChannel()
 
+            val localizedContext = AppLocaleManager.localizedContext(appContext)
             try {
-                setForeground(createForegroundInfo(0, 0, "Initializing scan..."))
+                setForeground(
+                    createForegroundInfo(
+                        0,
+                        0,
+                        localizedContext.getString(CommonR.string.scan_worker_initializing),
+                    ),
+                )
             } catch (e: Exception) {
                 logger.w(TAG, "Failed to set foreground info: ${e.message}", e)
             }
@@ -56,12 +65,16 @@ class LibraryScanWorker
         @Suppress("TooGenericExceptionCaught")
         @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
         private suspend fun runScan() {
+            val localizedContext = AppLocaleManager.localizedContext(appContext)
             mediaStoreScanner.scanLibrary().collect { progress ->
                 val title =
                     if (progress.currentSongTitle != null) {
-                        "Scanning: ${progress.currentSongTitle}"
+                        localizedContext.getString(
+                            CommonR.string.scan_worker_scanning_track,
+                            progress.currentSongTitle,
+                        )
                     } else {
-                        "Scanning music library..."
+                        localizedContext.getString(CommonR.string.scan_worker_scanning_library)
                     }
                 try {
                     setForeground(
@@ -91,17 +104,23 @@ class LibraryScanWorker
             total: Int,
             currentTitle: String,
         ): ForegroundInfo {
+            val localizedContext = AppLocaleManager.localizedContext(appContext)
             val notificationText =
                 if (total > 0) {
-                    "Scanned $scanned of $total tracks"
+                    localizedContext.resources.getQuantityString(
+                        CommonR.plurals.scan_worker_progress,
+                        total,
+                        scanned,
+                        total,
+                    )
                 } else {
-                    "Scanning local media..."
+                    localizedContext.getString(CommonR.string.scan_worker_indeterminate)
                 }
 
             val notification =
                 NotificationCompat
                     .Builder(appContext, CHANNEL_ID)
-                    .setContentTitle("Updating Music Library")
+                    .setContentTitle(localizedContext.getString(CommonR.string.scan_worker_title))
                     .setContentText(notificationText)
                     .setSubText(currentTitle)
                     .setSmallIcon(android.R.drawable.ic_popup_sync)
@@ -122,13 +141,14 @@ class LibraryScanWorker
 
         private fun createNotificationChannel() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val localizedContext = AppLocaleManager.localizedContext(appContext)
                 val channel =
                     NotificationChannel(
                         CHANNEL_ID,
-                        "Library Scan Progress",
+                        localizedContext.getString(CommonR.string.scan_worker_channel_name),
                         NotificationManager.IMPORTANCE_LOW,
                     ).apply {
-                        description = "Shows real-time progress when scanning local music files"
+                        description = localizedContext.getString(CommonR.string.scan_worker_channel_description)
                     }
                 val notificationManager =
                     appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

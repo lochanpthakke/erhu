@@ -2,6 +2,7 @@ package com.erhu.erhu.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erhu.erhu.core.common.result.AppError
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.LiveCoverCheck
@@ -16,6 +17,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+enum class LiveCoverFailureKind {
+    NO_LONGER_OFFERED,
+    RATE_LIMITED,
+    DOWNLOAD_FAILED,
+}
 
 /** What an album page shows for the album's live cover (see [LiveCoverViewModel]). */
 sealed interface LiveCoverUi {
@@ -37,10 +44,14 @@ sealed interface LiveCoverUi {
     data class Failed(
         val offer: LiveCoverCheck.Downloadable,
         val message: String,
+        val kind: LiveCoverFailureKind = LiveCoverFailureKind.DOWNLOAD_FAILED,
+        val rateLimitMinutes: Int? = null,
+        val error: AppError? = null,
     ) : LiveCoverUi
 
     data class RateLimited(
         val message: String,
+        val minutes: Int? = null,
     ) : LiveCoverUi
 }
 
@@ -96,7 +107,7 @@ class LiveCoverViewModel
                 when (current) {
                     is LiveCoverUi.Offer -> LiveCoverUi.Offer(updatedOffer)
                     is LiveCoverUi.Downloading -> LiveCoverUi.Downloading(updatedOffer)
-                    is LiveCoverUi.Failed -> LiveCoverUi.Failed(updatedOffer, current.message)
+                    is LiveCoverUi.Failed -> current.copy(offer = updatedOffer)
                     else -> current
                 }
         }
@@ -131,11 +142,28 @@ class LiveCoverViewModel
                         }
                     _state.value =
                         when (result) {
-                            is AppResult.Error ->
-                                LiveCoverUi.Failed(offer, liveCoverErrorMessage(result.error.cause, result.error.message))
+                            is AppResult.Error -> {
+                                val minutes = rateLimitMinutes(result.error.cause)
+                                LiveCoverUi.Failed(
+                                    offer = offer,
+                                    message = liveCoverErrorMessage(result.error.cause, result.error.message),
+                                    kind =
+                                        if (minutes != null) {
+                                            LiveCoverFailureKind.RATE_LIMITED
+                                        } else {
+                                            LiveCoverFailureKind.DOWNLOAD_FAILED
+                                        },
+                                    rateLimitMinutes = minutes,
+                                    error = result.error,
+                                )
+                            }
                             is AppResult.Success ->
                                 (check(album) as? LiveCoverUi.Saved)
-                                    ?: LiveCoverUi.Failed(offer, "Apple Music no longer offers a live cover for this album.")
+                                    ?: LiveCoverUi.Failed(
+                                        offer = offer,
+                                        message = "Apple Music no longer offers a live cover for this album.",
+                                        kind = LiveCoverFailureKind.NO_LONGER_OFFERED,
+                                    )
                         }
                     if (_state.value is LiveCoverUi.Saved) repository.compression.prepare(album.id)
                 }
@@ -171,9 +199,17 @@ class LiveCoverViewModel
         private suspend fun check(album: Album): LiveCoverUi =
             when (val result = repository.checkLiveCover(album.id, album.artist, album.title, album.songCount)) {
                 is AppResult.Error -> {
-                    val limitMessage = rateLimitMessage(result.error.cause)
-                    if (limitMessage != null) {
-                        LiveCoverUi.RateLimited(limitMessage)
+                    val minutes = rateLimitMinutes(result.error.cause)
+                    if (minutes != null) {
+                        LiveCoverUi.RateLimited(
+                            message =
+                                if (minutes == 1) {
+                                    "Apple Music is limiting requests right now. Try again in 1 minute."
+                                } else {
+                                    "Apple Music is limiting requests right now. Try again in $minutes minutes."
+                                },
+                            minutes = minutes,
+                        )
                     } else {
                         LiveCoverUi.Hidden
                     }
@@ -199,6 +235,14 @@ class LiveCoverViewModel
 private fun liveCoverErrorMessage(
     cause: Throwable?,
     message: String?,
-): String =
-    rateLimitMessage(cause)
-        ?: if (message.isNullOrBlank()) "The live cover couldn't be downloaded." else "The live cover couldn't be downloaded: $message"
+): String {
+    val minutes = rateLimitMinutes(cause)
+    if (minutes != null) {
+        return if (minutes == 1) {
+            "Apple Music is limiting requests right now. Try again in 1 minute."
+        } else {
+            "Apple Music is limiting requests right now. Try again in $minutes minutes."
+        }
+    }
+    return if (message.isNullOrBlank()) "The live cover couldn't be downloaded." else "The live cover couldn't be downloaded: $message"
+}

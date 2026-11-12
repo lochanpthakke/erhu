@@ -125,14 +125,20 @@ internal fun GraphicsLayerScope.mergeIntoButton(
     left: Float = restLeft,
     top: Float = restTop,
     startScale: Float = 1f,
+    isRtl: Boolean = false,
 ) {
     val scale = lerp(startScale, MERGE_SCALE, t)
     val endLeft = button.x
     val endTop = button.y - height * MERGE_SCALE / 2f
-    transformOrigin = TransformOrigin(0f, 0f)
+    transformOrigin = TransformOrigin(if (isRtl) 1f else 0f, 0f)
     scaleX = scale
     scaleY = scale
-    translationX = lerp(left, endLeft, t) - restLeft
+    translationX =
+        if (isRtl) {
+            lerp(left + size.width, button.x, t) - (restLeft + size.width)
+        } else {
+            lerp(left, endLeft, t) - restLeft
+        }
     translationY = lerp(top, endTop, t) - restTop
     alpha = 1f - smoothstep((t / MERGE_FADE_END).coerceAtMost(1f))
 }

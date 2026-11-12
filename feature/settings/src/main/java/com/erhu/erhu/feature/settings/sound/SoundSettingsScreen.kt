@@ -41,9 +41,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.IconSize
@@ -60,9 +64,11 @@ import com.erhu.erhu.feature.settings.component.SettingsPanel
 import com.erhu.erhu.feature.settings.component.SettingsSection
 import com.erhu.erhu.feature.settings.component.SettingsSegmentedControl
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
+import java.util.Locale
 import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 @Suppress("MagicNumber", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
@@ -72,6 +78,7 @@ fun SoundSettingsScreen(
     navigation: TopBarNavigation,
     modifier: Modifier = Modifier,
 ) {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val soundSettings by viewModel.soundSettings.collectAsState()
 
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -83,8 +90,8 @@ fun SoundSettingsScreen(
         SettingsGroup {
             row {
                 SettingsSwitchRow(
-                    title = "Equalizer",
-                    summary = if (soundSettings.isEqEnabled) "On" else "Off",
+                    title = stringResource(CommonR.string.eq_title),
+                    summary = stringResource(if (soundSettings.isEqEnabled) CommonR.string.eq_state_on else CommonR.string.eq_state_off),
                     icon = Icons.Default.Equalizer,
                     checked = soundSettings.isEqEnabled,
                     onCheckedChange = { viewModel.setEqEnabled(it) },
@@ -94,7 +101,7 @@ fun SoundSettingsScreen(
 
         AudioUtilityControls(soundSettings.utilities, viewModel::updateUtilities)
 
-        SettingsSection(title = "Preset & curve") {
+        SettingsSection(title = stringResource(CommonR.string.eq_preset_curve_section)) {
             SettingsPanel {
                 PresetAndResetHeader(
                     soundSettings = soundSettings,
@@ -121,28 +128,36 @@ fun SoundSettingsScreen(
             }
         }
 
-        SettingsSection(title = "Bands") {
+        SettingsSection(title = stringResource(CommonR.string.eq_bands_section)) {
+            val bandDescriptions =
+                List(soundSettings.activeBandCount) {
+                    stringResource(CommonR.string.eq_band_numbered, LocaleFormatters.formatInteger(it + 1, locale))
+                }
             SettingsPanel {
                 BandCountSelectorRow(
                     activeCount = soundSettings.activeBandCount,
+                    locale = locale,
                     enabled = soundSettings.isEqEnabled,
                     onCountSelected = { viewModel.setActiveBandCount(it) },
                 )
                 Spacer(modifier = Modifier.height(Spacing.md))
                 SettingsSegmentedControl(
-                    options = List(soundSettings.activeBandCount) { "${it + 1}" },
+                    options = List(soundSettings.activeBandCount) { LocaleFormatters.formatInteger(it + 1, locale) },
                     selectedIndex = selectedBandIndex,
                     onSelect = { viewModel.setSelectedBandIndex(it) },
-                    describe = { "Band ${it + 1}" },
+                    describe = { bandDescriptions[it] },
                 )
             }
         }
 
-        SettingsSection(title = "Band ${selectedBandIndex + 1}") {
+        SettingsSection(
+            title = stringResource(CommonR.string.eq_band_numbered, LocaleFormatters.formatInteger(selectedBandIndex + 1, locale)),
+        ) {
             SelectedBandPanel(
                 selectedBandIndex = selectedBandIndex,
                 activeBandCount = soundSettings.activeBandCount,
                 band = selectedBand,
+                locale = locale,
                 enabled = soundSettings.isEqEnabled,
                 onFreqChange = { viewModel.setBandFrequency(selectedBandIndex, it) },
                 onGainChange = { viewModel.setBandGain(selectedBandIndex, it) },
@@ -166,6 +181,7 @@ fun SoundSettingsScreen(
 @Composable
 private fun BandCountSelectorRow(
     activeCount: Int,
+    locale: Locale,
     enabled: Boolean,
     onCountSelected: (Int) -> Unit,
 ) {
@@ -174,7 +190,7 @@ private fun BandCountSelectorRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Active bands",
+            text = stringResource(CommonR.string.eq_active_bands_label),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
@@ -182,10 +198,10 @@ private fun BandCountSelectorRow(
             onClick = { if (activeCount > CustomEqAudioProcessor.MIN_BAND_COUNT) onCountSelected(activeCount - 1) },
             enabled = enabled && activeCount > CustomEqAudioProcessor.MIN_BAND_COUNT,
         ) {
-            Icon(imageVector = Icons.Default.Remove, contentDescription = "Fewer bands")
+            Icon(imageVector = Icons.Default.Remove, contentDescription = stringResource(CommonR.string.eq_fewer_bands_cd))
         }
         Text(
-            text = "$activeCount",
+            text = LocaleFormatters.formatInteger(activeCount, locale),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
             modifier = Modifier.width(36.dp),
@@ -194,7 +210,7 @@ private fun BandCountSelectorRow(
             onClick = { if (activeCount < CustomEqAudioProcessor.BAND_COUNT) onCountSelected(activeCount + 1) },
             enabled = enabled && activeCount < CustomEqAudioProcessor.BAND_COUNT,
         ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = "More bands")
+            Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(CommonR.string.eq_more_bands_cd))
         }
     }
 }
@@ -205,6 +221,7 @@ private fun SelectedBandPanel(
     selectedBandIndex: Int,
     activeBandCount: Int,
     band: BandConfig,
+    locale: Locale,
     enabled: Boolean,
     onFreqChange: (Float) -> Unit,
     onGainChange: (Float) -> Unit,
@@ -218,10 +235,14 @@ private fun SelectedBandPanel(
         // Filter type: only the first and last active band can be a shelf.
         if (isFirstBand || isLastBand) {
             val shelfType = if (isFirstBand) FilterType.LOW_SHELF else FilterType.HIGH_SHELF
-            Text("Filter type", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(CommonR.string.eq_filter_type_label), style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(Spacing.sm))
             SettingsSegmentedControl(
-                options = listOf("Bell", "Shelf"),
+                options =
+                    listOf(
+                        stringResource(CommonR.string.eq_filter_type_bell),
+                        stringResource(CommonR.string.eq_filter_type_shelf),
+                    ),
                 selectedIndex = if (band.filterType == shelfType) 1 else 0,
                 onSelect = { onFilterTypeChange(if (it == 1) shelfType else FilterType.PEAKING) },
                 enabled = enabled,
@@ -230,7 +251,10 @@ private fun SelectedBandPanel(
         }
 
         // 1. Logarithmic Center Frequency Slider
-        SliderLabel(label = "Center frequency", value = formatFrequency(band.frequencyHz))
+        SliderLabel(
+            label = stringResource(CommonR.string.eq_center_frequency_label),
+            value = formatFrequency(band.frequencyHz, locale),
+        )
         Slider(
             value = frequencyToNormalized(band.frequencyHz),
             onValueChange = { norm -> onFreqChange(normalizedToFrequency(norm)) },
@@ -239,7 +263,10 @@ private fun SelectedBandPanel(
         )
 
         // 2. Gain Slider
-        SliderLabel(label = "Gain", value = formatGain(band.gainDb))
+        SliderLabel(
+            label = stringResource(CommonR.string.eq_gain_label),
+            value = formatGain(band.gainDb, locale),
+        )
         Slider(
             value = band.gainDb,
             onValueChange = onGainChange,
@@ -248,7 +275,10 @@ private fun SelectedBandPanel(
         )
 
         // 3. Q Factor Slider
-        SliderLabel(label = "Q-factor (sharpness)", value = String.format("%.2f", band.q))
+        SliderLabel(
+            label = stringResource(CommonR.string.eq_q_factor_label),
+            value = LocaleFormatters.formatDecimal(band.q.toDouble(), 2, locale),
+        )
         Slider(
             value = band.q,
             onValueChange = onQChange,
@@ -295,11 +325,11 @@ private fun PresetAndResetHeader(
             modifier = Modifier.weight(1f),
         ) {
             OutlinedTextField(
-                value = activePreset.name,
+                value = localizedPresetName(activePreset),
                 onValueChange = {},
                 readOnly = true,
                 singleLine = true,
-                label = { Text("Preset") },
+                label = { Text(stringResource(CommonR.string.eq_preset_label)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
@@ -319,12 +349,12 @@ private fun PresetAndResetHeader(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(preset.name)
+                                Text(localizedPresetName(preset))
                                 if (preset.isCustom) {
                                     IconButton(onClick = { onDeleteCustomClick(preset.id) }) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
-                                            contentDescription = "Delete Preset",
+                                            contentDescription = stringResource(CommonR.string.eq_delete_preset_cd),
                                             tint = MaterialTheme.colorScheme.error,
                                         )
                                     }
@@ -343,13 +373,31 @@ private fun PresetAndResetHeader(
         Spacer(modifier = Modifier.width(Spacing.sm))
 
         FilledTonalIconButton(onClick = onSaveCustomClick) {
-            Icon(imageVector = Icons.Default.SaveAs, contentDescription = "Save Custom Preset")
+            Icon(imageVector = Icons.Default.SaveAs, contentDescription = stringResource(CommonR.string.eq_save_custom_preset_cd))
         }
         FilledTonalIconButton(onClick = onResetClick) {
-            Icon(imageVector = Icons.Default.RestartAlt, contentDescription = "Reset to flat", modifier = Modifier.size(IconSize.standard))
+            Icon(
+                imageVector = Icons.Default.RestartAlt,
+                contentDescription = stringResource(CommonR.string.eq_reset_flat_cd),
+                modifier = Modifier.size(IconSize.standard),
+            )
         }
     }
 }
+
+@Composable
+private fun localizedPresetName(preset: EqPreset): String =
+    when (preset.id) {
+        EqPreset.FLAT.id -> stringResource(CommonR.string.eq_preset_flat)
+        EqPreset.BASS_BOOSTER.id -> stringResource(CommonR.string.eq_preset_bass_booster)
+        EqPreset.TREBLE_BOOSTER.id -> stringResource(CommonR.string.eq_preset_treble_booster)
+        EqPreset.ROCK.id -> stringResource(CommonR.string.eq_preset_rock)
+        EqPreset.POP.id -> stringResource(CommonR.string.eq_preset_pop)
+        EqPreset.JAZZ.id -> stringResource(CommonR.string.eq_preset_jazz)
+        EqPreset.VOCAL.id -> stringResource(CommonR.string.eq_preset_vocal)
+        EqPreset.ACOUSTIC.id -> stringResource(CommonR.string.eq_preset_acoustic)
+        else -> preset.name
+    }
 
 @Composable
 private fun SavePresetDialog(
@@ -360,12 +408,12 @@ private fun SavePresetDialog(
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Save Custom Preset") },
+        title = { Text(stringResource(CommonR.string.eq_save_preset_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = presetName,
                 onValueChange = { presetName = it },
-                label = { Text("Preset Name") },
+                label = { Text(stringResource(CommonR.string.eq_save_preset_name_label)) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
@@ -376,12 +424,12 @@ private fun SavePresetDialog(
                 onClick = { onSave(presetName) },
                 enabled = presetName.isNotBlank(),
             ) {
-                Text("Save")
+                Text(stringResource(CommonR.string.action_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(CommonR.string.action_cancel))
             }
         },
     )
@@ -405,12 +453,23 @@ private fun normalizedToFrequency(norm: Float): Float {
     return 10f.pow(logF).coerceIn(minF, maxF)
 }
 
+@Composable
 @Suppress("MagicNumber")
-private fun formatFrequency(freqHz: Float): String =
+private fun formatFrequency(
+    freqHz: Float,
+    locale: Locale,
+): String =
     if (freqHz >= 1000f) {
-        "${(freqHz / 1000f).roundToInt()} kHz"
+        stringResource(CommonR.string.eq_freq_khz, LocaleFormatters.formatInteger((freqHz / 1000f).roundToInt(), locale))
     } else {
-        "${freqHz.roundToInt()} Hz"
+        stringResource(CommonR.string.eq_freq_hz, LocaleFormatters.formatInteger(freqHz.roundToInt(), locale))
     }
 
-private fun formatGain(gainDb: Float): String = "${if (gainDb > 0) "+" else ""}${String.format("%.1f", gainDb)} dB"
+@Composable
+private fun formatGain(
+    gainDb: Float,
+    locale: Locale,
+): String {
+    val sign = if (gainDb > 0f) "+" else ""
+    return stringResource(CommonR.string.eq_gain_db, "$sign${LocaleFormatters.formatDecimal(gainDb.toDouble(), 1, locale)}")
+}

@@ -1,7 +1,13 @@
 package com.erhu.erhu.feature.library
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.model.MetadataCandidate
 import com.erhu.erhu.core.model.RepairDiagnostics
+import com.erhu.erhu.core.common.R as CommonR
 
 /** One line of a track's search details: a label and its value, each shown as its own text. */
 data class DetailLine(
@@ -31,10 +37,55 @@ fun searchDetailLines(diag: RepairDiagnostics): List<DetailLine> =
         }
     }
 
+@Composable
+internal fun localizedSearchDetailLines(diag: RepairDiagnostics): List<DetailLine> {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val none = stringResource(CommonR.string.search_detail_paren_none)
+    val fileLabel = stringResource(CommonR.string.search_detail_file)
+    val titleTagLabel = stringResource(CommonR.string.search_detail_title_tag)
+    val titleFromFilenameLabel = stringResource(CommonR.string.search_detail_title_from_filename)
+    val artistTagLabel = stringResource(CommonR.string.search_detail_artist_tag)
+    val albumTagLabel = stringResource(CommonR.string.search_detail_album_tag)
+    val lengthLabel = stringResource(CommonR.string.search_detail_length)
+    val artistLowerLabel = stringResource(CommonR.string.search_detail_artist_lower)
+    val albumLowerLabel = stringResource(CommonR.string.search_detail_album_lower)
+    return buildList {
+        add(DetailLine(fileLabel, diag.originalFilename))
+        add(DetailLine(titleTagLabel, diag.embeddedTitle ?: none))
+        diag.fileTitles.forEach { add(DetailLine(titleFromFilenameLabel, it)) }
+        add(DetailLine(artistTagLabel, diag.embeddedArtist ?: none))
+        add(DetailLine(albumTagLabel, diag.embeddedAlbum ?: none))
+        diag.targetDurationMs?.let { add(DetailLine(lengthLabel, LocaleFormatters.formatDurationClock(it, locale))) }
+        diag.queries.forEachIndexed { index, query ->
+            val searchLabel =
+                stringResource(
+                    CommonR.string.search_detail_search_index,
+                    LocaleFormatters.formatInteger(index + 1, locale),
+                )
+            val queryValue = stringResource(CommonR.string.search_detail_query_value_from, query.title, query.source)
+            add(DetailLine(searchLabel, queryValue))
+            query.artist?.let { add(DetailLine(artistLowerLabel, it, indent = 1)) }
+            query.album?.let { add(DetailLine(albumLowerLabel, it, indent = 1)) }
+            query.outcomes.forEach { outcome ->
+                add(DetailLine(outcome.providerName, localizedProviderStatusText(outcome), indent = 2))
+            }
+        }
+    }
+}
+
 /** A candidate as one line: what it would write, its length and its score. */
 fun candidateLine(candidate: MetadataCandidate): String {
     val album = if (candidate.album.isNotBlank()) " · ${candidate.album}" else ""
     val length = candidate.durationMs?.let { " · ${clock(it)}" }.orEmpty()
+    val version = candidate.versionNote?.let { " [$it]" }.orEmpty()
+    return "${candidate.title} — ${candidate.artist}$album$length$version"
+}
+
+@Composable
+internal fun localizedCandidateLine(candidate: MetadataCandidate): String {
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
+    val album = if (candidate.album.isNotBlank()) " · ${candidate.album}" else ""
+    val length = candidate.durationMs?.let { " · ${LocaleFormatters.formatDurationClock(it, locale)}" }.orEmpty()
     val version = candidate.versionNote?.let { " [$it]" }.orEmpty()
     return "${candidate.title} — ${candidate.artist}$album$length$version"
 }

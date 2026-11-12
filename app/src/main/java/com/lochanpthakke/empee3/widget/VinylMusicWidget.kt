@@ -52,6 +52,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.erhu.erhu.MainActivity
 import com.erhu.erhu.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
 import com.erhu.erhu.core.designsystem.theme.DominantColorExtractor
 import com.erhu.erhu.core.model.PlaybackStatus
@@ -76,10 +77,13 @@ class VinylMusicWidget : GlanceAppWidget() {
         context: Context,
         widgetCategory: Int,
     ) {
+        val localized =
+            com.erhu.erhu.core.common.locale.AppLocaleManager
+                .localizedContext(context)
         provideContent {
             WidgetContent(
-                title = "Nothing playing",
-                artist = "Choose music in erhu",
+                title = localized.getString(R.string.widget_idle_title),
+                artist = localized.getString(R.string.widget_idle_hint),
                 artwork = null,
                 rawArtwork = null,
                 isPlaying = false,
@@ -133,7 +137,7 @@ class VinylMusicWidget : GlanceAppWidget() {
                 }
 
             WidgetContent(
-                title = song?.title ?: "Nothing playing",
+                title = song?.title ?: AppLocaleManager.localizedContext(context).getString(R.string.widget_idle_title),
                 artist = song?.artist.orEmpty(),
                 artwork = circularArtwork,
                 rawArtwork = rawArtwork,
@@ -238,28 +242,33 @@ class VinylMusicWidget : GlanceAppWidget() {
                         .fillMaxSize()
                         .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 12.dp),
             ) {
+                val localizedContext = AppLocaleManager.localizedContext(LocalContext.current)
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
                 // A 3x3 host may be only 180dp wide; do not squeeze labels and 3 controls into one row.
-                Text(artist.ifEmpty { "Choose music in erhu" }, style = TextStyle(color = mutedTextColor, fontSize = 12.sp), maxLines = 1)
+                Text(
+                    artist.ifEmpty { localizedContext.getString(R.string.widget_idle_hint) },
+                    style = TextStyle(color = mutedTextColor, fontSize = 12.sp),
+                    maxLines = 1,
+                )
                 MarqueeTitle(title, titleTextColor, GlanceModifier.fillMaxWidth())
                 Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     WidgetControl(
                         R.drawable.ic_widget_skip_previous,
-                        "Previous",
+                        localizedContext.getString(R.string.widget_cd_previous),
                         (if (hasSong) actionRunCallback<VinylSkipPreviousAction>() else actionStartActivity<MainActivity>()),
                         controlIconColor,
                     )
                     WidgetControl(
                         if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
-                        if (isPlaying) "Pause" else "Play",
+                        localizedContext.getString(if (isPlaying) R.string.widget_cd_pause else R.string.widget_cd_play),
                         (if (hasSong) actionRunCallback<VinylPlayPauseAction>() else actionStartActivity<MainActivity>()),
                         controlIconColor,
                         iconSize = 32,
                     )
                     WidgetControl(
                         R.drawable.ic_widget_skip_next,
-                        "Next",
+                        localizedContext.getString(R.string.widget_cd_next),
                         (if (hasSong) actionRunCallback<VinylSkipNextAction>() else actionStartActivity<MainActivity>()),
                         controlIconColor,
                     )

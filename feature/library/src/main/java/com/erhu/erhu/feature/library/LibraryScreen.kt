@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
@@ -79,6 +80,7 @@ import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.RadioSeed
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Actions offered for a single song wherever it is listed. */
 internal class SongActions(
@@ -176,8 +178,9 @@ fun LibraryScreen(
     val customScanPath by viewModel.customScanLocationPath.collectAsState()
     val emptyMessage =
         when {
-            isCustomScanEnabled && customScanPath.isNotBlank() -> "No songs found in $customScanPath"
-            else -> "No songs found on this device"
+            isCustomScanEnabled && customScanPath.isNotBlank() ->
+                stringResource(CommonR.string.library_empty_songs_folder, customScanPath)
+            else -> stringResource(CommonR.string.library_empty_songs_device)
         }
 
     // Picking a section in the bottom navigation while searching leaves search.
@@ -203,13 +206,13 @@ fun LibraryScreen(
             } else if (shownShelf != null) {
                 OverlayHeader(
                     navigation = TopBarNavigation.Detail(onBack = { openShelf = null }),
-                    title = shownShelf.label,
+                    title = stringResource(shownShelf.labelRes),
                     collapsingTitle = collapsingTitle,
                 )
             } else {
                 OverlayHeader(
                     navigation = TopBarNavigation.TopLevel(onOpenDrawer),
-                    title = visibleSection.pageTitle,
+                    title = stringResource(visibleSection.pageTitleRes),
                     collapsingTitle = collapsingTitle,
                 )
             }
@@ -388,7 +391,7 @@ fun LibraryScreen(
 
     if (showNewPlaylist) {
         PlaylistNameDialog(
-            title = "New playlist",
+            title = stringResource(CommonR.string.playlist_new),
             onDismiss = { showNewPlaylist = false },
             onConfirm = { name ->
                 playlistsViewModel.createPlaylist(name)
@@ -417,11 +420,11 @@ internal fun SongsTab(
     bottomInset: Dp,
     emptyIcon: ImageVector,
     modifier: Modifier = Modifier,
-    emptyMessage: String = "No songs found. Pull down to rescan your device.",
+    emptyMessage: String = stringResource(CommonR.string.library_empty_songs_rescan),
 ) {
     if (songs.itemCount == 0) {
         EmptyState(
-            message = if (isScanning) "Scanning your music…" else emptyMessage,
+            message = if (isScanning) stringResource(CommonR.string.library_scanning) else emptyMessage,
             icon = emptyIcon,
             modifier = Modifier.padding(top = topInset, bottom = bottomInset),
         )
@@ -475,7 +478,10 @@ internal fun LibrarySongRow(
         PressIconButton(onClick = { actions.onToggleFavorite(song) }) {
             Icon(
                 imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (song.isFavorite) "Remove from favorites" else "Add to favorites",
+                contentDescription =
+                    stringResource(
+                        if (song.isFavorite) CommonR.string.song_cd_favorite_remove else CommonR.string.song_cd_favorite_add,
+                    ),
                 tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(IconSize.small).selectionJiggle(song.isFavorite, identity = song.id, expressive = true),
             )
@@ -484,16 +490,20 @@ internal fun LibrarySongRow(
             PressIconButton(modifier = Modifier.glassMenuTrigger(), onClick = { menuExpanded = true }) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Song options",
+                    contentDescription = stringResource(CommonR.string.song_cd_options),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(IconSize.small),
                 )
             }
-            GlassMenu(label = "Song options", expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                GlassMenuSection("Playback")
+            GlassMenu(
+                label = stringResource(CommonR.string.song_cd_options),
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                GlassMenuSection(stringResource(CommonR.string.menu_section_playback))
                 GlassMenuItem(
                     icon = Icons.AutoMirrored.Filled.PlaylistPlay,
-                    text = { Text("Play next") },
+                    text = { Text(stringResource(CommonR.string.song_menu_play_next)) },
                     onClick = {
                         menuExpanded = false
                         actions.onPlayNext(song)
@@ -501,7 +511,7 @@ internal fun LibrarySongRow(
                 )
                 GlassMenuItem(
                     icon = Icons.AutoMirrored.Filled.QueueMusic,
-                    text = { Text("Add to queue") },
+                    text = { Text(stringResource(CommonR.string.song_menu_add_to_queue)) },
                     onClick = {
                         menuExpanded = false
                         actions.onAddToQueue(song)
@@ -510,7 +520,7 @@ internal fun LibrarySongRow(
                 if (LocalVybeEnabled.current) {
                     GlassMenuItem(
                         icon = Icons.Default.Radio,
-                        text = { Text("Start radio") },
+                        text = { Text(stringResource(CommonR.string.song_menu_start_radio)) },
                         onClick = {
                             menuExpanded = false
                             actions.onStartRadio(song)
@@ -518,10 +528,10 @@ internal fun LibrarySongRow(
                     )
                 }
                 GlassMenuDivider()
-                GlassMenuSection("Library")
+                GlassMenuSection(stringResource(CommonR.string.menu_section_library))
                 GlassMenuItem(
                     icon = Icons.AutoMirrored.Filled.PlaylistAdd,
-                    text = { Text("Add to playlist") },
+                    text = { Text(stringResource(CommonR.string.song_menu_add_to_playlist)) },
                     onClick = {
                         menuExpanded = false
                         actions.onAddToPlaylist(song)
@@ -529,7 +539,7 @@ internal fun LibrarySongRow(
                 )
                 GlassMenuItem(
                     icon = Icons.Default.AutoFixHigh,
-                    text = { Text("Fix tags / metadata") },
+                    text = { Text(stringResource(CommonR.string.song_menu_fix_tags)) },
                     onClick = {
                         menuExpanded = false
                         actions.onFixTags(song)
@@ -537,7 +547,7 @@ internal fun LibrarySongRow(
                 )
                 GlassMenuItem(
                     icon = Icons.Default.Info,
-                    text = { Text("View metadata") },
+                    text = { Text(stringResource(CommonR.string.song_menu_view_metadata)) },
                     onClick = {
                         menuExpanded = false
                         actions.onViewMetadata(song)
@@ -547,7 +557,7 @@ internal fun LibrarySongRow(
                     GlassMenuItem(
                         icon = Icons.Default.RemoveCircleOutline,
                         destructive = true,
-                        text = { Text("Remove from playlist") },
+                        text = { Text(stringResource(CommonR.string.song_menu_remove_from_playlist)) },
                         onClick = {
                             menuExpanded = false
                             onRemoveFromPlaylist()
@@ -569,7 +579,7 @@ private fun AlbumsTab(
 ) {
     if (albums.itemCount == 0) {
         EmptyState(
-            message = "No albums found. Pull down to rescan your device.",
+            message = stringResource(CommonR.string.library_empty_albums_rescan),
             icon = LibrarySection.ALBUMS.icon,
             modifier = Modifier.padding(top = topInset, bottom = bottomInset),
         )
@@ -616,7 +626,7 @@ internal fun ArtistsTab(
 ) {
     if (artists.itemCount == 0) {
         EmptyState(
-            message = "No artists found. Pull down to rescan your device.",
+            message = stringResource(CommonR.string.library_empty_artists_rescan),
             icon = LibraryShelf.ARTISTS.icon,
             modifier = Modifier.padding(top = topInset, bottom = bottomInset),
         )

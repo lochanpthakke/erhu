@@ -46,6 +46,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -61,6 +62,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Longest side a picked image is decoded at; plenty for a square cover. */
 private const val DECODE_MAX_PX = 2048
@@ -105,7 +107,7 @@ fun EditPlaylistDialog(
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit playlist") },
+        title = { Text(stringResource(CommonR.string.playlist_edit)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 val previewModifier = Modifier.size(EDITOR_PREVIEW_SIZE).clip(Radius.mediumShape)
@@ -113,7 +115,7 @@ fun EditPlaylistDialog(
                     is CoverChange.Replace ->
                         Image(
                             bitmap = change.preview,
-                            contentDescription = "New cover",
+                            contentDescription = stringResource(CommonR.string.playlist_cd_new_cover),
                             contentScale = ContentScale.Crop,
                             modifier = previewModifier,
                         )
@@ -123,27 +125,27 @@ fun EditPlaylistDialog(
                 Spacer(modifier = Modifier.height(Spacing.md))
                 Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     OutlinedButton(onClick = { picker.launch("image/*") }) {
-                        Text("Choose image")
+                        Text(stringResource(CommonR.string.playlist_choose_image))
                     }
                     val hasCover = cover is CoverChange.Replace || (cover == CoverChange.None && playlist.artworkUri != null)
                     if (hasCover) {
-                        TextButton(onClick = { cover = CoverChange.Remove }) { Text("Remove image") }
+                        TextButton(onClick = { cover = CoverChange.Remove }) { Text(stringResource(CommonR.string.playlist_remove_image)) }
                     }
                 }
                 Spacer(modifier = Modifier.height(Spacing.md))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
+                    label = { Text(stringResource(CommonR.string.field_name_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name, cover) }, enabled = name.isNotBlank()) { Text("Save") }
+            TextButton(onClick = { onSave(name, cover) }, enabled = name.isNotBlank()) { Text(stringResource(CommonR.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.action_cancel)) } },
     )
 
     pickedUri?.let { uri ->
@@ -185,9 +187,9 @@ internal fun SquareCropDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = Radius.largeShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column(modifier = Modifier.padding(Spacing.lg)) {
-                Text("Crop cover", style = TextStyles.sectionTitle)
+                Text(stringResource(CommonR.string.playlist_crop_title), style = TextStyles.sectionTitle)
                 Text(
-                    "Pinch to zoom, drag to position.",
+                    stringResource(CommonR.string.playlist_crop_hint),
                     style = TextStyles.supporting,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -243,13 +245,13 @@ internal fun SquareCropDialog(
                                 )
                             }
                         }
-                        failed -> Text("This image could not be opened.", color = MaterialTheme.colorScheme.error)
+                        failed -> Text(stringResource(CommonR.string.image_open_failed), color = MaterialTheme.colorScheme.error)
                         else -> CircularProgressIndicator()
                     }
                 }
                 Spacer(modifier = Modifier.height(Spacing.md))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.action_cancel)) }
                     TextButton(
                         enabled = source != null,
                         onClick = {
@@ -260,7 +262,7 @@ internal fun SquareCropDialog(
                                 onCropped(bytes, preview.asImageBitmap())
                             }
                         },
-                    ) { Text("Done") }
+                    ) { Text(stringResource(CommonR.string.action_done)) }
                 }
             }
         }

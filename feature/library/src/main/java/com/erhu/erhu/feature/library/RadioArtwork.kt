@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -39,6 +41,7 @@ import com.erhu.erhu.core.designsystem.component.pressScale
 import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Same footprint and feedback as AlbumTile; only the cover has an editorial treatment. */
 @Composable
@@ -48,18 +51,24 @@ internal fun RadioTile(
     modifier: Modifier = Modifier,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val openDescription = stringResource(CommonR.string.radio_cd_open, radio.album.title, radio.album.artist)
     Column(
         modifier =
             modifier
                 .semantics(mergeDescendants = true) {
-                    contentDescription = "Open radio based on ${radio.album.title} by ${radio.album.artist}"
+                    contentDescription = openDescription
                 }.clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick),
     ) {
         RadioArtwork(radio, Modifier.fillMaxWidth().aspectRatio(1f).pressScale(interaction, ARTWORK_PRESSED_SCALE))
         Spacer(Modifier.height(Spacing.sm))
-        Text("${radio.identity} Radio", style = TextStyles.tileTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
-            "Based on ${radio.album.title}",
+            stringResource(CommonR.string.radio_title_format, radio.identity),
+            style = TextStyles.tileTitle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            stringResource(CommonR.string.radio_subtitle_based_on, radio.album.title),
             style = TextStyles.tileSubtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -99,32 +108,46 @@ internal fun RadioArtwork(
             placeholderIcon = Icons.Default.GraphicEq,
             modifier = Modifier.offset(x = side * 0.24f, y = side * 0.18f).size(side * 0.52f).clip(CircleShape),
         )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ink, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.weight(1f))
-            Text("RADIO", color = ink, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-        }
-        Box(
-            Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth()
-                .height(side * 0.30f)
-                .padding(horizontal = Spacing.sm),
-        ) {
-            Text(
-                radio.identity,
-                color = ink,
-                fontSize = 20.sp,
-                lineHeight = 21.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = (-0.5).sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.CenterStart),
-            )
-        }
+        RadioBadgeHeader(ink)
+        RadioIdentityLabel(radio.identity, ink, Modifier.align(Alignment.BottomStart).height(side * 0.30f))
+    }
+}
+
+@Composable
+private fun RadioBadgeHeader(ink: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ink, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.weight(1f))
+        Text(
+            stringResource(CommonR.string.radio_badge),
+            color = ink,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.4.sp,
+        )
+    }
+}
+
+@Composable
+private fun RadioIdentityLabel(
+    identity: String,
+    ink: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.fillMaxWidth().padding(horizontal = Spacing.sm)) {
+        Text(
+            identity,
+            color = ink,
+            fontSize = 20.sp,
+            lineHeight = 21.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.5).sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.CenterStart),
+        )
     }
 }

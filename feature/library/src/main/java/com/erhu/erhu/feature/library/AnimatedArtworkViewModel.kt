@@ -1,7 +1,11 @@
 package com.erhu.erhu.feature.library
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
@@ -13,6 +17,7 @@ import com.erhu.erhu.core.network.apple.HlsVariantStream
 import com.erhu.erhu.core.network.apple.RateLimitException
 import com.erhu.erhu.core.network.apple.ResolveOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 data class FetchedMasterDetails(
     val catalogAlbumId: String,
@@ -39,6 +45,7 @@ data class AnimatedArtworkQueueItem(
 class AnimatedArtworkViewModel
     @Inject
     constructor(
+        @param:ApplicationContext private val appContext: Context,
         private val libraryRepository: LibraryRepository,
         private val animatedArtworkRepository: AnimatedArtworkRepository,
     ) : ViewModel() {
@@ -163,9 +170,10 @@ class AnimatedArtworkViewModel
         }
 
         fun triggerFetchMotionArtwork() {
+            val localized = AppLocaleManager.localizedContext(appContext)
             val album = _selectedAlbum.value
             if (album == null) {
-                _errorMessage.value = "Please search and select a target album from your library first."
+                _errorMessage.value = localized.getString(CommonR.string.anim_art_err_select_album)
                 return
             }
 
@@ -184,7 +192,8 @@ class AnimatedArtworkViewModel
                         is AppResult.Success -> {
                             when (val outcome = resolveResult.data) {
                                 is ResolveOutcome.NoMatch -> {
-                                    _errorMessage.value = "No match found for '${album.title}' on Apple Music."
+                                    _errorMessage.value =
+                                        localized.getString(CommonR.string.anim_art_err_no_match, album.title)
                                 }
                                 is ResolveOutcome.Matched -> {
                                     handleMasterUrlsFetched(album, outcome.catalogAlbumId, outcome.storefront)
@@ -192,8 +201,12 @@ class AnimatedArtworkViewModel
                             }
                         }
                         is AppResult.Error -> {
-                            _errorMessage.value = rateLimitMessage(resolveResult.error.cause)
-                                ?: "Failed to resolve album: ${resolveResult.error.message}"
+                            _errorMessage.value =
+                                rateLimitMessage(localized, resolveResult.error.cause)
+                                    ?: localized.getString(
+                                        CommonR.string.anim_art_err_resolve_failed,
+                                        resolveResult.error.localizedMessage(localized),
+                                    )
                         }
                     }
                 } finally {
@@ -207,10 +220,12 @@ class AnimatedArtworkViewModel
             catalogAlbumId: String,
             storefront: String,
         ) {
+            val localized = AppLocaleManager.localizedContext(appContext)
             val masterUrlsResult = animatedArtworkRepository.fetchMasterUrls(catalogAlbumId, storefront)
             if (masterUrlsResult !is AppResult.Success) {
-                _errorMessage.value = (masterUrlsResult as? AppResult.Error)?.let { rateLimitMessage(it.error.cause) }
-                    ?: "Failed to fetch catalog artwork details from Apple Music."
+                _errorMessage.value =
+                    (masterUrlsResult as? AppResult.Error)?.let { rateLimitMessage(localized, it.error.cause) }
+                        ?: localized.getString(CommonR.string.anim_art_err_catalog_failed)
                 return
             }
 
@@ -223,7 +238,7 @@ class AnimatedArtworkViewModel
                 }
 
             if (masterUrl == null) {
-                _errorMessage.value = "No motion cover video found on Apple Music for this album."
+                _errorMessage.value = localized.getString(CommonR.string.anim_art_err_no_video)
                 return
             }
 
@@ -249,12 +264,13 @@ class AnimatedArtworkViewModel
         }
 
         fun downloadAndSaveArtwork() {
+            val localized = AppLocaleManager.localizedContext(appContext)
             val album = _selectedAlbum.value
             val variant = _selectedVariant.value
             val details = _fetchedMasterDetails.value
 
             if (album == null || details == null) {
-                _errorMessage.value = "No valid stream selected to download."
+                _errorMessage.value = localized.getString(CommonR.string.anim_art_err_no_stream)
                 return
             }
 
@@ -280,7 +296,11 @@ class AnimatedArtworkViewModel
                         _successDialogArtwork.value = result.data
                         refreshStorageBytes()
                     } else if (result is AppResult.Error) {
-                        _errorMessage.value = "Download failed: ${result.error.message}"
+                        _errorMessage.value =
+                            localized.getString(
+                                CommonR.string.anim_art_err_download_failed,
+                                result.error.localizedMessage(localized),
+                            )
                     }
                 } finally {
                     _isDownloadingFile.value = false
@@ -324,9 +344,23 @@ class AnimatedArtworkViewModel
         }
     }
 
-/** When [cause] (or what caused it) is Apple's rate limit (HTTP 429): what to tell the user. */
-internal fun rateLimitMessage(cause: Throwable?): String? {
+/** When [cause] (or what caused it) is Apple's rate limit (HTTP 429): minutes remaining, else null. */
+internal fun rateLimitMinutes(cause: Throwable?): Int? {
     val limit = generateSequence(cause) { it.cause }.filterIsInstance<RateLimitException>().firstOrNull() ?: return null
-    val minutes = limit.minutesLeft()
-    return "Apple Music is limiting requests right now. Try again in $minutes ${if (minutes == 1) "minute" else "minutes"}."
+    return limit.minutesLeft()
+}
+
+/** When [cause] (or what caused it) is Apple's rate limit (HTTP 429): localized message to tell the user. */
+internal fun rateLimitMessage(
+    context: Context,
+    cause: Throwable?,
+): String? {
+    val minutes = rateLimitMinutes(cause) ?: return null
+    val localized = AppLocaleManager.localizedContext(context)
+    val locale = AppLocaleManager.activeLocale(localized)
+    return localized.resources.getQuantityString(
+        CommonR.plurals.apple_rate_limit_wait,
+        minutes,
+        LocaleFormatters.formatInteger(minutes, locale),
+    )
 }

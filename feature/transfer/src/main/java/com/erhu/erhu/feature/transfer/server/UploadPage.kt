@@ -5,17 +5,25 @@ package com.erhu.erhu.feature.transfer.server
  * external scripts, fonts or requests), so it works without internet. It holds no secret: the
  * session token comes from the QR link's #fragment (never sent to the server in the URL) or from
  * typing the pairing code, and is kept in sessionStorage for this tab only. File names are always
- * inserted as text, never as HTML. Written without the dollar sign, so Kotlin leaves it untouched.
+ * inserted as text, never as HTML.
  */
 internal object UploadPage {
-    val HTML: String =
-        """
+    val HTML: String by lazy { render() }
+
+    /** Renders the self-contained transfer HTML document localized for [w]. */
+    @Suppress("LongMethod")
+    fun render(w: TransferWebStrings = TransferWebStrings()): String {
+        val dir = if (w.isRtl) "rtl" else "ltr"
+        val langAttr = htmlEscape(w.langTag)
+        val stringsJson = buildStringsJson(w)
+        val filesJson = buildFilesJson(w)
+        return """
 <!doctype html>
-<html lang="en">
+<html lang="$langAttr" dir="$dir">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>erhu Wi-Fi Transfer</title>
+<title>${htmlEscape(w.title)}</title>
 <style>
 :root { color-scheme: light dark; --bg:#f6f6f8; --card:#ffffff; --text:#17171c; --muted:#666a75; --accent:#d23c78; --ok:#2e7d32; --warn:#a15c00; --err:#c62828; --line:#e3e3ea; }
 @media (prefers-color-scheme: dark) { :root { --bg:#111116; --card:#1c1c24; --text:#ececf2; --muted:#a0a3ad; --line:#2c2c37; --ok:#7bc47f; --warn:#e0a24a; --err:#ef7b7b; } }
@@ -31,8 +39,8 @@ button.primary { background:var(--accent); color:#fff; } button:disabled { opaci
 .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; margin-top:12px; }
 table { width:100%; border-collapse:collapse; font-size:14px; }
 td { padding:8px 6px; border-top:1px solid var(--line); vertical-align:middle; }
-td.name { word-break:break-all; } td.size { white-space:nowrap; color:var(--muted); width:90px; text-align:right; }
-td.state { width:230px; } td.act { width:40px; text-align:right; }
+td.name { word-break:break-all; } td.size { white-space:nowrap; color:var(--muted); width:90px; text-align:end; }
+td.state { width:230px; } td.act { width:40px; text-align:end; }
 .bar { height:6px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:4px; } .bar i { display:block; height:100%; width:0; background:var(--accent); }
 .ok { color:var(--ok); } .warn { color:var(--warn); } .err { color:var(--err); } .muted { color:var(--muted); }
 input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; text-align:center; padding:8px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--text); }
@@ -41,22 +49,24 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
 </head>
 <body>
 <main>
-<h1>erhu Wi-Fi Transfer</h1>
-<p class="sub">Send music from this computer straight to your phone over your Wi-Fi. Nothing goes through the internet.</p>
+<h1>${htmlEscape(w.title)}</h1>
+<p class="sub">${htmlEscape(w.subtitle)}</p>
 
 <section id="pairCard" class="card hidden">
-  <p>Enter the 6-digit code shown on the phone.</p>
-  <div class="row"><input id="code" type="text" inputmode="numeric" maxlength="6" autocomplete="off"><button id="pairBtn" class="primary">Connect</button></div>
+  <p>${htmlEscape(w.enterCodePrompt)}</p>
+  <div class="row"><input id="code" type="text" inputmode="numeric" maxlength="6" autocomplete="off"><button id="pairBtn" class="primary">${htmlEscape(
+            w.connectButton,
+        )}</button></div>
   <p id="pairMsg" class="row err"></p>
 </section>
 
 <section id="pickCard" class="card hidden">
   <div id="drop" class="drop">
-    <div><b>Drop music files or folders here</b></div>
-    <div class="muted">MP3, FLAC, M4A, AAC, OGG, Opus and WAV</div>
+    <div><b>${htmlEscape(w.dropHeading)}</b></div>
+    <div class="muted">${htmlEscape(w.supportedFormats)}</div>
     <div class="row">
-      <button id="pickFiles">Choose files</button>
-      <button id="pickFolder" class="hidden">Choose a folder</button>
+      <button id="pickFiles">${htmlEscape(w.chooseFilesButton)}</button>
+      <button id="pickFolder" class="hidden">${htmlEscape(w.chooseFolderButton)}</button>
     </div>
   </div>
   <input id="fileInput" type="file" multiple accept=".mp3,.flac,.m4a,.aac,.ogg,.oga,.opus,.wav,audio/*" class="hidden">
@@ -69,9 +79,9 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
   </div>
   <div class="bar"><i id="overall"></i></div>
   <div class="row">
-    <button id="startBtn" class="primary">Send to phone</button>
-    <button id="cancelAll">Cancel</button>
-    <button id="clearBtn">Clear list</button>
+    <button id="startBtn" class="primary">${htmlEscape(w.sendButton)}</button>
+    <button id="cancelAll">${htmlEscape(w.cancelButton)}</button>
+    <button id="clearBtn">${htmlEscape(w.clearListButton)}</button>
   </div>
   <table><tbody id="rows"></tbody></table>
 </section>
@@ -80,16 +90,25 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
 <script>
 (function () {
   "use strict";
+  var T = $stringsJson;
+  var FILES = $filesJson;
+  var LANG = ${Json.string(w.langTag)};
   var AUDIO = ["mp3","flac","m4a","aac","ogg","oga","opus","wav"];
   var PARALLEL = 2;
   var token = null;
   var items = [];
   var running = 0;
   var sending = false;
+  var UNITS = [T.unitB, T.unitKb, T.unitMb, T.unitGb];
+  var pluralizer = (typeof Intl !== "undefined" && Intl.PluralRules) ? new Intl.PluralRules(LANG) : null;
   function el(id) { return document.getElementById(id); }
   function show(id, on) { el(id).classList.toggle("hidden", !on); }
   function ext(name) { var i = name.lastIndexOf("."); return i < 0 ? "" : name.slice(i + 1).toLowerCase(); }
-  function human(n) { var u = ["B","KB","MB","GB"]; var i = 0; while (n >= 1024 && i < 3) { n /= 1024; i++; } return (i ? n.toFixed(1) : n) + " " + u[i]; }
+  function fmt(tpl, key, val) { return tpl.split("{" + key + "}").join(String(val)); }
+  function fmtNum(n) { try { return new Intl.NumberFormat(LANG).format(n); } catch (e) { return String(n); } }
+  function fmtPct(p) { try { return new Intl.NumberFormat(LANG, { style: "percent", maximumFractionDigits: 0 }).format(p / 100); } catch (e) { return p + "%"; } }
+  function human(n) { var i = 0; while (n >= 1024 && i < 3) { n /= 1024; i++; } var v = i ? Number(n.toFixed(1)) : n; var num = String(v); try { num = new Intl.NumberFormat(LANG, { maximumFractionDigits: i ? 1 : 0 }).format(v); } catch (e) {} return num + " " + UNITS[i]; }
+  function fileCountText(n) { var cat = (n === 0 && FILES.zero !== FILES.other) ? "zero" : (pluralizer ? pluralizer.select(n) : (n === 1 ? "one" : "other")); var pat = FILES[cat] || FILES.other; return pat.split("{n}").join(fmtNum(n)); }
   function headers(xhr) { xhr.setRequestHeader("X-Empee3-Transfer", "1"); if (token) xhr.setRequestHeader("X-Transfer-Token", token); }
 
   function readToken() {
@@ -119,10 +138,10 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
         el("pairMsg").textContent = "";
         setPaired(true);
       } else {
-        el("pairMsg").textContent = r.message || "Could not connect";
+        el("pairMsg").textContent = r.message || T.connectFailed;
       }
     };
-    xhr.onerror = function () { el("pairMsg").textContent = "The phone is not reachable. Is Wi-Fi Transfer still on?"; };
+    xhr.onerror = function () { el("pairMsg").textContent = T.phoneUnreachableTransfer; };
     xhr.send();
   }
 
@@ -132,8 +151,8 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
     for (var i = 0; i < files.length; i++) {
       var f = files[i];
       var item = { file: f, name: f.name, size: f.size, state: "queued", sent: 0, xhr: null, tries: 0 };
-      if (AUDIO.indexOf(ext(f.name)) < 0) { item.state = "skipped"; item.msg = "Not a supported audio file"; }
-      else if (f.size === 0) { item.state = "skipped"; item.msg = "Empty file"; }
+      if (AUDIO.indexOf(ext(f.name)) < 0) { item.state = "skipped"; item.msg = T.unsupportedAudio; }
+      else if (f.size === 0) { item.state = "skipped"; item.msg = T.emptyFile; }
       items.push(item);
       row(item);
     }
@@ -148,7 +167,7 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
     var label = document.createElement("div"); var bar = document.createElement("div"); bar.className = "bar"; var fill = document.createElement("i"); bar.appendChild(fill);
     state.appendChild(label); state.appendChild(bar);
     var act = document.createElement("td"); act.className = "act";
-    var x = document.createElement("button"); x.textContent = "×"; x.title = "Cancel or remove"; x.setAttribute("aria-label", "Cancel or remove " + item.name);
+    var x = document.createElement("button"); x.textContent = "×"; x.title = T.cancelOrRemove; x.setAttribute("aria-label", fmt(T.cancelOrRemoveFile, "name", item.name));
     x.onclick = function () { cancel(item); };
     act.appendChild(x);
     tr.appendChild(name); tr.appendChild(size); tr.appendChild(state); tr.appendChild(act);
@@ -157,13 +176,13 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
     paint(item);
   }
 
-  var LABELS = { queued: ["Waiting", "muted"], checking: ["Checking", "muted"], sending: ["Sending", ""], saving: ["Saving on phone", ""],
-    saved: ["Saved", "ok"], duplicate: ["Already on phone", "warn"], skipped: ["Skipped", "warn"], failed: ["Failed", "err"], cancelled: ["Cancelled", "muted"] };
+  var LABELS = { queued: [T.stWaiting, "muted"], checking: [T.stChecking, "muted"], sending: [T.stSending, ""], saving: [T.stSaving, ""],
+    saved: [T.stSaved, "ok"], duplicate: [T.stDuplicate, "warn"], skipped: [T.stSkipped, "warn"], failed: [T.stFailed, "err"], cancelled: [T.stCancelled, "muted"] };
 
   function paint(item) {
     var l = LABELS[item.state];
     var text = l[0];
-    if (item.state === "sending") text += " " + Math.floor(100 * item.sent / Math.max(1, item.size)) + "%";
+    if (item.state === "sending") text += " " + fmtPct(Math.floor(100 * item.sent / Math.max(1, item.size)));
     if (item.msg && (item.state === "failed" || item.state === "skipped" || item.state === "duplicate")) text += " - " + item.msg;
     item.ui.label.textContent = text;
     item.ui.label.className = l[1];
@@ -180,10 +199,10 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
       total += it.size; sent += (it.state === "saved" || it.state === "duplicate") ? it.size : it.sent;
       if (it.state === "saved") ok++; if (it.state === "duplicate") dup++; if (it.state === "failed") err++;
     });
-    el("sumTotal").textContent = items.length + " file" + (items.length === 1 ? "" : "s");
-    el("sumOk").textContent = ok ? ok + " saved" : "";
-    el("sumDup").textContent = dup ? dup + " already on phone" : "";
-    el("sumErr").textContent = err ? err + " not sent" : "";
+    el("sumTotal").textContent = fileCountText(items.length);
+    el("sumOk").textContent = ok ? fmt(T.sumSaved, "count", fmtNum(ok)) : "";
+    el("sumDup").textContent = dup ? fmt(T.sumDuplicate, "count", fmtNum(dup)) : "";
+    el("sumErr").textContent = err ? fmt(T.sumNotSent, "count", fmtNum(err)) : "";
     el("overall").style.width = (total ? Math.floor(100 * sent / total) : 0) + "%";
     var pending = items.some(function (it) { return it.state === "queued"; });
     el("startBtn").disabled = sending || !pending;
@@ -223,9 +242,9 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
       if (xhr.status === 200 && r.status === "ok") { upload(item); }
       else if (xhr.status === 200 && r.status === "duplicate") { finish(item, "duplicate", r.message); }
       else if (xhr.status === 401) { lost(r.message); finish(item, "failed", r.message); }
-      else { finish(item, "failed", r.message || ("Error " + xhr.status)); }
+      else { finish(item, "failed", r.message || fmt(T.errCode, "code", xhr.status)); }
     };
-    xhr.onerror = function () { finish(item, "failed", "The phone is not reachable"); };
+    xhr.onerror = function () { finish(item, "failed", T.phoneUnreachable); };
     xhr.send();
   }
 
@@ -244,9 +263,9 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
       else if (xhr.status === 200 && r.status === "duplicate") { finish(item, "duplicate", r.message); }
       else if (xhr.status === 429 && item.tries < 5) { item.tries++; item.state = "queued"; item.xhr = null; running--; paint(item); setTimeout(pump, 1500); }
       else if (xhr.status === 401) { lost(r.message); finish(item, "failed", r.message); }
-      else { finish(item, "failed", r.message || ("Error " + xhr.status)); }
+      else { finish(item, "failed", r.message || fmt(T.errCode, "code", xhr.status)); }
     };
-    xhr.onerror = function () { finish(item, "failed", "Connection lost: is the phone still on this Wi-Fi?"); };
+    xhr.onerror = function () { finish(item, "failed", T.connLost); };
     xhr.onabort = function () { finish(item, "cancelled"); };
     xhr.send(item.file);
   }
@@ -268,7 +287,7 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
     sending = false;
     token = null;
     try { sessionStorage.removeItem("erhuToken"); } catch (e) {}
-    el("fatal").textContent = message || "This transfer session has ended. Start Wi-Fi Transfer on the phone again.";
+    el("fatal").textContent = message || T.sessionEnded;
   }
 
   function readEntries(entry, out, then) {
@@ -320,5 +339,60 @@ input[type=text] { font:inherit; font-size:22px; letter-spacing:6px; width:9em; 
 </script>
 </body>
 </html>
-        """.trimIndent()
+            """.trimIndent()
+    }
+
+    private fun buildStringsJson(w: TransferWebStrings): String =
+        Json.obj(
+            "connectFailed" to w.connectFailed,
+            "phoneUnreachableTransfer" to w.phoneUnreachableTransfer,
+            "phoneUnreachable" to w.phoneUnreachable,
+            "unsupportedAudio" to w.unsupportedAudio,
+            "emptyFile" to w.emptyFile,
+            "cancelOrRemove" to w.cancelOrRemove,
+            "cancelOrRemoveFile" to w.cancelOrRemoveFileTemplate,
+            "stWaiting" to w.statusWaiting,
+            "stChecking" to w.statusChecking,
+            "stSending" to w.statusSending,
+            "stSaving" to w.statusSaving,
+            "stSaved" to w.statusSaved,
+            "stDuplicate" to w.statusDuplicate,
+            "stSkipped" to w.statusSkipped,
+            "stFailed" to w.statusFailed,
+            "stCancelled" to w.statusCancelled,
+            "sumSaved" to w.summarySavedTemplate,
+            "sumDuplicate" to w.summaryDuplicateTemplate,
+            "sumNotSent" to w.summaryNotSentTemplate,
+            "errCode" to w.errorCodeTemplate,
+            "connLost" to w.connectionLost,
+            "sessionEnded" to w.sessionEndedFatal,
+            "unitB" to w.unitB,
+            "unitKb" to w.unitKb,
+            "unitMb" to w.unitMb,
+            "unitGb" to w.unitGb,
+        )
+
+    private fun buildFilesJson(w: TransferWebStrings): String =
+        Json.obj(
+            "zero" to w.fileCountZeroPattern,
+            "one" to w.fileCountOnePattern,
+            "two" to w.fileCountTwoPattern,
+            "few" to w.fileCountFewPattern,
+            "many" to w.fileCountManyPattern,
+            "other" to w.fileCountOtherPattern,
+        )
+
+    private fun htmlEscape(text: String): String =
+        buildString(text.length) {
+            for (c in text) {
+                when (c) {
+                    '&' -> append("&amp;")
+                    '<' -> append("&lt;")
+                    '>' -> append("&gt;")
+                    '"' -> append("&quot;")
+                    '\'' -> append("&#39;")
+                    else -> append(c)
+                }
+            }
+        }
 }

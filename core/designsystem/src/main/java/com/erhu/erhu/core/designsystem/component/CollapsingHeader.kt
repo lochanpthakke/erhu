@@ -19,7 +19,9 @@ import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 /** The last stretch of the large title's rise over which the header collapses. */
@@ -56,6 +58,7 @@ private const val WRAPPED_HERO_GONE_AT = 0.6f
 class CollapsingHeaderState internal constructor(
     private val listState: LazyListState,
     private val travelPx: Float,
+    private val isRtl: Boolean = false,
 ) {
     /** Height of the header bar, px (measured by [OverlayHeader]). */
     internal var barHeight by mutableFloatStateOf(0f)
@@ -65,6 +68,7 @@ class CollapsingHeaderState internal constructor(
 
     /** The large title on screen (root coordinates), its first line's height and its line count. */
     internal var heroLeft by mutableFloatStateOf(Float.NaN)
+    internal var heroRight by mutableFloatStateOf(Float.NaN)
     internal var heroTop by mutableFloatStateOf(Float.NaN)
     internal var heroLineHeight by mutableFloatStateOf(0f)
     internal var heroLines by mutableIntStateOf(1)
@@ -131,9 +135,10 @@ class CollapsingHeaderState internal constructor(
                 restLeft = barLeft,
                 restTop = barTop,
                 height = barLineHeight,
-                left = heroLeft,
+                left = if (isRtl && !heroRight.isNaN()) heroRight - size.width else heroLeft,
                 top = heroTop,
                 startScale = heroLineHeight / barLineHeight,
+                isRtl = isRtl,
             )
             alpha *= smoothstep((p / HANDOVER_SPAN).coerceAtMost(1f))
         }
@@ -144,7 +149,8 @@ class CollapsingHeaderState internal constructor(
 @Composable
 fun rememberCollapsingHeaderState(listState: LazyListState): CollapsingHeaderState {
     val travel = with(LocalDensity.current) { COLLAPSE_TRAVEL.toPx() }
-    return remember(listState, travel) { CollapsingHeaderState(listState, travel) }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    return remember(listState, travel, isRtl) { CollapsingHeaderState(listState, travel, isRtl) }
 }
 
 /** The hero's title block (placed directly in the hero item's root box): where the collapse is measured from. */
@@ -155,6 +161,7 @@ fun Modifier.collapsingHeroTitle(state: CollapsingHeaderState): Modifier =
     onGloballyPositioned {
         val position = it.positionInRoot()
         state.heroLeft = position.x
+        state.heroRight = position.x + it.size.width
         state.heroTop = position.y
     }.graphicsLayer { state.drawHeroTitle(this) }
 

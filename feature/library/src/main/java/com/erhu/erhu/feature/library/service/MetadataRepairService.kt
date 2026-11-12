@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.feature.library.MetadataRepairOperation
 import com.erhu.erhu.feature.library.RepairPhase
 import com.erhu.erhu.feature.library.RepairProgress
@@ -22,6 +24,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Owns the single existing repair runner until fetch completion, pause, cancellation or timeout. */
 @AndroidEntryPoint
@@ -59,7 +62,10 @@ class MetadataRepairService : Service() {
                                 "erhu:metadata-fetch",
                             ).apply { acquire(MAX_WAKE_MS) }
                 } catch (e: RuntimeException) {
-                    operation.startFailed("Background metadata fetching could not start: ${e.message}")
+                    val localized = AppLocaleManager.localizedContext(this)
+                    operation.startFailed(
+                        localized.getString(CommonR.string.metadata_service_start_failed, e.message.orEmpty()),
+                    )
                     stopSelf()
                     return START_NOT_STICKY
                 }
@@ -117,6 +123,8 @@ class MetadataRepairService : Service() {
     }
 
     internal fun progressNotification(progress: RepairProgress): Notification {
+        val localized = AppLocaleManager.localizedContext(this)
+        val locale = AppLocaleManager.activeLocale(localized)
         val cancel =
             PendingIntent.getService(
                 this,
@@ -124,14 +132,27 @@ class MetadataRepairService : Service() {
                 Intent(this, MetadataRepairService::class.java).setAction(ACTION_STOP),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
+        val processedCount = LocaleFormatters.formatInteger(progress.processed, locale)
+        val totalCount = LocaleFormatters.formatInteger(progress.total, locale)
+        val summaryText =
+            localized.resources.getQuantityString(
+                CommonR.plurals.metadata_service_notif_processed,
+                progress.total,
+                processedCount,
+                totalCount,
+            )
+        val detailText = progress.reason ?: localized.getString(CommonR.string.metadata_service_notif_fetching_default)
         return NotificationCompat
             .Builder(this, PROGRESS_CHANNEL)
-            .setContentTitle("erhu – Fixing metadata")
-            .setContentText("${progress.processed} / ${progress.total} tracks processed")
+            .setContentTitle(localized.getString(CommonR.string.metadata_service_notif_fixing_title))
+            .setContentText(summaryText)
             .setStyle(
                 NotificationCompat.BigTextStyle().bigText(
-                    "${progress.processed} / ${progress.total} tracks processed. " +
-                        (progress.reason ?: "Fetching information for your music library."),
+                    localized.getString(
+                        CommonR.string.metadata_service_notif_processed_with_detail,
+                        summaryText,
+                        detailText,
+                    ),
                 ),
             ).setSmallIcon(android.R.drawable.ic_popup_sync)
             .setContentIntent(openIntent())
@@ -139,25 +160,40 @@ class MetadataRepairService : Service() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(progress.total, progress.processed, progress.total == 0)
-            .addAction(android.R.drawable.ic_delete, "Cancel", cancel)
+            .addAction(android.R.drawable.ic_delete, localized.getString(CommonR.string.action_cancel), cancel)
             .build()
     }
 
     internal fun completionNotification(progress: RepairProgress) {
         if (progress.phase == RepairPhase.IDLE || progress.phase == RepairPhase.FETCHING) return
+        val localized = AppLocaleManager.localizedContext(this)
+        val locale = AppLocaleManager.activeLocale(localized)
         val title =
-            when (progress.phase) {
-                RepairPhase.COMPLETE -> "Metadata fetching complete"
-                RepairPhase.FAILED -> "Metadata fetching stopped"
-                RepairPhase.CANCELLED -> "Metadata fetching cancelled"
-                else -> "Metadata fetching paused"
-            }
+            localized.getString(
+                when (progress.phase) {
+                    RepairPhase.COMPLETE -> CommonR.string.metadata_service_notif_complete
+                    RepairPhase.FAILED -> CommonR.string.metadata_service_notif_stopped
+                    RepairPhase.CANCELLED -> CommonR.string.metadata_service_notif_cancelled
+                    else -> CommonR.string.metadata_service_notif_paused
+                },
+            )
         val text =
             if (progress.pending > 0) {
-                "${progress.pending} tracks ready. Allow erhu to modify your files to apply the changes."
+                localized.resources.getQuantityString(
+                    CommonR.plurals.metadata_service_notif_pending_ready,
+                    progress.pending,
+                    LocaleFormatters.formatInteger(progress.pending, locale),
+                )
             } else {
-                "${progress.processed} / ${progress.total} tracks processed. " +
-                    (progress.reason ?: "Open Auto Fix Tags to review the results.")
+                val summaryText =
+                    localized.resources.getQuantityString(
+                        CommonR.plurals.metadata_service_notif_processed,
+                        progress.total,
+                        LocaleFormatters.formatInteger(progress.processed, locale),
+                        LocaleFormatters.formatInteger(progress.total, locale),
+                    )
+                val detailText = progress.reason ?: localized.getString(CommonR.string.metadata_service_notif_open_review)
+                localized.getString(CommonR.string.metadata_service_notif_processed_with_detail, summaryText, detailText)
             }
         val notification =
             NotificationCompat
@@ -170,8 +206,15 @@ class MetadataRepairService : Service() {
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setAutoCancel(true)
                 .setContentIntent(openIntent())
-                .apply { if (progress.pending > 0) addAction(android.R.drawable.ic_menu_edit, "Allow changes", openIntent()) }
-                .build()
+                .apply {
+                    if (progress.pending > 0) {
+                        addAction(
+                            android.R.drawable.ic_menu_edit,
+                            localized.getString(CommonR.string.metadata_service_action_allow_changes),
+                            openIntent(),
+                        )
+                    }
+                }.build()
         // Notification denial never prevents fetching or access to the in-app repair results.
         try {
             notifications.notify(COMPLETION_NOTIFICATION_ID, notification)
@@ -192,11 +235,20 @@ class MetadataRepairService : Service() {
         }
 
     internal fun createChannels() {
+        val localized = AppLocaleManager.localizedContext(this)
         notifications.createNotificationChannel(
-            NotificationChannel(PROGRESS_CHANNEL, "Metadata fetching progress", NotificationManager.IMPORTANCE_LOW),
+            NotificationChannel(
+                PROGRESS_CHANNEL,
+                localized.getString(CommonR.string.metadata_service_channel_fetch_progress),
+                NotificationManager.IMPORTANCE_LOW,
+            ),
         )
         notifications.createNotificationChannel(
-            NotificationChannel(COMPLETION_CHANNEL, "Metadata fetching results", NotificationManager.IMPORTANCE_HIGH),
+            NotificationChannel(
+                COMPLETION_CHANNEL,
+                localized.getString(CommonR.string.metadata_service_channel_fetch_results),
+                NotificationManager.IMPORTANCE_HIGH,
+            ),
         )
     }
 

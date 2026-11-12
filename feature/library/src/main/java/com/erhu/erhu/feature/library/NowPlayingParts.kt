@@ -50,10 +50,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
@@ -138,7 +140,8 @@ internal fun CarouselCard(
         val artSide =
             minOf(maxWidth * CARD_WIDTH_FRACTION - CARD_PADDING * 2, maxHeight - metadataHeight - CARD_PADDING * 2)
                 .coerceAtLeast(MIN_ART_SIDE)
-        val select = if (isCurrent || !selectable) Modifier else Modifier.clickable(onClickLabel = "Play this track", onClick = onSelect)
+        val playTrackLabel = stringResource(R.string.player_cd_play_track)
+        val select = if (isCurrent || !selectable) Modifier else Modifier.clickable(onClickLabel = playTrackLabel, onClick = onSelect)
         // Each card in its own artwork's colours (cached per artwork, cross-faded on change).
         val colors = rememberLyricsColors(track)
         val inset = with(LocalDensity.current) { CARD_PADDING.toPx() }
@@ -243,7 +246,7 @@ internal fun FavoriteButton(
         Box(Modifier.selectionJiggle(isFavorite, identity = songId, expressive = true)) {
             Icon(
                 imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                contentDescription = stringResource(if (isFavorite) R.string.song_cd_favorite_remove else R.string.song_cd_favorite_add),
                 tint = heartColor,
             )
         }
@@ -283,7 +286,10 @@ internal fun TransportControls(
                 ToggleIconButton(active = playbackState.shuffleModeEnabled, onClick = onShuffle) {
                     Icon(
                         imageVector = Icons.Default.Shuffle,
-                        contentDescription = if (playbackState.shuffleModeEnabled) "Shuffle on" else "Shuffle off",
+                        contentDescription =
+                            stringResource(
+                                if (playbackState.shuffleModeEnabled) R.string.player_cd_shuffle_on else R.string.player_cd_shuffle_off,
+                            ),
                     )
                 }
             }
@@ -291,7 +297,7 @@ internal fun TransportControls(
                 PressIconButton(onClick = onPrevious, nudge = -1) {
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
-                        contentDescription = "Previous",
+                        contentDescription = stringResource(R.string.cd_previous_track),
                         modifier = Modifier.size(IconSize.large),
                     )
                 }
@@ -308,7 +314,7 @@ internal fun TransportControls(
                         SwapIcon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow) { icon ->
                             Icon(
                                 imageVector = icon,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                contentDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
                                 modifier = Modifier.size(IconSize.hero),
                             )
                         }
@@ -317,7 +323,11 @@ internal fun TransportControls(
             }
             Slot {
                 PressIconButton(onClick = onNext, enabled = hasNext(playbackState), nudge = 1) {
-                    Icon(imageVector = Icons.Default.SkipNext, contentDescription = "Next", modifier = Modifier.size(IconSize.large))
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = stringResource(R.string.cd_next_track),
+                        modifier = Modifier.size(IconSize.large),
+                    )
                 }
             }
             Slot {
@@ -330,11 +340,13 @@ internal fun TransportControls(
                         Icon(
                             imageVector = it,
                             contentDescription =
-                                when (playbackState.repeatMode) {
-                                    RepeatMode.OFF -> "Repeat off"
-                                    RepeatMode.ALL -> "Repeat all"
-                                    RepeatMode.ONE -> "Repeat one"
-                                },
+                                stringResource(
+                                    when (playbackState.repeatMode) {
+                                        RepeatMode.OFF -> R.string.player_cd_repeat_off
+                                        RepeatMode.ALL -> R.string.player_cd_repeat_all
+                                        RepeatMode.ONE -> R.string.player_cd_repeat_one
+                                    },
+                                ),
                         )
                     }
                 }
@@ -346,7 +358,7 @@ internal fun TransportControls(
         ) {
             Slot {
                 PressIconButton(onClick = onAddToPlaylist) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add to playlist")
+                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(R.string.playlist_add_to_title))
                 }
             }
             // The actions sit under shuffle, play / pause and repeat; the columns between stay empty.
@@ -356,12 +368,12 @@ internal fun TransportControls(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Layers,
-                            contentDescription = if (!stacked) "Stack background albums" else null,
+                            contentDescription = if (!stacked) stringResource(R.string.player_cd_stack_albums) else null,
                             modifier = Modifier.graphicsLayer { alpha = 1f - stackProgress().coerceIn(0f, 1f) },
                         )
                         Icon(
                             imageVector = Icons.Default.ViewCarousel,
-                            contentDescription = if (stacked) "Show albums side by side" else null,
+                            contentDescription = if (stacked) stringResource(R.string.player_cd_unstack_albums) else null,
                             modifier = Modifier.graphicsLayer { alpha = stackProgress().coerceIn(0f, 1f) },
                         )
                     }
@@ -370,7 +382,10 @@ internal fun TransportControls(
             Slot {}
             Slot {
                 PressIconButton(onClick = onQueue) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.QueueMusic, contentDescription = "Queue")
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = stringResource(R.string.player_menu_queue),
+                    )
                 }
             }
         }
@@ -445,7 +460,12 @@ internal fun HeroAnimatedArtwork(
     modifier: Modifier = Modifier,
     coverVideo: CoverVideoHost? = null,
 ) {
-    val description = if (isCurrent) "Album artwork" else "${song.title} by ${song.artist}"
+    val description =
+        if (isCurrent) {
+            stringResource(R.string.cd_album_artwork)
+        } else {
+            stringResource(R.string.player_cd_track_by_artist, song.title, song.artist)
+        }
     if (!isCurrent || animatedArtworkRepository == null || libraryRepository == null) {
         SongArtwork(song = song, contentDescription = description, modifier = modifier)
         return

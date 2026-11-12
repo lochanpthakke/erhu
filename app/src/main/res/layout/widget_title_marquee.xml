@@ -9,5 +9,6 @@
     android:autoSizeMinTextSize="14sp"
     android:autoSizeMaxTextSize="18sp"
     android:autoSizeStepGranularity="1sp"
+    android:textAlignment="viewStart"
     android:textSize="18sp"
     android:textStyle="bold" />

@@ -15,6 +15,16 @@ import kotlinx.coroutines.launch
 import java.io.InputStream
 import javax.inject.Inject
 
+sealed interface ThemeImportMessage {
+    data class Success(
+        val themeName: String,
+    ) : ThemeImportMessage
+
+    data class Failure(
+        val reason: String,
+    ) : ThemeImportMessage
+}
+
 @HiltViewModel
 class ThemeViewModel
     @Inject
@@ -43,8 +53,8 @@ class ThemeViewModel
         val uiGlassyness: StateFlow<Float> = themeRepository.uiGlassyness
         val popupGlassOpacity: StateFlow<Float> = themeRepository.popupGlassOpacity
 
-        private val _importMessage = MutableStateFlow<String?>(null)
-        val importMessage: StateFlow<String?> = _importMessage.asStateFlow()
+        private val _importMessage = MutableStateFlow<ThemeImportMessage?>(null)
+        val importMessage: StateFlow<ThemeImportMessage?> = _importMessage.asStateFlow()
 
         fun selectAppTheme(themeId: String) {
             viewModelScope.launch {
@@ -101,7 +111,7 @@ class ThemeViewModel
                 when (result) {
                     is AppResult.Success -> {
                         val data = result.data
-                        _importMessage.value = "Successfully imported '${data.name}'!"
+                        _importMessage.value = ThemeImportMessage.Success(data.name)
                         if (data.isSkin) {
                             themeRepository.setAppTheme(data.themeId)
                         } else {
@@ -109,7 +119,7 @@ class ThemeViewModel
                         }
                     }
                     is AppResult.Error -> {
-                        _importMessage.value = "Import failed: ${result.error.message}"
+                        _importMessage.value = ThemeImportMessage.Failure(result.error.message)
                     }
                 }
             }

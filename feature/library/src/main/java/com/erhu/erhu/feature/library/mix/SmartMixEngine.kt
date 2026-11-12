@@ -271,6 +271,7 @@ object SmartMixEngine {
                 }
         val how = if (vybe != null) "Close to the songs you play most, matched by VYBE" else "From the genres and artists you play most"
         return finish(profile, MixKind.YOUR_SOUND, ranked, YOUR_SOUND_MIN, how, perArtist = 3)
+            ?.copy(noteKey = if (vybe != null) MixNoteKey.YOUR_SOUND_VYBE else MixNoteKey.YOUR_SOUND_TAGS)
     }
 
     private const val SOUND_VYBE = 0.55f

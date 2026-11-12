@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppError
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.getOrDefault
@@ -40,6 +43,7 @@ import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.feature.library.mix.RadioPlan
 import com.erhu.erhu.feature.library.mix.RadioRepository
 import com.erhu.erhu.feature.library.mix.RadioSeed
+import com.erhu.erhu.feature.library.mix.RadioSignal
 import com.erhu.erhu.feature.library.mix.SmartMixRepository
 import com.erhu.erhu.feature.library.mix.SmartMixes
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -70,6 +74,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 data class RepairQueueItem(
     val song: Song,
@@ -625,7 +630,8 @@ class LibraryViewModel
                 } ?: return
             when {
                 remove && view.saved != expected -> {
-                    onlineLyricsView.value = view.copy(saveError = "Saved lyrics changed. Reopen lyrics before removing them.")
+                    onlineLyricsView.value =
+                        view.copy(saveError = localized().getString(CommonR.string.library_lyrics_saved_changed))
                 }
                 remove && view.saved == null -> Unit
                 !remove && view.candidate?.bestText.isNullOrBlank() -> Unit
@@ -659,8 +665,14 @@ class LibraryViewModel
                         throw e
                     } catch (e: java.io.IOException) {
                         if (currentTrack(songId) == track && lyricsGeneration == generation) {
+                            val resId =
+                                if (remove) {
+                                    CommonR.string.library_lyrics_remove_failed
+                                } else {
+                                    CommonR.string.library_lyrics_download_failed
+                                }
                             onlineLyricsView.value =
-                                view.copy(saveError = "Could not ${if (remove) "remove" else "download"} lyrics. ${e.message.orEmpty()}")
+                                view.copy(saveError = localized().getString(resId, e.message.orEmpty()))
                         }
                     }
                 }
@@ -670,6 +682,15 @@ class LibraryViewModel
 
         private val _userMessage = MutableStateFlow<String?>(null)
         val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
+        private val _bpmMessage = MutableStateFlow<String?>(null)
+        val bpmMessage: StateFlow<String?> = _bpmMessage.asStateFlow()
+
+        private fun localized() = AppLocaleManager.localizedContext(appContext)
+
+        fun clearBpmMessage() {
+            _bpmMessage.value = null
+        }
 
         private val _artworkQueue = MutableStateFlow<List<ArtworkQueueItem>>(emptyList())
         val artworkQueue: StateFlow<List<ArtworkQueueItem>> = _artworkQueue.asStateFlow()
@@ -739,7 +760,7 @@ class LibraryViewModel
         ) {
             viewModelScope.launch(Dispatchers.IO) {
                 (artistArtworkRepository.setCustomArtwork(artist.id, imageBytes) as? AppResult.Error)?.let {
-                    _userMessage.value = it.error.message
+                    _userMessage.value = it.error.localizedMessage(localized())
                 }
             }
         }
@@ -748,7 +769,7 @@ class LibraryViewModel
         fun clearCustomArtistArtwork(artist: Artist) {
             viewModelScope.launch(Dispatchers.IO) {
                 when (val result = artistArtworkRepository.clearCustomArtwork(artist.id)) {
-                    is AppResult.Error -> _userMessage.value = result.error.message
+                    is AppResult.Error -> _userMessage.value = result.error.localizedMessage(localized())
                     is AppResult.Success -> artistArtworkUpdater.lookUp(artist)
                 }
             }
@@ -965,13 +986,13 @@ class LibraryViewModel
                                 targetName = album.title,
                                 searchQuery = "${album.artist} — ${album.title}",
                                 resolvedArtistInfo =
-                                    if (data?.fromCache ==
-                                        true
-                                    ) {
-                                        "Validated cached results"
-                                    } else {
-                                        "Music release matching; review editions before applying"
-                                    },
+                                    localized().getString(
+                                        if (data?.fromCache == true) {
+                                            CommonR.string.library_artwork_cached_results
+                                        } else {
+                                            CommonR.string.library_artwork_release_matching
+                                        },
+                                    ),
                                 providerOutcomes = data?.outcomes.orEmpty(),
                                 candidates =
                                     data?.candidates.orEmpty().map { candidate ->
@@ -1012,6 +1033,7 @@ class LibraryViewModel
                         val data = (result as? AppResult.Success)?.data
                         if (requestSequence != artworkRequestSequence) return@launch
                         val urls = data?.candidates.orEmpty()
+                        val deezerName = localized().getString(CommonR.string.artwork_source_deezer_artist)
                         _artworkCandidates.value = urls
                         _artworkSearchDiagnostics.value =
                             ArtworkSearchDiagnostics(
@@ -1020,7 +1042,7 @@ class LibraryViewModel
                                 providerOutcomes =
                                     listOf(
                                         com.erhu.erhu.core.model.ProviderOutcome(
-                                            "Deezer artist catalogue",
+                                            deezerName,
                                             urls.size,
                                             if (urls.isEmpty()) {
                                                 com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
@@ -1033,7 +1055,7 @@ class LibraryViewModel
                                     urls.map {
                                         ArtworkCandidateDetail(
                                             it,
-                                            "Deezer artist catalogue",
+                                            deezerName,
                                             matchedArtist = artist.name,
                                         )
                                     },
@@ -1062,12 +1084,14 @@ class LibraryViewModel
                     currentQueue[it].song.id in selectedSongIds && currentQueue[it].successDetails != null
                 }
             if (targetIndices.isEmpty()) {
-                _userMessage.value = "No modified tracks selected to revert."
+                _userMessage.value = localized().getString(CommonR.string.library_revert_none_selected)
                 return
             }
 
             _isReverting.value = true
             viewModelScope.launch(Dispatchers.IO) {
+                val context = localized()
+                val locale = AppLocaleManager.activeLocale(context)
                 withWriteAccess(
                     contentUris = targetIndices.map { currentQueue[it].song.uri },
                     onGranted = {
@@ -1121,7 +1145,12 @@ class LibraryViewModel
 
                                 val writeRes = metadataRepository.writeTagsToFile(request)
                                 if (writeRes is AppResult.Error) {
-                                    _userMessage.value = "Failed to revert tags for ${item.song.title}: ${writeRes.error.message}"
+                                    _userMessage.value =
+                                        context.getString(
+                                            CommonR.string.library_revert_failed_song,
+                                            item.song.title,
+                                            writeRes.error.localizedMessage(context),
+                                        )
                                     continue
                                 }
 
@@ -1140,7 +1169,11 @@ class LibraryViewModel
                                         album = succ.originalAlbum,
                                     )
                                 currentQueue[index] =
-                                    item.copy(song = restoredSong, status = "REVERTED", failureReason = "Changes reverted")
+                                    item.copy(
+                                        song = restoredSong,
+                                        status = "REVERTED",
+                                        failureReason = context.getString(CommonR.string.library_revert_status_reverted),
+                                    )
                                 revertedCount++
                             }
 
@@ -1149,7 +1182,12 @@ class LibraryViewModel
                             if (revertedCount > 0) {
                                 delay(500L)
                                 libraryRepository.requestRescanAfterChange()
-                                _revertCompletionMessage.value = "✓ $revertedCount tracks successfully reverted back to original tags"
+                                _revertCompletionMessage.value =
+                                    context.resources.getQuantityString(
+                                        CommonR.plurals.library_revert_complete,
+                                        revertedCount,
+                                        LocaleFormatters.formatInteger(revertedCount, locale),
+                                    )
                             }
                         } finally {
                             _isReverting.value = false
@@ -1157,7 +1195,7 @@ class LibraryViewModel
                     },
                     onDenied = {
                         _isReverting.value = false
-                        _userMessage.value = "Storage permission denied. Allow access when asked and try again to revert."
+                        _userMessage.value = context.getString(CommonR.string.library_revert_permission_denied)
                     },
                 )
             }
@@ -1178,6 +1216,7 @@ class LibraryViewModel
             }
 
             viewModelScope.launch {
+                val context = localized()
                 _isSearchingArtwork.value = true
                 updateStatus("WRITING")
 
@@ -1185,7 +1224,10 @@ class LibraryViewModel
                     val downloadResult = metadataRepository.downloadArtwork(artworkUrl)
                     val imageBytes =
                         (downloadResult as? AppResult.Success)?.data
-                            ?: throw IllegalStateException("Could not download artwork image")
+                            ?: throw IllegalStateException(
+                                (downloadResult as? AppResult.Error)?.error?.localizedMessage(context)
+                                    ?: "WRITE_ERROR",
+                            )
 
                     val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
                     val uris = albumSongs.map { it.uri }
@@ -1214,7 +1256,7 @@ class LibraryViewModel
                         },
                         onDenied = {
                             updateStatus("FAILED", "WRITE_PERMISSION_DENIED")
-                            _userMessage.value = "Artwork not saved: erhu wasn't allowed to modify the file."
+                            _userMessage.value = context.getString(CommonR.string.library_artwork_write_denied)
                         },
                     )
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1236,6 +1278,7 @@ class LibraryViewModel
             imageBytes: ByteArray,
         ) {
             viewModelScope.launch {
+                val context = localized()
                 try {
                     val albumSongs = libraryRepository.getSongsByAlbumId(album.id).first()
                     val uris = albumSongs.map { it.uri }
@@ -1260,13 +1303,14 @@ class LibraryViewModel
                             libraryRepository.triggerLibraryScan()
                         },
                         onDenied = {
-                            _userMessage.value = "Album cover not saved: erhu wasn't allowed to modify the file."
+                            _userMessage.value = context.getString(CommonR.string.library_album_cover_write_denied)
                         },
                     )
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    _userMessage.value = "Failed to write album cover: ${e.message}"
+                    _userMessage.value =
+                        context.getString(CommonR.string.library_album_cover_write_failed, e.message.orEmpty())
                 }
             }
         }
@@ -1277,6 +1321,7 @@ class LibraryViewModel
             imageUrl: String,
         ) {
             viewModelScope.launch(Dispatchers.IO) {
+                val context = localized()
                 _isSearchingArtwork.value = true
                 val queue = _artistArtworkQueue.value.toMutableList()
                 val queueIndex = queue.indexOfFirst { it.artist.id == artist.id }
@@ -1286,46 +1331,16 @@ class LibraryViewModel
                 }
 
                 try {
-                    when (val downloadResult = metadataRepository.downloadArtwork(imageUrl)) {
-                        is AppResult.Success -> {
-                            val result = artistArtworkRepository.setCustomArtwork(artist.id, downloadResult.data)
-                            if (result is AppResult.Error) {
-                                _userMessage.value = result.error.message
-                                if (queueIndex != -1) {
-                                    queue[queueIndex] =
-                                        queue[queueIndex].copy(
-                                            status = "FAILED",
-                                            failureReason = result.error.message,
-                                        )
-                                    _artistArtworkQueue.value = queue.toList()
-                                }
-                            } else if (queueIndex != -1) {
-                                queue[queueIndex] = queue[queueIndex].copy(status = "COMPLETED")
-                                _artistArtworkQueue.value = queue.toList()
-                            }
-                        }
-                        is AppResult.Error -> {
-                            _userMessage.value = downloadResult.error.message
-                            if (queueIndex != -1) {
-                                queue[queueIndex] =
-                                    queue[queueIndex].copy(
-                                        status = "FAILED",
-                                        failureReason = downloadResult.error.message,
-                                    )
-                                _artistArtworkQueue.value = queue.toList()
-                            }
-                        }
+                    val outcome = performArtistArtworkWrite(artist.id, imageUrl, context)
+                    if (outcome == null) {
+                        updateArtistQueueItem(queueIndex, status = "COMPLETED")
+                    } else {
+                        _userMessage.value = outcome
+                        updateArtistQueueItem(queueIndex, status = "FAILED", failureReason = outcome)
                     }
                     libraryRepository.triggerLibraryScan()
                 } catch (e: Throwable) {
-                    if (queueIndex != -1) {
-                        queue[queueIndex] =
-                            queue[queueIndex].copy(
-                                status = "FAILED",
-                                failureReason = e.message ?: "WRITE_ERROR",
-                            )
-                        _artistArtworkQueue.value = queue.toList()
-                    }
+                    updateArtistQueueItem(queueIndex, status = "FAILED", failureReason = e.message ?: "WRITE_ERROR")
                 } finally {
                     _selectedEnlargedArtworkUrl.value = null
                     _artworkCandidates.value = emptyList()
@@ -1334,6 +1349,30 @@ class LibraryViewModel
                     _isSearchingArtwork.value = false
                 }
             }
+        }
+
+        private suspend fun performArtistArtworkWrite(
+            artistId: Long,
+            imageUrl: String,
+            context: android.content.Context,
+        ): String? =
+            when (val downloadResult = metadataRepository.downloadArtwork(imageUrl)) {
+                is AppResult.Success -> {
+                    val result = artistArtworkRepository.setCustomArtwork(artistId, downloadResult.data)
+                    if (result is AppResult.Error) result.error.localizedMessage(context) else null
+                }
+                is AppResult.Error -> downloadResult.error.localizedMessage(context)
+            }
+
+        private fun updateArtistQueueItem(
+            queueIndex: Int,
+            status: String,
+            failureReason: String? = null,
+        ) {
+            if (queueIndex == -1) return
+            val queue = _artistArtworkQueue.value.toMutableList()
+            queue[queueIndex] = queue[queueIndex].copy(status = status, failureReason = failureReason)
+            _artistArtworkQueue.value = queue.toList()
         }
 
         fun scanForBadTracks() {
@@ -1522,7 +1561,10 @@ class LibraryViewModel
                 )
             } catch (e: RuntimeException) {
                 metadataRepair.startFailed(
-                    "Android could not start background metadata fetching: ${e.message}. Try again while erhu is open.",
+                    localized().getString(
+                        CommonR.string.library_metadata_service_start_failed,
+                        e.message.orEmpty(),
+                    ),
                 )
             }
         }
@@ -1563,14 +1605,14 @@ class LibraryViewModel
         fun playNext(song: Song) {
             viewModelScope.launch {
                 playbackRepository.playNext(song)
-                _userMessage.value = "\"${song.title}\" will play next"
+                _userMessage.value = localized().getString(CommonR.string.library_queue_play_next, song.title)
             }
         }
 
         fun addToQueue(song: Song) {
             viewModelScope.launch {
                 playbackRepository.addToQueue(song)
-                _userMessage.value = "Added \"${song.title}\" to queue"
+                _userMessage.value = localized().getString(CommonR.string.library_queue_added, song.title)
             }
         }
 
@@ -1737,23 +1779,43 @@ class LibraryViewModel
         }
 
         private fun report(plan: RadioPlan?) {
+            val context = localized()
+            val locale = AppLocaleManager.activeLocale(context)
             val message =
                 when {
-                    plan == null -> "No songs to start a radio from"
-                    plan.songIds.isEmpty() -> "Not enough other songs for a radio from “${plan.name}”"
+                    plan == null -> context.getString(CommonR.string.library_radio_no_songs)
+                    plan.songIds.isEmpty() ->
+                        context.getString(CommonR.string.library_radio_not_enough, plan.name)
                     else -> {
-                        val basis = plan.basedOn.map { it.label }
-                        val reasons =
-                            when (basis.size) {
-                                0 -> ""
-                                1 -> " · by ${basis[0]}"
-                                else -> " · by ${basis.dropLast(1).joinToString(", ")} and ${basis.last()}"
-                            }
-                        "Radio from “${plan.name}”: ${plan.songIds.size} songs$reasons"
+                        val songsLabel = songCountText(context, plan.songIds.size)
+                        val basis = plan.basedOn.map { context.getString(it.labelRes()) }
+                        if (basis.isEmpty()) {
+                            context.getString(
+                                CommonR.string.library_radio_summary_no_reasons,
+                                plan.name,
+                                songsLabel,
+                            )
+                        } else {
+                            context.getString(
+                                CommonR.string.library_radio_summary_with_reasons,
+                                plan.name,
+                                songsLabel,
+                                LocaleFormatters.formatList(basis, locale),
+                            )
+                        }
                     }
                 }
             _radioMessages.tryEmit(message)
         }
+
+        private fun RadioSignal.labelRes(): Int =
+            when (this) {
+                RadioSignal.SOUND -> CommonR.string.library_radio_signal_sound
+                RadioSignal.GENRE -> CommonR.string.library_radio_signal_genre
+                RadioSignal.TEMPO -> CommonR.string.library_radio_signal_tempo
+                RadioSignal.SAME_ARTIST -> CommonR.string.library_radio_signal_same_artist
+                RadioSignal.LISTENING -> CommonR.string.library_radio_signal_listening
+            }
 
         fun shufflePlayLibrary() {
             viewModelScope.launch {
@@ -1813,7 +1875,8 @@ class LibraryViewModel
             viewModelScope.launch {
                 val filePath = libraryRepository.getSongFilePath(song.id)
                 if (filePath == null) {
-                    _userMessage.value = "Couldn't find the file for \"${song.title}\". Pull to refresh the library and try again."
+                    _userMessage.value =
+                        localized().getString(CommonR.string.library_tags_file_missing, song.title)
                     return@launch
                 }
                 val request =
@@ -1829,9 +1892,10 @@ class LibraryViewModel
                         bpm = bpm,
                     )
                 if (request == null) {
-                    _userMessage.value = "Nothing changed"
+                    _userMessage.value = localized().getString(CommonR.string.library_tags_nothing_changed)
                     return@launch
                 }
+                val context = localized()
                 withWriteAccess(
                     contentUris = listOf(request.contentUri),
                     onGranted = {
@@ -1846,12 +1910,16 @@ class LibraryViewModel
                                     libraryRepository.updateFilePath(song.id, newPath)
                                 }
                                 libraryRepository.requestRescanAfterChange()
-                                _userMessage.value = "Tags saved for \"${request.title ?: song.title}\""
+                                _userMessage.value =
+                                    context.getString(
+                                        CommonR.string.library_tags_saved,
+                                        request.title ?: song.title,
+                                    )
                             }
                             is AppResult.Error -> _userMessage.value = tagWriteFailureMessage(result.error)
                         }
                     },
-                    onDenied = { _userMessage.value = "Tags not changed: erhu wasn't allowed to modify the file." },
+                    onDenied = { _userMessage.value = context.getString(CommonR.string.library_tags_write_denied) },
                 )
             }
         }
@@ -1867,13 +1935,25 @@ class LibraryViewModel
             newBpm: Int,
         ) {
             viewModelScope.launch {
+                val context = localized()
+                val locale = AppLocaleManager.activeLocale(context)
+
+                fun emitBpmMessage(message: String) {
+                    _bpmMessage.value = message
+                    _userMessage.value = message
+                }
                 if (newBpm !in PLAUSIBLE_BPM) {
-                    _userMessage.value = "BPM not changed: $newBpm is not a plausible tempo"
+                    emitBpmMessage(
+                        context.getString(
+                            CommonR.string.library_bpm_implausible,
+                            LocaleFormatters.formatInteger(newBpm, locale),
+                        ),
+                    )
                     return@launch
                 }
                 val filePath = libraryRepository.getSongFilePath(song.id)
                 if (filePath == null) {
-                    _userMessage.value = "Couldn't find the file for \"${song.title}\". Pull to refresh the library and try again."
+                    emitBpmMessage(context.getString(CommonR.string.library_tags_file_missing, song.title))
                     return@launch
                 }
                 val request = TagWriteRequest(contentUri = song.uri, filePath = filePath, bpm = newBpm)
@@ -1884,21 +1964,40 @@ class LibraryViewModel
                             is AppResult.Success -> {
                                 libraryRepository.updateSongBpm(song.id, newBpm)
                                 libraryRepository.requestRescanAfterChange()
-                                _userMessage.value = "BPM of \"${song.title}\" saved: $newBpm" + (oldBpm?.let { " (was $it)" } ?: "")
+                                val newFormatted = LocaleFormatters.formatInteger(newBpm, locale)
+                                val msg =
+                                    if (oldBpm != null) {
+                                        context.getString(
+                                            CommonR.string.library_bpm_saved_with_previous,
+                                            song.title,
+                                            newFormatted,
+                                            LocaleFormatters.formatInteger(oldBpm, locale),
+                                        )
+                                    } else {
+                                        context.getString(
+                                            CommonR.string.library_bpm_saved,
+                                            song.title,
+                                            newFormatted,
+                                        )
+                                    }
+                                emitBpmMessage(msg)
                             }
-                            is AppResult.Error -> _userMessage.value = tagWriteFailureMessage(result.error)
+                            is AppResult.Error -> emitBpmMessage(tagWriteFailureMessage(result.error))
                         }
                     },
-                    onDenied = { _userMessage.value = "BPM not changed: erhu wasn't allowed to modify the file." },
+                    onDenied = { emitBpmMessage(context.getString(CommonR.string.library_bpm_write_denied)) },
                 )
             }
         }
 
-        private fun tagWriteFailureMessage(error: AppError): String =
-            when (error) {
-                is AppError.WriteAccessRequired -> "Tags not changed: ${error.message}"
-                else -> "Couldn't write tags: ${error.message}"
+        private fun tagWriteFailureMessage(error: AppError): String {
+            val context = localized()
+            val detail = error.localizedMessage(context)
+            return when (error) {
+                is AppError.WriteAccessRequired -> context.getString(CommonR.string.library_tags_not_changed_error, detail)
+                else -> context.getString(CommonR.string.library_tags_write_failed_error, detail)
             }
+        }
 
         /**
          * Runs [onGranted] once the app may modify [contentUris]. If Android needs the

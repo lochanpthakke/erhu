@@ -44,8 +44,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
@@ -54,6 +57,7 @@ import com.erhu.erhu.core.designsystem.theme.GlassLevel
 import com.erhu.erhu.core.designsystem.theme.glassPanel
 import com.erhu.erhu.core.designsystem.theme.glassPressEffect
 import com.erhu.erhu.core.designsystem.theme.glassRippleConfiguration
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Visible size of the round header button (Material icon-button container; touch target stays 48 dp). */
 private val HEADER_BUTTON_SIZE = 40.dp
@@ -160,16 +164,23 @@ fun OverlayHeader(
                     when (navigation) {
                         is TopBarNavigation.TopLevel ->
                             IconButton(onClick = navigation.onOpenDrawer, colors = colors, interactionSource = interactionSource) {
-                                Icon(imageVector = Icons.Default.Menu, contentDescription = "Open navigation drawer")
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = stringResource(CommonR.string.cd_open_navigation_drawer),
+                                )
                             }
                         is TopBarNavigation.Detail ->
                             IconButton(onClick = navigation.onBack, colors = colors, interactionSource = interactionSource) {
-                                Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(CommonR.string.cd_back),
+                                )
                             }
                     }
                 }
             }
             if (!title.isNullOrBlank()) {
+                val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                 Spacer(modifier = Modifier.width(Spacing.md))
                 // A detail page's hero title is the one announced; a merging title only while it shows.
                 val announced by remember(collapsingHeader, collapsingTitle) {
@@ -187,6 +198,7 @@ fun OverlayHeader(
                                         collapsingTitle,
                                         merge,
                                         unclipped = !subtitle.isNullOrBlank(),
+                                        isRtl = isRtl,
                                     )
                                 else -> Modifier
                             },
@@ -242,6 +254,7 @@ private fun Modifier.mergingTitle(
     state: CollapsingTitleState,
     merge: TitleMerge,
     unclipped: Boolean = false,
+    isRtl: Boolean = false,
 ): Modifier =
     onGloballyPositioned {
         val position = it.positionInRoot()
@@ -258,6 +271,7 @@ private fun Modifier.mergingTitle(
                 restLeft = merge.left,
                 restTop = merge.top,
                 height = merge.height,
+                isRtl = isRtl,
             )
         }
     }

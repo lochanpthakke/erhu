@@ -30,15 +30,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.feature.transfer.server.TransferItem
 import com.erhu.erhu.feature.transfer.server.TransferStatus
-import java.util.Locale
+import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
 internal fun StatusCard(
@@ -69,95 +72,123 @@ internal fun StatusCard(
     }
 }
 
-@Suppress("CyclomaticComplexMethod")
+@Composable
 private fun statusText(
     status: TransferScreenStatus,
     reason: StopReason?,
-): Triple<ImageVector, String, String> =
+): Triple<ImageVector, String, String> {
+    val (titleRes, detailRes) = statusStringRes(status, reason)
+    return Triple(statusIcon(status), stringResource(titleRes), stringResource(detailRes))
+}
+
+private fun statusIcon(status: TransferScreenStatus): ImageVector =
+    when (status) {
+        TransferScreenStatus.STARTING -> Icons.Default.HourglassTop
+        TransferScreenStatus.WAITING, TransferScreenStatus.STOPPED -> Icons.Default.Wifi
+        TransferScreenStatus.IN_PROGRESS -> Icons.Default.CloudUpload
+        TransferScreenStatus.COMPLETED -> Icons.Default.CheckCircle
+        TransferScreenStatus.WIFI_DISCONNECTED -> Icons.Default.WifiOff
+        TransferScreenStatus.PERMISSION_DENIED -> Icons.Default.Lock
+        TransferScreenStatus.FAILED -> Icons.Default.ErrorOutline
+    }
+
+private fun statusStringRes(
+    status: TransferScreenStatus,
+    reason: StopReason?,
+): Pair<Int, Int> =
     when (status) {
         TransferScreenStatus.STARTING ->
-            Triple(
-                Icons.Default.HourglassTop,
-                "Starting…",
-                "Opening a private transfer session on this Wi-Fi.",
-            )
+            CommonR.string.transfer_status_starting_title to CommonR.string.transfer_status_starting_detail
         TransferScreenStatus.WAITING ->
-            Triple(
-                Icons.Default.Wifi,
-                "Waiting for a computer",
-                "Open the address below in a browser on the same Wi-Fi.",
-            )
+            CommonR.string.transfer_status_waiting_title to CommonR.string.transfer_status_waiting_detail
         TransferScreenStatus.IN_PROGRESS ->
-            Triple(
-                Icons.Default.CloudUpload,
-                "Receiving music",
-                "Keep both devices on this Wi-Fi until it finishes.",
-            )
+            CommonR.string.transfer_status_receiving_title to CommonR.string.transfer_status_receiving_detail
         TransferScreenStatus.COMPLETED ->
-            Triple(
-                Icons.Default.CheckCircle,
-                "Transfer finished",
-                "Send more from the browser, or stop when you are done.",
-            )
-        TransferScreenStatus.WIFI_DISCONNECTED ->
-            Triple(
-                Icons.Default.WifiOff,
-                if (reason == StopReason.WIFI_LOST) "Wi-Fi disconnected" else "Not connected to Wi-Fi",
-                "Connect the phone to the same Wi-Fi as your computer, then start again.",
-            )
-        TransferScreenStatus.PERMISSION_DENIED ->
-            Triple(
-                Icons.Default.Lock,
-                "Permission needed",
-                if (reason == StopReason.STORAGE_PERMISSION_DENIED) {
-                    "erhu needs storage access to save the music it receives."
+            CommonR.string.transfer_status_completed_title to CommonR.string.transfer_status_completed_detail
+        TransferScreenStatus.WIFI_DISCONNECTED -> {
+            val title =
+                if (reason == StopReason.WIFI_LOST) {
+                    CommonR.string.transfer_status_wifi_lost_title
                 } else {
-                    "erhu needs the Nearby devices (local network) permission to let your computer connect."
-                },
-            )
+                    CommonR.string.transfer_status_no_wifi_title
+                }
+            title to CommonR.string.transfer_status_wifi_detail
+        }
+        TransferScreenStatus.PERMISSION_DENIED -> {
+            val detail =
+                if (reason == StopReason.STORAGE_PERMISSION_DENIED) {
+                    CommonR.string.transfer_status_permission_storage_detail
+                } else {
+                    CommonR.string.transfer_status_permission_nearby_detail
+                }
+            CommonR.string.transfer_status_permission_title to detail
+        }
         TransferScreenStatus.FAILED ->
-            Triple(
-                Icons.Default.ErrorOutline,
-                "Could not start",
-                "The transfer server could not open a port. Try again.",
-            )
-        TransferScreenStatus.STOPPED ->
-            Triple(
-                Icons.Default.Wifi,
-                "Transfer is off",
+            CommonR.string.transfer_status_failed_title to CommonR.string.transfer_status_failed_detail
+        TransferScreenStatus.STOPPED -> {
+            val detail =
                 when (reason) {
-                    StopReason.IDLE_TIMEOUT -> "Stopped after 10 minutes without activity."
-                    StopReason.SESSION_EXPIRED, StopReason.SYSTEM_TIME_LIMIT -> "The session reached its time limit."
-                    else -> "Send songs and folders from a computer's browser straight to this phone."
-                },
-            )
+                    StopReason.IDLE_TIMEOUT -> CommonR.string.transfer_status_idle_timeout_detail
+                    StopReason.SESSION_EXPIRED, StopReason.SYSTEM_TIME_LIMIT ->
+                        CommonR.string.transfer_status_time_limit_detail
+                    else -> CommonR.string.transfer_status_stopped_default_detail
+                }
+            CommonR.string.transfer_status_stopped_title to detail
+        }
     }
 
 @Composable
 internal fun CountsRow(items: List<TransferItem>) {
     val counts = transferCounts(items)
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.lg), modifier = Modifier.padding(horizontal = Spacing.xs)) {
-        Text("${counts.saved} saved", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        if (counts.duplicates > 0) Text("${counts.duplicates} already on phone", style = MaterialTheme.typography.labelLarge)
-        if (counts.failed >
-            0
-        ) {
-            Text("${counts.failed} not saved", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
+        Text(
+            stringResource(CommonR.string.transfer_counts_saved, LocaleFormatters.formatInteger(counts.saved, locale)),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (counts.duplicates > 0) {
+            Text(
+                stringResource(
+                    CommonR.string.transfer_counts_duplicate,
+                    LocaleFormatters.formatInteger(counts.duplicates, locale),
+                ),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+        if (counts.failed > 0) {
+            Text(
+                stringResource(
+                    CommonR.string.transfer_counts_failed,
+                    LocaleFormatters.formatInteger(counts.failed, locale),
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
 
 @Composable
 internal fun TransferRow(item: TransferItem) {
+    val context = LocalContext.current
+    val locale = AppLocaleManager.activeLocale(context)
     val fraction = if (item.sizeBytes > 0) (item.receivedBytes.toFloat() / item.sizeBytes).coerceIn(0f, 1f) else 0f
     val (label, color) =
         when (item.status) {
-            TransferStatus.RECEIVING -> "${(fraction * PERCENT).toInt()}%" to MaterialTheme.colorScheme.onSurfaceVariant
-            TransferStatus.FINALIZING -> "Saving…" to MaterialTheme.colorScheme.onSurfaceVariant
-            TransferStatus.COMPLETED -> "Saved" to MaterialTheme.colorScheme.primary
-            TransferStatus.DUPLICATE -> "Already on phone" to MaterialTheme.colorScheme.onSurfaceVariant
-            TransferStatus.FAILED -> "Failed" to MaterialTheme.colorScheme.error
-            TransferStatus.CANCELLED -> "Cancelled" to MaterialTheme.colorScheme.onSurfaceVariant
+            TransferStatus.RECEIVING ->
+                LocaleFormatters.formatPercentInt((fraction * PERCENT).toInt(), locale) to
+                    MaterialTheme.colorScheme.onSurfaceVariant
+            TransferStatus.FINALIZING ->
+                stringResource(CommonR.string.transfer_item_saving) to MaterialTheme.colorScheme.onSurfaceVariant
+            TransferStatus.COMPLETED ->
+                stringResource(CommonR.string.transfer_item_saved) to MaterialTheme.colorScheme.primary
+            TransferStatus.DUPLICATE ->
+                stringResource(CommonR.string.transfer_item_duplicate) to MaterialTheme.colorScheme.onSurfaceVariant
+            TransferStatus.FAILED ->
+                stringResource(CommonR.string.transfer_item_failed) to MaterialTheme.colorScheme.error
+            TransferStatus.CANCELLED ->
+                stringResource(CommonR.string.transfer_item_cancelled) to MaterialTheme.colorScheme.onSurfaceVariant
         }
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -171,7 +202,11 @@ internal fun TransferRow(item: TransferItem) {
             Spacer(Modifier.width(Spacing.sm))
             Text(label, style = MaterialTheme.typography.labelLarge, color = color)
         }
-        Text(formatSize(item.sizeBytes), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            LocaleFormatters.formatFileSize(context, item.sizeBytes, locale),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         if (!item.status.isTerminal) {
             Spacer(Modifier.height(Spacing.xs))
             LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
@@ -195,33 +230,30 @@ internal fun TransferRow(item: TransferItem) {
 
 private const val PERCENT = 100
 
-@Suppress("MagicNumber")
-private fun formatSize(bytes: Long): String =
-    when {
-        bytes >= 1L shl 30 -> String.format(Locale.ROOT, "%.1f GB", bytes / (1L shl 30).toDouble())
-        bytes >= 1L shl 20 -> String.format(Locale.ROOT, "%.1f MB", bytes / (1L shl 20).toDouble())
-        bytes >= 1L shl 10 -> String.format(Locale.ROOT, "%.0f KB", bytes / (1L shl 10).toDouble())
-        else -> "$bytes B"
-    }
-
 @Composable
 internal fun HelpCard() {
     Panel {
-        Text("How to connect", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-        HelpLine("1. Put the phone and the computer on the same Wi-Fi network.")
-        HelpLine("2. Tap Start transfer, then scan the QR code or type the address in the computer's browser.")
-        HelpLine("3. Choose files or a folder (or drag them in) and press Send to phone.")
-        HelpLine("Music is saved to Music/${MediaStoreUploadSink.FOLDER} and appears in your library shortly after.")
-        Spacer(Modifier.height(Spacing.md))
-        Text("If the page does not load", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-        HelpLine("Check both devices use the same network (not a guest network: those often block devices from seeing each other).")
-        HelpLine("Turn off a VPN on either device, and type the address exactly, starting with http://.")
-        HelpLine("If you limited library scanning to a custom folder in Settings, include Music/${MediaStoreUploadSink.FOLDER}.")
+        Text(
+            stringResource(CommonR.string.transfer_help_how_to_connect),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        HelpLine(stringResource(CommonR.string.transfer_help_step_1))
+        HelpLine(stringResource(CommonR.string.transfer_help_step_2))
+        HelpLine(stringResource(CommonR.string.transfer_help_step_3))
+        HelpLine(stringResource(CommonR.string.transfer_help_step_4, MediaStoreUploadSink.FOLDER))
         Spacer(Modifier.height(Spacing.md))
         Text(
-            "Privacy: the page works only on your local network, only while this screen shows it as on, " +
-                "and only with this session's code. " +
-                "It uses plain HTTP, so on a shared or untrusted Wi-Fi others on the network could see what is sent.",
+            stringResource(CommonR.string.transfer_help_troubleshooting_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        HelpLine(stringResource(CommonR.string.transfer_help_trouble_1))
+        HelpLine(stringResource(CommonR.string.transfer_help_trouble_2))
+        HelpLine(stringResource(CommonR.string.transfer_help_trouble_3, MediaStoreUploadSink.FOLDER))
+        Spacer(Modifier.height(Spacing.md))
+        Text(
+            stringResource(CommonR.string.transfer_help_privacy),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -3,6 +3,7 @@ package com.erhu.erhu.feature.library.vybe
 import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.common.perf.Interactions
 import com.erhu.erhu.core.common.perf.traced
@@ -46,6 +47,7 @@ import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
+import com.erhu.erhu.core.common.R as CommonR
 
 /** Where VYBE stands. */
 sealed interface VybeStatus {
@@ -118,6 +120,8 @@ class VybeEngine
         @Volatile
         private var screenVisible = false
 
+        private fun localized(): Context = AppLocaleManager.localizedContext(context)
+
         /** VYBE shown or left: leaving it lets the model go once indexing is done. */
         fun setScreenVisible(visible: Boolean) {
             screenVisible = visible
@@ -157,9 +161,11 @@ class VybeEngine
                     val target = modelFile()
                     target.parentFile?.mkdirs()
                     val tmp = File(target.path + ".part")
-                    val input = context.contentResolver.openInputStream(uri) ?: throw IOException("The file couldn't be opened")
+                    val input =
+                        context.contentResolver.openInputStream(uri)
+                            ?: throw IOException(localized().getString(CommonR.string.vybe_error_open_model_file))
                     input.use { stream -> tmp.outputStream().use { stream.copyTo(it) } }
-                    if (!tmp.renameTo(target)) throw IOException("Couldn't store the model")
+                    if (!tmp.renameTo(target)) throw IOException(localized().getString(CommonR.string.vybe_error_store_model))
                     _status.value = VybeStatus.LoadingModel
                 }.onFailure { logger.w(TAG, "Model import failed: ${it.message}") }
             }.also { if (it.isSuccess) start() }
@@ -263,7 +269,7 @@ class VybeEngine
                 true
             } catch (e: VybeEmbedderException) {
                 logger.w(TAG, "Model load failed: ${e.message}")
-                _status.value = VybeStatus.Failed("The model couldn't be loaded: ${e.message}")
+                _status.value = VybeStatus.Failed(localized().getString(CommonR.string.vybe_error_load_model, e.message.orEmpty()))
                 false
             } finally {
                 Interactions.put(Interactions.VYBE_MODEL, null)
@@ -315,7 +321,7 @@ class VybeEngine
             } catch (e: Exception) {
                 file.append(batch)
                 logger.w(TAG, "Indexing failed: ${e.message}")
-                _status.value = VybeStatus.Failed("Indexing stopped: ${e.message}")
+                _status.value = VybeStatus.Failed(localized().getString(CommonR.string.vybe_error_indexing_stopped, e.message.orEmpty()))
             } finally {
                 Interactions.put(Interactions.VYBE_INDEX, null)
             }

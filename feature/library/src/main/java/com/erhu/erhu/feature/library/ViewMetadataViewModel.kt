@@ -1,7 +1,10 @@
 package com.erhu.erhu.feature.library
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
@@ -16,6 +19,7 @@ import com.erhu.erhu.core.network.tagger.writeGenres
 import com.erhu.erhu.core.playback.diagnostics.SourceDiagnostics
 import com.erhu.erhu.core.playback.diagnostics.SourceInspector
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +31,7 @@ import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.images.ArtworkFactory
 import java.io.File
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 data class EditableInspectorFields(
     val title: String = "",
@@ -94,6 +99,7 @@ data class InspectorUiState(
 class ViewMetadataViewModel
     @Inject
     constructor(
+        @param:ApplicationContext private val appContext: Context,
         private val libraryRepository: LibraryRepository,
         private val metadataRepository: MetadataRepository,
         private val embeddedTagReader: EmbeddedTagReader,
@@ -103,6 +109,8 @@ class ViewMetadataViewModel
         private val _uiState = MutableStateFlow(InspectorUiState())
         val uiState: StateFlow<InspectorUiState> = _uiState.asStateFlow()
 
+        private fun localized(): Context = AppLocaleManager.localizedContext(appContext)
+
         fun inspect(song: Song) {
             viewModelScope.launch {
                 _uiState.value = InspectorUiState(song = song, isLoading = true)
@@ -111,7 +119,7 @@ class ViewMetadataViewModel
                     _uiState.value =
                         _uiState.value.copy(
                             isLoading = false,
-                            userMessage = "Could not locate physical file for track",
+                            userMessage = localized().getString(CommonR.string.inspector_msg_no_file),
                         )
                     return@launch
                 }
@@ -199,15 +207,20 @@ class ViewMetadataViewModel
                         _uiState.value =
                             _uiState.value.copy(
                                 isSaving = false,
-                                userMessage = "Metadata saved & verified successfully",
+                                userMessage = localized().getString(CommonR.string.inspector_msg_saved),
                             )
                         onSuccess()
                     }
                     is AppResult.Error -> {
+                        val localizedContext = localized()
                         _uiState.value =
                             _uiState.value.copy(
                                 isSaving = false,
-                                userMessage = "Failed to write tags: ${result.error.message}",
+                                userMessage =
+                                    localizedContext.getString(
+                                        CommonR.string.inspector_msg_write_failed,
+                                        result.error.localizedMessage(localizedContext),
+                                    ),
                             )
                     }
                 }
@@ -264,14 +277,14 @@ class ViewMetadataViewModel
                     _uiState.value =
                         _uiState.value.copy(
                             isSaving = false,
-                            userMessage = "Force tag header reconstruction complete",
+                            userMessage = localized().getString(CommonR.string.inspector_msg_force_complete),
                         )
                     onSuccess()
                 } else {
                     _uiState.value =
                         _uiState.value.copy(
                             isSaving = false,
-                            userMessage = "Force repair failed: file corrupt or read-only",
+                            userMessage = localized().getString(CommonR.string.inspector_msg_force_failed),
                         )
                 }
             }

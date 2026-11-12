@@ -33,10 +33,18 @@ data class TransferItem(
  * forward transitions out of non-terminal states: a finished, failed or cancelled file never
  * changes again, so a late callback or a second finalization cannot rewrite its result.
  */
-class TransferRegistry {
+class TransferRegistry(
+    strings: TransferRegistryStrings = TransferRegistryStrings(),
+) {
+    @Volatile
+    private var strings: TransferRegistryStrings = strings
     private val nextId = AtomicLong(1)
     private val _items = MutableStateFlow<List<TransferItem>>(emptyList())
     val items: StateFlow<List<TransferItem>> = _items.asStateFlow()
+
+    fun updateStrings(newStrings: TransferRegistryStrings) {
+        strings = newStrings
+    }
 
     fun begin(
         name: String,
@@ -62,15 +70,14 @@ class TransferRegistry {
         savedName: String,
     ) = move(id, setOf(TransferStatus.FINALIZING)) { it.copy(status = TransferStatus.COMPLETED, name = savedName, message = null) }
 
-    fun duplicate(id: Long) =
-        move(id, ACTIVE) { it.copy(status = TransferStatus.DUPLICATE, message = "Already on the phone: skipped, nothing was overwritten") }
+    fun duplicate(id: Long) = move(id, ACTIVE) { it.copy(status = TransferStatus.DUPLICATE, message = strings.duplicateMessage) }
 
     fun failed(
         id: Long,
         message: String,
     ) = move(id, ACTIVE) { it.copy(status = TransferStatus.FAILED, message = message) }
 
-    fun cancelled(id: Long) = move(id, ACTIVE) { it.copy(status = TransferStatus.CANCELLED, message = "Cancelled before it finished") }
+    fun cancelled(id: Long) = move(id, ACTIVE) { it.copy(status = TransferStatus.CANCELLED, message = strings.cancelledMessage) }
 
     /** Ends every unfinished file (the session is stopping). */
     fun cancelAllActive() {

@@ -36,6 +36,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +47,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.erhu.erhu.core.common.R
+import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
@@ -55,8 +60,6 @@ import com.erhu.erhu.core.model.LyricsTimingContext
 import com.erhu.erhu.core.model.LyricsTimingOffset
 import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.launch
-import java.text.DateFormat
-import java.util.Date
 
 @Composable
 @Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
@@ -88,8 +91,13 @@ internal fun LyricsTimingEditor(
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxSize().systemBarsPadding().imePadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onDismiss, enabled = !saving) { Text("Cancel") }
-                    Text("Lyrics timing", Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium)
+                    TextButton(onClick = onDismiss, enabled = !saving) { Text(stringResource(R.string.action_cancel)) }
+                    Text(
+                        stringResource(R.string.lyrics_timing_title),
+                        Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                     TextButton(
                         enabled = !saving && draft.valid,
                         onClick = {
@@ -105,7 +113,7 @@ internal fun LyricsTimingEditor(
                                 }
                             }
                         },
-                    ) { Text(if (saving) "Saving…" else "Save") }
+                    ) { Text(stringResource(if (saving) R.string.action_saving else R.string.action_save)) }
                 }
                 Column(
                     Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
@@ -120,20 +128,22 @@ internal fun LyricsTimingEditor(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        "Move lyrics earlier if they arrive late, or later if they arrive too soon.",
+                        stringResource(R.string.lyrics_timing_hint),
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
                     )
+                    val sliderDescription = stringResource(R.string.lyrics_timing_cd_slider)
+                    val inputDescription = stringResource(R.string.lyrics_timing_cd_input_ms)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                        Text("Earlier", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.lyrics_timing_earlier), style = MaterialTheme.typography.labelMedium)
                         Slider(
                             value = draft.offsetMs.toFloat(),
                             onValueChange = draft::slide,
                             enabled = !saving,
                             valueRange = -LyricsTimingOffset.LIMIT_MS.toFloat()..LyricsTimingOffset.LIMIT_MS.toFloat(),
-                            modifier = Modifier.weight(1f).semantics { contentDescription = "Lyrics timing offset" },
+                            modifier = Modifier.weight(1f).semantics { contentDescription = sliderDescription },
                         )
-                        Text("Later", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.lyrics_timing_later), style = MaterialTheme.typography.labelMedium)
                     }
                     Row(
                         Modifier.fillMaxWidth(),
@@ -145,24 +155,24 @@ internal fun LyricsTimingEditor(
                             onValueChange = draft::input,
                             enabled = !saving,
                             singleLine = true,
-                            label = { Text("Offset") },
+                            label = { Text(stringResource(R.string.lyrics_timing_offset_label)) },
                             isError = !draft.valid,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(100.dp).semantics { contentDescription = "Timing offset in milliseconds" },
+                            modifier = Modifier.width(100.dp).semantics { contentDescription = inputDescription },
                         )
-                        Text("ms")
+                        Text(stringResource(R.string.lyrics_timing_unit_ms))
                         Spacer(Modifier.weight(1f))
                         IconButton(onClick = { draft.step(-1) }, enabled = !saving && draft.offsetMs > -LyricsTimingOffset.LIMIT_MS) {
-                            Icon(Icons.Default.Remove, "Lyrics earlier by 50 milliseconds")
+                            Icon(Icons.Default.Remove, stringResource(R.string.lyrics_timing_cd_step_earlier))
                         }
                         IconButton(onClick = { draft.step(1) }, enabled = !saving && draft.offsetMs < LyricsTimingOffset.LIMIT_MS) {
-                            Icon(Icons.Default.Add, "Lyrics later by 50 milliseconds")
+                            Icon(Icons.Default.Add, stringResource(R.string.lyrics_timing_cd_step_later))
                         }
-                        TextButton(onClick = { draft.set(0) }, enabled = !saving) { Text("Reset") }
+                        TextButton(onClick = { draft.set(0) }, enabled = !saving) { Text(stringResource(R.string.lyrics_timing_reset)) }
                     }
                     if (!draft.valid) {
                         Text(
-                            "Enter a whole number of milliseconds.",
+                            stringResource(R.string.lyrics_timing_error_integer),
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -171,7 +181,7 @@ internal fun LyricsTimingEditor(
                     Button(onClick = { onPlayPause?.invoke() }, enabled = onPlayPause != null && !saving) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null)
                         Spacer(Modifier.width(Spacing.sm))
-                        Text(if (isPlaying) "Pause preview" else "Preview timing")
+                        Text(stringResource(if (isPlaying) R.string.lyrics_timing_pause_preview else R.string.lyrics_timing_preview))
                     }
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 }
@@ -193,19 +203,33 @@ private fun PreviousLyricsTiming(
 ) {
     if (lyrics.previousTiming.isEmpty()) return
     var expanded by remember { mutableStateOf(false) }
+    val locale = AppLocaleManager.activeLocale(LocalContext.current)
     GlassMenuAnchor {
         TextButton(onClick = {
             expanded = true
-        }, enabled = enabled, modifier = Modifier.glassMenuTrigger()) { Text("Use timing from another source") }
-        GlassMenu(label = "Previous lyrics timing", expanded = expanded, onDismissRequest = { expanded = false }) {
+        }, enabled = enabled, modifier = Modifier.glassMenuTrigger()) {
+            Text(stringResource(R.string.lyrics_timing_use_other_source))
+        }
+        GlassMenu(
+            label = stringResource(R.string.lyrics_timing_previous_menu),
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
             lyrics.previousTiming.take(20).forEach { saved ->
-                GlassMenuItem(text = {
-                    Text(
-                        "${saved.label} · ${saved.offsetMs} ms · ${DateFormat.getDateInstance(
-                            DateFormat.MEDIUM,
-                        ).format(Date(saved.savedAtMs))}",
+                val sourceLabel =
+                    when {
+                        saved.sourceKey == "file" -> stringResource(R.string.lyrics_source_file_short)
+                        saved.label == "Online lyrics" -> stringResource(R.string.lyrics_source_online_short)
+                        else -> saved.label
+                    }
+                val entryText =
+                    stringResource(
+                        R.string.lyrics_timing_previous_entry,
+                        sourceLabel,
+                        LocaleFormatters.formatInteger(saved.offsetMs, locale),
+                        LocaleFormatters.formatMediumDate(saved.savedAtMs, locale),
                     )
-                }, onClick = {
+                GlassMenuItem(text = { Text(entryText) }, onClick = {
                     expanded = false
                     onSelect(saved.offsetMs)
                 })

@@ -1,6 +1,7 @@
 package com.erhu.erhu.core.common.locale
 
 import android.content.Context
+import android.icu.text.ListFormatter
 import com.erhu.erhu.core.common.R
 import java.text.DateFormat
 import java.text.NumberFormat
@@ -107,5 +108,15 @@ object LocaleFormatters {
         } else {
             String.format(locale, "%d:%02d", minutes, seconds)
         }
+    }
+
+    fun formatList(
+        items: List<String>,
+        locale: Locale = Locale.getDefault(),
+    ): String {
+        if (items.size <= 1) return items.firstOrNull().orEmpty()
+        return runCatching { ListFormatter.getInstance(locale)?.format(items) }
+            .getOrNull()
+            ?: items.joinToString(", ")
     }
 }

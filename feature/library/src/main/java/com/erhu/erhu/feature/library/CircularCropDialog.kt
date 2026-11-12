@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Dialog
@@ -54,6 +55,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 import kotlin.math.roundToInt
+import com.erhu.erhu.core.common.R as CommonR
 
 private const val MAX_ZOOM = 4f
 private const val CROP_JPEG_QUALITY = 90
@@ -99,10 +101,10 @@ internal fun CircularCropDialog(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
             Column(modifier = Modifier.padding(Spacing.lg)) {
-                Text("Frame artist photo", style = TextStyles.sectionTitle)
+                Text(stringResource(CommonR.string.artist_crop_title), style = TextStyles.sectionTitle)
                 Spacer(modifier = Modifier.height(Spacing.xs))
                 Text(
-                    "Pinch to zoom, drag to align inside the circle.",
+                    stringResource(CommonR.string.artist_crop_hint),
                     style = TextStyles.supporting,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -195,7 +197,7 @@ internal fun CircularCropDialog(
                                 )
                             }
                         }
-                        failed -> Text("This image could not be loaded.", color = MaterialTheme.colorScheme.error)
+                        failed -> Text(stringResource(CommonR.string.image_load_failed), color = MaterialTheme.colorScheme.error)
                         else -> CircularProgressIndicator()
                     }
                 }
@@ -204,7 +206,7 @@ internal fun CircularCropDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End,
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.action_cancel)) }
                     TextButton(
                         enabled = source != null,
                         onClick = {
@@ -216,7 +218,7 @@ internal fun CircularCropDialog(
                             }
                         },
                     ) {
-                        Text("Apply")
+                        Text(stringResource(CommonR.string.action_apply))
                     }
                 }
             }

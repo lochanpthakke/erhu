@@ -9,9 +9,9 @@
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:gravity="center">
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_previous" android:tint="#FFFFFF" android:contentDescription="Previous" />
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_play" android:tint="#FFFFFF" android:contentDescription="Play" />
-            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_next" android:tint="#FFFFFF" android:contentDescription="Next" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_previous" android:tint="#FFFFFF" android:contentDescription="@string/widget_cd_previous" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_play" android:tint="#FFFFFF" android:contentDescription="@string/widget_cd_play" />
+            <ImageView android:layout_width="48dp" android:layout_height="48dp" android:padding="11dp" android:src="@drawable/ic_widget_skip_next" android:tint="#FFFFFF" android:contentDescription="@string/widget_cd_next" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

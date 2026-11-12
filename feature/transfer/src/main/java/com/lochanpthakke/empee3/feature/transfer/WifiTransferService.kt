@@ -14,6 +14,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.feature.transfer.StopReason
 import com.erhu.erhu.feature.transfer.TransferServerState
 import com.erhu.erhu.feature.transfer.WifiTransferCoordinator
@@ -26,6 +27,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.erhu.erhu.core.common.R as CommonR
 
 /**
  * Keeps a transfer session alive while the user switches apps or locks the screen, with an honest
@@ -53,11 +55,12 @@ class WifiTransferService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        ensureChannel()
+        val localized = AppLocaleManager.localizedContext(this)
+        ensureChannel(localized)
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            notification("Starting Wi-Fi Transfer…", null),
+            notification(localized, localized.getString(CommonR.string.transfer_service_starting), null),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0,
         )
         if (!started) {
@@ -72,15 +75,29 @@ class WifiTransferService : Service() {
                         }
                         TransferServerState.Starting -> Unit
                         is TransferServerState.Running -> {
+                            val activeContext = AppLocaleManager.localizedContext(this@WifiTransferService)
                             val receiving = items.count { it.status == TransferStatus.RECEIVING || it.status == TransferStatus.FINALIZING }
                             val saved = items.count { it.status == TransferStatus.COMPLETED }
                             val text =
                                 when {
-                                    receiving > 0 -> "Receiving $receiving file${if (receiving == 1) "" else "s"} · $saved saved"
-                                    saved > 0 -> "$saved file${if (saved == 1) "" else "s"} saved · waiting at ${state.address}"
-                                    else -> "Waiting for a computer at ${state.address}"
+                                    receiving > 0 ->
+                                        activeContext.resources.getQuantityString(
+                                            CommonR.plurals.transfer_service_receiving,
+                                            receiving,
+                                            receiving,
+                                            saved,
+                                        )
+                                    saved > 0 ->
+                                        activeContext.resources.getQuantityString(
+                                            CommonR.plurals.transfer_service_saved_waiting,
+                                            saved,
+                                            saved,
+                                            state.address,
+                                        )
+                                    else ->
+                                        activeContext.getString(CommonR.string.transfer_service_waiting, state.address)
                                 }
-                            notify(notification("Wi-Fi Transfer is on", text))
+                            notify(notification(activeContext, activeContext.getString(CommonR.string.transfer_service_on_title), text))
                         }
                     }
                 }
@@ -109,6 +126,7 @@ class WifiTransferService : Service() {
     }
 
     private fun notification(
+        localized: Context,
         title: String,
         text: String?,
     ): Notification {
@@ -132,15 +150,17 @@ class WifiTransferService : Service() {
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(open)
-            .addAction(0, "Stop", stop)
+            .addAction(0, localized.getString(CommonR.string.transfer_service_stop), stop)
             .build()
     }
 
-    private fun ensureChannel() {
+    private fun ensureChannel(localized: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java) ?: return
-        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-            manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Wi-Fi Transfer", NotificationManager.IMPORTANCE_LOW))
+        val name = localized.getString(CommonR.string.transfer_channel_name)
+        val existing = manager.getNotificationChannel(CHANNEL_ID)
+        if (existing == null || existing.name != name) {
+            manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW))
         }
     }
 

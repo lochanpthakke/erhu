@@ -1,35 +1,25 @@
 package com.erhu.erhu.onboarding
 
+import androidx.annotation.StringRes
 import com.erhu.erhu.R
+import com.erhu.erhu.core.common.R as CommonR
 
 internal enum class IntroductionPage(
-    val title: String,
-    val description: String,
+    @StringRes val titleRes: Int,
+    @StringRes val descriptionRes: Int,
 ) {
-    WELCOME("Your music. Your space.", "A beautiful home for the music you own. Listen, explore and make every sound yours."),
-    LIBRARY("Your music library.", "Browse albums, artists and tracks. Search the music stored on your device."),
-    ARTWORK(
-        "Give every album its cover.",
-        "Find album covers and artist photos with Artwork Fetcher, or choose a cover from your own files.",
-    ),
-    TAGS("Put the right names to your music.", "Use Auto Fix Tags to correct incomplete metadata and bring order to your collection."),
-    BUILDER(
-        "A library, down to the folders.",
-        "Library Builder uses your music tags to propose an organized folder structure on your device.",
-    ),
-    LISTENING("Your listening experience.", "Swipe the artwork to change tracks. Open Queue to reorder what plays next."),
-    LYRICS(
-        "Stay with the words.",
-        "Follow synchronized lyrics on supported tracks. Availability depends on the file and online providers.",
-    ),
-    SOUND("Make sound yours.", "Adjust the eight-band equalizer and choose a preset for your listening experience."),
-    TRANSITIONS(
-        "Make the next track flow.",
-        "Use Transition Studio to shape the handover between tracks, with defaults and individual transitions.",
-    ),
-    VYBE("Discover VYBE.", "Search your own collection and browse generated radio stations. Playback starts when you choose."),
-    WIDGETS("Music on your Home screen.", "Touch and hold your Android Home screen, open Widgets, then choose an erhu player."),
-    READY("Everything is in place.", "Your music is ready. Make yourself at home."),
+    WELCOME(CommonR.string.onboarding_page_welcome_title, CommonR.string.onboarding_page_welcome_desc),
+    LIBRARY(CommonR.string.onboarding_page_library_title, CommonR.string.onboarding_page_library_desc),
+    ARTWORK(CommonR.string.onboarding_page_artwork_title, CommonR.string.onboarding_page_artwork_desc),
+    TAGS(CommonR.string.onboarding_page_tags_title, CommonR.string.onboarding_page_tags_desc),
+    BUILDER(CommonR.string.onboarding_page_builder_title, CommonR.string.onboarding_page_builder_desc),
+    LISTENING(CommonR.string.onboarding_page_listening_title, CommonR.string.onboarding_page_listening_desc),
+    LYRICS(CommonR.string.onboarding_page_lyrics_title, CommonR.string.onboarding_page_lyrics_desc),
+    SOUND(CommonR.string.onboarding_page_sound_title, CommonR.string.onboarding_page_sound_desc),
+    TRANSITIONS(CommonR.string.onboarding_page_transitions_title, CommonR.string.onboarding_page_transitions_desc),
+    VYBE(CommonR.string.onboarding_page_vybe_title, CommonR.string.onboarding_page_vybe_desc),
+    WIDGETS(CommonR.string.onboarding_page_widgets_title, CommonR.string.onboarding_page_widgets_desc),
+    READY(CommonR.string.onboarding_page_ready_title, CommonR.string.onboarding_page_ready_desc),
 }
 
 internal fun introductionPages(
@@ -52,43 +42,49 @@ internal fun restoredIntroductionPage(
 }
 
 internal data class IntroductionPreview(
-    val label: String,
+    @StringRes val labelRes: Int,
     val image: Int,
 )
 
 internal fun IntroductionPage.previews(): List<IntroductionPreview> =
     when (this) {
-        IntroductionPage.WELCOME -> listOf(IntroductionPreview("Now Playing", R.drawable.onb_welcome))
+        IntroductionPage.WELCOME -> listOf(IntroductionPreview(CommonR.string.onboarding_preview_now_playing, R.drawable.onb_welcome))
         IntroductionPage.LIBRARY ->
             listOf(
-                IntroductionPreview("Library", R.drawable.onb_library),
-                IntroductionPreview("Albums", R.drawable.onb_albums),
+                IntroductionPreview(CommonR.string.onboarding_preview_library, R.drawable.onb_library),
+                IntroductionPreview(CommonR.string.onboarding_preview_albums, R.drawable.onb_albums),
             )
         IntroductionPage.LISTENING ->
             listOf(
-                IntroductionPreview("Now Playing", R.drawable.onb_player),
-                IntroductionPreview("Queue", R.drawable.onb_queue),
+                IntroductionPreview(CommonR.string.onboarding_preview_now_playing, R.drawable.onb_player),
+                IntroductionPreview(CommonR.string.onboarding_preview_queue, R.drawable.onb_queue),
             )
-        IntroductionPage.LYRICS -> listOf(IntroductionPreview("Lyrics", R.drawable.onb_lyrics))
-        IntroductionPage.SOUND -> listOf(IntroductionPreview("Equalizer", R.drawable.onb_equalizer))
+        IntroductionPage.LYRICS -> listOf(IntroductionPreview(CommonR.string.onboarding_preview_lyrics, R.drawable.onb_lyrics))
+        IntroductionPage.SOUND -> listOf(IntroductionPreview(CommonR.string.onboarding_preview_equalizer, R.drawable.onb_equalizer))
         IntroductionPage.VYBE ->
             listOf(
-                IntroductionPreview("VYBE", R.drawable.onb_vybe),
-                IntroductionPreview("Radio", R.drawable.onb_radio),
+                IntroductionPreview(CommonR.string.onboarding_preview_vybe, R.drawable.onb_vybe),
+                IntroductionPreview(CommonR.string.onboarding_preview_radio, R.drawable.onb_radio),
             )
         IntroductionPage.WIDGETS ->
             listOf(
-                IntroductionPreview("Music", R.drawable.onb_widget_music),
-                IntroductionPreview("Glass", R.drawable.onb_widget_glass),
-                IntroductionPreview("Vinyl", R.drawable.onb_widget_vinyl),
+                IntroductionPreview(CommonR.string.onboarding_preview_widget_music, R.drawable.onb_widget_music),
+                IntroductionPreview(CommonR.string.onboarding_preview_widget_glass, R.drawable.onb_widget_glass),
+                IntroductionPreview(CommonR.string.onboarding_preview_widget_vinyl, R.drawable.onb_widget_vinyl),
             )
-        IntroductionPage.ARTWORK -> listOf(IntroductionPreview("Artwork Fetcher", R.drawable.onb_artwork_fetcher))
-        IntroductionPage.TAGS -> listOf(IntroductionPreview("Auto Fix Tags", R.drawable.onb_auto_fix_tags))
-        IntroductionPage.BUILDER -> listOf(IntroductionPreview("Library Builder", R.drawable.onb_library_builder))
+        IntroductionPage.ARTWORK ->
+            listOf(
+                IntroductionPreview(CommonR.string.onboarding_preview_artwork_fetcher, R.drawable.onb_artwork_fetcher),
+            )
+        IntroductionPage.TAGS -> listOf(IntroductionPreview(CommonR.string.onboarding_preview_auto_fix_tags, R.drawable.onb_auto_fix_tags))
+        IntroductionPage.BUILDER ->
+            listOf(
+                IntroductionPreview(CommonR.string.onboarding_preview_library_builder, R.drawable.onb_library_builder),
+            )
         IntroductionPage.TRANSITIONS ->
             listOf(
-                IntroductionPreview("Studio", R.drawable.onb_transition_studio),
-                IntroductionPreview("Volume panel", R.drawable.onb_transition_volume),
+                IntroductionPreview(CommonR.string.onboarding_preview_studio, R.drawable.onb_transition_studio),
+                IntroductionPreview(CommonR.string.onboarding_preview_volume_panel, R.drawable.onb_transition_volume),
             )
         IntroductionPage.READY -> emptyList()
     }
