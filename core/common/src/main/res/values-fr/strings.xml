@@ -2072,10 +2072,24 @@
     <string name="dialog_delete_music_title">Supprimer la musique</string>
     <string name="dialog_delete_music_message">Voulez-vous vraiment supprimer « %1$s » de votre appareil ? Le fichier sera définitivement supprimé.</string>
 <string name="dialog_delete_album_title">Supprimer l\'album</string>
-    <string name="dialog_delete_album_message">Voulez-vous vraiment supprimer « %1$s » de votre appareil ? Cela supprimera définitivement les %2$d fichiers musicaux de cet album.</string>
+    <string name="dialog_delete_album_message">Voulez-vous vraiment supprimer « %1$s » de votre appareil ?</string>
     <string name="delete_song_success">%1$s supprimé</string>
-    <string name="delete_album_success">Album %1$s supprimé (%2$d pistes)</string>
     <string name="delete_permission_denied">Autorisation refusée pour supprimer la musique</string>
     <string name="delete_failed">Échec de la suppression de la musique</string>
-    <string name="delete_partial_failure">%1$d pistes supprimées. Impossible de supprimer : %2$s</string>
+    <string name="delete_progress">Suppression…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">Cela supprimera définitivement %1$d piste de cet album.</item>
+        <item quantity="many">Cela supprimera définitivement les %1$d pistes de cet album.</item>
+        <item quantity="other">Cela supprimera définitivement les %1$d pistes de cet album.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">« %1$s » et %2$d chanson supprimés</item>
+        <item quantity="many">« %1$s » et %2$d chansons supprimés</item>
+        <item quantity="other">« %1$s » et %2$d chansons supprimés</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">%1$d piste supprimée. Impossible de supprimer : %2$s</item>
+        <item quantity="many">%1$d pistes supprimées. Impossible de supprimer : %2$s</item>
+        <item quantity="other">%1$d pistes supprimées. Impossible de supprimer : %2$s</item>
+    </plurals>
 </resources>

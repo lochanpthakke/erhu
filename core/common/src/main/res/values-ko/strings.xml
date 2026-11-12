@@ -1986,10 +1986,18 @@
     <string name="dialog_delete_music_title">음악 삭제</string>
     <string name="dialog_delete_music_message">"%1$s"을(를) 기기에서 삭제하시겠습니까? 파일이 영구적으로 삭제됩니다.</string>
     <string name="dialog_delete_album_title">앨범 삭제</string>
-    <string name="dialog_delete_album_message">"%1$s"을(를) 기기에서 삭제하시겠습니까? 이 앨범에 속한 모든 음악 파일(%2$d개)이 영구적으로 삭제됩니다.</string>
+    <string name="dialog_delete_album_message">"%1$s"을(를) 기기에서 삭제하시겠습니까?</string>
     <string name="delete_song_success">"%1$s" 삭제 완료</string>
-    <string name="delete_album_success">"%1$s" 앨범 삭제 완료 (%2$d곡)</string>
     <string name="delete_permission_denied">음악 삭제 권한이 거부되었습니다</string>
     <string name="delete_failed">음악 삭제 실패</string>
-    <string name="delete_partial_failure">%1$d곡 삭제 완료. 삭제 실패: %2$s</string>
+    <string name="delete_progress">삭제 중…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="other">이 앨범에 속한 모든 음악 파일(%1$d개)이 영구적으로 삭제됩니다.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="other">"%1$s" 및 %2$d개 곡을 삭제했습니다</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="other">%1$d개 파일을 삭제했습니다. 삭제할 수 없음: %2$s</item>
+    </plurals>
 </resources>

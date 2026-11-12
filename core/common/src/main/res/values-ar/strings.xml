@@ -2201,10 +2201,33 @@
     <string name="dialog_delete_music_title">حذف المقطع</string>
     <string name="dialog_delete_music_message">هل أنت متأكد من رغبتك في حذف "%1$s" من جهازك؟ سيتم حذف الملف نهائياً.</string>
     <string name="dialog_delete_album_title">حذف الألبوم</string>
-    <string name="dialog_delete_album_message">هل أنت متأكد من رغبتك في حذف "%1$s" من جهازك؟ سيؤدي ذلك إلى حذف جميع ملفات الموسيقى البالغ عددها %2$d في هذا الألبوم نهائياً.</string>
+    <string name="dialog_delete_album_message">هل أنت متأكد من رغبتك في حذف "%1$s" من جهازك؟</string>
     <string name="delete_song_success">تم حذف %1$s</string>
-    <string name="delete_album_success">تم حذف الألبوم %1$s (%2$d مقطع)</string>
     <string name="delete_permission_denied">تم رفض إذن حذف الموسيقى</string>
     <string name="delete_failed">فشل حذف الموسيقى</string>
-    <string name="delete_partial_failure">تم حذف %1$d مقطع. تعذر حذف: %2$s</string>
+    <string name="delete_progress">جارٍ الحذف…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="zero">سيؤدي ذلك إلى حذف %1$d مقطع في هذا الألبوم نهائياً.</item>
+        <item quantity="one">سيؤدي ذلك إلى حذف مقطع واحد (%1$d) في هذا الألبوم نهائياً.</item>
+        <item quantity="two">سيؤدي ذلك إلى حذف مقطعين (%1$d) في هذا الألبوم نهائياً.</item>
+        <item quantity="few">سيؤدي ذلك إلى حذف %1$d مقاطع في هذا الألبوم نهائياً.</item>
+        <item quantity="many">سيؤدي ذلك إلى حذف جميع المقاطع البالغ عددها %1$d في هذا الألبوم نهائياً.</item>
+        <item quantity="other">سيؤدي ذلك إلى حذف %1$d مقطع في هذا الألبوم نهائياً.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="zero">تم حذف "%1$s" و%2$d مقطع</item>
+        <item quantity="one">تم حذف "%1$s" ومقطع واحد (%2$d)</item>
+        <item quantity="two">تم حذف "%1$s" ومقطعين (%2$d)</item>
+        <item quantity="few">تم حذف "%1$s" و%2$d مقاطع</item>
+        <item quantity="many">تم حذف "%1$s" و%2$d مقطعاً</item>
+        <item quantity="other">تم حذف "%1$s" و%2$d مقطع</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="zero">تم حذف %1$d مقطع. تعذر حذف: %2$s</item>
+        <item quantity="one">تم حذف مقطع واحد (%1$d). تعذر حذف: %2$s</item>
+        <item quantity="two">تم حذف مقطعين (%1$d). تعذر حذف: %2$s</item>
+        <item quantity="few">تم حذف %1$d مقاطع. تعذر حذف: %2$s</item>
+        <item quantity="many">تم حذف %1$d مقطعاً. تعذر حذف: %2$s</item>
+        <item quantity="other">تم حذف %1$d مقطع. تعذر حذف: %2$s</item>
+    </plurals>
 </resources>

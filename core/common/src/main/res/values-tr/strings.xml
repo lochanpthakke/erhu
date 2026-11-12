@@ -2029,10 +2029,18 @@
     <string name="dialog_delete_music_title">Parçayı Sil</string>
     <string name="dialog_delete_music_message">„%1$s“ adlı parçayı cihazınızdan silmek istediğinizden emin misiniz? Dosya kalıcı olarak silinecektir.</string>
     <string name="dialog_delete_album_title">Albümü Sil</string>
-    <string name="dialog_delete_album_message">„%1$s“ albümünü cihazınızdan silmek istediğinizden emin misiniz? Bu işlem albümdeki %2$d müzik dosyasını kalıcı olarak silecektir.</string>
+    <string name="dialog_delete_album_message">„%1$s“ albümünü cihazınızdan silmek istediğinizden emin misiniz?</string>
     <string name="delete_song_success">%1$s silindi</string>
-    <string name="delete_album_success">%1$s albümü silindi (%2$d parça)</string>
     <string name="delete_permission_denied">Müzik silme izni reddedildi</string>
     <string name="delete_failed">Müzik silinemedi</string>
-    <string name="delete_partial_failure">%1$d parça silindi. Silinemeyenler: %2$s</string>
+    <string name="delete_progress">Siliniyor…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="other">Bu işlem albümdeki %1$d parçayı kalıcı olarak silecektir.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="other">„%1$s“ albümü ve %2$d parça silindi</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="other">%1$d parça silindi. Silinemeyenler: %2$s</item>
+    </plurals>
 </resources>

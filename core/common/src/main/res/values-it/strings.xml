@@ -2029,10 +2029,21 @@
     <string name="dialog_delete_music_title">Elimina brano</string>
     <string name="dialog_delete_music_message">Vuoi davvero eliminare «%1$s» dal dispositivo? Il file verrà rimosso definitivamente.</string>
     <string name="dialog_delete_album_title">Elimina album</string>
-    <string name="dialog_delete_album_message">Vuoi davvero eliminare «%1$s» dal dispositivo? Questa operazione eliminerà definitivamente tutti i %2$d file musicali di questo album.</string>
+    <string name="dialog_delete_album_message">Vuoi davvero eliminare «%1$s» dal dispositivo?</string>
     <string name="delete_song_success">«%1$s» eliminato</string>
-    <string name="delete_album_success">Album «%1$s» eliminato (%2$d brani)</string>
 <string name="delete_permission_denied">Autorizzazione all\'eliminazione della musica negata</string>
     <string name="delete_failed">Impossibile eliminare la musica</string>
-    <string name="delete_partial_failure">Eliminati %1$d brani. Impossibile eliminare: %2$s</string>
+    <string name="delete_progress">Eliminazione in corso…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">Questa operazione eliminerà definitivamente %1$d brano di questo album.</item>
+        <item quantity="other">Questa operazione eliminerà definitivamente tutti i %1$d brani di questo album.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">Eliminato «%1$s» e %2$d brano</item>
+        <item quantity="other">Eliminato «%1$s» e %2$d brani</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">Eliminato %1$d brano. Impossibile eliminare: %2$s</item>
+        <item quantity="other">Eliminati %1$d brani. Impossibile eliminare: %2$s</item>
+    </plurals>
 </resources>

@@ -2029,10 +2029,21 @@
     <string name="dialog_delete_music_title">Delete Music</string>
     <string name="dialog_delete_music_message">Are you sure you want to delete "%1$s" from your device? This will permanently delete the file.</string>
     <string name="dialog_delete_album_title">Delete Album</string>
-    <string name="dialog_delete_album_message">Are you sure you want to delete "%1$s" from your device? This will permanently delete all %2$d music files in this album.</string>
+    <string name="dialog_delete_album_message">Are you sure you want to delete "%1$s" from your device?</string>
     <string name="delete_song_success">Deleted %1$s</string>
-    <string name="delete_album_success">Deleted album %1$s (%2$d tracks)</string>
     <string name="delete_permission_denied">Permission denied to delete music</string>
     <string name="delete_failed">Failed to delete music</string>
-    <string name="delete_partial_failure">Deleted %1$d tracks. Could not delete: %2$s</string>
+    <string name="delete_progress">Deleting…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">This will permanently delete %1$d track from your device.</item>
+        <item quantity="other">This will permanently delete all %1$d tracks from your device.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">Deleted "%1$s" and %2$d song</item>
+        <item quantity="other">Deleted "%1$s" and %2$d songs</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">Deleted %1$d track. Could not delete: %2$s</item>
+        <item quantity="other">Deleted %1$d tracks. Could not delete: %2$s</item>
+    </plurals>
 </resources>

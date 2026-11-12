@@ -2115,10 +2115,27 @@
     <string name="dialog_delete_music_title">Usuń utwór</string>
     <string name="dialog_delete_music_message">Czy na pewno chcesz usunąć „%1$s” ze swojego urządzenia? Plik zostanie trwale usunięty.</string>
     <string name="dialog_delete_album_title">Usuń album</string>
-    <string name="dialog_delete_album_message">Czy na pewno chcesz usunąć album „%1$s” ze swojego urządzenia? Spowoduje to trwałe usunięcie wszystkich %2$d plików muzycznych z tego albumu.</string>
+    <string name="dialog_delete_album_message">Czy na pewno chcesz usunąć album „%1$s” ze swojego urządzenia?</string>
     <string name="delete_song_success">Usunięto %1$s</string>
-    <string name="delete_album_success">Usunięto album %1$s (utwory: %2$d)</string>
     <string name="delete_permission_denied">Odmowa uprawnień do usunięcia plików</string>
     <string name="delete_failed">Nie udało się usunąć muzyki</string>
-    <string name="delete_partial_failure">Usunięto %1$d utworów. Nie udało się usunąć: %2$s</string>
+    <string name="delete_progress">Usuwanie…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">Spowoduje to trwałe usunięcie %1$d utworu z tego albumu.</item>
+        <item quantity="few">Spowoduje to trwałe usunięcie %1$d utworów z tego albumu.</item>
+        <item quantity="many">Spowoduje to trwałe usunięcie wszystkich %1$d utworów z tego albumu.</item>
+        <item quantity="other">Spowoduje to trwałe usunięcie %1$d utworu z tego albumu.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">Usunięto „%1$s” i %2$d utwór</item>
+        <item quantity="few">Usunięto „%1$s” i %2$d utwory</item>
+        <item quantity="many">Usunięto „%1$s” i %2$d utworów</item>
+        <item quantity="other">Usunięto „%1$s” i %2$d utworu</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">Usunięto %1$d utwór. Nie udało się usunąć: %2$s</item>
+        <item quantity="few">Usunięto %1$d utwory. Nie udało się usunąć: %2$s</item>
+        <item quantity="many">Usunięto %1$d utworów. Nie udało się usunąć: %2$s</item>
+        <item quantity="other">Usunięto %1$d utworu. Nie udało się usunąć: %2$s</item>
+    </plurals>
 </resources>

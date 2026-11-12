@@ -1986,10 +1986,18 @@
     <string name="dialog_delete_music_title">Xóa bài hát</string>
     <string name="dialog_delete_music_message">Bạn có chắc chắn muốn xóa "%1$s" khỏi thiết bị của mình không? Tệp sẽ bị xóa vĩnh viễn.</string>
     <string name="dialog_delete_album_title">Xóa album</string>
-    <string name="dialog_delete_album_message">Bạn có chắc chắn muốn xóa "%1$s" khỏi thiết bị của mình không? Thao tác này sẽ xóa vĩnh viễn tất cả %2$d tệp nhạc trong album này.</string>
+    <string name="dialog_delete_album_message">Bạn có chắc chắn muốn xóa "%1$s" khỏi thiết bị của mình không?</string>
     <string name="delete_song_success">Đã xóa %1$s</string>
-    <string name="delete_album_success">Đã xóa album %1$s (%2$d bài hát)</string>
     <string name="delete_permission_denied">Quyền xóa nhạc bị từ chối</string>
     <string name="delete_failed">Không thể xóa nhạc</string>
-    <string name="delete_partial_failure">Đã xóa %1$d bài hát. Không thể xóa: %2$s</string>
+    <string name="delete_progress">Đang xóa…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="other">Thao tác này sẽ xóa vĩnh viễn tất cả %1$d tệp nhạc trong album này.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="other">Đã xóa "%1$s" và %2$d bài hát</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="other">Đã xóa %1$d tệp. Không thể xóa: %2$s</item>
+    </plurals>
 </resources>

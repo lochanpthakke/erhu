@@ -1986,10 +1986,18 @@
     <string name="dialog_delete_music_title">Hapus Lagu</string>
     <string name="dialog_delete_music_message">Apakah Anda yakin ingin menghapus "%1$s" dari perangkat Anda? Berkas ini akan dihapus secara permanen.</string>
     <string name="dialog_delete_album_title">Hapus Album</string>
-    <string name="dialog_delete_album_message">Apakah Anda yakin ingin menghapus "%1$s" dari perangkat Anda? Tindakan ini akan menghapus semua %2$d berkas musik dalam album ini secara permanen.</string>
+    <string name="dialog_delete_album_message">Apakah Anda yakin ingin menghapus "%1$s" dari perangkat Anda?</string>
     <string name="delete_song_success">"%1$s" telah dihapus</string>
-    <string name="delete_album_success">Album "%1$s" telah dihapus (%2$d trek)</string>
     <string name="delete_permission_denied">Izin menghapus musik ditolak</string>
     <string name="delete_failed">Gagal menghapus musik</string>
-    <string name="delete_partial_failure">%1$d trek dihapus. Tidak dapat menghapus: %2$s</string>
+    <string name="delete_progress">Menghapus…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="other">Tindakan ini akan menghapus semua %1$d trek dalam album ini secara permanen.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="other">Berhasil menghapus "%1$s" dan %2$d lagu</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="other">Berhasil menghapus %1$d berkas. Tidak dapat menghapus: %2$s</item>
+    </plurals>
 </resources>

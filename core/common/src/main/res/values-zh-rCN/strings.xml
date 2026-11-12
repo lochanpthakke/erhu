@@ -1986,10 +1986,18 @@
     <string name="dialog_delete_music_title">删除歌曲</string>
     <string name="dialog_delete_music_message">确定要从设备中删除“%1$s”吗？该文件将被永久删除。</string>
     <string name="dialog_delete_album_title">删除专辑</string>
-    <string name="dialog_delete_album_message">确定要从设备中删除“%1$s”吗？此专辑中的所有 %2$d 个音乐文件将被永久删除。</string>
+    <string name="dialog_delete_album_message">确定要从设备中删除“%1$s”吗？</string>
     <string name="delete_song_success">已删除 %1$s</string>
-    <string name="delete_album_success">已删除专辑 %1$s（%2$d 首曲目）</string>
     <string name="delete_permission_denied">删除音乐的权限被拒绝</string>
     <string name="delete_failed">删除音乐失败</string>
-    <string name="delete_partial_failure">已删除 %1$d 首曲目。无法删除：%2$s</string>
+    <string name="delete_progress">正在删除…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="other">此专辑中的所有 %1$d 个音乐文件将被永久删除。</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="other">已删除“%1$s”及 %2$d 首歌曲</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="other">已删除 %1$d 个文件。无法删除：%2$s</item>
+    </plurals>
 </resources>

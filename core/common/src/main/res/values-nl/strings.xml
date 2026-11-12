@@ -2029,10 +2029,21 @@
     <string name="dialog_delete_music_title">Nummer verwijderen</string>
     <string name="dialog_delete_music_message">Weet je zeker dat je „%1$s“ van je apparaat wilt verwijderen? Het bestand wordt permanent verwijderd.</string>
     <string name="dialog_delete_album_title">Album verwijderen</string>
-    <string name="dialog_delete_album_message">Weet je zeker dat je „%1$s“ van je apparaat wilt verwijderen? Hiermee worden alle %2$d muziekbestanden in dit album permanent verwijderd.</string>
+    <string name="dialog_delete_album_message">Weet je zeker dat je „%1$s“ van je apparaat wilt verwijderen?</string>
     <string name="delete_song_success">„%1$s“ verwijderd</string>
-    <string name="delete_album_success">Album „%1$s“ verwijderd (%2$d nummers)</string>
     <string name="delete_permission_denied">Toestemming om muziek te verwijderen geweigerd</string>
     <string name="delete_failed">Muziek verwijderen mislukt</string>
-    <string name="delete_partial_failure">%1$d nummers verwijderd. Kon niet verwijderen: %2$s</string>
+    <string name="delete_progress">Verwijderen…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">Hiermee wordt %1$d nummer in dit album permanent verwijderd.</item>
+        <item quantity="other">Hiermee worden alle %1$d nummers in dit album permanent verwijderd.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">„%1$s“ en %2$d nummer verwijderd</item>
+        <item quantity="other">„%1$s“ en %2$d nummers verwijderd</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">%1$d nummer verwijderd. Kon niet worden verwijderd: %2$s</item>
+        <item quantity="other">%1$d nummers verwijderd. Kon niet worden verwijderd: %2$s</item>
+    </plurals>
 </resources>

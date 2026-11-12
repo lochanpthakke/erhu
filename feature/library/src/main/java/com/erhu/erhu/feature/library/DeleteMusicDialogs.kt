@@ -1,12 +1,16 @@
 package com.erhu.erhu.feature.library
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.common.R as CommonR
@@ -57,7 +61,19 @@ fun DeleteAlbumConfirmationDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(CommonR.string.dialog_delete_album_title)) },
         text = {
-            Text(stringResource(CommonR.string.dialog_delete_album_message, albumTitle, trackCount))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(CommonR.string.dialog_delete_album_message, albumTitle))
+                Text(
+                    text =
+                        pluralStringResource(
+                            CommonR.plurals.dialog_delete_album_tracks_count,
+                            trackCount,
+                            trackCount,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         },
         confirmButton = {
             Button(

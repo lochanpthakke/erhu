@@ -2149,11 +2149,18 @@ class LibraryViewModel
                     }
 
                     if (failedTitles.isEmpty()) {
-                        _userMessage.value = context.getString(CommonR.string.delete_album_success, album.title, deletedCount)
+                        _userMessage.value =
+                            context.resources.getQuantityString(
+                                CommonR.plurals.delete_album_success,
+                                deletedCount,
+                                album.title,
+                                deletedCount,
+                            )
                     } else if (deletedCount > 0) {
                         _userMessage.value =
-                            context.getString(
-                                CommonR.string.delete_partial_failure,
+                            context.resources.getQuantityString(
+                                CommonR.plurals.delete_partial_failure,
+                                deletedCount,
                                 deletedCount,
                                 failedTitles.joinToString(", "),
                             )

@@ -2030,10 +2030,21 @@
     <string name="dialog_delete_music_title">Ta bort låt</string>
     <string name="dialog_delete_music_message">Är du säker på att du vill ta bort ”%1$s” från enheten? Filen kommer att tas bort permanent.</string>
     <string name="dialog_delete_album_title">Ta bort album</string>
-    <string name="dialog_delete_album_message">Är du säker på att du vill ta bort ”%1$s” från enheten? Detta raderar alla %2$d musikfiler i detta album permanent.</string>
+    <string name="dialog_delete_album_message">Är du säker på att du vill ta bort ”%1$s” från enheten?</string>
     <string name="delete_song_success">Tog bort %1$s</string>
-    <string name="delete_album_success">Tog bort albumet %1$s (%2$d spår)</string>
     <string name="delete_permission_denied">Behörighet att ta bort musik nekades</string>
     <string name="delete_failed">Kunde inte ta bort musik</string>
-    <string name="delete_partial_failure">Tog bort %1$d spår. Kunde inte ta bort: %2$s</string>
+    <string name="delete_progress">Tar bort…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">Detta raderar %1$d spår i detta album permanent.</item>
+        <item quantity="other">Detta raderar alla %1$d spår i detta album permanent.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">Raderade ”%1$s” och %2$d låt</item>
+        <item quantity="other">Raderade ”%1$s” och %2$d låtar</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">Raderade %1$d spår. Kunde inte ta bort: %2$s</item>
+        <item quantity="other">Raderade %1$d spår. Kunde inte ta bort: %2$s</item>
+    </plurals>
 </resources>

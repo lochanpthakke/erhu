@@ -2029,10 +2029,21 @@
     <string name="dialog_delete_music_title">Excluir música</string>
     <string name="dialog_delete_music_message">Tem certeza de que deseja excluir "%1$s" do seu dispositivo? O arquivo será excluído permanentemente.</string>
     <string name="dialog_delete_album_title">Excluir álbum</string>
-    <string name="dialog_delete_album_message">Tem certeza de que deseja excluir "%1$s" do seu dispositivo? Isso excluirá permanentemente todos os %2$d arquivos de música deste álbum.</string>
+    <string name="dialog_delete_album_message">Tem certeza de que deseja excluir "%1$s" do seu dispositivo?</string>
     <string name="delete_song_success">Excluído %1$s</string>
-    <string name="delete_album_success">Álbum %1$s excluído (%2$d faixas)</string>
     <string name="delete_permission_denied">Permissão negada para excluir música</string>
     <string name="delete_failed">Falha ao excluir música</string>
-    <string name="delete_partial_failure">%1$d faixas excluídas. Não foi possível excluir: %2$s</string>
+    <string name="delete_progress">Excluindo…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="one">Isso excluirá permanentemente %1$d faixa deste álbum.</item>
+        <item quantity="other">Isso excluirá permanentemente todas as %1$d faixas deste álbum.</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="one">Excluído "%1$s" e %2$d música</item>
+        <item quantity="other">Excluído "%1$s" e %2$d músicas</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="one">Excluída %1$d faixa. Não foi possível excluir: %2$s</item>
+        <item quantity="other">Excluídas %1$d faixas. Não foi possível excluir: %2$s</item>
+    </plurals>
 </resources>

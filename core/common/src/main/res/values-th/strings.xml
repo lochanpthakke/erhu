@@ -1986,10 +1986,18 @@
     <string name="dialog_delete_music_title">ลบเพลง</string>
     <string name="dialog_delete_music_message">คุณแน่ใจหรือไม่ว่าต้องการลบ "%1$s" ออกจากอุปกรณ์ของคุณ? ไฟล์นี้จะถูกลบอย่างถาวร</string>
     <string name="dialog_delete_album_title">ลบอัลบั้ม</string>
-    <string name="dialog_delete_album_message">คุณแน่ใจหรือไม่ว่าต้องการลบ "%1$s" ออกจากอุปกรณ์ของคุณ? การดำเนินการนี้จะลบไฟล์เพลงทั้งหมด %2$d ไฟล์ในอัลบั้มนี้อย่างถาวร</string>
+    <string name="dialog_delete_album_message">คุณแน่ใจหรือไม่ว่าต้องการลบ "%1$s" ออกจากอุปกรณ์ของคุณ?</string>
     <string name="delete_song_success">ลบ %1$s แล้ว</string>
-    <string name="delete_album_success">ลบอัลบั้ม %1$s แล้ว (%2$d เพลง)</string>
     <string name="delete_permission_denied">การอนุญาตให้ลบเพลงถูกปฏิเสธ</string>
     <string name="delete_failed">ไม่สามารถลบเพลงได้</string>
-    <string name="delete_partial_failure">ลบแล้ว %1$d เพลง ไม่สามารถลบได้: %2$s</string>
+    <string name="delete_progress">กำลังลบ…</string>
+    <plurals name="dialog_delete_album_tracks_count">
+        <item quantity="other">การดำเนินการนี้จะลบไฟล์เพลงทั้งหมด %1$d ไฟล์ในอัลบั้มนี้อย่างถาวร</item>
+    </plurals>
+    <plurals name="delete_album_success">
+        <item quantity="other">ลบ "%1$s" และเพลง %2$d เพลงแล้ว</item>
+    </plurals>
+    <plurals name="delete_partial_failure">
+        <item quantity="other">ลบแล้ว %1$d ไฟล์ ไม่สามารถลบได้: %2$s</item>
+    </plurals>
 </resources>
