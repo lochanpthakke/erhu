@@ -10,8 +10,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -66,6 +70,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -73,6 +78,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.erhu.erhu.R
 import com.erhu.erhu.audioPermission
+import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.findActivity
@@ -153,7 +159,23 @@ fun OnboardingScreen(
             }.getOrDefault(false)
         }
     val pages = remember(vybeEnabled, widgetsAvailable) { introductionPages(vybeEnabled, widgetsAvailable) }
-    var savedPage by rememberSaveable { mutableStateOf(IntroductionPage.WELCOME.name) }
+    val initialLanguageTag =
+        remember(context) {
+            val current = AppLocaleManager.selectedLanguageTag(context)
+            if (current != null) {
+                current
+            } else {
+                val sysLocale = AppLocaleManager.systemLocale(context)
+                val detected =
+                    AppLocaleManager.findSupportedTag(sysLocale.toLanguageTag())
+                        ?: AppLocaleManager.findSupportedTag(sysLocale.language)
+                        ?: "en"
+                AppLocaleManager.setLanguageTag(context, detected)
+                detected
+            }
+        }
+    var selectedLanguageTag by rememberSaveable { mutableStateOf(initialLanguageTag) }
+    var savedPage by rememberSaveable { mutableStateOf(IntroductionPage.LANGUAGE.name) }
     var finishing by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -263,6 +285,11 @@ fun OnboardingScreen(
                             onVybeEnabledChange = onVybeEnabledChange,
                             glassEffectEnabled = glassEffectEnabled,
                             onGlassEffectEnabledChange = onGlassEffectEnabledChange,
+                            selectedLanguageTag = selectedLanguageTag,
+                            onLanguageSelected = { tag ->
+                                selectedLanguageTag = tag
+                                AppLocaleManager.setLanguageTag(context, tag)
+                            },
                         )
                     }
                     Surface(color = Color(0xed11161b), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
@@ -331,6 +358,8 @@ fun OnboardingScreen(
                                             when {
                                                 finishing -> CommonR.string.action_saving
                                                 pager.settledPage == pages.lastIndex -> CommonR.string.onboarding_start_listening
+                                                pager.settledPage == 0 && pages.firstOrNull() == IntroductionPage.LANGUAGE ->
+                                                    CommonR.string.action_continue
                                                 else -> CommonR.string.action_next
                                             },
                                         ),
@@ -345,7 +374,7 @@ fun OnboardingScreen(
     }
 }
 
-@Suppress("LongMethod", "CyclomaticComplexMethod") // Keep the existing page explanations and callbacks together.
+@Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList") // Keep the existing page explanations and callbacks together.
 @Composable
 private fun IntroductionContent(
     page: IntroductionPage,
@@ -361,6 +390,8 @@ private fun IntroductionContent(
     onVybeEnabledChange: (Boolean) -> Unit,
     glassEffectEnabled: Boolean,
     onGlassEffectEnabledChange: (Boolean) -> Unit,
+    selectedLanguageTag: String,
+    onLanguageSelected: (String) -> Unit,
 ) {
     val toolGuide = remember(page) { page.toolGuide() }
     Column(
@@ -378,7 +409,8 @@ private fun IntroductionContent(
             stringResource(page.titleRes),
             style =
                 if (page == IntroductionPage.WELCOME ||
-                    page == IntroductionPage.READY
+                    page == IntroductionPage.READY ||
+                    page == IntroductionPage.LANGUAGE
                 ) {
                     MaterialTheme.typography.displaySmall
                 } else {
@@ -403,6 +435,12 @@ private fun IntroductionContent(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (page == IntroductionPage.LANGUAGE) {
+            LanguageSelectionContent(
+                selectedTag = selectedLanguageTag,
+                onLanguageSelected = onLanguageSelected,
+            )
+        }
         if (page == IntroductionPage.READY) {
             IntroductionVisual(page, null, active, motionEnabled)
         }
@@ -492,6 +530,8 @@ private fun IntroductionContent(
                     )
                 }
             }
+        } else if (page == IntroductionPage.LANGUAGE) {
+            // Language selection page has no preview gallery
         } else if (toolGuide != null) {
             PreviewGallery(page, active, motionEnabled)
             ToolGuideContent(page, toolGuide)
@@ -534,4 +574,95 @@ private fun PreviewGallery(
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+@Composable
+private fun LanguageSelectionContent(
+    selectedTag: String,
+    onLanguageSelected: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AppLocaleManager.supportedLanguages.forEach { language ->
+            LanguageSelectionItem(
+                language = language,
+                isSelected = language.tag == selectedTag,
+                onClick = { onLanguageSelected(language.tag) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LanguageSelectionItem(
+    language: com.erhu.erhu.core.common.locale.SupportedLanguage,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isSelected) Color(0xff2d3238) else Color(0xff181b1e),
+        border =
+            BorderStroke(
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.08f),
+            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f, fill = false)) {
+                Text(
+                    text = language.nativeName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (language.englishName != language.nativeName) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = language.englishName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            LanguageSelectionIndicator(isSelected)
+        }
+    }
+}
+
+@Composable
+private fun LanguageSelectionIndicator(isSelected: Boolean) {
+    if (isSelected) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp),
+        )
+    } else {
+        Box(
+            modifier =
+                Modifier
+                    .size(20.dp)
+                    .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
+        )
+    }
 }

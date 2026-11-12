@@ -343,41 +343,54 @@ private fun SmartMixHeader(
             maxLines = 1,
         )
         Spacer(modifier = Modifier.height(Spacing.lg))
-        Row(
-            modifier = Modifier.fillMaxWidth(ACTION_PAIR_WIDTH_FRACTION),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
+        SmartMixActions(
+            enabled = songs.isNotEmpty(),
+            onPlay = onPlay,
+            onShuffle = onShuffle,
+        )
+    }
+}
+
+@Composable
+private fun SmartMixActions(
+    enabled: Boolean,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(ACTION_PAIR_WIDTH_FRACTION),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Button(
+            onClick = onPlay,
+            enabled = enabled,
+            contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
+            modifier = Modifier.weight(1f),
         ) {
-            Button(
-                onClick = onPlay,
-                enabled = songs.isNotEmpty(),
-                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text(
-                    text = stringResource(CommonR.string.action_play),
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            FilledTonalButton(
-                onClick = onShuffle,
-                enabled = songs.isNotEmpty(),
-                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text(
-                    text = stringResource(CommonR.string.action_shuffle),
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
+            Spacer(modifier = Modifier.width(Spacing.xs))
+            Text(
+                text = stringResource(CommonR.string.action_play),
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        FilledTonalButton(
+            onClick = onShuffle,
+            enabled = enabled,
+            contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
+            modifier = Modifier.weight(1f),
+        ) {
+            Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
+            Spacer(modifier = Modifier.width(Spacing.xs))
+            Text(
+                text = stringResource(CommonR.string.action_shuffle),
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

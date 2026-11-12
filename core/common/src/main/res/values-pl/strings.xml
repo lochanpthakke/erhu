@@ -2105,4 +2105,20 @@
     <string name="library_tags_not_changed_error">Tagi nie zostały zmienione: %1$s</string>
     <string name="library_tags_write_failed_error">Nie udało się zapisać tagów: %1$s</string>
     <string name="transition_exact_points_title">Dokładne wartości punktów</string>
+    <string name="onboarding_page_language_title">Wybierz język</string>
+    <string name="onboarding_page_language_desc">Wybierz preferowany język dla aplikacji Erhu. Możesz go zmienić w dowolnym momencie w Ustawieniach.</string>
+    <string name="action_continue">Dalej</string>
+    <string name="action_yes">Tak</string>
+    <string name="action_no">Nie</string>
+    <string name="menu_delete_music">Usuń utwór</string>
+    <string name="menu_delete_album">Usuń album</string>
+    <string name="dialog_delete_music_title">Usuń utwór</string>
+    <string name="dialog_delete_music_message">Czy na pewno chcesz usunąć „%1$s” ze swojego urządzenia? Plik zostanie trwale usunięty.</string>
+    <string name="dialog_delete_album_title">Usuń album</string>
+    <string name="dialog_delete_album_message">Czy na pewno chcesz usunąć album „%1$s” ze swojego urządzenia? Spowoduje to trwałe usunięcie wszystkich %2$d plików muzycznych z tego albumu.</string>
+    <string name="delete_song_success">Usunięto %1$s</string>
+    <string name="delete_album_success">Usunięto album %1$s (utwory: %2$d)</string>
+    <string name="delete_permission_denied">Odmowa uprawnień do usunięcia plików</string>
+    <string name="delete_failed">Nie udało się usunąć muzyki</string>
+    <string name="delete_partial_failure">Usunięto %1$d utworów. Nie udało się usunąć: %2$s</string>
 </resources>

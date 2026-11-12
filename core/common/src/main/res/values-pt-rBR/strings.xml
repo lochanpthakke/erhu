@@ -2019,4 +2019,20 @@
     <string name="library_tags_not_changed_error">Tags não alteradas: %1$s</string>
     <string name="library_tags_write_failed_error">Não foi possível gravar as tags: %1$s</string>
     <string name="transition_exact_points_title">Valores exatos dos pontos</string>
+    <string name="onboarding_page_language_title">Escolha seu idioma</string>
+    <string name="onboarding_page_language_desc">Selecione o idioma de sua preferência para o Erhu. Você pode alterá-lo a qualquer momento nas Configurações.</string>
+    <string name="action_continue">Continuar</string>
+    <string name="action_yes">Sim</string>
+    <string name="action_no">Não</string>
+    <string name="menu_delete_music">Excluir música</string>
+    <string name="menu_delete_album">Excluir álbum</string>
+    <string name="dialog_delete_music_title">Excluir música</string>
+    <string name="dialog_delete_music_message">Tem certeza de que deseja excluir "%1$s" do seu dispositivo? O arquivo será excluído permanentemente.</string>
+    <string name="dialog_delete_album_title">Excluir álbum</string>
+    <string name="dialog_delete_album_message">Tem certeza de que deseja excluir "%1$s" do seu dispositivo? Isso excluirá permanentemente todos os %2$d arquivos de música deste álbum.</string>
+    <string name="delete_song_success">Excluído %1$s</string>
+    <string name="delete_album_success">Álbum %1$s excluído (%2$d faixas)</string>
+    <string name="delete_permission_denied">Permissão negada para excluir música</string>
+    <string name="delete_failed">Falha ao excluir música</string>
+    <string name="delete_partial_failure">%1$d faixas excluídas. Não foi possível excluir: %2$s</string>
 </resources>

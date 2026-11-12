@@ -1976,4 +1976,20 @@
     <string name="library_tags_not_changed_error">Tag tidak diubah: %1$s</string>
     <string name="library_tags_write_failed_error">Tidak dapat menulis tag: %1$s</string>
     <string name="transition_exact_points_title">Nilai titik persis</string>
+    <string name="onboarding_page_language_title">Pilih bahasa Anda</string>
+    <string name="onboarding_page_language_desc">Pilih bahasa pilihan Anda untuk Erhu. Anda dapat mengubahnya kapan saja di Pengaturan.</string>
+    <string name="action_continue">Lanjutkan</string>
+    <string name="action_yes">Ya</string>
+    <string name="action_no">Tidak</string>
+    <string name="menu_delete_music">Hapus Lagu</string>
+    <string name="menu_delete_album">Hapus Album</string>
+    <string name="dialog_delete_music_title">Hapus Lagu</string>
+    <string name="dialog_delete_music_message">Apakah Anda yakin ingin menghapus "%1$s" dari perangkat Anda? Berkas ini akan dihapus secara permanen.</string>
+    <string name="dialog_delete_album_title">Hapus Album</string>
+    <string name="dialog_delete_album_message">Apakah Anda yakin ingin menghapus "%1$s" dari perangkat Anda? Tindakan ini akan menghapus semua %2$d berkas musik dalam album ini secara permanen.</string>
+    <string name="delete_song_success">"%1$s" telah dihapus</string>
+    <string name="delete_album_success">Album "%1$s" telah dihapus (%2$d trek)</string>
+    <string name="delete_permission_denied">Izin menghapus musik ditolak</string>
+    <string name="delete_failed">Gagal menghapus musik</string>
+    <string name="delete_partial_failure">%1$d trek dihapus. Tidak dapat menghapus: %2$s</string>
 </resources>

@@ -8,6 +8,7 @@ internal enum class IntroductionPage(
     @StringRes val titleRes: Int,
     @StringRes val descriptionRes: Int,
 ) {
+    LANGUAGE(CommonR.string.onboarding_page_language_title, CommonR.string.onboarding_page_language_desc),
     WELCOME(CommonR.string.onboarding_page_welcome_title, CommonR.string.onboarding_page_welcome_desc),
     LIBRARY(CommonR.string.onboarding_page_library_title, CommonR.string.onboarding_page_library_desc),
     ARTWORK(CommonR.string.onboarding_page_artwork_title, CommonR.string.onboarding_page_artwork_desc),
@@ -35,7 +36,7 @@ internal fun restoredIntroductionPage(
     saved: String,
     pages: List<IntroductionPage>,
 ): Int {
-    val previous = IntroductionPage.entries.firstOrNull { it.name == saved } ?: IntroductionPage.WELCOME
+    val previous = IntroductionPage.entries.firstOrNull { it.name == saved } ?: IntroductionPage.LANGUAGE
     return pages.indexOf(previous).takeIf { it >= 0 }
         ?: pages.indexOfFirst { it.ordinal > previous.ordinal }.takeIf { it >= 0 }
         ?: 0
@@ -86,5 +87,7 @@ internal fun IntroductionPage.previews(): List<IntroductionPreview> =
                 IntroductionPreview(CommonR.string.onboarding_preview_studio, R.drawable.onb_transition_studio),
                 IntroductionPreview(CommonR.string.onboarding_preview_volume_panel, R.drawable.onb_transition_volume),
             )
-        IntroductionPage.READY -> emptyList()
+        IntroductionPage.LANGUAGE,
+        IntroductionPage.READY,
+        -> emptyList()
     }

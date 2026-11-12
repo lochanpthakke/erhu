@@ -1976,4 +1976,20 @@
     <string name="library_tags_not_changed_error">태그가 변경되지 않았습니다: %1$s</string>
     <string name="library_tags_write_failed_error">태그를 쓸 수 없습니다: %1$s</string>
     <string name="transition_exact_points_title">정확한 포인트 값</string>
+    <string name="onboarding_page_language_title">언어 선택</string>
+    <string name="onboarding_page_language_desc">Erhu에서 사용할 언어를 선택하세요. 설정에서 언제든지 변경할 수 있습니다.</string>
+    <string name="action_continue">계속</string>
+    <string name="action_yes">예</string>
+    <string name="action_no">아니요</string>
+    <string name="menu_delete_music">음악 삭제</string>
+    <string name="menu_delete_album">앨범 삭제</string>
+    <string name="dialog_delete_music_title">음악 삭제</string>
+    <string name="dialog_delete_music_message">"%1$s"을(를) 기기에서 삭제하시겠습니까? 파일이 영구적으로 삭제됩니다.</string>
+    <string name="dialog_delete_album_title">앨범 삭제</string>
+    <string name="dialog_delete_album_message">"%1$s"을(를) 기기에서 삭제하시겠습니까? 이 앨범에 속한 모든 음악 파일(%2$d개)이 영구적으로 삭제됩니다.</string>
+    <string name="delete_song_success">"%1$s" 삭제 완료</string>
+    <string name="delete_album_success">"%1$s" 앨범 삭제 완료 (%2$d곡)</string>
+    <string name="delete_permission_denied">음악 삭제 권한이 거부되었습니다</string>
+    <string name="delete_failed">음악 삭제 실패</string>
+    <string name="delete_partial_failure">%1$d곡 삭제 완료. 삭제 실패: %2$s</string>
 </resources>

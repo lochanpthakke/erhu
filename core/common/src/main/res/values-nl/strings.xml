@@ -2019,4 +2019,20 @@
     <string name="library_tags_not_changed_error">Tags niet gewijzigd: %1$s</string>
     <string name="library_tags_write_failed_error">Kon tags niet schrijven: %1$s</string>
     <string name="transition_exact_points_title">Exacte puntwaarden</string>
+    <string name="onboarding_page_language_title">Kies je taal</string>
+    <string name="onboarding_page_language_desc">Selecteer je voorkeurstaal voor Erhu. Je kunt dit op elk moment wijzigen in Instellingen.</string>
+    <string name="action_continue">Doorgaan</string>
+    <string name="action_yes">Ja</string>
+    <string name="action_no">Nee</string>
+    <string name="menu_delete_music">Nummer verwijderen</string>
+    <string name="menu_delete_album">Album verwijderen</string>
+    <string name="dialog_delete_music_title">Nummer verwijderen</string>
+    <string name="dialog_delete_music_message">Weet je zeker dat je „%1$s“ van je apparaat wilt verwijderen? Het bestand wordt permanent verwijderd.</string>
+    <string name="dialog_delete_album_title">Album verwijderen</string>
+    <string name="dialog_delete_album_message">Weet je zeker dat je „%1$s“ van je apparaat wilt verwijderen? Hiermee worden alle %2$d muziekbestanden in dit album permanent verwijderd.</string>
+    <string name="delete_song_success">„%1$s“ verwijderd</string>
+    <string name="delete_album_success">Album „%1$s“ verwijderd (%2$d nummers)</string>
+    <string name="delete_permission_denied">Toestemming om muziek te verwijderen geweigerd</string>
+    <string name="delete_failed">Muziek verwijderen mislukt</string>
+    <string name="delete_partial_failure">%1$d nummers verwijderd. Kon niet verwijderen: %2$s</string>
 </resources>

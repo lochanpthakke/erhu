@@ -14,6 +14,7 @@ import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.appResultOf
 import com.erhu.erhu.core.database.dao.AlbumDao
 import com.erhu.erhu.core.database.dao.ArtistDao
+import com.erhu.erhu.core.database.dao.PlaylistDao
 import com.erhu.erhu.core.database.dao.SongDao
 import com.erhu.erhu.core.database.mapper.toDomainModel
 import com.erhu.erhu.core.model.Album
@@ -36,6 +37,7 @@ class LibraryRepositoryImpl
         private val songDao: SongDao,
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
+        private val playlistDao: PlaylistDao,
         // Lazy: this repository is created during Application injection (widget
         // updater), before HiltWorkerFactory is ready for WorkManager's config.
         private val workManager: Lazy<WorkManager>,
@@ -173,6 +175,14 @@ class LibraryRepositoryImpl
                 val song = songDao.getSongById(songId)
                 if (song != null) {
                     songDao.setFavorite(songId, !song.isFavorite)
+                }
+            }
+
+        override suspend fun deleteSongsFromDatabase(songIds: List<Long>): AppResult<Unit> =
+            appResultOf {
+                songIds.chunked(500).forEach { chunk ->
+                    songDao.deleteSongsByIds(chunk)
+                    playlistDao.deleteSongsFromAllPlaylists(chunk)
                 }
             }
 

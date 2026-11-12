@@ -2063,4 +2063,20 @@
     <string name="library_tags_not_changed_error">Etichetele nu au fost modificate: %1$s</string>
     <string name="library_tags_write_failed_error">Nu s-au putut scrie etichetele: %1$s</string>
     <string name="transition_exact_points_title">Valori exacte ale punctelor</string>
+    <string name="onboarding_page_language_title">Alegeți limba</string>
+    <string name="onboarding_page_language_desc">Selectați limba preferată pentru Erhu. O puteți modifica oricând din Setări.</string>
+    <string name="action_continue">Continuați</string>
+    <string name="action_yes">Da</string>
+    <string name="action_no">Nu</string>
+    <string name="menu_delete_music">Șterge melodia</string>
+    <string name="menu_delete_album">Șterge albumul</string>
+    <string name="dialog_delete_music_title">Șterge melodia</string>
+    <string name="dialog_delete_music_message">Sigur doriți să ștergeți „%1$s” de pe dispozitiv? Fișierul va fi șters definitiv.</string>
+    <string name="dialog_delete_album_title">Șterge albumul</string>
+    <string name="dialog_delete_album_message">Sigur doriți să ștergeți „%1$s” de pe dispozitiv? Toate cele %2$d fișiere audio din acest album vor fi șterse definitiv.</string>
+    <string name="delete_song_success">S-a șters %1$s</string>
+    <string name="delete_album_success">S-a șters albumul %1$s (%2$d piese)</string>
+    <string name="delete_permission_denied">Permisiunea de a șterge muzica a fost refuzată</string>
+    <string name="delete_failed">Ștergerea muzicii a eșuat</string>
+    <string name="delete_partial_failure">S-au șters %1$d piese. Nu s-au putut șterge: %2$s</string>
 </resources>

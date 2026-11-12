@@ -2015,6 +2015,158 @@ class LibraryViewModel
 
         fun onWriteAccessResult(granted: Boolean) = metadataWriteAccess.onResult(granted)
 
+        private suspend fun withDeleteAccess(
+            contentUris: List<String>,
+            onGranted: suspend () -> Unit,
+            onDenied: suspend () -> Unit,
+        ) = metadataWriteAccess.withDeleteAccess(contentUris, appContext.contentResolver, onGranted, onDenied)
+
+        private val deleteMutex = kotlinx.coroutines.sync.Mutex()
+        private var isDeleting = false
+
+        fun deleteSong(song: Song) {
+            if (isDeleting) return
+            viewModelScope.launch {
+                if (!deleteMutex.tryLock()) return@launch
+                isDeleting = true
+                try {
+                    executeSongDeletion(song)
+                } finally {
+                    isDeleting = false
+                    deleteMutex.unlock()
+                }
+            }
+        }
+
+        fun deleteAlbum(
+            album: Album,
+            albumSongs: List<Song> = emptyList(),
+        ) {
+            if (isDeleting) return
+            viewModelScope.launch {
+                if (!deleteMutex.tryLock()) return@launch
+                isDeleting = true
+                try {
+                    val songs =
+                        if (albumSongs.isNotEmpty()) {
+                            albumSongs
+                        } else {
+                            libraryRepository.getSongsByAlbumId(album.id).first()
+                        }
+                    executeAlbumDeletion(album, songs)
+                } finally {
+                    isDeleting = false
+                    deleteMutex.unlock()
+                }
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught")
+        private suspend fun executeSongDeletion(song: Song) {
+            val context = localized()
+            val uris = listOf(song.uri)
+            withDeleteAccess(
+                contentUris = uris,
+                onGranted = {
+                    try {
+                        appContext.contentResolver.delete(android.net.Uri.parse(song.uri), null, null)
+                    } catch (_: Exception) {
+                    }
+                    val file = song.filePath?.let { java.io.File(it) }
+                    if (file != null && file.exists()) {
+                        file.delete()
+                    }
+
+                    if (playbackRepository.playbackState.value.currentSong
+                            ?.id == song.id
+                    ) {
+                        playbackRepository.skipNext()
+                    }
+
+                    libraryRepository.deleteSongsFromDatabase(listOf(song.id))
+                    ArtworkLoader.invalidate(song.uri)
+                    libraryRepository.requestRescanAfterChange()
+
+                    _userMessage.value = context.getString(CommonR.string.delete_song_success, song.title)
+                },
+                onDenied = {
+                    _userMessage.value = context.getString(CommonR.string.delete_permission_denied)
+                },
+            )
+        }
+
+        @Suppress("TooGenericExceptionCaught", "CyclomaticComplexMethod", "LongMethod")
+        private suspend fun executeAlbumDeletion(
+            album: Album,
+            songs: List<Song>,
+        ) {
+            val context = localized()
+            if (songs.isEmpty()) {
+                _userMessage.value = context.getString(CommonR.string.delete_failed)
+                return
+            }
+            val uris = songs.map { it.uri }
+            withDeleteAccess(
+                contentUris = uris,
+                onGranted = {
+                    val failedTitles = mutableListOf<String>()
+                    var deletedCount = 0
+                    val deletedIds = mutableListOf<Long>()
+
+                    for (song in songs) {
+                        var deleted = false
+                        try {
+                            val count = appContext.contentResolver.delete(android.net.Uri.parse(song.uri), null, null)
+                            if (count > 0) deleted = true
+                        } catch (_: Exception) {
+                        }
+                        val file = song.filePath?.let { java.io.File(it) }
+                        if (file != null && file.exists()) {
+                            if (file.delete()) deleted = true
+                        } else {
+                            deleted = true
+                        }
+
+                        if (deleted) {
+                            deletedCount++
+                            deletedIds += song.id
+                            ArtworkLoader.invalidate(song.uri)
+                        } else {
+                            failedTitles += song.title
+                        }
+                    }
+
+                    val currentPlayingId =
+                        playbackRepository.playbackState.value.currentSong
+                            ?.id
+                    if (currentPlayingId != null && deletedIds.contains(currentPlayingId)) {
+                        playbackRepository.skipNext()
+                    }
+
+                    if (deletedIds.isNotEmpty()) {
+                        libraryRepository.deleteSongsFromDatabase(deletedIds)
+                        libraryRepository.requestRescanAfterChange()
+                    }
+
+                    if (failedTitles.isEmpty()) {
+                        _userMessage.value = context.getString(CommonR.string.delete_album_success, album.title, deletedCount)
+                    } else if (deletedCount > 0) {
+                        _userMessage.value =
+                            context.getString(
+                                CommonR.string.delete_partial_failure,
+                                deletedCount,
+                                failedTitles.joinToString(", "),
+                            )
+                    } else {
+                        _userMessage.value = context.getString(CommonR.string.delete_failed)
+                    }
+                },
+                onDenied = {
+                    _userMessage.value = context.getString(CommonR.string.delete_permission_denied)
+                },
+            )
+        }
+
         companion object {
             // The plan's generic notes, replaced by the specific reason when there is one.
 

@@ -2191,4 +2191,20 @@
     <string name="library_tags_not_changed_error">لم تتغير الوسوم: %1$s</string>
     <string name="library_tags_write_failed_error">تعذرت كتابة الوسوم: %1$s</string>
     <string name="transition_exact_points_title">القيم الدقيقة للنقطة</string>
+    <string name="onboarding_page_language_title">اختر لغتك</string>
+    <string name="onboarding_page_language_desc">حدد لغتك المفضلة لتطبيق Erhu. يمكنك تغييرها في أي وقت من الإعدادات.</string>
+    <string name="action_continue">متابعة</string>
+    <string name="action_yes">نعم</string>
+    <string name="action_no">لا</string>
+    <string name="menu_delete_music">حذف المقطع</string>
+    <string name="menu_delete_album">حذف الألبوم</string>
+    <string name="dialog_delete_music_title">حذف المقطع</string>
+    <string name="dialog_delete_music_message">هل أنت متأكد من رغبتك في حذف "%1$s" من جهازك؟ سيتم حذف الملف نهائياً.</string>
+    <string name="dialog_delete_album_title">حذف الألبوم</string>
+    <string name="dialog_delete_album_message">هل أنت متأكد من رغبتك في حذف "%1$s" من جهازك؟ سيؤدي ذلك إلى حذف جميع ملفات الموسيقى البالغ عددها %2$d في هذا الألبوم نهائياً.</string>
+    <string name="delete_song_success">تم حذف %1$s</string>
+    <string name="delete_album_success">تم حذف الألبوم %1$s (%2$d مقطع)</string>
+    <string name="delete_permission_denied">تم رفض إذن حذف الموسيقى</string>
+    <string name="delete_failed">فشل حذف الموسيقى</string>
+    <string name="delete_partial_failure">تم حذف %1$d مقطع. تعذر حذف: %2$s</string>
 </resources>

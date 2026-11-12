@@ -1976,4 +1976,20 @@
     <string name="library_tags_not_changed_error">ไม่ได้เปลี่ยนแท็ก: %1$s</string>
     <string name="library_tags_write_failed_error">ไม่สามารถเขียนแท็กได้: %1$s</string>
     <string name="transition_exact_points_title">ค่าจุดที่แน่นอน</string>
+    <string name="onboarding_page_language_title">เลือกภาษาของคุณ</string>
+    <string name="onboarding_page_language_desc">เลือกภาษาที่คุณต้องการสำหรับ Erhu คุณสามารถเปลี่ยนได้ตลอดเวลาในการตั้งค่า</string>
+    <string name="action_continue">ดำเนินการต่อ</string>
+    <string name="action_yes">ใช่</string>
+    <string name="action_no">ไม่</string>
+    <string name="menu_delete_music">ลบเพลง</string>
+    <string name="menu_delete_album">ลบอัลบั้ม</string>
+    <string name="dialog_delete_music_title">ลบเพลง</string>
+    <string name="dialog_delete_music_message">คุณแน่ใจหรือไม่ว่าต้องการลบ "%1$s" ออกจากอุปกรณ์ของคุณ? ไฟล์นี้จะถูกลบอย่างถาวร</string>
+    <string name="dialog_delete_album_title">ลบอัลบั้ม</string>
+    <string name="dialog_delete_album_message">คุณแน่ใจหรือไม่ว่าต้องการลบ "%1$s" ออกจากอุปกรณ์ของคุณ? การดำเนินการนี้จะลบไฟล์เพลงทั้งหมด %2$d ไฟล์ในอัลบั้มนี้อย่างถาวร</string>
+    <string name="delete_song_success">ลบ %1$s แล้ว</string>
+    <string name="delete_album_success">ลบอัลบั้ม %1$s แล้ว (%2$d เพลง)</string>
+    <string name="delete_permission_denied">การอนุญาตให้ลบเพลงถูกปฏิเสธ</string>
+    <string name="delete_failed">ไม่สามารถลบเพลงได้</string>
+    <string name="delete_partial_failure">ลบแล้ว %1$d เพลง ไม่สามารถลบได้: %2$s</string>
 </resources>

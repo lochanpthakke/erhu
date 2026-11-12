@@ -59,6 +59,9 @@ interface PlaylistDao {
     @Query("DELETE FROM playlist_song_cross_ref WHERE playlist_id = :playlistId")
     suspend fun deleteAllSongsFromPlaylist(playlistId: Long): Int
 
+    @Query("DELETE FROM playlist_song_cross_ref WHERE song_id IN (:songIds)")
+    suspend fun deleteSongsFromAllPlaylists(songIds: List<Long>): Int
+
     /** Cross-refs have no foreign keys, so remove them explicitly with the playlist. */
     @Transaction
     suspend fun deletePlaylist(playlistId: Long) {

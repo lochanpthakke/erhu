@@ -2019,4 +2019,20 @@
     <string name="library_tags_not_changed_error">Tags not changed: %1$s</string>
     <string name="library_tags_write_failed_error">Couldn\'t write tags: %1$s</string>
     <string name="transition_exact_points_title">Exact point values</string>
+    <string name="onboarding_page_language_title">Choose your language</string>
+    <string name="onboarding_page_language_desc">Select your preferred language for Erhu. You can change this anytime in Settings.</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_yes">Yes</string>
+    <string name="action_no">No</string>
+    <string name="menu_delete_music">Delete Music</string>
+    <string name="menu_delete_album">Delete Album</string>
+    <string name="dialog_delete_music_title">Delete Music</string>
+    <string name="dialog_delete_music_message">Are you sure you want to delete "%1$s" from your device? This will permanently delete the file.</string>
+    <string name="dialog_delete_album_title">Delete Album</string>
+    <string name="dialog_delete_album_message">Are you sure you want to delete "%1$s" from your device? This will permanently delete all %2$d music files in this album.</string>
+    <string name="delete_song_success">Deleted %1$s</string>
+    <string name="delete_album_success">Deleted album %1$s (%2$d tracks)</string>
+    <string name="delete_permission_denied">Permission denied to delete music</string>
+    <string name="delete_failed">Failed to delete music</string>
+    <string name="delete_partial_failure">Deleted %1$d tracks. Could not delete: %2$s</string>
 </resources>

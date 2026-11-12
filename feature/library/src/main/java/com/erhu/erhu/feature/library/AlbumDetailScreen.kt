@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -168,6 +169,8 @@ fun AlbumDetailScreen(
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
     var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
+    var songToDelete by remember { mutableStateOf<Song?>(null) }
+    var confirmDeleteAlbum by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     UserMessageEffect(viewModel.userMessage, snackbarHostState, viewModel::consumeUserMessage)
@@ -186,6 +189,9 @@ fun AlbumDetailScreen(
             },
             onViewMetadata = { song ->
                 songForViewMetadata = song
+            },
+            onDeleteMusic = { song ->
+                songToDelete = song
             },
         )
 
@@ -315,6 +321,15 @@ fun AlbumDetailScreen(
                                         onClick = {
                                             menuExpanded = false
                                             showStudio = true
+                                        },
+                                    )
+                                    GlassMenuItem(
+                                        icon = Icons.Default.DeleteOutline,
+                                        destructive = true,
+                                        text = { Text(stringResource(CommonR.string.menu_delete_album)) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            confirmDeleteAlbum = true
                                         },
                                     )
                                 }
@@ -454,6 +469,29 @@ fun AlbumDetailScreen(
             songs = songs,
             viewModel = playlistsViewModel,
             onDismiss = { songsForPlaylist = null },
+        )
+    }
+
+    songToDelete?.let { song ->
+        DeleteSongConfirmationDialog(
+            song = song,
+            onConfirm = { viewModel.deleteSong(song) },
+            onDismiss = { songToDelete = null },
+        )
+    }
+
+    if (confirmDeleteAlbum && detail?.album != null) {
+        val album = detail.album
+        val albumSongs = detail.songs
+        DeleteAlbumConfirmationDialog(
+            albumTitle = album.title,
+            trackCount = albumSongs.size,
+            onConfirm = {
+                confirmDeleteAlbum = false
+                viewModel.deleteAlbum(album, albumSongs)
+                onBack()
+            },
+            onDismiss = { confirmDeleteAlbum = false },
         )
     }
 }

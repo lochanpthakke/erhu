@@ -1976,4 +1976,20 @@
     <string name="library_tags_not_changed_error">タグは変更されませんでした: %1$s</string>
     <string name="library_tags_write_failed_error">タグを書き込めませんでした: %1$s</string>
     <string name="transition_exact_points_title">正確なポイント値</string>
+    <string name="onboarding_page_language_title">言語を選択</string>
+    <string name="onboarding_page_language_desc">Erhu で使用する言語を選択してください。設定からいつでも変更できます。</string>
+    <string name="action_continue">続ける</string>
+    <string name="action_yes">はい</string>
+    <string name="action_no">いいえ</string>
+    <string name="menu_delete_music">曲を削除</string>
+    <string name="menu_delete_album">アルバムを削除</string>
+    <string name="dialog_delete_music_title">曲を削除</string>
+    <string name="dialog_delete_music_message">「%1$s」を端末から削除してもよろしいですか？ファイルは完全に削除されます。</string>
+    <string name="dialog_delete_album_title">アルバムを削除</string>
+    <string name="dialog_delete_album_message">「%1$s」を端末から削除してもよろしいですか？このアルバムに含まれる %2$d 件の音楽ファイルがすべて完全に削除されます。</string>
+    <string name="delete_song_success">「%1$s」を削除しました</string>
+    <string name="delete_album_success">アルバム「%1$s」（%2$d 曲）を削除しました</string>
+    <string name="delete_permission_denied">音楽を削除する権限が拒否されました</string>
+    <string name="delete_failed">音楽の削除に失敗しました</string>
+    <string name="delete_partial_failure">%1$d 曲を削除しました。削除できなかった曲: %2$s</string>
 </resources>

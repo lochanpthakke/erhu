@@ -2062,4 +2062,20 @@
     <string name="library_tags_not_changed_error">Tags non modifiés : %1$s</string>
     <string name="library_tags_write_failed_error">Impossible d\'écrire les tags : %1$s</string>
     <string name="transition_exact_points_title">Valeurs exactes des points</string>
+    <string name="onboarding_page_language_title">Choisissez votre langue</string>
+    <string name="onboarding_page_language_desc">Sélectionnez votre langue préférée pour Erhu. Vous pouvez la modifier à tout moment dans les Paramètres.</string>
+    <string name="action_continue">Continuer</string>
+    <string name="action_yes">Oui</string>
+    <string name="action_no">Non</string>
+    <string name="menu_delete_music">Supprimer la musique</string>
+<string name="menu_delete_album">Supprimer l\'album</string>
+    <string name="dialog_delete_music_title">Supprimer la musique</string>
+    <string name="dialog_delete_music_message">Voulez-vous vraiment supprimer « %1$s » de votre appareil ? Le fichier sera définitivement supprimé.</string>
+<string name="dialog_delete_album_title">Supprimer l\'album</string>
+    <string name="dialog_delete_album_message">Voulez-vous vraiment supprimer « %1$s » de votre appareil ? Cela supprimera définitivement les %2$d fichiers musicaux de cet album.</string>
+    <string name="delete_song_success">%1$s supprimé</string>
+    <string name="delete_album_success">Album %1$s supprimé (%2$d pistes)</string>
+    <string name="delete_permission_denied">Autorisation refusée pour supprimer la musique</string>
+    <string name="delete_failed">Échec de la suppression de la musique</string>
+    <string name="delete_partial_failure">%1$d pistes supprimées. Impossible de supprimer : %2$s</string>
 </resources>

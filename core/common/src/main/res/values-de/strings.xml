@@ -2019,4 +2019,20 @@
     <string name="library_tags_not_changed_error">Tags nicht geändert: %1$s</string>
     <string name="library_tags_write_failed_error">Tags konnten nicht geschrieben werden: %1$s</string>
     <string name="transition_exact_points_title">Exakte Punktwerte</string>
+    <string name="onboarding_page_language_title">Sprache wählen</string>
+    <string name="onboarding_page_language_desc">Wähle deine bevorzugte Sprache für Erhu. Du kannst sie jederzeit in den Einstellungen ändern.</string>
+    <string name="action_continue">Weiter</string>
+    <string name="action_yes">Ja</string>
+    <string name="action_no">Nein</string>
+    <string name="menu_delete_music">Titel löschen</string>
+    <string name="menu_delete_album">Album löschen</string>
+    <string name="dialog_delete_music_title">Titel löschen</string>
+    <string name="dialog_delete_music_message">Möchtest du „%1$s“ wirklich von deinem Gerät löschen? Die Datei wird dauerhaft gelöscht.</string>
+    <string name="dialog_delete_album_title">Album löschen</string>
+    <string name="dialog_delete_album_message">Möchtest du „%1$s“ wirklich von deinem Gerät löschen? Dadurch werden alle %2$d Musikdateien dieses Albums dauerhaft gelöscht.</string>
+    <string name="delete_song_success">„%1$s“ gelöscht</string>
+    <string name="delete_album_success">Album „%1$s“ gelöscht (%2$d Titel)</string>
+    <string name="delete_permission_denied">Berechtigung zum Löschen von Musik verweigert</string>
+    <string name="delete_failed">Fehler beim Löschen der Musik</string>
+    <string name="delete_partial_failure">%1$d Titel gelöscht. Konnte nicht gelöscht werden: %2$s</string>
 </resources>

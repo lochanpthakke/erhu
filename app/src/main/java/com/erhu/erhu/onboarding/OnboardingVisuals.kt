@@ -182,7 +182,7 @@ private object IntroductionMotifs {
         curveStroke: Stroke,
     ) {
         when (page) {
-            IntroductionPage.WELCOME, IntroductionPage.LISTENING -> drawWaves(path, angle, hairline)
+            IntroductionPage.LANGUAGE, IntroductionPage.WELCOME, IntroductionPage.LISTENING -> drawWaves(path, angle, hairline)
             IntroductionPage.LIBRARY -> drawLibraryTiles(angle)
             IntroductionPage.ARTWORK -> drawArtworkLight(angle)
             IntroductionPage.TAGS -> drawDocuments(angle, false)

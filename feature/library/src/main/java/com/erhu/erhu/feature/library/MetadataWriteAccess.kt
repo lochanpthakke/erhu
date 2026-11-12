@@ -8,8 +8,20 @@
 
 package com.erhu.erhu.feature.library
 
+import android.Manifest
+import android.app.RecoverableSecurityException
+import android.content.ContentResolver
+import android.content.Context
+import android.content.IntentSender
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 import com.erhu.erhu.core.network.repository.MetadataRepository
 import com.erhu.erhu.core.network.tagger.WriteAuthorization
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,6 +38,7 @@ class MetadataWriteAccess
     @Inject
     constructor(
         private val metadata: MetadataRepository,
+        @ApplicationContext private val context: Context? = null,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         private val requestState = MutableStateFlow<WriteAuthorization?>(null)
@@ -52,6 +65,61 @@ class MetadataWriteAccess
                 launched = false
                 pending = Pending({ withWriteAccess(contentUris, onGranted, onDenied, attempt + 1) }, onDenied)
                 requestState.value = authorization
+            }
+
+        @Suppress("TooGenericExceptionCaught")
+        suspend fun withDeleteAccess(
+            contentUris: List<String>,
+            resolver: ContentResolver,
+            onGranted: suspend () -> Unit,
+            onDenied: suspend () -> Unit,
+        ): Unit =
+            mutex.withLock {
+                check(pending == null) { "Another operation is awaiting file access" }
+                val uris = contentUris.distinct().map(Uri::parse)
+                if (uris.isEmpty()) {
+                    onGranted()
+                    return@withLock
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    if (Environment.isExternalStorageManager()) {
+                        onGranted()
+                        return@withLock
+                    }
+                    val pendingIntent = MediaStore.createDeleteRequest(resolver, uris)
+                    launched = false
+                    pending = Pending(onGranted, onDenied)
+                    requestState.value = WriteAuthorization.NeedsUserConsent(pendingIntent.intentSender)
+                } else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                    var consentNeeded: IntentSender? = null
+                    for (uri in uris) {
+                        try {
+                            resolver.openFileDescriptor(uri, "rw")?.close()
+                        } catch (e: RecoverableSecurityException) {
+                            consentNeeded = e.userAction.actionIntent.intentSender
+                            break
+                        } catch (_: Exception) {
+                        }
+                    }
+                    if (consentNeeded != null) {
+                        launched = false
+                        pending = Pending(onGranted, onDenied)
+                        requestState.value = WriteAuthorization.NeedsUserConsent(consentNeeded)
+                    } else {
+                        onGranted()
+                    }
+                } else {
+                    val appCtx = context
+                    val permission = Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    if (appCtx == null || ContextCompat.checkSelfPermission(appCtx, permission) == PackageManager.PERMISSION_GRANTED) {
+                        onGranted()
+                    } else {
+                        launched = false
+                        pending = Pending(onGranted, onDenied)
+                        requestState.value = WriteAuthorization.NeedsPermission(permission)
+                    }
+                }
             }
 
         fun claimLaunch(): Boolean {

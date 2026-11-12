@@ -1976,4 +1976,20 @@
     <string name="library_tags_not_changed_error">Thẻ không thay đổi: %1$s</string>
     <string name="library_tags_write_failed_error">Không thể ghi thẻ: %1$s</string>
     <string name="transition_exact_points_title">Giá trị điểm chính xác</string>
+    <string name="onboarding_page_language_title">Chọn ngôn ngữ của bạn</string>
+    <string name="onboarding_page_language_desc">Chọn ngôn ngữ ưa thích của bạn cho Erhu. Bạn có thể thay đổi bất cứ lúc nào trong Cài đặt.</string>
+    <string name="action_continue">Tiếp tục</string>
+    <string name="action_yes">Có</string>
+    <string name="action_no">Không</string>
+    <string name="menu_delete_music">Xóa bài hát</string>
+    <string name="menu_delete_album">Xóa album</string>
+    <string name="dialog_delete_music_title">Xóa bài hát</string>
+    <string name="dialog_delete_music_message">Bạn có chắc chắn muốn xóa "%1$s" khỏi thiết bị của mình không? Tệp sẽ bị xóa vĩnh viễn.</string>
+    <string name="dialog_delete_album_title">Xóa album</string>
+    <string name="dialog_delete_album_message">Bạn có chắc chắn muốn xóa "%1$s" khỏi thiết bị của mình không? Thao tác này sẽ xóa vĩnh viễn tất cả %2$d tệp nhạc trong album này.</string>
+    <string name="delete_song_success">Đã xóa %1$s</string>
+    <string name="delete_album_success">Đã xóa album %1$s (%2$d bài hát)</string>
+    <string name="delete_permission_denied">Quyền xóa nhạc bị từ chối</string>
+    <string name="delete_failed">Không thể xóa nhạc</string>
+    <string name="delete_partial_failure">Đã xóa %1$d bài hát. Không thể xóa: %2$s</string>
 </resources>

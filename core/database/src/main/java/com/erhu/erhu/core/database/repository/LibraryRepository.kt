@@ -98,6 +98,9 @@ interface LibraryRepository {
 
     suspend fun toggleFavorite(songId: Long): AppResult<Unit>
 
+    /** Removes deleted songs and their playlist associations from local storage. */
+    suspend fun deleteSongsFromDatabase(songIds: List<Long>): AppResult<Unit>
+
     suspend fun triggerLibraryScan(): AppResult<Unit>
 
     /**

@@ -1976,4 +1976,20 @@
     <string name="library_tags_not_changed_error">标签未更改：%1$s</string>
     <string name="library_tags_write_failed_error">无法写入标签：%1$s</string>
     <string name="transition_exact_points_title">精确控制点数值</string>
+    <string name="onboarding_page_language_title">选择语言</string>
+    <string name="onboarding_page_language_desc">请选择您希望在 Erhu 中使用的语言。您可以随时在“设置”中进行更改。</string>
+    <string name="action_continue">继续</string>
+    <string name="action_yes">是</string>
+    <string name="action_no">否</string>
+    <string name="menu_delete_music">删除歌曲</string>
+    <string name="menu_delete_album">删除专辑</string>
+    <string name="dialog_delete_music_title">删除歌曲</string>
+    <string name="dialog_delete_music_message">确定要从设备中删除“%1$s”吗？该文件将被永久删除。</string>
+    <string name="dialog_delete_album_title">删除专辑</string>
+    <string name="dialog_delete_album_message">确定要从设备中删除“%1$s”吗？此专辑中的所有 %2$d 个音乐文件将被永久删除。</string>
+    <string name="delete_song_success">已删除 %1$s</string>
+    <string name="delete_album_success">已删除专辑 %1$s（%2$d 首曲目）</string>
+    <string name="delete_permission_denied">删除音乐的权限被拒绝</string>
+    <string name="delete_failed">删除音乐失败</string>
+    <string name="delete_partial_failure">已删除 %1$d 首曲目。无法删除：%2$s</string>
 </resources>

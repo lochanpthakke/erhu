@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Info
@@ -92,6 +93,7 @@ internal class SongActions(
     val onAddToPlaylist: (Song) -> Unit,
     val onFixTags: (Song) -> Unit,
     val onViewMetadata: (Song) -> Unit,
+    val onDeleteMusic: (Song) -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -144,6 +146,7 @@ fun LibraryScreen(
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
     var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
     var songForPlaylist by remember { mutableStateOf<Song?>(null) }
+    var songToDelete by remember { mutableStateOf<Song?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     UserMessageEffect(viewModel.userMessage, snackbarHostState, viewModel::consumeUserMessage)
@@ -162,6 +165,9 @@ fun LibraryScreen(
             },
             onViewMetadata = { song ->
                 songForViewMetadata = song
+            },
+            onDeleteMusic = { song ->
+                songToDelete = song
             },
         )
 
@@ -407,6 +413,14 @@ fun LibraryScreen(
             onDismiss = { songForPlaylist = null },
         )
     }
+
+    songToDelete?.let { song ->
+        DeleteSongConfirmationDialog(
+            song = song,
+            onConfirm = { viewModel.deleteSong(song) },
+            onDismiss = { songToDelete = null },
+        )
+    }
 }
 
 @Composable
@@ -551,6 +565,15 @@ internal fun LibrarySongRow(
                     onClick = {
                         menuExpanded = false
                         actions.onViewMetadata(song)
+                    },
+                )
+                GlassMenuItem(
+                    icon = Icons.Default.DeleteOutline,
+                    destructive = true,
+                    text = { Text(stringResource(CommonR.string.menu_delete_music)) },
+                    onClick = {
+                        menuExpanded = false
+                        actions.onDeleteMusic(song)
                     },
                 )
                 if (onRemoveFromPlaylist != null) {

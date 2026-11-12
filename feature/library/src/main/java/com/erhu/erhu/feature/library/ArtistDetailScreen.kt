@@ -142,6 +142,7 @@ fun ArtistDetailScreen(
     var songsForPlaylist by remember { mutableStateOf<List<Song>?>(null) }
     var songForFixTags by remember { mutableStateOf<Song?>(null) }
     var songForViewMetadata by remember { mutableStateOf<Song?>(null) }
+    var songToDelete by remember { mutableStateOf<Song?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     val customArtworkKeys by viewModel.customArtworkArtistKeys.collectAsState()
 
@@ -162,6 +163,9 @@ fun ArtistDetailScreen(
             },
             onViewMetadata = { song ->
                 songForViewMetadata = song
+            },
+            onDeleteMusic = { song ->
+                songToDelete = song
             },
         )
 
@@ -471,6 +475,14 @@ fun ArtistDetailScreen(
             songs = songs,
             viewModel = playlistsViewModel,
             onDismiss = { songsForPlaylist = null },
+        )
+    }
+
+    songToDelete?.let { song ->
+        DeleteSongConfirmationDialog(
+            song = song,
+            onConfirm = { viewModel.deleteSong(song) },
+            onDismiss = { songToDelete = null },
         )
     }
 

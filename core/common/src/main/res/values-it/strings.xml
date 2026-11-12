@@ -2019,4 +2019,20 @@
     <string name="library_tags_not_changed_error">Tag non modificati: %1$s</string>
     <string name="library_tags_write_failed_error">Impossibile scrivere i tag: %1$s</string>
     <string name="transition_exact_points_title">Valori esatti dei punti</string>
+    <string name="onboarding_page_language_title">Scegli la tua lingua</string>
+    <string name="onboarding_page_language_desc">Seleziona la lingua che preferisci per Erhu. Puoi modificarla in qualsiasi momento nelle Impostazioni.</string>
+    <string name="action_continue">Continua</string>
+    <string name="action_yes">Sì</string>
+    <string name="action_no">No</string>
+    <string name="menu_delete_music">Elimina brano</string>
+    <string name="menu_delete_album">Elimina album</string>
+    <string name="dialog_delete_music_title">Elimina brano</string>
+    <string name="dialog_delete_music_message">Vuoi davvero eliminare «%1$s» dal dispositivo? Il file verrà rimosso definitivamente.</string>
+    <string name="dialog_delete_album_title">Elimina album</string>
+    <string name="dialog_delete_album_message">Vuoi davvero eliminare «%1$s» dal dispositivo? Questa operazione eliminerà definitivamente tutti i %2$d file musicali di questo album.</string>
+    <string name="delete_song_success">«%1$s» eliminato</string>
+    <string name="delete_album_success">Album «%1$s» eliminato (%2$d brani)</string>
+<string name="delete_permission_denied">Autorizzazione all\'eliminazione della musica negata</string>
+    <string name="delete_failed">Impossibile eliminare la musica</string>
+    <string name="delete_partial_failure">Eliminati %1$d brani. Impossibile eliminare: %2$s</string>
 </resources>

@@ -2019,4 +2019,20 @@
     <string name="library_tags_not_changed_error">Etiketler değiştirilmedi: %1$s</string>
     <string name="library_tags_write_failed_error">Etiketler yazılamadı: %1$s</string>
     <string name="transition_exact_points_title">Tam nokta değerleri</string>
+    <string name="onboarding_page_language_title">Dilinizi seçin</string>
+<string name="onboarding_page_language_desc">Erhu için tercih ettiğiniz dili seçin. Bunu Ayarlar\'dan istediğiniz zaman değiştirebilirsiniz.</string>
+    <string name="action_continue">Devam Et</string>
+    <string name="action_yes">Evet</string>
+    <string name="action_no">Hayır</string>
+    <string name="menu_delete_music">Parçayı Sil</string>
+    <string name="menu_delete_album">Albümü Sil</string>
+    <string name="dialog_delete_music_title">Parçayı Sil</string>
+    <string name="dialog_delete_music_message">„%1$s“ adlı parçayı cihazınızdan silmek istediğinizden emin misiniz? Dosya kalıcı olarak silinecektir.</string>
+    <string name="dialog_delete_album_title">Albümü Sil</string>
+    <string name="dialog_delete_album_message">„%1$s“ albümünü cihazınızdan silmek istediğinizden emin misiniz? Bu işlem albümdeki %2$d müzik dosyasını kalıcı olarak silecektir.</string>
+    <string name="delete_song_success">%1$s silindi</string>
+    <string name="delete_album_success">%1$s albümü silindi (%2$d parça)</string>
+    <string name="delete_permission_denied">Müzik silme izni reddedildi</string>
+    <string name="delete_failed">Müzik silinemedi</string>
+    <string name="delete_partial_failure">%1$d parça silindi. Silinemeyenler: %2$s</string>
 </resources>

@@ -6,10 +6,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IntroductionPagesTest {
-    @Test fun allAvailableFeaturesHaveTwelvePagesWithBookends() {
+    @Test fun allAvailableFeaturesHaveThirteenPagesWithBookends() {
         val pages = introductionPages(true, true)
-        assertEquals(12, pages.size)
-        assertEquals(IntroductionPage.WELCOME, pages.first())
+        assertEquals(13, pages.size)
+        assertEquals(IntroductionPage.LANGUAGE, pages.first())
         assertEquals(IntroductionPage.READY, pages.last())
         assertEquals(pages.size, pages.distinct().size)
     }
@@ -18,11 +18,25 @@ class IntroductionPagesTest {
             val pages = introductionPages(vybe, widgets)
             assertEquals(vybe, IntroductionPage.VYBE in pages)
             assertEquals(widgets, IntroductionPage.WIDGETS in pages)
-            assertTrue(pages.filterNot { it == IntroductionPage.READY }.all { it.previews().isNotEmpty() || it.toolGuide() != null })
+            val contentPages = pages.filterNot {
+                it == IntroductionPage.READY || it == IntroductionPage.LANGUAGE
+            }
+            assertTrue(contentPages.all { it.previews().isNotEmpty() || it.toolGuide() != null })
         }
     }
     @Test fun currentPageIdentitySurvivesOptionalPageChanges() {
-        for (page in listOf(IntroductionPage.LIBRARY, IntroductionPage.ARTWORK, IntroductionPage.TAGS, IntroductionPage.BUILDER, IntroductionPage.LISTENING, IntroductionPage.TRANSITIONS, IntroductionPage.READY)) {
+        val testPages = listOf(
+            IntroductionPage.LANGUAGE,
+            IntroductionPage.WELCOME,
+            IntroductionPage.LIBRARY,
+            IntroductionPage.ARTWORK,
+            IntroductionPage.TAGS,
+            IntroductionPage.BUILDER,
+            IntroductionPage.LISTENING,
+            IntroductionPage.TRANSITIONS,
+            IntroductionPage.READY,
+        )
+        for (page in testPages) {
             for (vybe in listOf(false, true)) {
                 val pages = introductionPages(vybe, true)
                 assertEquals(page, pages[restoredIntroductionPage(page.name, pages)])
@@ -35,7 +49,7 @@ class IntroductionPagesTest {
         val withoutWidgets = introductionPages(false, false)
         assertEquals(IntroductionPage.READY, withoutWidgets[restoredIntroductionPage("VYBE", withoutWidgets)])
     }
-    @Test fun unknownSavedPageReturnsToWelcome() {
+    @Test fun unknownSavedPageReturnsToFirstPage() {
         assertEquals(0, restoredIntroductionPage("unknown-old-page", introductionPages(false, false)))
     }
 }

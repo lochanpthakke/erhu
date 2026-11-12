@@ -2105,4 +2105,20 @@
     <string name="library_tags_not_changed_error">Теги не изменены: %1$s</string>
     <string name="library_tags_write_failed_error">Не удалось записать теги: %1$s</string>
     <string name="transition_exact_points_title">Точные значения точки</string>
+    <string name="onboarding_page_language_title">Выберите язык</string>
+    <string name="onboarding_page_language_desc">Выберите предпочитаемый язык для Erhu. Вы можете изменить его в любое время в Настройках.</string>
+    <string name="action_continue">Продолжить</string>
+    <string name="action_yes">Да</string>
+    <string name="action_no">Нет</string>
+    <string name="menu_delete_music">Удалить трек</string>
+    <string name="menu_delete_album">Удалить альбом</string>
+    <string name="dialog_delete_music_title">Удалить трек</string>
+    <string name="dialog_delete_music_message">Вы действительно хотите удалить «%1$s» с вашего устройства? Файл будет удален безвозвратно.</string>
+    <string name="dialog_delete_album_title">Удалить альбом</string>
+    <string name="dialog_delete_album_message">Вы действительно хотите удалить «%1$s» с вашего устройства? Все файлы музыки (%2$d) в этом альбоме будут удалены безвозвратно.</string>
+    <string name="delete_song_success">Удалено: %1$s</string>
+    <string name="delete_album_success">Удален альбом %1$s (%2$d треков)</string>
+    <string name="delete_permission_denied">Отказано в разрешении на удаление музыки</string>
+    <string name="delete_failed">Не удалось удалить музыку</string>
+    <string name="delete_partial_failure">Удалено треков: %1$d. Не удалось удалить: %2$s</string>
 </resources>
