@@ -6,7 +6,7 @@ An Android music player for your own collection.
 
 <img src="images/showcase/hero.png" alt="erhu Home and Now Playing on a Galaxy S23" width="1200">
 
-## Current beta — 1.0.17
+## Current beta — 1.0.18
 
 The current beta is available as an ARM64 APK for Android 8.0 and newer. It has been tested on a Samsung Galaxy S23 running One UI. Compatibility with other devices is still being tested.
 
