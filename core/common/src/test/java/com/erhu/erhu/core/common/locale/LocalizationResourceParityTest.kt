@@ -92,6 +92,7 @@ class LocalizationResourceParityTest {
         val (baseWidgetStrings, _) = parseStrings(baseWidgetFile)
 
         val exposedTags = AppLocaleManager.supportedLanguages.map { it.tag }
+        assertEquals("All 20 target languages must be exposed", 20, exposedTags.size)
         assertTrue("Expected at least en in supportedLanguages", exposedTags.contains("en"))
 
         val localesConfigFile = File(root, "app/src/main/res/xml/locales_config.xml")
@@ -109,55 +110,71 @@ class LocalizationResourceParityTest {
 
         for (tag in exposedTags) {
             if (tag == "en") continue
-            val qualifier = tagToQualifier(tag)
-            val commonFile = File(root, "core/common/src/main/res/$qualifier/strings.xml")
-            val widgetFile = File(root, "app/src/main/res/$qualifier/widget_strings.xml")
-            assertTrue("Missing $commonFile", commonFile.exists())
-            assertTrue("Missing $widgetFile", widgetFile.exists())
+            verifyLocaleParity(root, tag, baseStrings, basePlurals, baseWidgetStrings)
+        }
+    }
 
-            val (locStrings, locPlurals) = parseStrings(commonFile)
-            assertEquals("[$tag] missing string keys", emptySet<String>(), baseStrings.keys - locStrings.keys)
-            assertEquals("[$tag] extra string keys", emptySet<String>(), locStrings.keys - baseStrings.keys)
+    private fun verifyLocaleParity(
+        root: File,
+        tag: String,
+        baseStrings: Map<String, String>,
+        basePlurals: Map<String, Map<String, String>>,
+        baseWidgetStrings: Map<String, String>,
+    ) {
+        val qualifier = tagToQualifier(tag)
+        val commonFile = File(root, "core/common/src/main/res/$qualifier/strings.xml")
+        val widgetFile = File(root, "app/src/main/res/$qualifier/widget_strings.xml")
+        assertTrue("Missing $commonFile", commonFile.exists())
+        assertTrue("Missing $widgetFile", widgetFile.exists())
 
-            for ((key, baseVal) in baseStrings) {
-                val locVal = locStrings.getValue(key)
+        val (locStrings, locPlurals) = parseStrings(commonFile)
+        verifyStringParity(tag, "string", baseStrings, locStrings)
+        verifyPluralsParity(tag, basePlurals, locPlurals)
+
+        val (locWidgetStrings, _) = parseStrings(widgetFile)
+        verifyStringParity(tag, "widget string", baseWidgetStrings, locWidgetStrings)
+    }
+
+    private fun verifyStringParity(
+        tag: String,
+        kind: String,
+        baseStrings: Map<String, String>,
+        locStrings: Map<String, String>,
+    ) {
+        assertEquals("[$tag] missing $kind keys", emptySet<String>(), baseStrings.keys - locStrings.keys)
+        assertEquals("[$tag] extra $kind keys", emptySet<String>(), locStrings.keys - baseStrings.keys)
+        for ((key, baseVal) in baseStrings) {
+            val locVal = locStrings.getValue(key)
+            assertEquals(
+                "[$tag] placeholder mismatch in $kind '$key'",
+                extractPlaceholders(baseVal),
+                extractPlaceholders(locVal),
+            )
+        }
+    }
+
+    private fun verifyPluralsParity(
+        tag: String,
+        basePlurals: Map<String, Map<String, String>>,
+        locPlurals: Map<String, Map<String, String>>,
+    ) {
+        assertEquals("[$tag] missing plurals keys", emptySet<String>(), basePlurals.keys - locPlurals.keys)
+        assertEquals("[$tag] extra plurals keys", emptySet<String>(), locPlurals.keys - basePlurals.keys)
+
+        val requiredQuantities = cldrRequiredQuantities.getValue(tag)
+        for ((key, baseItems) in basePlurals) {
+            val locItems = locPlurals.getValue(key)
+            assertTrue(
+                "[$tag] plurals '$key' missing CLDR quantities ${requiredQuantities - locItems.keys}",
+                locItems.keys.containsAll(requiredQuantities),
+            )
+            val baseOther = baseItems["other"] ?: baseItems.values.first()
+            val expectedPlaceholders = extractPlaceholders(baseOther)
+            for ((qty, text) in locItems) {
                 assertEquals(
-                    "[$tag] placeholder mismatch in string '$key'",
-                    extractPlaceholders(baseVal),
-                    extractPlaceholders(locVal),
-                )
-            }
-
-            assertEquals("[$tag] missing plurals keys", emptySet<String>(), basePlurals.keys - locPlurals.keys)
-            assertEquals("[$tag] extra plurals keys", emptySet<String>(), locPlurals.keys - basePlurals.keys)
-
-            val requiredQuantities = cldrRequiredQuantities.getValue(tag)
-            for ((key, baseItems) in basePlurals) {
-                val locItems = locPlurals.getValue(key)
-                assertTrue(
-                    "[$tag] plurals '$key' missing CLDR quantities ${requiredQuantities - locItems.keys}",
-                    locItems.keys.containsAll(requiredQuantities),
-                )
-                val baseOther = baseItems["other"] ?: baseItems.values.first()
-                val expectedPlaceholders = extractPlaceholders(baseOther)
-                for ((qty, text) in locItems) {
-                    assertEquals(
-                        "[$tag] placeholder mismatch in plurals '$key'[$qty]",
-                        expectedPlaceholders,
-                        extractPlaceholders(text),
-                    )
-                }
-            }
-
-            val (locWidgetStrings, _) = parseStrings(widgetFile)
-            assertEquals("[$tag] missing widget string keys", emptySet<String>(), baseWidgetStrings.keys - locWidgetStrings.keys)
-            assertEquals("[$tag] extra widget string keys", emptySet<String>(), locWidgetStrings.keys - baseWidgetStrings.keys)
-            for ((key, baseVal) in baseWidgetStrings) {
-                val locVal = locWidgetStrings.getValue(key)
-                assertEquals(
-                    "[$tag] placeholder mismatch in widget string '$key'",
-                    extractPlaceholders(baseVal),
-                    extractPlaceholders(locVal),
+                    "[$tag] placeholder mismatch in plurals '$key'[$qty]",
+                    expectedPlaceholders,
+                    extractPlaceholders(text),
                 )
             }
         }

@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">Trình phát nhạc</string>
+    <string name="widget_glass_name">Trình phát kính</string>
+    <string name="widget_vinyl_name">Trình phát đĩa than</string>
+    <string name="widget_idle_title">Chưa phát nhạc</string>
+    <string name="widget_idle_hint">Chọn nhạc trong erhu</string>
+    <string name="widget_cd_artwork">Ảnh bìa album</string>
+    <string name="widget_cd_favorite">Yêu thích</string>
+    <string name="widget_cd_previous">Trước</string>
+    <string name="widget_cd_play">Phát</string>
+    <string name="widget_cd_pause">Tạm dừng</string>
+    <string name="widget_cd_next">Tiếp theo</string>
+</resources>

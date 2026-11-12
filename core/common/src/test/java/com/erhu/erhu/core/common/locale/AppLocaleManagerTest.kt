@@ -124,4 +124,21 @@ class AppLocaleManagerTest {
         assertTrue(localized.getString(R.string.nav_library).isNotBlank())
         assertTrue(localized.getString(R.string.nav_library) != "Library")
     }
+
+    @Test
+    fun setLanguageTag_handlesIndonesianLegacyTagAndRegionalLocales() {
+        assertEquals("id", AppLocaleManager.findSupportedTag("in"))
+        assertEquals("id", AppLocaleManager.findSupportedTag("in-ID"))
+        assertEquals("pt-BR", AppLocaleManager.findSupportedTag("pt_BR"))
+        assertEquals("zh-CN", AppLocaleManager.findSupportedTag("zh_CN"))
+
+        for (tag in listOf("id", "pt-BR", "zh-CN", "ja", "ko", "th", "vi")) {
+            AppLocaleManager.setLanguageTag(context, tag)
+            assertEquals(tag, AppLocaleManager.selectedLanguageTag(context))
+            val localized = AppLocaleManager.localizedContext(context)
+            val label = localized.getString(R.string.nav_library)
+            assertTrue("Expected non-blank localized label for $tag", label.isNotBlank())
+            assertTrue("Expected non-English label for $tag", label != "Library")
+        }
+    }
 }

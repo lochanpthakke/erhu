@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">Pemutar musik</string>
+    <string name="widget_glass_name">Pemutar kaca</string>
+    <string name="widget_vinyl_name">Pemutar vinil</string>
+    <string name="widget_idle_title">Tidak ada yang diputar</string>
+    <string name="widget_idle_hint">Pilih musik di erhu</string>
+    <string name="widget_cd_artwork">Sampul album</string>
+    <string name="widget_cd_favorite">Favorit</string>
+    <string name="widget_cd_previous">Sebelumnya</string>
+    <string name="widget_cd_play">Putar</string>
+    <string name="widget_cd_pause">Jeda</string>
+    <string name="widget_cd_next">Berikutnya</string>
+</resources>

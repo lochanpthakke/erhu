@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">音乐播放器</string>
+    <string name="widget_glass_name">玻璃播放器</string>
+    <string name="widget_vinyl_name">黑胶播放器</string>
+    <string name="widget_idle_title">暂无播放</string>
+    <string name="widget_idle_hint">在 erhu 中选择音乐</string>
+    <string name="widget_cd_artwork">专辑封面</string>
+    <string name="widget_cd_favorite">收藏</string>
+    <string name="widget_cd_previous">上一首</string>
+    <string name="widget_cd_play">播放</string>
+    <string name="widget_cd_pause">暂停</string>
+    <string name="widget_cd_next">下一首</string>
+</resources>

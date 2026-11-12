@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">음악 플레이어</string>
+    <string name="widget_glass_name">글래스 플레이어</string>
+    <string name="widget_vinyl_name">바이닐 플레이어</string>
+    <string name="widget_idle_title">재생 중인 곡 없음</string>
+    <string name="widget_idle_hint">erhu에서 음악 선택</string>
+    <string name="widget_cd_artwork">앨범 아트워크</string>
+    <string name="widget_cd_favorite">즐겨찾기</string>
+    <string name="widget_cd_previous">이전 곡</string>
+    <string name="widget_cd_play">재생</string>
+    <string name="widget_cd_pause">일시정지</string>
+    <string name="widget_cd_next">다음 곡</string>
+</resources>

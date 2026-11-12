@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">ミュージックプレーヤー</string>
+    <string name="widget_glass_name">グラスプレーヤー</string>
+    <string name="widget_vinyl_name">レコードプレーヤー</string>
+    <string name="widget_idle_title">再生中の曲はありません</string>
+    <string name="widget_idle_hint">erhu で曲を選択</string>
+    <string name="widget_cd_artwork">アルバムアートワーク</string>
+    <string name="widget_cd_favorite">お気に入り</string>
+    <string name="widget_cd_previous">前の曲</string>
+    <string name="widget_cd_play">再生</string>
+    <string name="widget_cd_pause">一時停止</string>
+    <string name="widget_cd_next">次の曲</string>
+</resources>
