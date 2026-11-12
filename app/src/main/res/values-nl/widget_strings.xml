@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">Muziekspeler</string>
+    <string name="widget_glass_name">Glass-speler</string>
+    <string name="widget_vinyl_name">Vinylspeler</string>
+    <string name="widget_idle_title">Er wordt niets afgespeeld</string>
+    <string name="widget_idle_hint">Kies muziek in erhu</string>
+    <string name="widget_cd_artwork">Albumhoes</string>
+    <string name="widget_cd_favorite">Favoriet</string>
+    <string name="widget_cd_previous">Vorige</string>
+    <string name="widget_cd_play">Afspelen</string>
+    <string name="widget_cd_pause">Pauzeren</string>
+    <string name="widget_cd_next">Volgende</string>
+</resources>

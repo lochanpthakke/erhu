@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_music_name">Lecteur de musique</string>
+    <string name="widget_glass_name">Lecteur Verre</string>
+    <string name="widget_vinyl_name">Lecteur Vinyle</string>
+    <string name="widget_idle_title">Aucune lecture</string>
+    <string name="widget_idle_hint">Choisissez un titre dans erhu</string>
+    <string name="widget_cd_artwork">Pochette d\'album</string>
+    <string name="widget_cd_favorite">Favori</string>
+    <string name="widget_cd_previous">Précédent</string>
+    <string name="widget_cd_play">Lecture</string>
+    <string name="widget_cd_pause">Pause</string>
+    <string name="widget_cd_next">Suivant</string>
+</resources>

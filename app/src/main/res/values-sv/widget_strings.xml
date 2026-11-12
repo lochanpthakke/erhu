@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">Musikspelare</string>
+    <string name="widget_glass_name">Glasspelare</string>
+    <string name="widget_vinyl_name">Vinylspelare</string>
+    <string name="widget_idle_title">Inget spelas</string>
+    <string name="widget_idle_hint">Välj musik i erhu</string>
+    <string name="widget_cd_artwork">Skivomslag</string>
+    <string name="widget_cd_favorite">Favorit</string>
+    <string name="widget_cd_previous">Föregående</string>
+    <string name="widget_cd_play">Spela</string>
+    <string name="widget_cd_pause">Pausa</string>
+    <string name="widget_cd_next">Nästa</string>
+</resources>

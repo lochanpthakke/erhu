@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">Reprodutor de música</string>
+    <string name="widget_glass_name">Reprodutor de vidro</string>
+    <string name="widget_vinyl_name">Reprodutor de vinil</string>
+    <string name="widget_idle_title">Nada em reprodução</string>
+    <string name="widget_idle_hint">Escolha músicas no erhu</string>
+    <string name="widget_cd_artwork">Capa do álbum</string>
+    <string name="widget_cd_favorite">Favorito</string>
+    <string name="widget_cd_previous">Anterior</string>
+    <string name="widget_cd_play">Reproduzir</string>
+    <string name="widget_cd_pause">Pausar</string>
+    <string name="widget_cd_next">Próxima</string>
+</resources>

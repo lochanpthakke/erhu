@@ -64,6 +64,14 @@ object AppLocaleManager {
         setOf(
             "en",
             "pl",
+            "es",
+            "pt-BR",
+            "fr",
+            "de",
+            "it",
+            "nl",
+            "sv",
+            "ro",
         )
 
     /** Languages currently exposed to users. Incomplete translations are never shown. */
