@@ -63,6 +63,7 @@ object AppLocaleManager {
     private val completedLanguageTags: Set<String> =
         setOf(
             "en",
+            "pl",
         )
 
     /** Languages currently exposed to users. Incomplete translations are never shown. */

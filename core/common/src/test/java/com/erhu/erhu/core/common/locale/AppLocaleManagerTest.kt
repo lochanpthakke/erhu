@@ -1,10 +1,12 @@
 package com.erhu.erhu.core.common.locale
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.view.View
 import androidx.core.os.LocaleListCompat
 import androidx.test.core.app.ApplicationProvider
+import com.erhu.erhu.core.common.R
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [Build.VERSION_CODES.P, Build.VERSION_CODES.UPSIDE_DOWN_CAKE])
@@ -92,5 +95,23 @@ class AppLocaleManagerTest {
         AppLocaleManager.setLanguageTag(context, "en")
         val localized = AppLocaleManager.localizedContext(context)
         assertEquals(View.LAYOUT_DIRECTION_LTR, localized.resources.configuration.layoutDirection)
+    }
+
+    @Test
+    fun setLanguageTag_polishResolvesPolishResourcesAndResetsToSystemDefault() {
+        AppLocaleManager.setLanguageTag(context, "pl")
+        assertEquals("pl", AppLocaleManager.selectedLanguageTag(context))
+        val localized = AppLocaleManager.localizedContext(context)
+        assertEquals("Biblioteka", localized.getString(R.string.nav_library))
+        assertEquals(View.LAYOUT_DIRECTION_LTR, localized.resources.configuration.layoutDirection)
+
+        AppLocaleManager.setLanguageTag(context, null)
+        assertNull(AppLocaleManager.selectedLanguageTag(context))
+
+        val unknownFallback = AppLocaleManager.resolveSupportedTag(LocaleListCompat.forLanguageTags("zz-ZZ"))
+        assertNull(unknownFallback)
+        val unsupportedConfig = Configuration(context.resources.configuration).apply { setLocale(Locale.forLanguageTag("zz-ZZ")) }
+        val unsupportedContext = context.createConfigurationContext(unsupportedConfig)
+        assertEquals("Library", unsupportedContext.getString(R.string.nav_library))
     }
 }
