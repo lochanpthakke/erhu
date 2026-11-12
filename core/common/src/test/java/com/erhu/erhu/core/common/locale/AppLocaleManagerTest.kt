@@ -114,4 +114,14 @@ class AppLocaleManagerTest {
         val unsupportedContext = context.createConfigurationContext(unsupportedConfig)
         assertEquals("Library", unsupportedContext.getString(R.string.nav_library))
     }
+
+    @Test
+    fun setLanguageTag_arabicSetsRtlLayoutDirectionAndLocalizedResources() {
+        AppLocaleManager.setLanguageTag(context, "ar")
+        assertEquals("ar", AppLocaleManager.selectedLanguageTag(context))
+        val localized = AppLocaleManager.localizedContext(context)
+        assertEquals(View.LAYOUT_DIRECTION_RTL, localized.resources.configuration.layoutDirection)
+        assertTrue(localized.getString(R.string.nav_library).isNotBlank())
+        assertTrue(localized.getString(R.string.nav_library) != "Library")
+    }
 }

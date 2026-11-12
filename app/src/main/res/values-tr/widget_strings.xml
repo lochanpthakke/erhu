@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_music_name">Müzik çalar</string>
+    <string name="widget_glass_name">Cam çalar</string>
+    <string name="widget_vinyl_name">Plak çalar</string>
+    <string name="widget_idle_title">Hiçbir şey çalmıyor</string>
+    <string name="widget_idle_hint">erhu\'da müzik seçin</string>
+    <string name="widget_cd_artwork">Albüm kapağı</string>
+    <string name="widget_cd_favorite">Favori</string>
+    <string name="widget_cd_previous">Önceki</string>
+    <string name="widget_cd_play">Çal</string>
+    <string name="widget_cd_pause">Duraklat</string>
+    <string name="widget_cd_next">Sonraki</string>
+</resources>

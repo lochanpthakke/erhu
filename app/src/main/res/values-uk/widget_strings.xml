@@ -1,0 +1,13 @@
+<resources>
+    <string name="widget_music_name">Музичний плеєр</string>
+    <string name="widget_glass_name">Скляний плеєр</string>
+    <string name="widget_vinyl_name">Вініловий плеєр</string>
+    <string name="widget_idle_title">Нічого не відтворюється</string>
+    <string name="widget_idle_hint">Оберіть музику в erhu</string>
+    <string name="widget_cd_artwork">Обкладинка альбому</string>
+    <string name="widget_cd_favorite">Улюблене</string>
+    <string name="widget_cd_previous">Попередній трек</string>
+    <string name="widget_cd_play">Відтворити</string>
+    <string name="widget_cd_pause">Пауза</string>
+    <string name="widget_cd_next">Наступний трек</string>
+</resources>

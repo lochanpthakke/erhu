@@ -72,6 +72,10 @@ object AppLocaleManager {
             "nl",
             "sv",
             "ro",
+            "ru",
+            "uk",
+            "tr",
+            "ar",
         )
 
     /** Languages currently exposed to users. Incomplete translations are never shown. */
