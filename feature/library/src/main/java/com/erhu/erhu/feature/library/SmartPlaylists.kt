@@ -348,15 +348,35 @@ private fun SmartMixHeader(
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Button(onClick = onPlay, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = onPlay,
+                enabled = songs.isNotEmpty(),
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
+                modifier = Modifier.weight(1f),
+            ) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Text(stringResource(CommonR.string.action_play), maxLines = 1, softWrap = false)
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(
+                    text = stringResource(CommonR.string.action_play),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            FilledTonalButton(onClick = onShuffle, enabled = songs.isNotEmpty(), modifier = Modifier.weight(1f)) {
+            FilledTonalButton(
+                onClick = onShuffle,
+                enabled = songs.isNotEmpty(),
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
+                modifier = Modifier.weight(1f),
+            ) {
                 Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Text(stringResource(CommonR.string.action_shuffle), maxLines = 1, softWrap = false)
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(
+                    text = stringResource(CommonR.string.action_shuffle),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -371,5 +391,5 @@ private fun smartPlaylistFacts(songs: List<Song>): String {
 
 private const val COVER_WIDTH_FRACTION = 0.62f
 private const val NOTE_FILL_ALPHA = 0.5f
-private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
+private const val ACTION_PAIR_WIDTH_FRACTION = 0.92f
 private const val MS_PER_MINUTE = 60_000L

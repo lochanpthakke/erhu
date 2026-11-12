@@ -125,7 +125,7 @@ private const val HERO_FADE_LOWER_POINT = 0.75f
 private const val HERO_FADE_LOWER_ALPHA = 0.75f
 
 /** Width of the centered Play / Shuffle pair as a share of the screen (as on the artist page). */
-private const val ACTION_PAIR_WIDTH_FRACTION = 0.83f
+private const val ACTION_PAIR_WIDTH_FRACTION = 0.92f
 
 private const val MS_PER_MINUTE = 60_000L
 
@@ -705,21 +705,33 @@ private fun AlbumActions(
                 onClick = onPlay,
                 enabled = enabled,
                 interactionSource = playPress,
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
                 modifier = Modifier.weight(1f).pressScale(playPress, BUTTON_PRESSED_SCALE, enabled),
             ) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Text(stringResource(CommonR.string.action_play))
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(
+                    text = stringResource(CommonR.string.action_play),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             FilledTonalButton(
                 onClick = onShuffle,
                 enabled = enabled,
                 interactionSource = shufflePress,
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = Spacing.xs),
                 modifier = Modifier.weight(1f).pressScale(shufflePress, BUTTON_PRESSED_SCALE, enabled),
             ) {
                 Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(IconSize.small))
-                Spacer(modifier = Modifier.width(Spacing.sm))
-                Text(stringResource(CommonR.string.action_shuffle))
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(
+                    text = stringResource(CommonR.string.action_shuffle),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
