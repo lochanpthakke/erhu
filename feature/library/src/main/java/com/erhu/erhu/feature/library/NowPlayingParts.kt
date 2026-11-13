@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,6 +48,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -107,6 +110,9 @@ private const val SIDE_CARD_DIM = 0.45f
 /** A toggle that is off: its icon dimmed. */
 private const val INACTIVE_ALPHA = 0.6f
 
+private const val CARD_FADE_START = 0.35f
+private const val CARD_FADE_SPAN = 0.45f
+
 /**
  * One card of the carousel: the artwork with the track's title, artist and album beneath it, as
  * one rounded card. It takes the room it is given: the artwork is as large as the width and height
@@ -116,7 +122,7 @@ private const val INACTIVE_ALPHA = 0.6f
  * neighbours are dimmed with their distance and select their track when tapped.
  */
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongMethod", "LongParameterList")
 internal fun CarouselCard(
     track: Song,
     isCurrent: Boolean,
@@ -140,51 +146,111 @@ internal fun CarouselCard(
         val artSide =
             minOf(maxWidth * CARD_WIDTH_FRACTION - CARD_PADDING * 2, maxHeight - metadataHeight - CARD_PADDING * 2)
                 .coerceAtLeast(MIN_ART_SIDE)
-        val playTrackLabel = stringResource(R.string.player_cd_play_track)
-        val select = if (isCurrent || !selectable) Modifier else Modifier.clickable(onClickLabel = playTrackLabel, onClick = onSelect)
-        // Each card in its own artwork's colours (cached per artwork, cross-faded on change).
         val colors = rememberLyricsColors(track)
-        val inset = with(LocalDensity.current) { CARD_PADDING.toPx() }
-        Column(
-            modifier =
-                Modifier
-                    .width(artSide + CARD_PADDING * 2)
-                    .onSizeChanged {
-                        if (isCurrent && transition != null) {
-                            transition.cardSize = Size(it.width.toFloat(), it.height.toFloat())
-                            transition.cardArtworkInset = inset
-                        }
-                    }.then(select)
-                    .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
-                    .clip(CARD_SHAPE)
-                    .drawWithContent {
-                        drawContent()
-                        val dim = abs(distance()).coerceAtMost(1f) * SIDE_CARD_DIM
-                        if (dim > 0f) drawRect(Color.Black.copy(alpha = dim))
-                    }.padding(CARD_PADDING),
-        ) {
-            HeroAnimatedArtwork(
-                song = track,
-                isCurrent = isCurrent,
-                isPlaying = isPlaying,
-                libraryRepository = libraryRepository,
-                animatedArtworkRepository = animatedArtworkRepository,
-                coverVideo = coverVideo,
+        if (isCurrent) {
+            val inset = with(LocalDensity.current) { CARD_PADDING.toPx() }
+            val cardAlpha =
+                if (transition != null) {
+                    ((transition.fraction - CARD_FADE_START) / CARD_FADE_SPAN).coerceIn(0f, 1f)
+                } else {
+                    1f
+                }
+            Box(
                 modifier =
                     Modifier
-                        .size(artSide)
-                        .then(if (isCurrent) Modifier.playerArtworkClip(transition) else Modifier.clip(Radius.largeShape)),
-            )
-            LyricsSurfaceTheme(colors) {
-                CardMetadata(
-                    track = track,
-                    showAlbum = showAlbum,
-                    favorite = if (isCurrent) ({ FavoriteButton(isFavorite, track.id, onToggleFavorite) }) else null,
-                    modifier =
-                        Modifier.height(metadataHeight).graphicsLayer {
-                            if (isCurrent && transition != null) alpha = (transition.fraction / 0.25f).coerceIn(0f, 1f)
+                        .width(artSide + CARD_PADDING * 2)
+                        .onSizeChanged {
+                            if (transition != null) {
+                                transition.cardSize = Size(it.width.toFloat(), it.height.toFloat())
+                                transition.cardArtworkInset = inset
+                            }
                         },
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = cardAlpha }
+                            .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
+                            .clip(CARD_SHAPE)
+                            .padding(CARD_PADDING),
+                ) {
+                    Spacer(modifier = Modifier.size(artSide))
+                    LyricsSurfaceTheme(colors) {
+                        CardMetadata(
+                            track = track,
+                            showAlbum = showAlbum,
+                            favorite = { FavoriteButton(isFavorite, track.id, onToggleFavorite) },
+                            modifier = Modifier.height(metadataHeight),
+                        )
+                    }
+                }
+
+                Box(
+                    modifier =
+                        Modifier
+                            .padding(top = CARD_PADDING)
+                            .size(artSide)
+                            .onGloballyPositioned { coordinates ->
+                                if (transition != null) {
+                                    val bounds = coordinates.boundsInRoot()
+                                    if (bounds.width > 0f) {
+                                        transition.measuredCardArtworkBounds = bounds
+                                    }
+                                }
+                            },
+                ) {
+                    HeroAnimatedArtwork(
+                        song = track,
+                        isCurrent = true,
+                        isPlaying = isPlaying,
+                        libraryRepository = libraryRepository,
+                        animatedArtworkRepository = animatedArtworkRepository,
+                        coverVideo = coverVideo,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .playerArtworkTravel(transition),
+                    )
+                }
+            }
+        } else {
+            val playTrackLabel = stringResource(R.string.player_cd_play_track)
+            val select = if (!selectable) Modifier else Modifier.clickable(onClickLabel = playTrackLabel, onClick = onSelect)
+            Column(
+                modifier =
+                    Modifier
+                        .width(artSide + CARD_PADDING * 2)
+                        .then(select)
+                        .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
+                        .clip(CARD_SHAPE)
+                        .drawWithContent {
+                            drawContent()
+                            val dim = abs(distance()).coerceAtMost(1f) * SIDE_CARD_DIM
+                            if (dim > 0f) drawRect(Color.Black.copy(alpha = dim))
+                        }.padding(CARD_PADDING),
+            ) {
+                HeroAnimatedArtwork(
+                    song = track,
+                    isCurrent = false,
+                    isPlaying = isPlaying,
+                    libraryRepository = libraryRepository,
+                    animatedArtworkRepository = animatedArtworkRepository,
+                    coverVideo = coverVideo,
+                    modifier =
+                        Modifier
+                            .size(artSide)
+                            .clip(Radius.largeShape),
                 )
+                LyricsSurfaceTheme(colors) {
+                    CardMetadata(
+                        track = track,
+                        showAlbum = showAlbum,
+                        favorite = null,
+                        modifier = Modifier.height(metadataHeight),
+                    )
+                }
             }
         }
     }

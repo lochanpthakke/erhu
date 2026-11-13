@@ -2075,8 +2075,8 @@
     <string name="dialog_delete_album_title">Șterge albumul</string>
     <string name="dialog_delete_album_message">Sigur doriți să ștergeți „%1$s” de pe dispozitiv?</string>
     <string name="delete_song_success">S-a șters %1$s</string>
-    <string name="delete_permission_denied">Permisiunea de a șterge muzica a fost refuzată</string>
-    <string name="delete_failed">Ștergerea muzicii a eșuat</string>
+    <string name="delete_permission_denied">Permisiunea de a șterge melodia a fost refuzată</string>
+    <string name="delete_failed">Ștergerea melodiei a eșuat</string>
     <string name="delete_progress">Se șterge…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="one">%1$d fișier audio din acest album va fi șters definitiv.</item>

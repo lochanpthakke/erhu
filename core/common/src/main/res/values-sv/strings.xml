@@ -2032,8 +2032,8 @@
     <string name="dialog_delete_album_title">Ta bort album</string>
     <string name="dialog_delete_album_message">Är du säker på att du vill ta bort ”%1$s” från enheten?</string>
     <string name="delete_song_success">Tog bort %1$s</string>
-    <string name="delete_permission_denied">Behörighet att ta bort musik nekades</string>
-    <string name="delete_failed">Kunde inte ta bort musik</string>
+    <string name="delete_permission_denied">Behörighet att ta bort låten nekades</string>
+    <string name="delete_failed">Kunde inte ta bort låten</string>
     <string name="delete_progress">Tar bort…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="one">Detta raderar %1$d spår i detta album permanent.</item>

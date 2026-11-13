@@ -104,7 +104,6 @@ import com.erhu.erhu.core.designsystem.theme.GlassLevel
 import com.erhu.erhu.core.designsystem.theme.LocalGlassBackdrop
 import com.erhu.erhu.core.designsystem.theme.LocalSetFocusedArtworkUri
 import com.erhu.erhu.core.designsystem.theme.ThemeManifest
-import com.erhu.erhu.core.designsystem.theme.WithoutGlass
 import com.erhu.erhu.core.designsystem.theme.glassBackdropSource
 import com.erhu.erhu.core.designsystem.theme.glassPanel
 import com.erhu.erhu.core.designsystem.theme.rememberGlassBackdrop
@@ -822,47 +821,43 @@ fun MainScaffold(
                                     val hiddenFromMixes by libraryViewModel.hiddenFromMixes.collectAsState()
                                     val currentSongId by libraryViewModel.currentSongId.collectAsState()
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
-                                    // The expanded player is drawn without the Glass Effect (as with the setting off):
-                                    // the glass cost frames here and looked the same. The rest of the app keeps it.
-                                    WithoutGlass {
-                                        NowPlayingScreen(
-                                            playbackRepository = playbackRepository,
-                                            libraryRepository = libraryViewModel.libraryRepository,
-                                            animatedArtworkRepository = libraryViewModel.animatedArtworkRepository,
-                                            isFavorite = isFavorite,
-                                            lyrics = lyrics,
-                                            lyricsActions = libraryViewModel.lyricsActions,
-                                            onBackClick = minimizePlayer,
-                                            onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
-                                            onAddToPlaylist = { songForPlaylist = it },
-                                            onSaveQueueAsPlaylist = { name, songs, onResult ->
-                                                playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
+                                    NowPlayingScreen(
+                                        playbackRepository = playbackRepository,
+                                        libraryRepository = libraryViewModel.libraryRepository,
+                                        animatedArtworkRepository = libraryViewModel.animatedArtworkRepository,
+                                        isFavorite = isFavorite,
+                                        lyrics = lyrics,
+                                        lyricsActions = libraryViewModel.lyricsActions,
+                                        onBackClick = minimizePlayer,
+                                        onToggleFavorite = { libraryViewModel.toggleFavorite(it) },
+                                        onAddToPlaylist = { songForPlaylist = it },
+                                        onSaveQueueAsPlaylist = { name, songs, onResult ->
+                                            playlistsViewModel.saveQueueAsPlaylist(name, songs, onResult)
+                                        },
+                                        extras = playerExtrasViewModel,
+                                        visualizer = visualizerViewModel,
+                                        audioDetails = audioDetailsViewModel,
+                                        onOpenEqualizer = {
+                                            minimizePlayer()
+                                            navController.navigate(SettingsCategory("audio"))
+                                        },
+                                        onShowMusicInfo = { songForMusicInfo = it },
+                                        isHiddenFromMixes = currentSongId in hiddenFromMixes,
+                                        onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
+                                        onStartRadio = if (vybeEnabled) libraryViewModel::startRadioFromCurrent else null,
+                                        radioSongIds =
+                                            if (vybeEnabled) {
+                                                radio
+                                                    ?.let {
+                                                        it.suggested + it.startSongId
+                                                    }.orEmpty()
+                                            } else {
+                                                emptySet()
                                             },
-                                            extras = playerExtrasViewModel,
-                                            visualizer = visualizerViewModel,
-                                            audioDetails = audioDetailsViewModel,
-                                            onOpenEqualizer = {
-                                                minimizePlayer()
-                                                navController.navigate(SettingsCategory("audio"))
-                                            },
-                                            onShowMusicInfo = { songForMusicInfo = it },
-                                            isHiddenFromMixes = currentSongId in hiddenFromMixes,
-                                            onSetHiddenFromMixes = { song, hidden -> libraryViewModel.setHiddenFromMixes(song.id, hidden) },
-                                            onStartRadio = if (vybeEnabled) libraryViewModel::startRadioFromCurrent else null,
-                                            radioSongIds =
-                                                if (vybeEnabled) {
-                                                    radio
-                                                        ?.let {
-                                                            it.suggested + it.startSongId
-                                                        }.orEmpty()
-                                                } else {
-                                                    emptySet()
-                                                },
-                                            onRefreshRadio = if (vybeEnabled) libraryViewModel::refreshRadio else null,
-                                            playlistMessage = playerPlaylistMessage,
-                                            onPlaylistMessageShown = { playerPlaylistMessage = null },
-                                        )
-                                    }
+                                        onRefreshRadio = if (vybeEnabled) libraryViewModel::refreshRadio else null,
+                                        playlistMessage = playerPlaylistMessage,
+                                        onPlaylistMessageShown = { playerPlaylistMessage = null },
+                                    )
                                 }
                             }
                         }

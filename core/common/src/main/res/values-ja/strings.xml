@@ -1988,8 +1988,8 @@
     <string name="dialog_delete_album_title">アルバムを削除</string>
     <string name="dialog_delete_album_message">「%1$s」を端末から削除してもよろしいですか？</string>
     <string name="delete_song_success">「%1$s」を削除しました</string>
-    <string name="delete_permission_denied">音楽を削除する権限が拒否されました</string>
-    <string name="delete_failed">音楽の削除に失敗しました</string>
+    <string name="delete_permission_denied">曲を削除する権限が拒否されました</string>
+    <string name="delete_failed">曲の削除に失敗しました</string>
     <string name="delete_progress">削除中…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="other">このアルバムに含まれる %1$d 件の音楽ファイルがすべて完全に削除されます。</item>

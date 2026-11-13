@@ -35,11 +35,65 @@ internal fun playerCardTransform(
     return PlayerCardTransform(scale, target - viewport.topLeft - (artwork.topLeft - viewport.topLeft) * scale)
 }
 
+/** Motion for the standalone travelling artwork, maintaining strict 1:1 aspect ratio. */
+internal data class PlayerArtworkMotion(
+    val scale: Float,
+    val translation: Offset,
+    val cornerRadiusPx: Float,
+)
+
+internal fun playerArtworkMotion(
+    progress: Float,
+    artwork: Rect,
+    thumbnail: Rect,
+    minCornerPx: Float,
+    maxCornerPx: Float,
+): PlayerArtworkMotion {
+    if (artwork.width <= 0f || thumbnail.width <= 0f) {
+        return PlayerArtworkMotion(1f, Offset.Zero, maxCornerPx)
+    }
+    val p = progress.coerceIn(0f, 1f)
+    val targetCenter = lerp(thumbnail.center, artwork.center, p)
+    val targetSide = lerp(thumbnail.width, artwork.width, p)
+    val scale = targetSide / artwork.width
+    val translation = targetCenter - artwork.center
+    val cornerRadius = lerp(minCornerPx, maxCornerPx, p)
+    return PlayerArtworkMotion(scale, translation, cornerRadius)
+}
+
 /** Neighbours unfold only after the anchor has started growing, on the same reversible timeline. */
 internal fun playerNeighbourReveal(progress: Float): Float {
     val t = ((progress - NEIGHBOUR_REVEAL_START) / NEIGHBOUR_REVEAL_SPAN).coerceIn(0f, 1f)
     return t * t * (1f + 2f * (1f - t))
 }
+
+/** Artwork travels independently from Now Playing card down to the mini player thumbnail. */
+internal fun Modifier.playerArtworkTravel(state: PlayerTransitionState?): Modifier =
+    graphicsLayer {
+        val p = state?.fraction?.coerceIn(0f, 1f) ?: 1f
+        val card = state?.cardArtworkBounds ?: Rect.Zero
+        val mini = state?.miniArtworkBounds ?: Rect.Zero
+        if (card.width > 0f && mini.width > 0f) {
+            val motion =
+                playerArtworkMotion(
+                    progress = p,
+                    artwork = card,
+                    thumbnail = mini,
+                    minCornerPx = MINI_ARTWORK_CORNER.toPx(),
+                    maxCornerPx = Radius.large.toPx(),
+                )
+            transformOrigin = TransformOrigin.Center
+            scaleX = motion.scale
+            scaleY = motion.scale
+            translationX = motion.translation.x
+            translationY = motion.translation.y
+            shape = RoundedCornerShape(motion.cornerRadiusPx / motion.scale.coerceAtLeast(MIN_CARD_SCALE))
+            clip = true
+        } else {
+            shape = Radius.largeShape
+            clip = true
+        }
+    }
 
 /** The whole carousel travels in one lightweight layer, around its untransformed layout. */
 internal fun Modifier.playerCardTravel(state: PlayerTransitionState?): Modifier =

@@ -2117,8 +2117,8 @@
     <string name="dialog_delete_album_title">Удалить альбом</string>
     <string name="dialog_delete_album_message">Вы действительно хотите удалить «%1$s» с вашего устройства?</string>
     <string name="delete_song_success">Удалено: %1$s</string>
-    <string name="delete_permission_denied">Отказано в разрешении на удаление музыки</string>
-    <string name="delete_failed">Не удалось удалить музыку</string>
+    <string name="delete_permission_denied">Отказано в разрешении на удаление трека</string>
+    <string name="delete_failed">Не удалось удалить трек</string>
     <string name="delete_progress">Удаление…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="one">Будет безвозвратно удален %1$d трек из этого альбома.</item>

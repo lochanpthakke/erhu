@@ -1,13 +1,11 @@
 package com.erhu.erhu.ui.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -19,37 +17,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.util.lerp
 import com.erhu.erhu.core.designsystem.component.LocalBottomChromeHeight
-import com.erhu.erhu.core.designsystem.foundation.Radius
-import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.PlayerTransitionState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** The surface's sides and bottom reach the screen edges over this part of the expansion. */
-private const val EDGE_SPAN = 0.3f
-
 /**
  * The player as one continuous object (see [PlayerTransitionState]). From a
- * single progress value it draws:
+ * single progress value:
  *
- * - the expanding surface: from the mini player's measured thumbnail and its
- *   corners to the full screen, opaque in the theme's environment colour, and
- *   holding Now Playing, whose sections reveal themselves on the same progress
- *   (revealWithPlayer), so nothing here fades the content a second time;
- * - the existing carousel owns the complete travelling card, including its artwork.
+ * - Now Playing sections reveal themselves smoothly on the progress timeline
+ *   (revealWithPlayer);
+ * - the carousel owns the complete travelling card, including its artwork.
  *   There is no separately loaded or animated artwork overlay.
  *
  * Everything is read in the draw phase, so dragging or animating the player
@@ -82,7 +63,6 @@ fun ExpandingPlayer(
     if (!visible && !warm) return
 
     val navigationBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val environment = ErhuGlass.backdropColor(MaterialTheme.colorScheme.background)
     Box(
         modifier =
             Modifier
@@ -94,52 +74,12 @@ fun ExpandingPlayer(
                     layout(placeable.width, placeable.height) { if (visible) placeable.place(0, 0) }
                 },
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        val p = state.fraction
-                        val full = Rect(0f, 0f, size.width, size.height)
-                        val thumbnail = state.miniArtworkBounds
-                        val mini = thumbnail.takeIf { it.width > 0f } ?: state.miniBounds.takeIf { it.width > 0f } ?: full
-                        // The sides and bottom reach the screen edges early; the top edge
-                        // follows the progress (the finger), like a sheet rising from the mini player.
-                        val edges = (p / EDGE_SPAN).coerceAtMost(1f)
-                        val bounds =
-                            Rect(
-                                left = lerp(mini.left, full.left, edges),
-                                top = lerp(mini.top, full.top, p),
-                                right = lerp(mini.right, full.right, edges),
-                                bottom = lerp(mini.bottom, full.bottom, edges),
-                            )
-                        val corner = if (thumbnail.width > 0f) Radius.small.toPx() else mini.height / 2f
-                        shape = ExpandingShape(bounds, lerp(corner, 0f, p))
-                        clip = true
-                        // Sections own their fades. Fading this parent would also dim
-                        // the travelling card, then flash its artwork back to full
-                        // opacity when the mini player takes over at zero.
-                    }.background(environment),
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // No bottom chrome while the player owns the screen: only the gesture area.
-                CompositionLocalProvider(LocalBottomChromeHeight provides navigationBar, content = content)
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            // No bottom chrome while the player owns the screen: only the gesture area.
+            CompositionLocalProvider(LocalBottomChromeHeight provides navigationBar, content = content)
         }
     }
 }
 
 /** Now Playing is composed this long after a song is available (after app start settles). */
 private const val WARM_UP_DELAY_MS = 1_500L
-
-/** A rounded rectangle at arbitrary [bounds] inside the layer (the expanding surface). */
-private class ExpandingShape(
-    private val bounds: Rect,
-    private val radius: Float,
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline = Outline.Rounded(RoundRect(bounds, CornerRadius(radius)))
-}

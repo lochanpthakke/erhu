@@ -313,7 +313,7 @@ internal fun TrackCarousel(
         // Layout stays at its final size. One transform carries the cards together;
         // the child layers only unfold the neighbours, never the central artwork.
         Box(
-            modifier = Modifier.fillMaxSize().playerCardTravel(transition),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             val pages = listOfNotNull(previous?.let { -1 to it }, 0 to current, next?.let { 1 to it })

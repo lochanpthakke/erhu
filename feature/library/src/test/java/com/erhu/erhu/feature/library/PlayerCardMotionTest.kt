@@ -45,6 +45,35 @@ class PlayerCardMotionTest {
         assertEquals(values.reversed(), (100 downTo 0).map { playerNeighbourReveal(it / 100f) })
     }
 
+    @Test
+    fun collapsedArtworkMotionMatchesThumbnail() {
+        val motion = playerArtworkMotion(0f, artwork, thumbnail, 24f, 48f)
+        assertEquals(thumbnail.width / artwork.width, motion.scale, 0.0001f)
+        assertPoint(thumbnail.center, artwork.center + motion.translation)
+        assertEquals(24f, motion.cornerRadiusPx, 0.0001f)
+    }
+
+    @Test
+    fun expandedArtworkMotionIsIdentity() {
+        val motion = playerArtworkMotion(1f, artwork, thumbnail, 24f, 48f)
+        assertEquals(1f, motion.scale, 0f)
+        assertPoint(Offset.Zero, motion.translation)
+        assertEquals(48f, motion.cornerRadiusPx, 0f)
+    }
+
+    @Test
+    fun artworkMotionPreservesStrictSquareAspectAndCenterInterpolation() {
+        for (step in 0..100) {
+            val p = step / 100f
+            val motion = playerArtworkMotion(p, artwork, thumbnail, 24f, 48f)
+            val expectedCenter = androidx.compose.ui.geometry.lerp(thumbnail.center, artwork.center, p)
+            assertPoint(expectedCenter, artwork.center + motion.translation)
+            val expectedSide = androidx.compose.ui.util.lerp(thumbnail.width, artwork.width, p)
+            assertEquals(expectedSide, artwork.width * motion.scale, 0.001f)
+            assertEquals(expectedSide, artwork.height * motion.scale, 0.001f)
+        }
+    }
+
     private fun mapped(point: Offset, transform: PlayerCardTransform): Offset =
         viewport.topLeft + transform.translation + (point - viewport.topLeft) * transform.scale
 

@@ -19,8 +19,8 @@ android {
         if (project.hasProperty("perfApp")) applicationIdSuffix = ".perf"
         minSdk = 26
         targetSdk = 37
-        versionCode = 19
-        versionName = "1.0.18"
+        versionCode = 20
+        versionName = "1.0.19"
 
         // Public Firebase client identifiers only. Never use service-account or server credentials here.
         for ((field, property, environment) in listOf(

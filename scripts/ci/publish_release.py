@@ -67,7 +67,36 @@ def main():
             subprocess.run(["gh", "release", "download", release["tag_name"], "--pattern", "verification.json", "--output", str(prior), "--clobber"], check=True)
             require_increasing_code(metadata, json.loads(prior.read_text()))
         notes = Path(temporary) / "notes.md"
-        notes.write_text(os.environ.get("RELEASE_NOTES", "").strip() or "Optimized ARM64 APK. Installation identity and original signing certificate preserved.", encoding="utf-8")
+        notes_content = os.environ.get("RELEASE_NOTES", "").strip()
+        if not notes_content:
+            repo_notes = Path(__file__).resolve().parents[2] / "release_notes.md"
+            if repo_notes.is_file():
+                notes_content = repo_notes.read_text(encoding="utf-8").strip()
+        notes.write_text(notes_content or "Optimized ARM64 APK. Installation identity and original signing certificate preserved.", encoding="utf-8")
+
+        # Ensure VYBE model pack is included in release assets
+        vybe_tag = None
+        for r in releases:
+            asset_names = [a["name"] for a in r.get("assets", [])]
+            if "vybe-embeddinggemma-300m-int4int8.zip" in asset_names and "vybe-embeddinggemma-300m-int4int8.zip.sha256" in asset_names:
+                vybe_tag = r["tag_name"]
+                break
+        if not vybe_tag:
+            vybe_tag = "erhu-v1.0.17-beta.31"
+
+        print(f"Fetching VYBE model pack from {vybe_tag}...")
+        subprocess.run(
+            ["gh", "release", "download", vybe_tag, "--pattern", "vybe-embeddinggemma-300m-int4int8.zip*", "--dir", str(temporary), "--clobber"],
+            check=True
+        )
+        vybe_zip = Path(temporary) / "vybe-embeddinggemma-300m-int4int8.zip"
+        vybe_sha = Path(temporary) / "vybe-embeddinggemma-300m-int4int8.zip.sha256"
+        if not vybe_zip.is_file() or not vybe_sha.is_file():
+            raise SystemExit("Failed to download VYBE model pack assets")
+        if hashlib.sha256(vybe_zip.read_bytes()).hexdigest() != vybe_sha.read_text(encoding="utf-8").split()[0]:
+            raise SystemExit("Downloaded VYBE model pack failed sha256 checksum verification")
+        assets.extend([vybe_zip, vybe_sha])
+
         subprocess.run(["gh", "release", "create", tag, "--draft", "--target", commit, "--title", f"erhu {metadata['versionName']}" + (" beta" if beta else ""), "--notes-file", str(notes)], check=True)
         subprocess.run(["gh", "release", "upload", tag, *map(str, assets)], check=True)
         uploaded = json.loads(subprocess.check_output(["gh", "release", "view", tag, "--json", "assets"], text=True))["assets"]

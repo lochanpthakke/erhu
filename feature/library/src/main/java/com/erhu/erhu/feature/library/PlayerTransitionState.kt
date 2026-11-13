@@ -66,10 +66,12 @@ class PlayerTransitionState {
     var carouselBounds by mutableStateOf(Rect.Zero)
     var cardSize by mutableStateOf(Size.Zero)
     var cardArtworkInset by mutableStateOf(0f)
+    var measuredCardArtworkBounds by mutableStateOf(Rect.Zero)
 
     /** Derived from untransformed layout, never from a moving graphics layer. */
     val cardArtworkBounds: Rect
         get() {
+            if (measuredCardArtworkBounds.width > 0f) return measuredCardArtworkBounds
             val side = (cardSize.width - 2f * cardArtworkInset).coerceAtLeast(0f)
             val left = carouselBounds.center.x - side / 2f
             val top = carouselBounds.center.y - cardSize.height / 2f + cardArtworkInset

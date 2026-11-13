@@ -2117,8 +2117,8 @@
     <string name="dialog_delete_album_title">Usuń album</string>
     <string name="dialog_delete_album_message">Czy na pewno chcesz usunąć album „%1$s” ze swojego urządzenia?</string>
     <string name="delete_song_success">Usunięto %1$s</string>
-    <string name="delete_permission_denied">Odmowa uprawnień do usunięcia plików</string>
-    <string name="delete_failed">Nie udało się usunąć muzyki</string>
+    <string name="delete_permission_denied">Odmowa uprawnień do usunięcia utworu</string>
+    <string name="delete_failed">Nie udało się usunąć utworu</string>
     <string name="delete_progress">Usuwanie…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="one">Spowoduje to trwałe usunięcie %1$d utworu z tego albumu.</item>

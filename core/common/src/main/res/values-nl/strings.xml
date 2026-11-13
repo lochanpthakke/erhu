@@ -2031,8 +2031,8 @@
     <string name="dialog_delete_album_title">Album verwijderen</string>
     <string name="dialog_delete_album_message">Weet je zeker dat je „%1$s“ van je apparaat wilt verwijderen?</string>
     <string name="delete_song_success">„%1$s“ verwijderd</string>
-    <string name="delete_permission_denied">Toestemming om muziek te verwijderen geweigerd</string>
-    <string name="delete_failed">Muziek verwijderen mislukt</string>
+    <string name="delete_permission_denied">Toestemming om nummer te verwijderen geweigerd</string>
+    <string name="delete_failed">Nummer verwijderen mislukt</string>
     <string name="delete_progress">Verwijderen…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="one">Hiermee wordt %1$d nummer in dit album permanent verwijderd.</item>

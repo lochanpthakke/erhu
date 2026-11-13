@@ -161,18 +161,7 @@ fun OnboardingScreen(
     val pages = remember(vybeEnabled, widgetsAvailable) { introductionPages(vybeEnabled, widgetsAvailable) }
     val initialLanguageTag =
         remember(context) {
-            val current = AppLocaleManager.selectedLanguageTag(context)
-            if (current != null) {
-                current
-            } else {
-                val sysLocale = AppLocaleManager.systemLocale(context)
-                val detected =
-                    AppLocaleManager.findSupportedTag(sysLocale.toLanguageTag())
-                        ?: AppLocaleManager.findSupportedTag(sysLocale.language)
-                        ?: "en"
-                AppLocaleManager.setLanguageTag(context, detected)
-                detected
-            }
+            AppLocaleManager.selectedLanguageTag(context)
         }
     var selectedLanguageTag by rememberSaveable { mutableStateOf(initialLanguageTag) }
     var savedPage by rememberSaveable { mutableStateOf(IntroductionPage.LANGUAGE.name) }
@@ -390,8 +379,8 @@ private fun IntroductionContent(
     onVybeEnabledChange: (Boolean) -> Unit,
     glassEffectEnabled: Boolean,
     onGlassEffectEnabledChange: (Boolean) -> Unit,
-    selectedLanguageTag: String,
-    onLanguageSelected: (String) -> Unit,
+    selectedLanguageTag: String?,
+    onLanguageSelected: (String?) -> Unit,
 ) {
     val toolGuide = remember(page) { page.toolGuide() }
     Column(
@@ -578,16 +567,32 @@ private fun PreviewGallery(
 
 @Composable
 private fun LanguageSelectionContent(
-    selectedTag: String,
-    onLanguageSelected: (String) -> Unit,
+    selectedTag: String?,
+    onLanguageSelected: (String?) -> Unit,
 ) {
+    val context = LocalContext.current
+    val systemLanguageName = remember(context, selectedTag) { AppLocaleManager.systemLanguageDisplayName(context) }
+    val systemSummary =
+        if (systemLanguageName.isNotBlank()) {
+            stringResource(CommonR.string.settings_language_system_default_summary, systemLanguageName)
+        } else {
+            stringResource(CommonR.string.settings_language_system_default_fallback)
+        }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        LanguageSelectionItem(
+            title = stringResource(CommonR.string.settings_language_system_default),
+            subtitle = systemSummary,
+            isSelected = selectedTag == null,
+            onClick = { onLanguageSelected(null) },
+        )
         AppLocaleManager.supportedLanguages.forEach { language ->
             LanguageSelectionItem(
-                language = language,
+                title = language.nativeName,
+                subtitle = language.englishName.takeIf { it != language.nativeName },
                 isSelected = language.tag == selectedTag,
                 onClick = { onLanguageSelected(language.tag) },
             )
@@ -597,7 +602,8 @@ private fun LanguageSelectionContent(
 
 @Composable
 private fun LanguageSelectionItem(
-    language: com.erhu.erhu.core.common.locale.SupportedLanguage,
+    title: String,
+    subtitle: String?,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -624,17 +630,17 @@ private fun LanguageSelectionItem(
         ) {
             Column(modifier = Modifier.weight(1f, fill = false)) {
                 Text(
-                    text = language.nativeName,
+                    text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (language.englishName != language.nativeName) {
+                if (subtitle != null) {
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = language.englishName,
+                        text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

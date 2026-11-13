@@ -2031,8 +2031,8 @@
     <string name="dialog_delete_album_title">Eliminar álbum</string>
     <string name="dialog_delete_album_message">¿Seguro que deseas eliminar «%1$s» de tu dispositivo?</string>
     <string name="delete_song_success">Se eliminó %1$s</string>
-    <string name="delete_permission_denied">Permiso denegado para eliminar música</string>
-    <string name="delete_failed">No se pudo eliminar la música</string>
+    <string name="delete_permission_denied">Permiso denegado para eliminar la canción</string>
+    <string name="delete_failed">No se pudo eliminar la canción</string>
     <string name="delete_progress">Eliminando…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="one">Se eliminará de forma permanente %1$d pista de este álbum.</item>

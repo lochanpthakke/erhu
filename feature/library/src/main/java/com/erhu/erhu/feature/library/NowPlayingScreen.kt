@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
@@ -278,6 +279,7 @@ fun NowPlayingScreen(
             GlassArtworkBackdrop(song = song)
         }
         AppScaffold(
+            containerColor = Color.Transparent,
             contentBackdrop = artworkBackdrop,
             // Its top bar is not glass: nothing samples the page itself.
             contentIsBackdrop = false,
@@ -338,6 +340,7 @@ fun NowPlayingScreen(
                                         Modifier
                                             .fillMaxWidth()
                                             .weight(1f)
+                                            .zIndex(1f)
                                             .then(gestureRegion),
                                 ) { track, isCurrent, distance, slot ->
                                     CarouselCard(

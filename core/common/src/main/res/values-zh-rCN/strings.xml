@@ -1988,8 +1988,8 @@
     <string name="dialog_delete_album_title">删除专辑</string>
     <string name="dialog_delete_album_message">确定要从设备中删除“%1$s”吗？</string>
     <string name="delete_song_success">已删除 %1$s</string>
-    <string name="delete_permission_denied">删除音乐的权限被拒绝</string>
-    <string name="delete_failed">删除音乐失败</string>
+    <string name="delete_permission_denied">删除歌曲的权限被拒绝</string>
+    <string name="delete_failed">删除歌曲失败</string>
     <string name="delete_progress">正在删除…</string>
     <plurals name="dialog_delete_album_tracks_count">
         <item quantity="other">此专辑中的所有 %1$d 个音乐文件将被永久删除。</item>
