@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -20,6 +21,7 @@ internal fun LibraryContentMotion(
     content: @Composable (LibrarySection, LibraryShelf?) -> Unit,
 ) {
     val destination = section to shelf
+    val scrollRequests = LocalLibraryScrollToTopRequests.current
     Crossfade(
         targetState = destination,
         animationSpec = Motion.fade(Motion.CONTENT),
@@ -42,7 +44,9 @@ internal fun LibraryContentMotion(
             }
         stateHolder.SaveableStateProvider("${shown.first.name}:${shown.second?.name.orEmpty()}") {
             Box(modifier = Modifier.fillMaxSize().then(outgoing)) {
-                content(shown.first, shown.second)
+                CompositionLocalProvider(LocalLibraryScrollToTopRequests provides scrollRequests.takeIf { shown == destination }) {
+                    content(shown.first, shown.second)
+                }
             }
         }
     }

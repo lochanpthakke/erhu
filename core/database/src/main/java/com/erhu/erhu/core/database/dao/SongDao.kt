@@ -56,7 +56,10 @@ interface SongDao {
     @Query("SELECT id FROM songs")
     suspend fun getAllSongIds(): List<Long>
 
-    @Query("SELECT * FROM songs ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT title FROM songs ORDER BY title COLLATE NOCASE ASC, id ASC")
+    fun observeSongTitles(): Flow<List<String>>
+
+    @Query("SELECT * FROM songs ORDER BY title COLLATE NOCASE ASC, id ASC")
     fun getSongsPaged(): PagingSource<Int, SongEntity>
 
     @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")

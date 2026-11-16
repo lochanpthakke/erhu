@@ -66,6 +66,7 @@ import com.erhu.erhu.core.designsystem.component.pressScale
 import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
+import com.erhu.erhu.feature.library.ScrollToTopOnReselect
 import com.erhu.erhu.feature.library.SongRow
 import com.erhu.erhu.core.common.R as CommonR
 
@@ -116,6 +117,7 @@ fun VybeScreen(
     val listState = rememberLazyListState()
     // The page title merges into the header button as this scrolls.
     ReportTitleScroll(listState)
+    ScrollToTopOnReselect(listState)
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),

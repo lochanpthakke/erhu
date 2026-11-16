@@ -36,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,9 +56,14 @@ import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassMenu
 import com.erhu.erhu.core.designsystem.component.GlassMenuAnchor
 import com.erhu.erhu.core.designsystem.component.GlassMenuItem
+import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
 import com.erhu.erhu.core.designsystem.component.OverlayHeader
+import com.erhu.erhu.core.designsystem.component.ReportTitleScroll
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
+import com.erhu.erhu.core.designsystem.component.forScrollingContent
 import com.erhu.erhu.core.designsystem.component.glassMenuTrigger
+import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
+import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.model.SongsMood
 import com.erhu.erhu.core.model.SongsSort
@@ -119,153 +125,177 @@ fun SongsScreen(
             onDeleteMusic = { songToDelete = it },
         )
     val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
+    val collapsingTitle = rememberCollapsingTitleState()
+    CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) {
+        ReportTitleScroll(listState)
+    }
     LaunchedEffect(state.preferences, state.query) { listState.scrollToItem(0) }
     AppScaffold(
         topBar = {
             if (isSearchActive) {
                 SearchHeader(state.query, viewModel::setQuery, closeSearch)
             } else {
-                OverlayHeader(navigation = TopBarNavigation.Detail(onBack))
+                OverlayHeader(
+                    navigation = TopBarNavigation.Detail(onBack),
+                    title = stringResource(R.string.songs_browser_title),
+                    collapsingTitle = collapsingTitle,
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize().padding(padding).nestedScroll(chromeScroll),
-            contentPadding = PaddingValues(bottom = 16.dp),
-        ) {
-            item(key = "filters") {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                    Text(
-                        stringResource(R.string.songs_browser_title),
-                        style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 20.dp),
-                    )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        BrowserPill(
-                            label = stringResource(sortLabel(state.preferences.sort)),
-                            icon = Icons.AutoMirrored.Filled.Sort,
-                            expanded = openMenu == "sort",
-                            onOpen = { openMenu = "sort" },
-                            onDismiss = { openMenu = null },
-                            enabled = !state.loading && !state.failed,
-                        ) {
-                            SongsSort.entries.forEach { sort ->
-                                GlassMenuItem(
-                                    text = { Text(stringResource(sortLabel(sort))) },
-                                    icon = Icons.Default.Check.takeIf { state.preferences.sort == sort },
-                                    onClick = { viewModel.setSort(sort) },
-                                )
-                            }
-                        }
-                        val selectedGenre =
-                            when {
-                                state.preferences.genre.isEmpty() -> stringResource(R.string.songs_browser_genre)
-                                state.preferences.genre == "untagged" -> stringResource(R.string.songs_browser_untagged)
-                                else -> state.preferences.genre.removePrefix("genre:")
-                            }
-                        BrowserPill(
-                            selectedGenre,
-                            Icons.Default.Tune,
-                            openMenu == "genre",
-                            { openMenu = "genre" },
-                            { openMenu = null },
-                            selected = state.preferences.genre.isNotEmpty(),
-                            enabled = !state.loading && !state.failed,
-                        ) {
-                            val choices =
-                                listOf(
-                                    "" to stringResource(R.string.songs_browser_all_genres),
-                                    "untagged" to stringResource(R.string.songs_browser_untagged),
-                                ) + state.genres.map { "genre:$it" to it }
-                            choices.forEach { (key, label) ->
-                                GlassMenuItem(
-                                    text = { Text(label) },
-                                    icon = Icons.Default.Check.takeIf { state.preferences.genre.equals(key, ignoreCase = true) },
-                                    onClick = { viewModel.setGenre(key) },
-                                )
-                            }
-                        }
-                        BrowserPill(
-                            stringResource(
-                                if (state.preferences.mood ==
-                                    SongsMood.ALL
-                                ) {
-                                    R.string.songs_browser_mood
-                                } else {
-                                    moodLabel(state.preferences.mood)
-                                },
-                            ),
-                            Icons.Default.AutoAwesome,
-                            openMenu == "mood",
-                            { openMenu = "mood" },
-                            { openMenu = null },
-                            selected = state.preferences.mood != SongsMood.ALL,
-                            enabled = !state.loading && !state.failed,
-                        ) {
-                            SongsMood.entries.forEach { mood ->
-                                GlassMenuItem(
-                                    text = { Text(stringResource(moodLabel(mood))) },
-                                    icon = Icons.Default.Check.takeIf { state.preferences.mood == mood },
-                                    onClick = { viewModel.setMood(mood) },
-                                )
-                            }
-                        }
-                        IconButton(onClick = {
-                            openMenu = null
-                            onSearchActiveChange(true)
-                        }) {
-                            Icon(Icons.Default.Search, stringResource(R.string.songs_browser_search))
-                        }
-                    }
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            pluralStringResource(CommonR.plurals.library_songs_count, state.songs.size, state.songs.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        if (state.preferences.genre.isNotEmpty() || state.preferences.mood != SongsMood.ALL || state.query.isNotEmpty()) {
-                            TextButton(onClick = viewModel::clearFilters) { Text(stringResource(R.string.songs_browser_clear)) }
-                        }
-                    }
+        val scroll = padding.forScrollingContent(topOverlay = true)
+        val alphabetLabels =
+            remember(state.songs, state.preferences.sort) {
+                when (state.preferences.sort) {
+                    SongsSort.ARTIST -> state.songs.map { it.artist }
+                    SongsSort.ALBUM -> state.songs.map { it.album }
+                    SongsSort.TITLE_ASC, SongsSort.TITLE_DESC -> state.songs.map { it.title }
+                    else -> emptyList()
                 }
             }
-            when {
-                state.loading ->
-                    item {
-                        Box(
-                            Modifier.fillMaxWidth().padding(32.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.Center,
-                        ) { CircularProgressIndicator() }
-                    }
-                state.failed ->
-                    item {
-                        Column(Modifier.padding(20.dp)) {
-                            Text(stringResource(R.string.songs_browser_error))
-                            TextButton(onClick = viewModel::reload) { Text(stringResource(R.string.songs_browser_retry)) }
-                        }
-                    }
-                state.songs.isEmpty() ->
-                    item {
-                        Column(Modifier.padding(20.dp)) {
-                            Text(stringResource(if (state.total == 0) R.string.songs_browser_empty else R.string.songs_browser_no_matches))
-                            if (state.preferences.genre.isNotEmpty() ||
-                                state.preferences.mood != SongsMood.ALL ||
-                                state.query.isNotEmpty()
+        val hasFilters =
+            state.preferences.genre.isNotEmpty() || state.preferences.mood != SongsMood.ALL || state.query.isNotEmpty()
+        LibraryFastScroll(
+            labels = alphabetLabels,
+            itemCount = if (state.loading || state.failed) 0 else state.songs.size,
+            topInset = scroll.contentTop,
+            bottomInset = scroll.contentBottom,
+            onJump = { listState.requestScrollToItem(it + 1) }, // The filters occupy item zero.
+            modifier = Modifier.fillMaxSize().padding(scroll.container),
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().nestedScroll(chromeScroll),
+                contentPadding = PaddingValues(top = scroll.contentTop + Spacing.sm, bottom = scroll.contentBottom + Spacing.lg),
+            ) {
+                item(key = "filters") {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            BrowserPill(
+                                label = stringResource(sortLabel(state.preferences.sort)),
+                                icon = Icons.AutoMirrored.Filled.Sort,
+                                expanded = openMenu == "sort",
+                                onOpen = { openMenu = "sort" },
+                                onDismiss = { openMenu = null },
+                                enabled = !state.loading && !state.failed,
                             ) {
+                                SongsSort.entries.forEach { sort ->
+                                    GlassMenuItem(
+                                        text = { Text(stringResource(sortLabel(sort))) },
+                                        icon = Icons.Default.Check.takeIf { state.preferences.sort == sort },
+                                        onClick = { viewModel.setSort(sort) },
+                                    )
+                                }
+                            }
+                            val selectedGenre =
+                                when {
+                                    state.preferences.genre.isEmpty() -> stringResource(R.string.songs_browser_genre)
+                                    state.preferences.genre == "untagged" -> stringResource(R.string.songs_browser_untagged)
+                                    else -> state.preferences.genre.removePrefix("genre:")
+                                }
+                            BrowserPill(
+                                selectedGenre,
+                                Icons.Default.Tune,
+                                openMenu == "genre",
+                                { openMenu = "genre" },
+                                { openMenu = null },
+                                selected = state.preferences.genre.isNotEmpty(),
+                                enabled = !state.loading && !state.failed,
+                            ) {
+                                val choices =
+                                    listOf(
+                                        "" to stringResource(R.string.songs_browser_all_genres),
+                                        "untagged" to stringResource(R.string.songs_browser_untagged),
+                                    ) + state.genres.map { "genre:$it" to it }
+                                choices.forEach { (key, label) ->
+                                    GlassMenuItem(
+                                        text = { Text(label) },
+                                        icon = Icons.Default.Check.takeIf { state.preferences.genre.equals(key, ignoreCase = true) },
+                                        onClick = { viewModel.setGenre(key) },
+                                    )
+                                }
+                            }
+                            BrowserPill(
+                                stringResource(
+                                    if (state.preferences.mood ==
+                                        SongsMood.ALL
+                                    ) {
+                                        R.string.songs_browser_mood
+                                    } else {
+                                        moodLabel(state.preferences.mood)
+                                    },
+                                ),
+                                Icons.Default.AutoAwesome,
+                                openMenu == "mood",
+                                { openMenu = "mood" },
+                                { openMenu = null },
+                                selected = state.preferences.mood != SongsMood.ALL,
+                                enabled = !state.loading && !state.failed,
+                            ) {
+                                SongsMood.entries.forEach { mood ->
+                                    GlassMenuItem(
+                                        text = { Text(stringResource(moodLabel(mood))) },
+                                        icon = Icons.Default.Check.takeIf { state.preferences.mood == mood },
+                                        onClick = { viewModel.setMood(mood) },
+                                    )
+                                }
+                            }
+                            IconButton(onClick = {
+                                openMenu = null
+                                onSearchActiveChange(true)
+                            }) {
+                                Icon(Icons.Default.Search, stringResource(R.string.songs_browser_search))
+                            }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                pluralStringResource(CommonR.plurals.library_songs_count, state.songs.size, state.songs.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            if (hasFilters) {
                                 TextButton(onClick = viewModel::clearFilters) { Text(stringResource(R.string.songs_browser_clear)) }
                             }
                         }
                     }
-                else ->
-                    itemsIndexed(state.songs, key = { _, song -> song.id }) { index, song ->
-                        LibrarySongRow(song, song.id == currentSongId, { viewModel.play(state.songs, index) }, actions)
-                    }
+                }
+                when {
+                    state.loading ->
+                        item {
+                            Box(
+                                Modifier.fillMaxWidth().padding(32.dp),
+                                contentAlignment = androidx.compose.ui.Alignment.Center,
+                            ) { CircularProgressIndicator() }
+                        }
+                    state.failed ->
+                        item {
+                            Column(Modifier.padding(20.dp)) {
+                                Text(stringResource(R.string.songs_browser_error))
+                                TextButton(onClick = viewModel::reload) { Text(stringResource(R.string.songs_browser_retry)) }
+                            }
+                        }
+                    state.songs.isEmpty() ->
+                        item {
+                            Column(Modifier.padding(20.dp)) {
+                                val emptyMessage =
+                                    if (state.total == 0) R.string.songs_browser_empty else R.string.songs_browser_no_matches
+                                Text(stringResource(emptyMessage))
+                                if (hasFilters) {
+                                    TextButton(onClick = viewModel::clearFilters) { Text(stringResource(R.string.songs_browser_clear)) }
+                                }
+                            }
+                        }
+                    else ->
+                        itemsIndexed(state.songs, key = { _, song -> song.id }) { index, song ->
+                            LibrarySongRow(song, song.id == currentSongId, { viewModel.play(state.songs, index) }, actions)
+                        }
+                }
             }
         }
     }

@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -241,8 +242,11 @@ internal fun SearchContent(
                     message = stringResource(CommonR.string.search_no_matches_body, query),
                     modifier = Modifier.padding(top = topInset, bottom = bottomInset),
                 )
-            SearchState.RESULTS ->
+            SearchState.RESULTS -> {
+                val listState = rememberLazyListState()
+                ScrollToTopOnReselect(listState)
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.lg + bottomInset),
                 ) {
@@ -285,6 +289,7 @@ internal fun SearchContent(
                         }
                     }
                 }
+            }
         }
     }
 }
@@ -372,7 +377,10 @@ private fun RecentSearchesContent(
             recentSearchItems.filterIsInstance<RecentSearchItem.SongItem>()
         }
 
+    val listState = rememberLazyListState()
+    ScrollToTopOnReselect(listState)
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.lg),
     ) {

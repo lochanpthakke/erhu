@@ -148,8 +148,8 @@ fun IconBadge(
 }
 
 /**
- * A choice between a few [options] (tabs, a setting's values): a pill on the group surface with the
- * navigation bar's liquid capsule behind the selected one. Tap an option or drag the capsule to it;
+ * A choice between a few [options], with the navigation bar's liquid capsule behind the selection.
+ * The surrounding track can be hidden with [showTrack]. Tap an option or drag the capsule to it;
  * [onSelect] is called once per change. Labels highlight as the capsule reaches them. A
  * [selectedIndex] of -1 (the current value is none of the options) shows no capsule.
  */
@@ -159,7 +159,9 @@ fun SegmentedSelector(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    showTrack: Boolean = true,
 ) {
+    val track = if (showTrack) Modifier.groupSurface(CircleShape) else Modifier
     val position = remember { Animatable(selectedIndex.coerceAtLeast(0).toFloat()) }
     LaunchedEffect(selectedIndex) { if (selectedIndex >= 0) position.animateTo(selectedIndex.toFloat(), Motion.selection()) }
     val slots = remember(options.size) { CapsuleSlots(options.size) }
@@ -171,7 +173,7 @@ fun SegmentedSelector(
         modifier =
             modifier
                 .fillMaxWidth()
-                .groupSurface(CircleShape)
+                .then(track)
                 .padding(SEGMENT_INSET)
                 .capsuleDrag(position, slots, current = { current }, enabled = options.size > 1, onSettle = onSelect),
     ) {
@@ -226,8 +228,8 @@ private fun SegmentLabel(
 }
 
 /**
- * A search box: a filled pill on the group surface with a search icon, a clear button once there is
- * text, and optional extra trailing [actions].
+ * A search box with a search icon, a clear button once there is text, and optional trailing [actions].
+ * Set [showContainer] to false to place the field directly on the page background.
  */
 @Composable
 fun SearchField(
@@ -235,9 +237,10 @@ fun SearchField(
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
+    showContainer: Boolean = true,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
-    val fill = groupFillColor()
+    val fill = if (showContainer) groupFillColor() else Color.Transparent
     TextField(
         value = value,
         onValueChange = onValueChange,

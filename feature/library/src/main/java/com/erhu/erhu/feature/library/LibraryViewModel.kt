@@ -279,17 +279,21 @@ class LibraryViewModel
                 .getArtistsPaged()
                 .cachedIn(viewModelScope)
 
+        internal val songTitles = libraryRepository.observeSongTitles()
+        internal val albumTitles = libraryRepository.observeAlbumTitles()
+        internal val artistCatalog = libraryRepository.getAllArtists()
+
         private val _metadataCandidates = MutableStateFlow<List<MetadataCandidate>>(emptyList())
         val metadataCandidates: StateFlow<List<MetadataCandidate>> = _metadataCandidates.asStateFlow()
 
-        private val isScanningLocal = MutableStateFlow(false)
+        private val _isScanningMissingArtwork = MutableStateFlow(false)
+        val isScanningMissingArtwork: StateFlow<Boolean> = _isScanningMissingArtwork.asStateFlow()
         private val scanTimeoutTrigger = MutableStateFlow(false)
 
         /** Reflects the real WorkManager scan state, guarded by a timeout on startup. */
         val isScanning: StateFlow<Boolean> =
             libraryRepository
                 .observeIsScanning()
-                .combine(isScanningLocal) { libScan, localScan -> libScan || localScan }
                 .combine(scanTimeoutTrigger) { scanning, timedOut -> scanning && !timedOut }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
@@ -835,52 +839,12 @@ class LibraryViewModel
             }
         }
 
-        fun enqueueAlbumForArtwork(album: Album) {
-            val currentQueue = _artworkQueue.value.toMutableList()
-            if (currentQueue.none { it.album.id == album.id }) {
-                currentQueue.add(ArtworkQueueItem(album = album, status = "PENDING"))
-                _artworkQueue.value = currentQueue
-            }
-        }
-
-        fun removeFromArtworkQueue(album: Album) {
-            val currentQueue = _artworkQueue.value.toMutableList()
-            currentQueue.removeAll { it.album.id == album.id }
-            _artworkQueue.value = currentQueue
-            if (_currentProcessingAlbum.value?.id == album.id) {
-                _currentProcessingAlbum.value = null
-                _artworkCandidates.value = emptyList()
-                _artworkSearchDiagnostics.value = null
-                _selectedEnlargedArtworkUrl.value = null
-            }
-        }
-
         fun clearArtworkQueue() {
             _artworkQueue.value = emptyList()
             _currentProcessingAlbum.value = null
             _artworkCandidates.value = emptyList()
             _artworkSearchDiagnostics.value = null
             _selectedEnlargedArtworkUrl.value = null
-        }
-
-        fun enqueueArtistForArtwork(artist: Artist) {
-            val currentQueue = _artistArtworkQueue.value.toMutableList()
-            if (currentQueue.none { it.artist.id == artist.id }) {
-                currentQueue.add(ArtistArtworkQueueItem(artist = artist, status = "PENDING"))
-                _artistArtworkQueue.value = currentQueue
-            }
-        }
-
-        fun removeFromArtistArtworkQueue(artist: Artist) {
-            val currentQueue = _artistArtworkQueue.value.toMutableList()
-            currentQueue.removeAll { it.artist.id == artist.id }
-            _artistArtworkQueue.value = currentQueue
-            if (_currentProcessingArtist.value?.id == artist.id) {
-                _currentProcessingArtist.value = null
-                _artworkCandidates.value = emptyList()
-                _artworkSearchDiagnostics.value = null
-                _selectedEnlargedArtworkUrl.value = null
-            }
         }
 
         fun clearArtistArtworkQueue() {
@@ -891,31 +855,46 @@ class LibraryViewModel
             _selectedEnlargedArtworkUrl.value = null
         }
 
-        fun scanForMissingCovers() {
-            viewModelScope.launch {
-                isScanningLocal.value = true
-                val allAlbums = libraryRepository.getAllAlbums().first()
-                val missingCoverAlbums =
-                    allAlbums.filter { album ->
-                        album.artworkUri.isNullOrBlank()
-                    }
-                _artworkQueue.value = missingCoverAlbums.map { ArtworkQueueItem(album = it, status = "PENDING") }
-                delay(SCAN_INDICATOR_DELAY_MS)
-                isScanningLocal.value = false
+        fun scanForMissingCovers() =
+            scanMissingArtwork { isCurrent ->
+                val missing = libraryRepository.getAllAlbums().first().filter { it.artworkUri.isNullOrBlank() }
+                _artworkQueue.value = missing.map { ArtworkQueueItem(album = it, status = "PENDING") }
+                if (isCurrent()) missing.firstOrNull()?.let(::searchArtworkForAlbum)
+                missing.isEmpty()
             }
-        }
 
-        fun scanForMissingArtistPhotos() {
-            viewModelScope.launch {
-                isScanningLocal.value = true
-                val allArtists = libraryRepository.getAllArtists().first()
-                val missingPhotoArtists =
-                    allArtists.filter { artist ->
-                        artist.artworkUri.isNullOrBlank() || ArtistArtworkCache.isNotFound(artist.artworkUri)
+        fun scanForMissingArtistPhotos() =
+            scanMissingArtwork { isCurrent ->
+                val missing =
+                    libraryRepository.getAllArtists().first().filter {
+                        it.artworkUri.isNullOrBlank() || ArtistArtworkCache.isNotFound(it.artworkUri)
                     }
-                _artistArtworkQueue.value = missingPhotoArtists.map { ArtistArtworkQueueItem(artist = it, status = "PENDING") }
-                delay(SCAN_INDICATOR_DELAY_MS)
-                isScanningLocal.value = false
+                _artistArtworkQueue.value = missing.map { ArtistArtworkQueueItem(artist = it, status = "PENDING") }
+                if (isCurrent()) missing.firstOrNull()?.let(::searchArtworkForArtist)
+                missing.isEmpty()
+            }
+
+        private fun scanMissingArtwork(scan: suspend (isCurrent: () -> Boolean) -> Boolean) {
+            if (_isScanningMissingArtwork.value || _isSearchingArtwork.value) return
+            clearArtworkDiagnostics()
+            val requestSequence = artworkRequestSequence
+            viewModelScope.launch {
+                _isScanningMissingArtwork.value = true
+                try {
+                    // Skip auto-fetch if the user leaves the screen during the local scan.
+                    val noMissingArtwork = scan { requestSequence == artworkRequestSequence }
+                    if (noMissingArtwork && requestSequence == artworkRequestSequence) {
+                        _userMessage.value = localized().getString(R.string.artwork_missing_none)
+                    }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    if (requestSequence == artworkRequestSequence) {
+                        _userMessage.value = localized().getString(R.string.artwork_missing_scan_failed)
+                    }
+                } finally {
+                    _isScanningMissingArtwork.value = false
+                }
             }
         }
 
@@ -1028,6 +1007,8 @@ class LibraryViewModel
                     _currentProcessingArtist.value = artist
                     _currentProcessingAlbum.value = null
                     _selectedEnlargedArtworkUrl.value = null
+                    _artworkCandidates.value = emptyList()
+                    _artworkSearchDiagnostics.value = null
                     try {
                         val result = metadataRepository.fetchArtistArtworkCandidatesDetailed(artist.name)
                         val data = (result as? AppResult.Success)?.data
@@ -2181,7 +2162,6 @@ class LibraryViewModel
             const val PREPARE_ALBUM_TIMEOUT_MS = 150L
 
             private const val SCAN_TIMEOUT_MS = 15_000L
-            private const val SCAN_INDICATOR_DELAY_MS = 1000L
             const val MIN_THRESHOLD = 0.50f
             const val MAX_THRESHOLD = 0.95f
             private const val SEARCH_DEBOUNCE_MS = 250L

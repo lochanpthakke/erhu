@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -292,8 +293,10 @@ fun LibraryScreen(
                                 // Collected only on the Tracks section, which shows the smart mix cards.
                                 val smartMixes by viewModel.smartMixes.collectAsState()
                                 val featuredAlbums by hiltViewModel<FeaturedAlbumsViewModel>().albums.collectAsState()
+                                val songTitles by viewModel.songTitles.collectAsState(initial = emptyList())
                                 HomeFeed(
                                     songs = songs,
+                                    songTitles = songTitles,
                                     smartMixes = smartMixes,
                                     featuredAlbums = featuredAlbums,
                                     artistArtwork = artistArtwork,
@@ -316,6 +319,7 @@ fun LibraryScreen(
                             LibrarySection.ALBUMS ->
                                 AlbumsTab(
                                     albums = albums,
+                                    titles = viewModel.albumTitles,
                                     topInset = scroll.contentTop,
                                     bottomInset = scroll.contentBottom,
                                     onAlbumClick = onOpenAlbum,
@@ -347,8 +351,8 @@ fun LibraryScreen(
                                         shelf = activeShelf,
                                         playlists = playlists,
                                         favoriteSongs = favoriteSongs,
-                                        artists = artists,
                                         artistArtwork = artistArtwork,
+                                        artistCatalog = viewModel.artistCatalog,
                                         currentSongId = currentSongId,
                                         onFavoriteClick = { viewModel.playFromLibrary(it, SongSource.FAVORITES) },
                                         onPlaylistClick = { onOpenPlaylist(it.id) },
@@ -447,6 +451,7 @@ internal fun SongsTab(
         val listState = rememberLazyListState()
         // The page title merges into the header button as this scrolls.
         ReportTitleScroll(listState)
+        ScrollToTopOnReselect(listState)
         LazyColumn(
             state = listState,
             modifier = modifier.fillMaxSize(),
@@ -598,6 +603,7 @@ internal fun LibrarySongRow(
 @Composable
 private fun AlbumsTab(
     albums: LazyPagingItems<Album>,
+    titles: kotlinx.coroutines.flow.Flow<List<String>>,
     topInset: Dp,
     bottomInset: Dp,
     onAlbumClick: (Album) -> Unit,
@@ -614,27 +620,38 @@ private fun AlbumsTab(
         val gridState = rememberLazyGridState()
         // The page title merges into the header button as this scrolls.
         ReportTitleScroll(gridState)
-        LazyVerticalGrid(
-            state = gridState,
-            columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
+        ScrollToTopOnReselect(gridState)
+        val labels by titles.collectAsState(initial = emptyList())
+        val indexedLabels = labels.takeIf { it.size == albums.itemCount }.orEmpty()
+        LibraryFastScroll(
+            labels = indexedLabels,
+            topInset = topInset,
+            bottomInset = bottomInset,
+            onJump = { gridState.requestScrollToItem(it) },
             modifier = modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-            contentPadding =
-                PaddingValues(
-                    start = Spacing.screenGutter,
-                    end = Spacing.screenGutter,
-                    top = Spacing.sm + topInset,
-                    bottom = Spacing.lg + bottomInset,
-                ),
         ) {
-            items(
-                count = albums.itemCount,
-                key = albums.itemKey { it.id },
-            ) { index ->
-                val album = albums[index]
-                if (album != null) {
-                    AlbumTile(album = album, onClick = { onAlbumClick(album) })
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                contentPadding =
+                    PaddingValues(
+                        start = Spacing.screenGutter,
+                        end = Spacing.screenGutter,
+                        top = Spacing.sm + topInset,
+                        bottom = Spacing.lg + bottomInset,
+                    ),
+            ) {
+                items(
+                    count = albums.itemCount,
+                    key = albums.itemKey { it.id },
+                ) { index ->
+                    val album = albums[index]
+                    if (album != null) {
+                        AlbumTile(album = album, onClick = { onAlbumClick(album) })
+                    }
                 }
             }
         }
@@ -643,14 +660,15 @@ private fun AlbumsTab(
 
 @Composable
 internal fun ArtistsTab(
-    artists: LazyPagingItems<Artist>,
+    catalog: kotlinx.coroutines.flow.Flow<List<Artist>>,
     artwork: Map<Long, String>,
     topInset: Dp,
     bottomInset: Dp,
     onArtistClick: (Artist) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (artists.itemCount == 0) {
+    val artists by catalog.collectAsState(initial = emptyList())
+    if (artists.isEmpty()) {
         EmptyState(
             message = stringResource(CommonR.string.library_empty_artists_rescan),
             icon = LibraryShelf.ARTISTS.icon,
@@ -661,26 +679,30 @@ internal fun ArtistsTab(
         val gridState = rememberLazyGridState()
         // The page title merges into the header button as this scrolls.
         ReportTitleScroll(gridState)
-        LazyVerticalGrid(
-            state = gridState,
-            columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
+        ScrollToTopOnReselect(gridState)
+        val labels = remember(artists) { artists.map { it.name } }
+        LibraryFastScroll(
+            labels = labels,
+            topInset = topInset,
+            bottomInset = bottomInset,
+            onJump = { gridState.requestScrollToItem(it) },
             modifier = modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-            contentPadding =
-                PaddingValues(
-                    start = Spacing.screenGutter,
-                    end = Spacing.screenGutter,
-                    top = Spacing.sm + topInset,
-                    bottom = Spacing.lg + bottomInset,
-                ),
         ) {
-            items(
-                count = artists.itemCount,
-                key = artists.itemKey { it.id },
-            ) { index ->
-                val artist = artists[index]
-                if (artist != null) {
+            LazyVerticalGrid(
+                state = gridState,
+                columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                contentPadding =
+                    PaddingValues(
+                        start = Spacing.screenGutter,
+                        end = Spacing.screenGutter,
+                        top = Spacing.sm + topInset,
+                        bottom = Spacing.lg + bottomInset,
+                    ),
+            ) {
+                items(artists, key = { it.id }) { artist ->
                     ArtistTile(artist = artist, artworkUri = artwork[artist.id], onClick = { onArtistClick(artist) })
                 }
             }

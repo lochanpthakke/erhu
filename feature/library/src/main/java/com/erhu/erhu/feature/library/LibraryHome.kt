@@ -3,8 +3,10 @@ package com.erhu.erhu.feature.library
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,8 +21,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.paging.compose.LazyPagingItems
@@ -37,6 +42,9 @@ import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.SmartMixes
 import com.erhu.erhu.core.common.R as CommonR
 
+private const val HOME_TRACKS_HEADING = "tracks_heading"
+private const val HOME_TRACK_ROW = "song"
+
 /**
  * The Tracks destination as the home feed, top to bottom: the Smart Playlists as a hero banner
  * (whenever the library has songs), Featured Radio Stations and Featured Albums, Recently
@@ -47,6 +55,7 @@ import com.erhu.erhu.core.common.R as CommonR
 @Suppress("LongParameterList")
 internal fun HomeFeed(
     songs: LazyPagingItems<Song>,
+    songTitles: List<String>,
     smartMixes: SmartMixes?,
     featuredAlbums: List<Album>,
     artistArtwork: Map<Long, String>,
@@ -66,53 +75,99 @@ internal fun HomeFeed(
     emptyMessage: String = stringResource(CommonR.string.library_empty_songs_device),
 ) {
     val mixes = visibleHomeMixes(smartMixes?.mixes.orEmpty(), LocalVybeEnabled.current)
-    val hasSongs = songs.itemCount > 0
+    val songCount = songs.itemCount
+    val hasSongs = songCount > 0
     // Shown once the library has songs: the mixes, and a note while history is still short.
     val hasSmartPlaylists = hasSongs && (mixes.isNotEmpty() || smartMixes?.needsMoreListening == true)
     val hasShelves = hasSongs || recentAlbums.isNotEmpty() || recentPlaylists.isNotEmpty()
-    LazyColumn(
-        state = rememberLazyListState().also { ReportTitleScroll(it) }, // the page title merges into the header button
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.sm + bottomInset),
-    ) {
-        // One header item that always exists (empty = zero height). The list stays anchored
-        // to it at the top, so shelves appearing after the first play push the tracks down
-        // into view instead of being inserted above the visible position.
-        item(key = "home_header", contentType = "header") {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (hasSmartPlaylists) {
-                    SmartMixHero(
-                        mixes = mixes,
-                        needsMoreListening = smartMixes?.needsMoreListening == true,
-                        onOpen = onSmartPlaylistClick,
-                        onPlay = onSmartPlaylistPlay,
-                        modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.lg),
-                    )
-                }
-                AlbumShelves(
-                    featuredAlbums,
-                    artistArtwork,
-                    recentAlbums,
-                    recentPlaylists,
-                    showRecentNote = hasSongs,
-                    onAlbumClick,
-                    onOpenRadio,
-                    onPlaylistClick,
-                )
-                if (hasShelves) SectionHeading(stringResource(CommonR.string.library_home_tracks))
+    val listState = rememberLazyListState()
+    ReportTitleScroll(listState)
+    ScrollToTopOnReselect(listState)
+    val (topInsetPx, bottomInsetPx) = with(LocalDensity.current) { topInset.roundToPx() to bottomInset.roundToPx() }
+    val tracksVisible by remember(listState, topInsetPx, bottomInsetPx) {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val top = layout.viewportStartOffset + topInsetPx
+            val bottom = layout.viewportEndOffset - bottomInsetPx
+            layout.visibleItemsInfo.any { item ->
+                (item.contentType == HOME_TRACKS_HEADING || item.contentType == HOME_TRACK_ROW) &&
+                    item.offset < bottom &&
+                    item.offset + item.size > top
             }
         }
-        if (songs.itemCount == 0) {
-            item(key = "empty", contentType = "empty") {
-                EmptyState(
-                    message = if (isScanning) stringResource(CommonR.string.library_scanning) else emptyMessage,
-                    icon = LibrarySection.TRACKS.icon,
-                )
+    }
+
+    LibraryFastScroll(
+        labels = songTitles,
+        topInset = topInset,
+        bottomInset = bottomInset,
+        onJump = { index ->
+            // Tracks are the last items in the feed. Skip the shelves and the section heading.
+            val firstTrack = listState.layoutInfo.totalItemsCount - songCount
+            if (firstTrack > 0) listState.requestScrollToItem(firstTrack + index)
+        },
+        modifier = Modifier.fillMaxSize(),
+        itemCount = songCount,
+        enabled = tracksVisible,
+        showHandle = true,
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = Spacing.sm + topInset, bottom = Spacing.sm + bottomInset),
+        ) {
+            // One header item that always exists (empty = zero height). The list stays anchored
+            // to it at the top, so shelves appearing after the first play push the tracks down
+            // into view instead of being inserted above the visible position.
+            item(key = "home_header", contentType = "header") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (hasSmartPlaylists) {
+                        SmartMixHero(
+                            mixes = mixes,
+                            needsMoreListening = smartMixes?.needsMoreListening == true,
+                            onOpen = onSmartPlaylistClick,
+                            onPlay = onSmartPlaylistPlay,
+                            modifier = Modifier.padding(top = Spacing.xs, bottom = Spacing.lg),
+                        )
+                    }
+                    AlbumShelves(
+                        featuredAlbums,
+                        artistArtwork,
+                        recentAlbums,
+                        recentPlaylists,
+                        showRecentNote = hasSongs,
+                        onAlbumClick,
+                        onOpenRadio,
+                        onPlaylistClick,
+                    )
+                }
             }
-        } else {
-            items(count = songs.itemCount, key = songs.itemKey { it.id }, contentType = { "song" }) { index ->
-                songs[index]?.let { song ->
-                    LibrarySongRow(song = song, isCurrent = song.id == currentSongId, onClick = { onSongClick(song) }, actions = actions)
+            if (hasShelves) {
+                item(key = HOME_TRACKS_HEADING, contentType = HOME_TRACKS_HEADING) {
+                    SectionHeading(stringResource(CommonR.string.library_home_tracks))
+                }
+            }
+            if (songCount == 0) {
+                item(key = "empty", contentType = "empty") {
+                    EmptyState(
+                        message = if (isScanning) stringResource(CommonR.string.library_scanning) else emptyMessage,
+                        icon = LibrarySection.TRACKS.icon,
+                    )
+                }
+            } else {
+                items(count = songCount, key = songs.itemKey { it.id }, contentType = { HOME_TRACK_ROW }) { index ->
+                    val song = songs[index]
+                    if (song == null) {
+                        // Keep unloaded rows measurable when paging jumps to a distant initial.
+                        Spacer(Modifier.height(ArtworkSize.list + Spacing.sm * 2))
+                    } else {
+                        LibrarySongRow(
+                            song = song,
+                            isCurrent = song.id == currentSongId,
+                            onClick = { onSongClick(song) },
+                            actions = actions,
+                        )
+                    }
                 }
             }
         }
@@ -237,8 +292,8 @@ internal fun LibraryHub(
     shelf: LibraryShelf,
     playlists: List<Playlist>,
     favoriteSongs: LazyPagingItems<Song>,
-    artists: LazyPagingItems<Artist>,
     artistArtwork: Map<Long, String>,
+    artistCatalog: kotlinx.coroutines.flow.Flow<List<Artist>>,
     currentSongId: Long?,
     onFavoriteClick: (Song) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
@@ -271,7 +326,7 @@ internal fun LibraryHub(
             )
         LibraryShelf.ARTISTS ->
             ArtistsTab(
-                artists = artists,
+                catalog = artistCatalog,
                 artwork = artistArtwork,
                 topInset = topInset,
                 bottomInset = bottomInset,
@@ -292,6 +347,7 @@ private fun PlaylistsGrid(
     val gridState = rememberLazyGridState()
     // The page title merges into the header button as this scrolls.
     ReportTitleScroll(gridState)
+    ScrollToTopOnReselect(gridState)
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = ArtworkSize.gridMin),

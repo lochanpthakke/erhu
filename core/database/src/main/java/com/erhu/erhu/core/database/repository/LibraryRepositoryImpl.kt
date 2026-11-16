@@ -58,8 +58,10 @@ class LibraryRepositoryImpl
                 rows.map { ArtistOnSongs(it.artist.toDomainModel(), it.representativeSongId) }
             }
 
+        override fun observeSongTitles(): Flow<List<String>> = songDao.observeSongTitles().distinctUntilChanged()
+
         override fun getSongsPaged(): Flow<PagingData<Song>> =
-            Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE)) {
+            Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE, jumpThreshold = DEFAULT_PAGE_SIZE)) {
                 songDao.getSongsPaged()
             }.flow.map { pagingData ->
                 pagingData.map { entity -> entity.toDomainModel() }
@@ -119,8 +121,10 @@ class LibraryRepositoryImpl
                 list.map { it.toDomainModel() }
             }
 
+        override fun observeAlbumTitles(): Flow<List<String>> = albumDao.observeAlbumTitles().distinctUntilChanged()
+
         override fun getAlbumsPaged(): Flow<PagingData<Album>> =
-            Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE)) {
+            Pager(config = PagingConfig(pageSize = DEFAULT_PAGE_SIZE, jumpThreshold = DEFAULT_PAGE_SIZE)) {
                 albumDao.getAlbumsPaged()
             }.flow.map { pagingData ->
                 pagingData.map { entity -> entity.toDomainModel() }

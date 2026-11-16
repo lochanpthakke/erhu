@@ -247,7 +247,7 @@ fun ArtistDetailScreen(
                                     text = { Text(stringResource(CommonR.string.menu_fetch_photo_online)) },
                                     onClick = {
                                         menuExpanded = false
-                                        viewModel.enqueueArtistForArtwork(artist)
+                                        viewModel.searchArtworkForArtist(artist)
                                         onNavigateToArtworkFetcher()
                                     },
                                 )

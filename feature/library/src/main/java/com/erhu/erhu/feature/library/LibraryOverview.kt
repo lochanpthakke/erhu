@@ -92,6 +92,7 @@ internal fun LibraryOverview(
         val listState = rememberLazyListState()
         // The page title merges into the header button as this scrolls.
         ReportTitleScroll(listState)
+        ScrollToTopOnReselect(listState)
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),

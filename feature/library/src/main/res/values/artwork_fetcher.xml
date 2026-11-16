@@ -1,0 +1,10 @@
+<resources>
+    <string name="artwork_quick_actions">Quick actions</string>
+    <string name="artwork_fetch_missing_covers">Fetch missing covers</string>
+    <string name="artwork_fetch_missing_photos">Fetch missing artist photos</string>
+    <string name="artwork_fetch_missing_summary">Find items without artwork and look up the first match.</string>
+    <string name="artwork_missing_none">No missing artwork found.</string>
+    <string name="artwork_missing_scan_failed">Could not scan for missing artwork. Try again.</string>
+    <string name="artwork_lookup_selected">Selected</string>
+    <string name="artwork_cd_fetch">Fetch artwork for %1$s</string>
+</resources>

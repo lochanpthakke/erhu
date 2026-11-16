@@ -27,6 +27,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,7 +46,6 @@ import com.erhu.erhu.core.designsystem.component.OverlayHeader
 import com.erhu.erhu.core.designsystem.component.SectionHeading
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
-import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.network.artwork.ArtworkUpgradeMatch
 import com.erhu.erhu.core.common.R as CommonR
@@ -63,7 +63,15 @@ internal fun ArtworkUpgradeScreen(
     var selected by remember(kind) { mutableStateOf<ArtworkUpgradeResult?>(null) }
     val back = { if (!state.saving) onBack() }
     BackHandler(onBack = back)
-    LaunchedEffect(kind) { controller.select(kind) }
+    var startedOnOpen by rememberSaveable(kind) { mutableStateOf(false) }
+    LaunchedEffect(controller, kind) {
+        val restart = !startedOnOpen
+        controller.select(kind, restart = restart)
+        if (restart || controller.state.value == ArtworkUpgradeState()) {
+            controller.search(kind)
+            startedOnOpen = true
+        }
+    }
     DisposableEffect(controller) { onDispose { controller.stop() } }
     LaunchedEffect(state.results) {
         if (selected !in state.results) selected = null
@@ -97,7 +105,7 @@ internal fun ArtworkUpgradeScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
             item {
-                Column(Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
                     Text(
                         stringResource(
                             CommonR.string.artwork_upgrade_intro,
@@ -174,11 +182,10 @@ internal fun ArtworkUpgradeScreen(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .groupSurface()
                         .clickable(enabled = !state.saving, role = Role.Button) {
                             controller.stop()
                             selected = result
-                        }.padding(Spacing.lg),
+                        }.padding(vertical = Spacing.sm),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     AsyncImage(

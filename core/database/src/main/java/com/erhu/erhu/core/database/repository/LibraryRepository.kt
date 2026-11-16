@@ -9,11 +9,14 @@ import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.ArtistOnSongs
 import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 @Suppress("TooManyFunctions")
 interface LibraryRepository {
     /** Approved search aliases; never rewrite tags or merge library identities. */
     fun observeVybeAliases(): Flow<Map<String, String>> = kotlinx.coroutines.flow.flowOf(emptyMap())
+
+    fun observeSongTitles(): Flow<List<String>> = getAllSongs().map { rows -> rows.map { it.title } }
 
     fun getSongsPaged(): Flow<PagingData<Song>>
 
@@ -41,6 +44,8 @@ interface LibraryRepository {
     fun getAllAlbums(): Flow<List<Album>>
 
     fun getAlbumsByArtistId(artistId: Long): Flow<List<Album>>
+
+    fun observeAlbumTitles(): Flow<List<String>> = getAllAlbums().map { rows -> rows.map { it.title } }
 
     fun getAlbumsPaged(): Flow<PagingData<Album>>
 

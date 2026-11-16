@@ -15,7 +15,10 @@ interface AlbumDao {
     @Query("SELECT * FROM albums ORDER BY title COLLATE NOCASE ASC")
     fun getAllAlbums(): Flow<List<AlbumEntity>>
 
-    @Query("SELECT * FROM albums ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT title FROM albums ORDER BY title COLLATE NOCASE ASC, id ASC")
+    fun observeAlbumTitles(): Flow<List<String>>
+
+    @Query("SELECT * FROM albums ORDER BY title COLLATE NOCASE ASC, id ASC")
     fun getAlbumsPaged(): PagingSource<Int, AlbumEntity>
 
     @Query("SELECT * FROM albums WHERE id = :id LIMIT 1")

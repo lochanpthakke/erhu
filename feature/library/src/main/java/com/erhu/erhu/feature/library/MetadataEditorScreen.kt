@@ -94,7 +94,6 @@ import com.erhu.erhu.core.designsystem.component.SearchField
 import com.erhu.erhu.core.designsystem.component.SectionHeading
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
-import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
 import com.erhu.erhu.core.designsystem.foundation.ArtworkSize
 import com.erhu.erhu.core.designsystem.foundation.Radius
@@ -239,11 +238,12 @@ fun MetadataEditorScreen(
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl)) {
                     SectionHeading(title = stringResource(CommonR.string.repair_section_find))
                     Column(
-                        modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         SearchField(
                             value = searchQuery,
+                            showContainer = false,
                             onValueChange = {
                                 searchQuery = it
                                 viewModel.searchLocalLibrary(it)
@@ -347,7 +347,7 @@ fun MetadataEditorScreen(
             item(key = "options") {
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl)) {
                     SectionHeading(title = stringResource(CommonR.string.repair_section_options))
-                    Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Box {
                             GroupRow(
                                 title = stringResource(CommonR.string.repair_option_source),
@@ -469,7 +469,7 @@ fun MetadataEditorScreen(
                             ),
                     )
                     Column(
-                        modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         ProgressBar(progress = { progressFloat })
@@ -606,7 +606,7 @@ fun MetadataEditorScreen(
                         text = stringResource(CommonR.string.repair_queue_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
+                        modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
                     )
                 }
             } else {
@@ -677,7 +677,7 @@ fun MetadataEditorScreen(
             item(key = "more") {
                 Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl)) {
                     SectionHeading(title = stringResource(CommonR.string.artwork_more_section))
-                    Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         GroupRow(
                             title = stringResource(CommonR.string.artwork_utility_settings_title),
                             summary = stringResource(CommonR.string.artwork_utility_settings_summary),
@@ -925,7 +925,7 @@ private fun RepairQueueCard(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxWidth().groupSurface()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         if (queueItem.status == "FIXING") {
             ProgressBar(modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm))
         }

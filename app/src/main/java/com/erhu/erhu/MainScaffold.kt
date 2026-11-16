@@ -121,6 +121,7 @@ import com.erhu.erhu.feature.library.LibraryBottomChrome
 import com.erhu.erhu.feature.library.LibraryScreen
 import com.erhu.erhu.feature.library.LibrarySection
 import com.erhu.erhu.feature.library.LibraryViewModel
+import com.erhu.erhu.feature.library.LocalLibraryScrollToTopRequests
 import com.erhu.erhu.feature.library.LocalPlayerTransition
 import com.erhu.erhu.feature.library.LocalVybeEnabled
 import com.erhu.erhu.feature.library.MetadataEditorScreen
@@ -174,6 +175,7 @@ import com.erhu.erhu.ui.components.ExpandingPlayer
 import com.erhu.erhu.ui.components.MiniPlayer
 import com.erhu.erhu.ui.components.WriteAccessRequestEffect
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -374,6 +376,8 @@ fun MainScaffold(
             var isSongsSearchActive by rememberSaveable { mutableStateOf(false) }
             // Library scrolling compacts the bottom chrome; switching section or searching restores it.
             val libraryChrome = rememberLibraryChromeState()
+            val libraryScrollRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+            val songsScrollRequests = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
             LaunchedEffect(librarySection, isLibrarySearchActive) { libraryChrome.expand() }
             val context = LocalContext.current
             var isLibraryContentShown by rememberSaveable {
@@ -382,6 +386,10 @@ fun MainScaffold(
 
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
             val scope = rememberCoroutineScope()
+            val scrollCurrentTabToTop: () -> Unit = {
+                if (isOnSongs) songsScrollRequests.tryEmit(Unit) else libraryScrollRequests.tryEmit(Unit)
+                scope.launch { libraryChrome.expand() }
+            }
             val openDrawer: () -> Unit = { scope.launch { drawerState.open() } }
             val openPlayer: () -> Unit = { scope.launch { player.expand() } }
             // The tapped album and its tracks go with the navigation: Album Detail enters complete
@@ -554,9 +562,14 @@ fun MainScaffold(
                                                         state = libraryChrome,
                                                         showNavigation = (isOnLibrary && isLibraryContentShown) || isOnSongs,
                                                         selected = if (isOnSongs) LibrarySection.LIBRARY else visibleLibrarySection,
-                                                        onSelect = {
-                                                            if (isOnSongs) navController.popBackStack<Library>(false)
-                                                            librarySection = it.visibleWithVybe(vybeEnabled)
+                                                        onSelect = { section ->
+                                                            val current = if (isOnSongs) LibrarySection.LIBRARY else visibleLibrarySection
+                                                            if (section == current) {
+                                                                scrollCurrentTabToTop()
+                                                            } else {
+                                                                if (isOnSongs) navController.popBackStack<Library>(false)
+                                                                librarySection = section.visibleWithVybe(vybeEnabled)
+                                                            }
                                                         },
                                                         defaultStartSection = defaultStartSection,
                                                         onSearch = {
@@ -567,7 +580,7 @@ fun MainScaffold(
                                                                     true
                                                             }
                                                         },
-                                                        onExpand = { scope.launch { libraryChrome.expand() } },
+                                                        onExpand = scrollCurrentTabToTop,
                                                         searching = if (isOnSongs) isSongsSearchActive else isLibrarySearchActive,
                                                         hasCurrentSong = hasCurrentSong,
                                                         onShufflePlayLibrary = { libraryViewModel.shufflePlayLibrary() },
@@ -602,43 +615,49 @@ fun MainScaffold(
                                             popExitTransition = { navPopExit(initialState.destination) },
                                         ) {
                                             composable<Library> {
-                                                ProvideMotionScope(this) {
-                                                    LibraryRoute(
-                                                        libraryViewModel = libraryViewModel,
-                                                        playlistsViewModel = playlistsViewModel,
-                                                        section = visibleLibrarySection,
-                                                        onOpenDrawer = openDrawer,
-                                                        onContentShownChange = { isLibraryContentShown = it },
-                                                        onOpenAlbum = { openAlbum(it) },
-                                                        onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
-                                                        onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
-                                                        onOpenSmartPlaylist = {
-                                                            if (vybeEnabled ||
-                                                                !isVybeMix(it)
-                                                            ) {
-                                                                navController.navigate(SmartPlaylistDetail(it))
-                                                            }
-                                                        },
-                                                        onOpenRadio = { if (vybeEnabled) navController.navigate(RadioStationDetail(it)) },
-                                                        onOpenSongs = { navController.navigate(Songs) },
-                                                        onSelectSection = { librarySection = it.visibleWithVybe(vybeEnabled) },
-                                                        isSearchActive = isLibrarySearchActive,
-                                                        onSearchActiveChange = { isLibrarySearchActive = it },
-                                                        chromeScroll = libraryChrome.connection,
-                                                    )
+                                                CompositionLocalProvider(LocalLibraryScrollToTopRequests provides libraryScrollRequests) {
+                                                    ProvideMotionScope(this) {
+                                                        LibraryRoute(
+                                                            libraryViewModel = libraryViewModel,
+                                                            playlistsViewModel = playlistsViewModel,
+                                                            section = visibleLibrarySection,
+                                                            onOpenDrawer = openDrawer,
+                                                            onContentShownChange = { isLibraryContentShown = it },
+                                                            onOpenAlbum = { openAlbum(it) },
+                                                            onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
+                                                            onOpenPlaylist = { navController.navigate(PlaylistDetail(it)) },
+                                                            onOpenSmartPlaylist = {
+                                                                if (vybeEnabled ||
+                                                                    !isVybeMix(it)
+                                                                ) {
+                                                                    navController.navigate(SmartPlaylistDetail(it))
+                                                                }
+                                                            },
+                                                            onOpenRadio = { albumId ->
+                                                                if (vybeEnabled) navController.navigate(RadioStationDetail(albumId))
+                                                            },
+                                                            onOpenSongs = { navController.navigate(Songs) },
+                                                            onSelectSection = { librarySection = it.visibleWithVybe(vybeEnabled) },
+                                                            isSearchActive = isLibrarySearchActive,
+                                                            onSearchActiveChange = { isLibrarySearchActive = it },
+                                                            chromeScroll = libraryChrome.connection,
+                                                        )
+                                                    }
                                                 }
                                             }
                                             composable<Songs> {
-                                                ProvideMotionScope(this) {
-                                                    SongsScreen(
-                                                        viewModel = hiltViewModel(),
-                                                        libraryViewModel = libraryViewModel,
-                                                        playlistsViewModel = playlistsViewModel,
-                                                        onBack = { navController.popBackStack() },
-                                                        isSearchActive = isSongsSearchActive,
-                                                        onSearchActiveChange = { isSongsSearchActive = it },
-                                                        chromeScroll = libraryChrome.connection,
-                                                    )
+                                                CompositionLocalProvider(LocalLibraryScrollToTopRequests provides songsScrollRequests) {
+                                                    ProvideMotionScope(this) {
+                                                        SongsScreen(
+                                                            viewModel = hiltViewModel(),
+                                                            libraryViewModel = libraryViewModel,
+                                                            playlistsViewModel = playlistsViewModel,
+                                                            onBack = { navController.popBackStack() },
+                                                            isSearchActive = isSongsSearchActive,
+                                                            onSearchActiveChange = { isSongsSearchActive = it },
+                                                            chromeScroll = libraryChrome.connection,
+                                                        )
+                                                    }
                                                 }
                                             }
                                             composable<AlbumDetail> { entry ->

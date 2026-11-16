@@ -293,7 +293,7 @@ fun AlbumDetailScreen(
                                         text = { Text(stringResource(CommonR.string.menu_fetch_cover_online)) },
                                         onClick = {
                                             menuExpanded = false
-                                            viewModel.enqueueAlbumForArtwork(album)
+                                            viewModel.searchArtworkForAlbum(album)
                                             onNavigateToArtworkFetcher()
                                         },
                                     )

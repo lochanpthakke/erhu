@@ -96,8 +96,11 @@ internal class ArtworkUpgradeController(
         scan?.cancel()
     }
 
-    suspend fun select(kind: ArtworkUpgradeKind) {
-        if (selectedKind == kind || state.value.saving) return
+    suspend fun select(
+        kind: ArtworkUpgradeKind,
+        restart: Boolean = false,
+    ) {
+        if (state.value.saving || (selectedKind == kind && !restart)) return
         scan?.cancelAndJoin()
         directory.deleteRecursively()
         mutableState.value = ArtworkUpgradeState()

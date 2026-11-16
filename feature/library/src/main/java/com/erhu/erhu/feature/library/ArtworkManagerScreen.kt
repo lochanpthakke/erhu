@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,20 +24,19 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
@@ -46,10 +44,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +64,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -72,10 +75,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
-import com.erhu.erhu.core.designsystem.component.ActionButton
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
-import com.erhu.erhu.core.designsystem.component.GroupDivider
 import com.erhu.erhu.core.designsystem.component.GroupRow
 import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
 import com.erhu.erhu.core.designsystem.component.OverlayHeader
@@ -86,7 +87,6 @@ import com.erhu.erhu.core.designsystem.component.SectionHeading
 import com.erhu.erhu.core.designsystem.component.SegmentedSelector
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
-import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.Album
@@ -109,9 +109,8 @@ private const val BADGE_FILL_ALPHA = 0.85f
 private const val USER_AGENT = "erhu/1.0.0 (https://github.com/lochanpthakke/empee3)"
 
 /**
- * Artwork Fetcher: find missing album covers and artist photos and apply chosen artwork. The page
- * is grouped like Settings (accent section headings over tinted cards) under the app's floating
- * header, with the queue's search as its one prominent action.
+ * Artwork Fetcher: find album covers and artist photos, then review and apply the chosen artwork.
+ * Only a missing-artwork scan populates the list of items still to review.
  */
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod", "MagicNumber")
@@ -124,7 +123,11 @@ fun ArtworkManagerScreen(
 ) {
     val artworkQueue by viewModel.artworkQueue.collectAsState()
     val artistArtworkQueue by viewModel.artistArtworkQueue.collectAsState()
-    var selectedTab by rememberSaveable { mutableStateOf(if (artworkQueue.isEmpty() && artistArtworkQueue.isNotEmpty()) 1 else 0) }
+    var selectedTab by rememberSaveable { mutableStateOf(if (viewModel.currentProcessingArtist.value != null) 1 else 0) }
+    LaunchedEffect(Unit) {
+        if (viewModel.currentProcessingArtist.value != null) selectedTab = 1
+        if (viewModel.currentProcessingAlbum.value != null) selectedTab = 0
+    }
     var upgradeTab by rememberSaveable { mutableStateOf<Int?>(null) }
     if (upgradeTab != null) {
         ArtworkUpgradeScreen(
@@ -136,9 +139,15 @@ fun ArtworkManagerScreen(
         return
     }
     var searchQuery by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
+    val clearSearch = {
+        searchQuery = ""
+        viewModel.searchLocalLibrary("")
+        focusManager.clearFocus()
+    }
     var appliedItemSuccessTitle by remember { mutableStateOf<String?>(null) }
 
-    androidx.compose.runtime.DisposableEffect(Unit) {
+    DisposableEffect(viewModel) {
         onDispose {
             viewModel.clearArtworkDiagnostics()
         }
@@ -146,13 +155,17 @@ fun ArtworkManagerScreen(
 
     val searchAlbums by viewModel.searchAlbums.collectAsState()
     val searchArtists by viewModel.searchArtists.collectAsState()
-    val isScanning by viewModel.isScanning.collectAsState()
+    val isScanning by viewModel.isScanningMissingArtwork.collectAsState()
     val isSearchingArtwork by viewModel.isSearchingArtwork.collectAsState()
     val artworkCandidates by viewModel.artworkCandidates.collectAsState()
     val currentProcessingAlbum by viewModel.currentProcessingAlbum.collectAsState()
     val currentProcessingArtist by viewModel.currentProcessingArtist.collectAsState()
     val selectedEnlargedArtworkUrl by viewModel.selectedEnlargedArtworkUrl.collectAsState()
     val minResolution by viewModel.minArtworkResolution.collectAsState()
+
+    val snackbar = remember { SnackbarHostState() }
+    UserMessageEffect(viewModel.userMessage, snackbar, viewModel::consumeUserMessage)
+    val busy = isScanning || isSearchingArtwork
 
     val activeQueueCount = if (selectedTab == 0) artworkQueue.size else artistArtworkQueue.size
     val doneCount =
@@ -183,6 +196,7 @@ fun ArtworkManagerScreen(
             )
         },
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { innerPadding ->
         val scroll = innerPadding.forScrollingContent(topOverlay = true)
         val scrollState = rememberScrollState()
@@ -204,136 +218,28 @@ fun ArtworkManagerScreen(
                         stringResource(CommonR.string.artwork_tab_artists),
                     ),
                 selectedIndex = selectedTab,
+                showTrack = false,
                 onSelect = { index ->
-                    if (selectedTab != index) {
+                    if (selectedTab != index && !busy) {
                         selectedTab = index
-                        searchQuery = ""
+                        clearSearch()
                         viewModel.clearArtworkDiagnostics()
                     }
                 },
             )
 
-            // ---- Find: where artwork comes from, and what to fetch it for.
-            Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = stringResource(CommonR.string.artwork_section_find))
-                Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
-                    Text(
-                        if (selectedTab == 0) {
-                            stringResource(CommonR.string.artwork_source_album_chain)
-                        } else {
-                            stringResource(CommonR.string.artwork_source_deezer_artist)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(Spacing.lg),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    GroupDivider()
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        SearchField(
-                            value = searchQuery,
-                            onValueChange = {
-                                searchQuery = it
-                                viewModel.searchLocalLibrary(it)
-                            },
-                            placeholder =
-                                stringResource(
-                                    if (selectedTab == 0) {
-                                        CommonR.string.artwork_search_albums_hint
-                                    } else {
-                                        CommonR.string.artwork_search_artists_hint
-                                    },
-                                ),
-                        )
-
-                        if (searchQuery.isNotBlank()) {
-                            Text(
-                                text = stringResource(CommonR.string.artwork_search_results_hint),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            val resultsEmpty = if (selectedTab == 0) searchAlbums.isEmpty() else searchArtists.isEmpty()
-                            if (resultsEmpty) {
-                                Text(
-                                    text =
-                                        stringResource(
-                                            if (selectedTab == 0) {
-                                                CommonR.string.artwork_no_matching_albums
-                                            } else {
-                                                CommonR.string.artwork_no_matching_artists
-                                            },
-                                        ),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            } else {
-                                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
-                                    if (selectedTab == 0) {
-                                        items(searchAlbums) { album ->
-                                            AlbumSearchCard(
-                                                album = album,
-                                                onAdd = {
-                                                    viewModel.enqueueAlbumForArtwork(album)
-                                                    searchQuery = ""
-                                                    viewModel.searchLocalLibrary("")
-                                                },
-                                            )
-                                        }
-                                    } else {
-                                        items(searchArtists) { artist ->
-                                            ArtistSearchCard(
-                                                artist = artist,
-                                                onAdd = {
-                                                    viewModel.enqueueArtistForArtwork(artist)
-                                                    searchQuery = ""
-                                                    viewModel.searchLocalLibrary("")
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        ActionButton(
-                            text =
-                                stringResource(
-                                    when {
-                                        isScanning -> CommonR.string.artwork_scanning_storage
-                                        selectedTab == 0 -> CommonR.string.artwork_scan_missing_covers
-                                        else -> CommonR.string.artwork_scan_missing_photos
-                                    },
-                                ),
-                            onClick = {
-                                if (selectedTab == 0) {
-                                    viewModel.scanForMissingCovers()
-                                } else {
-                                    viewModel.scanForMissingArtistPhotos()
-                                }
-                            },
-                            icon = Icons.Default.AutoFixHigh,
-                            enabled = !isScanning && !isSearchingArtwork,
-                        )
-                    }
-                }
-            }
-
-            // ---- Resolution target.
-            Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = stringResource(CommonR.string.artwork_section_improve))
-                Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
-                    GroupRow(
-                        title =
-                            stringResource(
-                                if (selectedTab == 0) CommonR.string.artwork_upgrade_covers else CommonR.string.artwork_upgrade_photos,
-                            ),
-                        summary = stringResource(CommonR.string.artwork_upgrade_summary),
-                        onClick = { upgradeTab = selectedTab },
-                    )
-                }
-            }
+            SearchField(
+                value = searchQuery,
+                showContainer = false,
+                onValueChange = {
+                    searchQuery = it
+                    viewModel.searchLocalLibrary(it)
+                },
+                placeholder =
+                    stringResource(
+                        if (selectedTab == 0) CommonR.string.artwork_search_albums_hint else CommonR.string.artwork_search_artists_hint,
+                    ),
+            )
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 val minResFormatted = LocaleFormatters.formatInteger(minResolution, locale)
@@ -347,6 +253,7 @@ fun ArtworkManagerScreen(
                             stringResource(CommonR.string.artwork_resolution_chip, LocaleFormatters.formatInteger(it, locale))
                         },
                     selectedIndex = RESOLUTION_TARGETS.indexOf(minResolution),
+                    showTrack = false,
                     onSelect = { index ->
                         val res = RESOLUTION_TARGETS[index]
                         if (minResolution != res) viewModel.setMinArtworkResolution(res)
@@ -354,7 +261,66 @@ fun ArtworkManagerScreen(
                 )
             }
 
-            // ---- The item being fetched: provider diagnostics and the candidates found.
+            if (searchQuery.isNotBlank()) {
+                val resultsEmpty = if (selectedTab == 0) searchAlbums.isEmpty() else searchArtists.isEmpty()
+                if (resultsEmpty) {
+                    val emptyMessage =
+                        if (selectedTab == 0) CommonR.string.artwork_no_matching_albums else CommonR.string.artwork_no_matching_artists
+                    Text(
+                        text = stringResource(emptyMessage),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
+                        if (selectedTab == 0) {
+                            items(searchAlbums, key = { it.id }) { album ->
+                                AlbumSearchCard(album, enabled = !busy, onAdd = {
+                                    viewModel.searchArtworkForAlbum(album)
+                                    clearSearch()
+                                })
+                            }
+                        } else {
+                            items(searchArtists, key = { it.id }) { artist ->
+                                ArtistSearchCard(artist, enabled = !busy, onAdd = {
+                                    viewModel.searchArtworkForArtist(artist)
+                                    clearSearch()
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                SectionHeading(title = stringResource(R.string.artwork_quick_actions))
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    GroupRow(
+                        title =
+                            stringResource(
+                                if (selectedTab == 0) R.string.artwork_fetch_missing_covers else R.string.artwork_fetch_missing_photos,
+                            ),
+                        summary =
+                            stringResource(
+                                if (isScanning) CommonR.string.artwork_scanning_storage else R.string.artwork_fetch_missing_summary,
+                            ),
+                        onClick = {
+                            if (selectedTab == 0) viewModel.scanForMissingCovers() else viewModel.scanForMissingArtistPhotos()
+                        },
+                        enabled = !busy,
+                    )
+                    GroupRow(
+                        title =
+                            stringResource(
+                                if (selectedTab == 0) CommonR.string.artwork_upgrade_covers else CommonR.string.artwork_upgrade_photos,
+                            ),
+                        summary = stringResource(CommonR.string.artwork_upgrade_summary),
+                        onClick = { upgradeTab = selectedTab },
+                        enabled = !busy,
+                    )
+                }
+            }
+
             val currentContextTitle = if (selectedTab == 0) currentProcessingAlbum?.title else currentProcessingArtist?.name
             val currentContextSub =
                 if (selectedTab == 0) {
@@ -372,118 +338,15 @@ fun ArtworkManagerScreen(
 
             if (currentContextTitle != null) {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    SectionHeading(title = stringResource(CommonR.string.artwork_section_candidates))
-                    ArtworkWebSearchButton(
-                        url =
-                            if (selectedTab == 0) {
-                                currentProcessingAlbum?.let { albumArtworkSearchUrl(it.title, it.artist) }
-                            } else {
-                                currentProcessingArtist?.let { artistArtworkSearchUrl(it.name) }
-                            },
-                        targetName = currentContextTitle,
-                    )
-
-                    if (diagnostics != null) {
-                        Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clickable(role = Role.Button) { showDiagnosticsExpanded = !showDiagnosticsExpanded }
-                                        .padding(Spacing.lg),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(CommonR.string.artwork_section_provider_diagnostics),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                    if (diagnostics?.searchQuery.orEmpty().isNotBlank()) {
-                                        Text(
-                                            text =
-                                                stringResource(
-                                                    CommonR.string.artwork_search_query_label,
-                                                    diagnostics!!.searchQuery,
-                                                ),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    if (diagnostics?.resolvedArtistInfo.orEmpty().isNotBlank()) {
-                                        Text(
-                                            text = diagnostics!!.resolvedArtistInfo!!,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                }
-                                Icon(
-                                    imageVector = if (showDiagnosticsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription =
-                                        stringResource(
-                                            if (showDiagnosticsExpanded) {
-                                                CommonR.string.artwork_cd_hide_provider_results
-                                            } else {
-                                                CommonR.string.artwork_cd_show_provider_results
-                                            },
-                                        ),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-
-                            if (showDiagnosticsExpanded) {
-                                GroupDivider()
-                                Column(
-                                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                ) {
-                                    Text(
-                                        stringResource(CommonR.string.artwork_provider_results),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    diagnostics!!.providerOutcomes.forEach { outcome ->
-                                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                                            Text(
-                                                text = outcome.providerName,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                modifier = Modifier.weight(1f).padding(end = Spacing.sm),
-                                            )
-                                            Text(
-                                                text =
-                                                    when (outcome.status) {
-                                                        ProviderStatus.SUCCESS ->
-                                                            pluralStringResource(
-                                                                CommonR.plurals.artwork_provider_found_candidates,
-                                                                outcome.candidateCount,
-                                                                LocaleFormatters.formatInteger(outcome.candidateCount, locale),
-                                                            )
-                                                        else -> outcome.status.localizedLabel()
-                                                    },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color =
-                                                    if (outcome.status == ProviderStatus.SUCCESS) {
-                                                        MaterialTheme.colorScheme.primary
-                                                    } else {
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                    },
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    val resultTitleRequester = remember { BringIntoViewRequester() }
+                    LaunchedEffect(currentProcessingAlbum?.id, currentProcessingArtist?.id) {
+                        resultTitleRequester.bringIntoView()
                     }
-
                     Column(
-                        modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
-                        Column {
+                        Column(Modifier.bringIntoViewRequester(resultTitleRequester)) {
                             Text(
                                 text = currentContextTitle,
                                 style = MaterialTheme.typography.titleMedium,
@@ -543,11 +406,115 @@ fun ArtworkManagerScreen(
                             )
                         }
                     }
+
+                    ArtworkWebSearchButton(
+                        url =
+                            if (selectedTab == 0) {
+                                currentProcessingAlbum?.let { albumArtworkSearchUrl(it.title, it.artist) }
+                            } else {
+                                currentProcessingArtist?.let { artistArtworkSearchUrl(it.name) }
+                            },
+                        targetName = currentContextTitle,
+                    )
+
+                    if (diagnostics != null) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable(role = Role.Button) { showDiagnosticsExpanded = !showDiagnosticsExpanded }
+                                        .padding(vertical = Spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(CommonR.string.artwork_section_provider_diagnostics),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    if (diagnostics?.searchQuery.orEmpty().isNotBlank()) {
+                                        Text(
+                                            text =
+                                                stringResource(
+                                                    CommonR.string.artwork_search_query_label,
+                                                    diagnostics!!.searchQuery,
+                                                ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    if (diagnostics?.resolvedArtistInfo.orEmpty().isNotBlank()) {
+                                        Text(
+                                            text = diagnostics!!.resolvedArtistInfo!!,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = if (showDiagnosticsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription =
+                                        stringResource(
+                                            if (showDiagnosticsExpanded) {
+                                                CommonR.string.artwork_cd_hide_provider_results
+                                            } else {
+                                                CommonR.string.artwork_cd_show_provider_results
+                                            },
+                                        ),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+
+                            if (showDiagnosticsExpanded) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.sm),
+                                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                ) {
+                                    Text(
+                                        stringResource(CommonR.string.artwork_provider_results),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    diagnostics!!.providerOutcomes.forEach { outcome ->
+                                        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                            Text(
+                                                text = outcome.providerName,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.weight(1f).padding(end = Spacing.sm),
+                                            )
+                                            Text(
+                                                text =
+                                                    when (outcome.status) {
+                                                        ProviderStatus.SUCCESS ->
+                                                            pluralStringResource(
+                                                                CommonR.plurals.artwork_provider_found_candidates,
+                                                                outcome.candidateCount,
+                                                                LocaleFormatters.formatInteger(outcome.candidateCount, locale),
+                                                            )
+                                                        else -> outcome.status.localizedLabel()
+                                                    },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color =
+                                                    if (outcome.status == ProviderStatus.SUCCESS) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                    },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // ---- Queue: progress, the page's primary action, and the queued items.
-            Column(modifier = Modifier.fillMaxWidth()) {
+            if (!isScanning && activeQueueCount > 0) {
                 val doneFormatted = LocaleFormatters.formatInteger(doneCount, locale)
                 val totalFormatted = LocaleFormatters.formatInteger(activeQueueCount, locale)
                 SectionHeading(
@@ -571,95 +538,54 @@ fun ArtworkManagerScreen(
                             totalFormatted,
                         ),
                 )
-                Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
-                        verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                    ) {
-                        ProgressBar(progress = { progressFloat })
-
-                        if (isQueueComplete) {
-                            ActionButton(
-                                text = stringResource(CommonR.string.artwork_finish_return),
-                                onClick = {
-                                    if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
-                                    onNavigateToLibrary()
-                                },
-                                icon = Icons.Default.CheckCircle,
-                                primary = true,
-                            )
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    ProgressBar(progress = { progressFloat })
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                        if (selectedTab == 0) {
+                            items(artworkQueue, key = { it.album.id }) { item ->
+                                ArtworkScanRow(
+                                    title = item.album.title,
+                                    subtitle = item.album.artist,
+                                    status =
+                                        artworkScanStatus(
+                                            item.status,
+                                            currentProcessingAlbum?.id == item.album.id,
+                                            isSearchingArtwork,
+                                        ),
+                                    icon = Icons.Default.MusicNote,
+                                    enabled = !busy,
+                                    onClick = { viewModel.searchArtworkForAlbum(item.album) },
+                                )
+                            }
                         } else {
-                            ActionButton(
-                                text =
-                                    stringResource(
-                                        if (isSearchingArtwork) {
-                                            CommonR.string.artwork_searching_button
-                                        } else {
-                                            CommonR.string.artwork_search_button
-                                        },
-                                    ),
-                                onClick = {
-                                    if (selectedTab == 0) {
-                                        val firstPending = artworkQueue.firstOrNull { it.status == "PENDING" }
-                                        if (firstPending != null) viewModel.searchArtworkForAlbum(firstPending.album)
-                                    } else {
-                                        val firstPending = artistArtworkQueue.firstOrNull { it.status == "PENDING" }
-                                        if (firstPending != null) viewModel.searchArtworkForArtist(firstPending.artist)
-                                    }
-                                },
-                                icon = Icons.Default.ImageSearch,
-                                primary = true,
-                                enabled =
-                                    !isSearchingArtwork &&
-                                        if (selectedTab == 0) {
-                                            artworkQueue.any { it.status == "PENDING" }
-                                        } else {
-                                            artistArtworkQueue.any { it.status == "PENDING" }
-                                        },
-                            )
+                            items(artistArtworkQueue, key = { it.artist.id }) { item ->
+                                ArtworkScanRow(
+                                    title = item.artist.name,
+                                    subtitle =
+                                        pluralStringResource(
+                                            CommonR.plurals.library_tracks_count,
+                                            item.artist.songCount,
+                                            LocaleFormatters.formatInteger(item.artist.songCount, locale),
+                                        ),
+                                    status =
+                                        artworkScanStatus(
+                                            item.status,
+                                            currentProcessingArtist?.id == item.artist.id,
+                                            isSearchingArtwork,
+                                        ),
+                                    icon = Icons.Default.Person,
+                                    enabled = !busy,
+                                    onClick = { viewModel.searchArtworkForArtist(item.artist) },
+                                )
+                            }
                         }
                     }
-
-                    GroupDivider()
-
-                    if (selectedTab == 0) {
-                        if (artworkQueue.isEmpty()) {
-                            QueueEmpty(stringResource(CommonR.string.artwork_queue_empty_album))
-                        } else {
-                            LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
-                                items(artworkQueue, key = { it.album.id }) { queueItem ->
-                                    AlbumQueueCard(
-                                        title = queueItem.album.title,
-                                        subtitle = queueItem.album.artist,
-                                        status = queueItem.status,
-                                        icon = Icons.Default.MusicNote,
-                                        onRemove = { viewModel.removeFromArtworkQueue(queueItem.album) },
-                                        webSearchUrl = albumArtworkSearchUrl(queueItem.album.title, queueItem.album.artist),
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        if (artistArtworkQueue.isEmpty()) {
-                            QueueEmpty(stringResource(CommonR.string.artwork_queue_empty_artist))
-                        } else {
-                            LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
-                                items(artistArtworkQueue, key = { it.artist.id }) { queueItem ->
-                                    AlbumQueueCard(
-                                        title = queueItem.artist.name,
-                                        subtitle =
-                                            pluralStringResource(
-                                                CommonR.plurals.library_tracks_count,
-                                                queueItem.artist.songCount,
-                                                LocaleFormatters.formatInteger(queueItem.artist.songCount, locale),
-                                            ),
-                                        status = queueItem.status,
-                                        icon = Icons.Default.Person,
-                                        onRemove = { viewModel.removeFromArtistArtworkQueue(queueItem.artist) },
-                                        webSearchUrl = artistArtworkSearchUrl(queueItem.artist.name),
-                                    )
-                                }
-                            }
+                    if (isQueueComplete) {
+                        TextButton(onClick = {
+                            if (selectedTab == 0) viewModel.clearArtworkQueue() else viewModel.clearArtistArtworkQueue()
+                            onNavigateToLibrary()
+                        }, enabled = !busy) {
+                            Text(stringResource(CommonR.string.artwork_finish_return))
                         }
                     }
                 }
@@ -668,7 +594,7 @@ fun ArtworkManagerScreen(
             // ---- More: a quiet row, not a competing button.
             Column(modifier = Modifier.fillMaxWidth()) {
                 SectionHeading(title = stringResource(CommonR.string.artwork_more_section))
-                Column(modifier = Modifier.fillMaxWidth().groupSurface()) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     GroupRow(
                         icon = Icons.Default.Settings,
                         title = stringResource(CommonR.string.artwork_utility_settings_title),
@@ -805,17 +731,6 @@ fun ArtworkManagerScreen(
 }
 
 @Composable
-private fun ColumnScope.QueueEmpty(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
-    )
-}
-
-/** Placeholder artwork of a row: the item's kind on a soft accent tile. */
-@Composable
 private fun RowThumb(
     icon: ImageVector,
     shape: androidx.compose.ui.graphics.Shape,
@@ -917,80 +832,83 @@ private fun SquareArtworkCandidateCard(
     }
 }
 
+private fun artworkScanStatus(
+    status: String,
+    selected: Boolean,
+    searching: Boolean,
+): String =
+    when {
+        !selected || status == "WRITING" -> status
+        searching -> "SEARCHING"
+        status == "PENDING" -> "REVIEW"
+        else -> status
+    }
+
 @Composable
-private fun AlbumQueueCard(
+private fun ArtworkScanRow(
     title: String,
     subtitle: String,
     status: String,
     icon: ImageVector,
-    onRemove: () -> Unit,
-    webSearchUrl: String?,
+    enabled: Boolean,
+    onClick: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = Spacing.lg, end = Spacing.xs, top = Spacing.sm, bottom = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RowThumb(icon = icon, shape = MaterialTheme.shapes.small)
-            Spacer(modifier = Modifier.width(Spacing.md))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Spacer(modifier = Modifier.width(Spacing.sm))
-            when (status) {
-                "SEARCHING", "WRITING" ->
-                    Icon(
-                        imageVector = Icons.Default.HourglassTop,
-                        contentDescription = stringResource(CommonR.string.artwork_status_searching),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                "COMPLETED", "DONE", "SUCCESS" ->
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = stringResource(CommonR.string.artwork_status_done),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                "FAILED" ->
-                    Icon(
-                        imageVector = Icons.Default.Error,
-                        contentDescription = stringResource(CommonR.string.artwork_status_failed),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                else ->
-                    Text(
-                        text = stringResource(CommonR.string.artwork_status_pending),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-            }
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(CommonR.string.artwork_cd_remove_queue),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                .padding(vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RowThumb(icon = icon, shape = MaterialTheme.shapes.small)
+        Spacer(modifier = Modifier.width(Spacing.md))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        ArtworkWebSearchButton(webSearchUrl, title, Modifier.padding(start = Spacing.lg))
-        if (status == "SEARCHING" || status == "WRITING") {
-            ProgressBar(modifier = Modifier.padding(horizontal = Spacing.lg).padding(bottom = Spacing.sm))
+        Spacer(modifier = Modifier.width(Spacing.sm))
+        when (status) {
+            "SEARCHING", "WRITING" ->
+                Icon(
+                    imageVector = Icons.Default.HourglassTop,
+                    contentDescription = stringResource(CommonR.string.artwork_status_searching),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            "COMPLETED", "DONE", "SUCCESS" ->
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = stringResource(CommonR.string.artwork_status_done),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            "FAILED" ->
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = stringResource(CommonR.string.artwork_status_failed),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            else ->
+                Text(
+                    text =
+                        stringResource(
+                            if (status == "REVIEW") R.string.artwork_lookup_selected else CommonR.string.artwork_status_pending,
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
         }
     }
 }
@@ -1002,6 +920,7 @@ private fun SearchResultRow(
     icon: ImageVector,
     thumbShape: androidx.compose.ui.graphics.Shape,
     addDescription: String,
+    enabled: Boolean,
     onAdd: () -> Unit,
 ) {
     Row(
@@ -1027,7 +946,7 @@ private fun SearchResultRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = onAdd) {
+        IconButton(onClick = onAdd, enabled = enabled) {
             Icon(imageVector = Icons.Default.Add, contentDescription = addDescription, tint = MaterialTheme.colorScheme.primary)
         }
     }
@@ -1036,6 +955,7 @@ private fun SearchResultRow(
 @Composable
 private fun AlbumSearchCard(
     album: Album,
+    enabled: Boolean,
     onAdd: () -> Unit,
 ) {
     SearchResultRow(
@@ -1043,7 +963,8 @@ private fun AlbumSearchCard(
         subtitle = album.artist,
         icon = Icons.Default.MusicNote,
         thumbShape = MaterialTheme.shapes.small,
-        addDescription = stringResource(CommonR.string.artwork_cd_add_album),
+        addDescription = stringResource(R.string.artwork_cd_fetch, album.title),
+        enabled = enabled,
         onAdd = onAdd,
     )
 }
@@ -1051,6 +972,7 @@ private fun AlbumSearchCard(
 @Composable
 private fun ArtistSearchCard(
     artist: Artist,
+    enabled: Boolean,
     onAdd: () -> Unit,
 ) {
     val locale = AppLocaleManager.activeLocale(LocalContext.current)
@@ -1064,7 +986,8 @@ private fun ArtistSearchCard(
             ),
         icon = Icons.Default.Person,
         thumbShape = CircleShape,
-        addDescription = stringResource(CommonR.string.artwork_cd_add_artist),
+        addDescription = stringResource(R.string.artwork_cd_fetch, artist.name),
+        enabled = enabled,
         onAdd = onAdd,
     )
 }
