@@ -9,6 +9,9 @@ import com.erhu.erhu.core.database.MIGRATION_12_13
 import com.erhu.erhu.core.database.MIGRATION_13_14
 import com.erhu.erhu.core.database.MIGRATION_14_15
 import com.erhu.erhu.core.database.MIGRATION_15_16
+import com.erhu.erhu.core.database.MIGRATION_16_17
+import com.erhu.erhu.core.database.MIGRATION_17_18
+import com.erhu.erhu.core.database.RemoteTrackIdSeed
 import com.erhu.erhu.core.database.MIGRATION_5_6
 import com.erhu.erhu.core.database.MIGRATION_6_7
 import com.erhu.erhu.core.database.MIGRATION_7_8
@@ -17,15 +20,20 @@ import com.erhu.erhu.core.database.MIGRATION_9_10
 import com.erhu.erhu.core.database.dao.AlbumDao
 import com.erhu.erhu.core.database.dao.AnimatedArtworkDao
 import com.erhu.erhu.core.database.dao.ArtistDao
+import com.erhu.erhu.core.database.dao.CustomSongArtworkDao
 import com.erhu.erhu.core.database.dao.LearnedWatermarkDao
 import com.erhu.erhu.core.database.dao.LibraryModelDao
+import com.erhu.erhu.core.database.dao.ListeningEventDao
 import com.erhu.erhu.core.database.dao.ListeningStatsDao
 import com.erhu.erhu.core.database.dao.MetadataProcessingDao
 import com.erhu.erhu.core.database.dao.PlaylistDao
 import com.erhu.erhu.core.database.dao.RecentlyPlayedDao
+import com.erhu.erhu.core.database.dao.RemoteLibraryDao
 import com.erhu.erhu.core.database.dao.SongDao
 import com.erhu.erhu.core.database.dao.TrackBookmarkDao
 import com.erhu.erhu.core.database.dao.WaveformCacheDao
+import com.erhu.erhu.core.database.repository.CustomSongArtworkStore
+import java.io.File
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -59,9 +67,15 @@ object DatabaseModule {
                 MIGRATION_13_14,
                 MIGRATION_14_15,
                 MIGRATION_15_16,
-            ).fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
+                MIGRATION_16_17,
+                MIGRATION_17_18,
+            ).addCallback(RemoteTrackIdSeed)
+            .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)
             .build()
+
+    @Provides
+    fun provideRemoteLibraryDao(database: ErhuDatabase): RemoteLibraryDao = database.remoteLibraryDao()
 
     @Provides
     fun provideSongDao(database: ErhuDatabase): SongDao = database.songDao()
@@ -98,4 +112,16 @@ object DatabaseModule {
 
     @Provides
     fun provideAnimatedArtworkDao(database: ErhuDatabase): AnimatedArtworkDao = database.animatedArtworkDao()
+
+    @Provides
+    fun provideCustomSongArtworkDao(database: ErhuDatabase): CustomSongArtworkDao = database.customSongArtworkDao()
+
+    @Provides
+    fun provideListeningEventDao(database: ErhuDatabase): ListeningEventDao = database.listeningEventDao()
+
+    @Provides
+    @Singleton
+    fun provideCustomSongArtworkStore(
+        @ApplicationContext context: Context,
+    ): CustomSongArtworkStore = CustomSongArtworkStore(File(context.filesDir, "artwork/custom_songs"))
 }

@@ -25,6 +25,8 @@ import com.lochanpthakke.empee3.core.database.scanner.LibraryScanWorker
 import dagger.Lazy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -144,6 +146,36 @@ class LibraryRepositoryImpl
             }
 
         override fun getArtistById(id: Long): Flow<Artist?> = artistDao.observeArtistById(id).map { it?.toDomainModel() }
+
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+        override fun getArtistsForSong(songId: Long): Flow<List<Artist>> =
+            artistDao.observeArtistsForSong(songId).flatMapLatest { entities ->
+                if (entities.isNotEmpty()) {
+                    flowOf(entities.map { it.toDomainModel() })
+                } else {
+                    songDao.observeSongById(songId).map { songEntity ->
+                        if (songEntity == null) {
+                            emptyList()
+                        } else {
+                            val primary = artistDao.getArtistById(songEntity.artistId)?.toDomainModel()
+                            if (primary != null) {
+                                listOf(primary)
+                            } else if (songEntity.artist.isNotBlank()) {
+                                listOf(
+                                    Artist(
+                                        id = songEntity.artistId,
+                                        name = songEntity.artist,
+                                        songCount = 1,
+                                        albumCount = 1,
+                                    ),
+                                )
+                            } else {
+                                emptyList()
+                            }
+                        }
+                    }
+                }
+            }.distinctUntilChanged()
 
         override fun searchSongs(query: String): Flow<List<Song>> =
             songDao.getAllSongs().map { list ->

@@ -66,6 +66,8 @@ fun MiniPlayer(
     onMiniPlayerClick: () -> Unit,
     modifier: Modifier = Modifier,
     compact: () -> Float = { 0f },
+    customArtworkPath: String? = null,
+    isCustomAnimated: Boolean = false,
 ) {
     // Stable state drives composition; the position is only read inside the
     // progress lambda (draw phase), so position ticks redraw the bar without
@@ -94,7 +96,14 @@ fun MiniPlayer(
                 // Floating card; shares margins and shape with the rest of the bottom chrome.
                 .padding(horizontal = BottomChrome.horizontalMargin, vertical = BottomChrome.gap)
                 // Share navigation glass and strength, sampling the screen content underneath.
-                .onGloballyPositioned { coordinates -> transition?.miniBounds = coordinates.boundsInRoot() }
+                .onGloballyPositioned { coordinates ->
+                    if (transition != null) {
+                        val bounds = coordinates.boundsInRoot()
+                        if (transition.miniBounds != bounds) {
+                            transition.miniBounds = bounds
+                        }
+                    }
+                }
                 .graphicsLayer {
                     val p = transition?.fraction ?: 0f
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
@@ -148,9 +157,18 @@ fun MiniPlayer(
                                 androidx.compose.ui.res.stringResource(
                                     com.erhu.erhu.core.common.R.string.cd_album_artwork,
                                 ),
+                            customArtworkPath = customArtworkPath,
+                            isAnimated = isCustomAnimated,
                             modifier =
                                 Modifier
-                                    .onGloballyPositioned { coordinates -> transition?.miniArtworkBounds = coordinates.boundsInRoot() }
+                                    .onGloballyPositioned { coordinates ->
+                                        if (transition != null) {
+                                            val bounds = coordinates.boundsInRoot()
+                                            if (transition.miniArtworkBounds != bounds) {
+                                                transition.miniArtworkBounds = bounds
+                                            }
+                                        }
+                                    }
                                     // The player's artwork is ONE object: once it starts travelling, the
                                     // travelling copy (same bitmap, same place) is the only one drawn.
                                     .graphicsLayer { alpha = if ((transition?.fraction ?: 0f) > 0f) 0f else 1f }

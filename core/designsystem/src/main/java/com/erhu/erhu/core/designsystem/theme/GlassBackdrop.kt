@@ -105,6 +105,10 @@ fun Modifier.glassBackdropSource(
     return this
         .onGloballyPositioned { backdrop.sourceOffset = if (backdrop.screenCoordinates) it.positionOnScreen() else it.positionInRoot() }
         .drawWithContent {
+            if (backdrop.frozen && backdrop.hasContent) {
+                drawLayer(backdrop.layer)
+                return@drawWithContent
+            }
             backdrop.isRecording = true
             traced(backdrop.sourceSection) { backdrop.layer.record { this@drawWithContent.drawContent() } }
             backdrop.isRecording = false

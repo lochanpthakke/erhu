@@ -125,6 +125,8 @@ internal class ExoTailPlayer(
     context: Context,
     soundSettings: SoundSettings,
     private val currentUtilities: () -> com.erhu.erhu.core.model.AudioUtilities = { soundSettings.utilities },
+    /** The main player's sources, so a remote track's tail opens the same way; null = Media3's default. */
+    mediaSourceFactory: androidx.media3.exoplayer.source.MediaSource.Factory? = null,
 ) : TailPlayer {
     private val gain = TransitionGainProcessor(cancelOnLaterFlush = false)
     private val eq =
@@ -135,6 +137,7 @@ internal class ExoTailPlayer(
     private val player: ExoPlayer =
         ExoPlayer
             .Builder(context, renderers(context))
+            .apply { mediaSourceFactory?.let(::setMediaSourceFactory) }
             .setAudioAttributes(MUSIC_ATTRIBUTES, false)
             .setHandleAudioBecomingNoisy(false)
             .build()

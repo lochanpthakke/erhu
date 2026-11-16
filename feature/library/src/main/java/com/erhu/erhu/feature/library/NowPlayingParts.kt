@@ -3,6 +3,12 @@ package com.erhu.erhu.feature.library
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
+import com.erhu.erhu.core.model.Artist
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -143,7 +149,22 @@ internal fun CarouselCard(
     coverVideo: CoverVideoHost? = null,
     /** False while the neighbours are stacked behind the current card: a tap there must not reach them. */
     selectable: Boolean = true,
+    onOpenArtist: ((Long) -> Unit)? = null,
+    onOpenAlbum: ((Long) -> Unit)? = null,
+    customArtworkPath: String? = null,
+    isCustomAnimated: Boolean = false,
 ) {
+    val artists by if (isCurrent && libraryRepository != null) {
+        libraryRepository.getArtistsForSong(track.id).collectAsState(initial = emptyList())
+    } else {
+        remember { mutableStateOf(emptyList()) }
+    }
+    val albumId by if (isCurrent && libraryRepository != null) {
+        libraryRepository.getAlbumIdForSong(track.id).collectAsState(initial = null)
+    } else {
+        remember { mutableStateOf<Long?>(null) }
+    }
+
     BoxWithConstraints(contentAlignment = Alignment.Center) {
         val showAlbum = maxHeight >= ALBUM_LINE_MIN_HEIGHT
         val metadataHeight = if (showAlbum) METADATA_HEIGHT + ALBUM_LINE_HEIGHT else METADATA_HEIGHT
@@ -153,20 +174,19 @@ internal fun CarouselCard(
         val colors = rememberLyricsColors(track)
         if (isCurrent) {
             val inset = with(LocalDensity.current) { CARD_PADDING.toPx() }
-            val cardAlpha =
-                if (transition != null) {
-                    ((transition.fraction - CARD_FADE_START) / CARD_FADE_SPAN).coerceIn(0f, 1f)
-                } else {
-                    1f
-                }
             Box(
                 modifier =
                     Modifier
                         .width(artSide + CARD_PADDING * 2)
                         .onSizeChanged {
                             if (transition != null) {
-                                transition.cardSize = Size(it.width.toFloat(), it.height.toFloat())
-                                transition.cardArtworkInset = inset
+                                val newSize = Size(it.width.toFloat(), it.height.toFloat())
+                                if (transition.cardSize != newSize) {
+                                    transition.cardSize = newSize
+                                }
+                                if (transition.cardArtworkInset != inset) {
+                                    transition.cardArtworkInset = inset
+                                }
                             }
                         },
                 contentAlignment = Alignment.TopCenter,
@@ -175,7 +195,14 @@ internal fun CarouselCard(
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .graphicsLayer { alpha = cardAlpha }
+                            .graphicsLayer {
+                                alpha =
+                                    if (transition != null) {
+                                        ((transition.fraction - CARD_FADE_START) / CARD_FADE_SPAN).coerceIn(0f, 1f)
+                                    } else {
+                                        1f
+                                    }
+                            }
                             .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
                             .clip(CARD_SHAPE)
                             .padding(CARD_PADDING),
@@ -187,6 +214,10 @@ internal fun CarouselCard(
                             showAlbum = showAlbum,
                             favorite = { FavoriteButton(isFavorite, track.id, onToggleFavorite) },
                             modifier = Modifier.height(metadataHeight),
+                            artists = artists,
+                            albumId = albumId,
+                            onOpenArtist = onOpenArtist,
+                            onOpenAlbum = onOpenAlbum,
                         )
                     }
                 }
@@ -199,7 +230,7 @@ internal fun CarouselCard(
                             .onGloballyPositioned { coordinates ->
                                 if (transition != null) {
                                     val bounds = coordinates.boundsInRoot()
-                                    if (bounds.width > 0f) {
+                                    if (bounds.width > 0f && transition.measuredCardArtworkBounds != bounds) {
                                         transition.measuredCardArtworkBounds = bounds
                                     }
                                 }
@@ -212,6 +243,8 @@ internal fun CarouselCard(
                         libraryRepository = libraryRepository,
                         animatedArtworkRepository = animatedArtworkRepository,
                         coverVideo = coverVideo,
+                        customArtworkPath = customArtworkPath,
+                        isCustomAnimated = isCustomAnimated,
                         modifier =
                             Modifier
                                 .fillMaxSize()
@@ -267,6 +300,10 @@ private fun CardMetadata(
     showAlbum: Boolean,
     favorite: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier,
+    artists: List<Artist> = emptyList(),
+    albumId: Long? = null,
+    onOpenArtist: ((Long) -> Unit)? = null,
+    onOpenAlbum: ((Long) -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().padding(start = Spacing.xs, top = Spacing.sm),
@@ -280,13 +317,52 @@ private fun CardMetadata(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = track.artist,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+
+            if (artists.isNotEmpty() && onOpenArtist != null) {
+                val annotatedString =
+                    remember(artists) {
+                        buildAnnotatedString {
+                            artists.forEachIndexed { index, artist ->
+                                if (index > 0) {
+                                    append(", ")
+                                }
+                                pushStringAnnotation(tag = "artist_id", annotation = artist.id.toString())
+                                append(artist.name)
+                                pop()
+                            }
+                        }
+                    }
+                var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                Text(
+                    text = annotatedString,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { textLayoutResult = it },
+                    modifier =
+                        Modifier.pointerInput(annotatedString) {
+                            detectTapGestures { offset ->
+                                val layout = textLayoutResult ?: return@detectTapGestures
+                                val charOffset = layout.getOffsetForPosition(offset)
+                                val annotation =
+                                    annotatedString.getStringAnnotations("artist_id", charOffset, charOffset).firstOrNull()
+                                if (annotation != null) {
+                                    annotation.item.toLongOrNull()?.let { onOpenArtist(it) }
+                                }
+                            }
+                        },
+                )
+            } else {
+                Text(
+                    text = track.artist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
             if (showAlbum && track.album.isNotBlank()) {
                 Text(
                     text = track.album,
@@ -294,6 +370,16 @@ private fun CardMetadata(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = ALBUM_ALPHA),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier =
+                        if (albumId != null && onOpenAlbum != null) {
+                            Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onOpenAlbum(albumId) },
+                            )
+                        } else {
+                            Modifier
+                        },
                 )
             }
         }
@@ -529,6 +615,8 @@ internal fun HeroAnimatedArtwork(
     animatedArtworkRepository: AnimatedArtworkRepository?,
     modifier: Modifier = Modifier,
     coverVideo: CoverVideoHost? = null,
+    customArtworkPath: String? = null,
+    isCustomAnimated: Boolean = false,
 ) {
     val description =
         if (isCurrent) {
@@ -536,6 +624,16 @@ internal fun HeroAnimatedArtwork(
         } else {
             stringResource(R.string.player_cd_track_by_artist, song.title, song.artist)
         }
+    if (!customArtworkPath.isNullOrBlank()) {
+        SongArtwork(
+            song = song,
+            contentDescription = description,
+            customArtworkPath = customArtworkPath,
+            isAnimated = isCustomAnimated,
+            modifier = modifier,
+        )
+        return
+    }
     if (!isCurrent || animatedArtworkRepository == null || libraryRepository == null) {
         SongArtwork(song = song, contentDescription = description, modifier = modifier)
         return

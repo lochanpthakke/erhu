@@ -28,6 +28,7 @@ data class SoundCapsule(
     val topSongs: List<RankedSong>,
     val topAlbums: List<RankedAlbum>,
     val topArtists: List<RankedArtist>,
+    val uniqueTracks: Int = 0,
 ) {
     val isEmpty: Boolean get() = totalPlays == 0
 }

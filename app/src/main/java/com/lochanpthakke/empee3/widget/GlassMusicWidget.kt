@@ -60,8 +60,10 @@ import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
 import com.erhu.erhu.core.model.PlaybackStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 private const val ALBUM_ART_SIZE_PX = 400
@@ -142,7 +144,8 @@ class GlassMusicWidget : GlanceAppWidget() {
                     val rawBitmap = ArtworkLoader.load(context, song.uri, song.artworkUri, ALBUM_ART_SIZE_PX)
                     val density = context.resources.displayMetrics.density
                     val radiusPx = 14f * density
-                    value = rawBitmap?.toRoundedCorners(radiusPx)
+                    // Glance composes on the main thread: round the corners on a worker.
+                    value = rawBitmap?.let { withContext(Dispatchers.Default) { it.toRoundedCorners(radiusPx) } }
                 } else {
                     value = null
                 }

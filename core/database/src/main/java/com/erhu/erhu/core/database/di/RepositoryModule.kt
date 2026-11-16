@@ -10,6 +10,8 @@ import com.erhu.erhu.core.database.repository.AnimatedArtworkRepositoryImpl
 import com.erhu.erhu.core.database.repository.ArtistArtworkRepository
 import com.erhu.erhu.core.database.repository.ArtistArtworkRepositoryImpl
 import com.erhu.erhu.core.database.repository.ArtistArtworkStore
+import com.erhu.erhu.core.database.repository.CustomSongArtworkRepository
+import com.erhu.erhu.core.database.repository.CustomSongArtworkRepositoryImpl
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.database.repository.LibraryRepositoryImpl
 import com.erhu.erhu.core.database.repository.PlaylistArtworkStore
@@ -45,12 +47,21 @@ interface RepositoryModule {
     fun bindSongLookup(impl: RoomSongLookup): SongLookup
 
     @Binds
+    fun bindRemoteSourceLookup(
+        impl: com.erhu.erhu.core.database.repository.RemoteLibraryRepository,
+    ): com.erhu.erhu.core.model.RemoteSourceLookup
+
+    @Binds
     @Singleton
     fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
 
     @Binds
     @Singleton
     fun bindArtistArtworkRepository(impl: ArtistArtworkRepositoryImpl): ArtistArtworkRepository
+
+    @Binds
+    @Singleton
+    fun bindCustomSongArtworkRepository(impl: CustomSongArtworkRepositoryImpl): CustomSongArtworkRepository
 
     companion object {
         @Provides

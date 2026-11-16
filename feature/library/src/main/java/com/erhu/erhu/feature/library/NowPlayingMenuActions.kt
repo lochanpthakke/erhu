@@ -16,4 +16,8 @@ internal class NowPlayingMenuActions(
     val onQueue: () -> Unit,
     val onVisualizer: () -> Unit,
     val onEqualizer: () -> Unit,
+    val onShareSongCard: (() -> Unit)? = null,
+    val onCustomArtwork: (() -> Unit)? = null,
+    /** False for a remote track: reading the file's tags and audio headers needs a file on the device. */
+    val hasLocalFile: Boolean = true,
 )

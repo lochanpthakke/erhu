@@ -26,6 +26,8 @@ android {
 }
 
 dependencies {
+    // Google account authorization for the read-only Drive remote library (see docs/remote-libraries.md).
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation(project(":core:common"))
     implementation(project(":core:model"))
     implementation(project(":core:database"))
@@ -48,6 +50,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
 
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.common)

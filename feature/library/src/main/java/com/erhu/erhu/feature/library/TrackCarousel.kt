@@ -21,6 +21,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
@@ -306,7 +307,12 @@ internal fun TrackCarousel(
     Box(
         modifier =
             modifier.onGloballyPositioned { coordinates ->
-                transition?.carouselBounds = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+                if (transition != null) {
+                    val bounds = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+                    if (transition.carouselBounds != bounds) {
+                        transition.carouselBounds = bounds
+                    }
+                }
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -397,6 +403,10 @@ private fun GraphicsLayerScope.depthCard(
     translationX = lerp(distance * size.width * SIDE_SPACING, spread * stackedOut, stack)
     rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * depth * (1f - stack)
     cameraDistance = CAMERA_DISTANCE * density
+    // Under a perspective turn the GPU cannot clip the card's rounded shapes itself: Skia rasterizes
+    // every clip as a mask on the CPU and uploads it, each frame the card moves (about 12 masks,
+    // 6 ms per frame). Drawn flat into its own layer first, the turned card is one textured quad.
+    compositingStrategy = if (rotationY != 0f) CompositingStrategy.Offscreen else CompositingStrategy.Auto
     val vanish = (1f - (away - 1f).coerceAtLeast(0f) / (VANISH_DISTANCE - 1f)).coerceIn(0f, 1f)
     val gathered = if (hideLeft) (stack * (-distance).coerceIn(0f, 1f) * STACKED_HIDE_RATE).coerceAtMost(1f) else 0f
     alpha = vanish * (1f - gathered)

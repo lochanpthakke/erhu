@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="app_updates" path="updates/" />
+    <cache-path name="shared_cards" path="share_cards/" />
+    <files-path name="custom_artwork" path="artwork/" />
 </paths>
