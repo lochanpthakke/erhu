@@ -5,12 +5,15 @@ import androidx.room.RoomDatabase
 import com.erhu.erhu.core.database.dao.AlbumDao
 import com.erhu.erhu.core.database.dao.AnimatedArtworkDao
 import com.erhu.erhu.core.database.dao.ArtistDao
+import com.erhu.erhu.core.database.dao.CustomSongArtworkDao
 import com.erhu.erhu.core.database.dao.LearnedWatermarkDao
 import com.erhu.erhu.core.database.dao.LibraryModelDao
+import com.erhu.erhu.core.database.dao.ListeningEventDao
 import com.erhu.erhu.core.database.dao.ListeningStatsDao
 import com.erhu.erhu.core.database.dao.MetadataProcessingDao
 import com.erhu.erhu.core.database.dao.PlaylistDao
 import com.erhu.erhu.core.database.dao.RecentlyPlayedDao
+import com.erhu.erhu.core.database.dao.RemoteLibraryDao
 import com.erhu.erhu.core.database.dao.SongArtistCrossRefDao
 import com.erhu.erhu.core.database.dao.SongDao
 import com.erhu.erhu.core.database.dao.TrackBookmarkDao
@@ -21,13 +24,17 @@ import com.erhu.erhu.core.database.entity.AnimatedArtworkEntity
 import com.erhu.erhu.core.database.entity.ArtistAliasEntity
 import com.erhu.erhu.core.database.entity.ArtistArtworkEntity
 import com.erhu.erhu.core.database.entity.ArtistEntity
+import com.erhu.erhu.core.database.entity.CustomSongArtworkEntity
 import com.erhu.erhu.core.database.entity.LearnedWatermarkEntity
 import com.erhu.erhu.core.database.entity.ListeningDayEntity
+import com.erhu.erhu.core.database.entity.ListeningEventEntity
 import com.erhu.erhu.core.database.entity.ListeningStatsEntity
 import com.erhu.erhu.core.database.entity.MetadataProcessingEntity
 import com.erhu.erhu.core.database.entity.PlaylistEntity
 import com.erhu.erhu.core.database.entity.PlaylistSongCrossRefEntity
 import com.erhu.erhu.core.database.entity.RecentlyPlayedEntity
+import com.erhu.erhu.core.database.entity.RemoteSourceEntity
+import com.erhu.erhu.core.database.entity.RemoteTrackEntity
 import com.erhu.erhu.core.database.entity.SongArtistCrossRefEntity
 import com.erhu.erhu.core.database.entity.SongEntity
 import com.erhu.erhu.core.database.entity.TrackBookmarkEntity
@@ -54,8 +61,12 @@ import com.erhu.erhu.core.database.entity.WaveformCacheEntity
         WaveformCacheEntity::class,
         LearnedWatermarkEntity::class,
         AnimatedArtworkEntity::class,
+        CustomSongArtworkEntity::class,
+        ListeningEventEntity::class,
+        RemoteSourceEntity::class,
+        RemoteTrackEntity::class,
     ],
-    version = 16,
+    version = 18,
     exportSchema = true,
 )
 abstract class ErhuDatabase : RoomDatabase() {
@@ -84,4 +95,10 @@ abstract class ErhuDatabase : RoomDatabase() {
     abstract fun listeningStatsDao(): ListeningStatsDao
 
     abstract fun animatedArtworkDao(): AnimatedArtworkDao
+
+    abstract fun customSongArtworkDao(): CustomSongArtworkDao
+
+    abstract fun listeningEventDao(): ListeningEventDao
+
+    abstract fun remoteLibraryDao(): RemoteLibraryDao
 }

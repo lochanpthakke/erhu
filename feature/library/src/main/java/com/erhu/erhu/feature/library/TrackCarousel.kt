@@ -1,6 +1,7 @@
 package com.erhu.erhu.feature.library
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
@@ -21,6 +22,7 @@ import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
@@ -34,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import com.erhu.erhu.core.common.perf.Interactions
-import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -51,6 +52,19 @@ private val SKIP_FLING_VELOCITY = 900.dp
 
 /** Dragging towards a side with no song moves the content this much per finger pixel. */
 private const val EDGE_RESISTANCE = 0.25f
+
+/**
+ * Every track change (swipe release, skip button, notification or lock-screen skip) settles with
+ * this critically damped spring: from rest it eases in and out over about 450 ms, and it keeps a
+ * running motion's velocity when consecutive skips retarget it.
+ */
+private const val TRACK_SETTLE_STIFFNESS = 240f
+
+/** About how long a track change's card motion takes to settle with [TRACK_SETTLE_STIFFNESS]. */
+internal const val TRACK_CHANGE_SETTLE_MS = 500L
+
+/** sqrt([TRACK_SETTLE_STIFFNESS]): the fastest release that still approaches the destination monotonically. */
+private const val TRACK_SETTLE_MAX_RATE = 15f
 
 /** A committed skip whose track change never arrives (e.g. the player refused it) springs back after this. */
 private const val TRACK_CHANGE_TIMEOUT_MS = 1_000L
@@ -206,7 +220,7 @@ internal class TrackCarouselState(
         settle =
             scope.launch {
                 offset.snapTo(start)
-                offset.animateTo(absolute, Motion.trackSettle(), initialVelocity = settlingVelocity(start, absolute, velocity, page)) {
+                offset.animateTo(absolute, spring(dampingRatio = 1f, stiffness = TRACK_SETTLE_STIFFNESS), initialVelocity = settlingVelocity(start, absolute, velocity, page)) {
                     position = value + base
                 }
                 if (!dragging) Interactions.put(Interactions.TRACK, null)
@@ -306,7 +320,12 @@ internal fun TrackCarousel(
     Box(
         modifier =
             modifier.onGloballyPositioned { coordinates ->
-                transition?.carouselBounds = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+                if (transition != null) {
+                    val bounds = coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+                    if (transition.carouselBounds != bounds) {
+                        transition.carouselBounds = bounds
+                    }
+                }
             },
         contentAlignment = Alignment.Center,
     ) {
@@ -366,7 +385,15 @@ private const val STACKED_HIDE_RATE = 1.5f
 
 /** Beyond one place over, cards shrink and fade out by this distance. */
 private const val VANISH_DISTANCE = 1.6f
-private const val CAMERA_DISTANCE = 14f
+private const val CAMERA_DISTANCE = 11f
+
+/**
+ * In flight between two places, the cards turn further than at rest and sink back a little, so a
+ * track change reads as two cards rotating past each other about the vertical axis (the outgoing
+ * one turning away, the incoming one turning in from the other side). Zero at rest.
+ */
+private const val TRANSIT_TURN_DEGREES = 28f
+private const val TRANSIT_SINK = 0.05f
 
 /**
  * One card of the depth carousel at [distance] places from the centre: moved sideways by a share of
@@ -391,12 +418,18 @@ private fun GraphicsLayerScope.depthCard(
     val spread = sign(distance) * size.width * SIDE_SPACING
     // Out to the side half way, back behind the centre at one place over.
     val stackedOut = 2f * minOf(near, 1f - near)
-    val scale = lerp(1f - (1f - sideScale) * depth, 1f + (STACKED_BEHIND_SCALE - 1f) * depth, stack)
+    // 0 at rest (on a place), 1 half way between two places.
+    val transit = if (reduceMotion) 0f else 4f * near * (1f - near) * (1f - stack)
+    val scale = lerp(1f - (1f - sideScale) * depth, 1f + (STACKED_BEHIND_SCALE - 1f) * depth, stack) * (1f - TRANSIT_SINK * transit)
     scaleX = scale
     scaleY = scale
     translationX = lerp(distance * size.width * SIDE_SPACING, spread * stackedOut, stack)
-    rotationY = if (reduceMotion) 0f else -sign(distance) * SIDE_TURN_DEGREES * depth * (1f - stack)
+    rotationY = if (reduceMotion) 0f else -sign(distance) * (SIDE_TURN_DEGREES * depth * (1f - stack) + TRANSIT_TURN_DEGREES * transit)
     cameraDistance = CAMERA_DISTANCE * density
+    // Under a perspective turn the GPU cannot clip the card's rounded shapes itself: Skia rasterizes
+    // every clip as a mask on the CPU and uploads it, each frame the card moves (about 12 masks,
+    // 6 ms per frame). Drawn flat into its own layer first, the turned card is one textured quad.
+    compositingStrategy = if (rotationY != 0f) CompositingStrategy.Offscreen else CompositingStrategy.Auto
     val vanish = (1f - (away - 1f).coerceAtLeast(0f) / (VANISH_DISTANCE - 1f)).coerceIn(0f, 1f)
     val gathered = if (hideLeft) (stack * (-distance).coerceIn(0f, 1f) * STACKED_HIDE_RATE).coerceAtMost(1f) else 0f
     alpha = vanish * (1f - gathered)
@@ -494,8 +527,8 @@ internal fun settlingVelocity(
 ): Float {
     val remaining = target - start
     if (remaining == 0f || velocity * remaining <= 0f) return 0f
-    // For the critically damped spring (stiffness 650), v <= sqrt(k) * distance
+    // For the critically damped settle spring, v <= sqrt(k) * distance
     // approaches the destination monotonically. Also cap anomalous batched-input velocities.
-    val limit = minOf(abs(remaining) * 25f, page * 4f)
+    val limit = minOf(abs(remaining) * TRACK_SETTLE_MAX_RATE, page * 4f)
     return velocity.coerceIn(-limit, limit)
 }

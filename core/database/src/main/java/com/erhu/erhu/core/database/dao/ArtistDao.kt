@@ -33,6 +33,25 @@ interface ArtistDao {
         seedSongId: Long,
     ): Flow<List<ArtistForSongs>>
 
+    /** All credited artists for [songId] in presentation order (primary first, then featured, by position). */
+    @Query(
+        "SELECT a.* FROM artists a INNER JOIN song_artist_cross_ref ref ON a.id = ref.artist_id " +
+            "WHERE ref.song_id = :songId ORDER BY ref.position ASC, CASE WHEN ref.role = 'PRIMARY' THEN 0 ELSE 1 END, a.name ASC",
+    )
+    fun observeArtistsForSong(songId: Long): Flow<List<ArtistEntity>>
+
+    @Query(
+        "SELECT a.* FROM artists a INNER JOIN song_artist_cross_ref ref ON a.id = ref.artist_id " +
+            "WHERE ref.song_id = :songId ORDER BY ref.position ASC, CASE WHEN ref.role = 'PRIMARY' THEN 0 ELSE 1 END, a.name ASC",
+    )
+    suspend fun getArtistsForSong(songId: Long): List<ArtistEntity>
+
+    @Query("SELECT * FROM artists WHERE artist_key = :key LIMIT 1")
+    suspend fun getArtistByKey(key: String): ArtistEntity?
+
+    @Query("SELECT * FROM artists WHERE name = :name COLLATE NOCASE LIMIT 1")
+    suspend fun getArtistByName(name: String): ArtistEntity?
+
     @Upsert
     suspend fun upsertAll(artists: List<ArtistEntity>)
 

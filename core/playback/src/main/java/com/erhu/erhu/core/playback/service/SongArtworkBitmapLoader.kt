@@ -8,6 +8,7 @@ import androidx.media3.common.util.BitmapLoader
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
 import com.erhu.erhu.core.common.artwork.ArtworkLoader
+import com.erhu.erhu.core.playback.artworkUriFromExtras
 import com.erhu.erhu.core.playback.songUriFromExtras
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.ListeningExecutorService
@@ -40,8 +41,9 @@ internal class SongArtworkBitmapLoader(
     override fun loadBitmap(uri: Uri): ListenableFuture<Bitmap> = fallback.loadBitmap(uri)
 
     override fun loadBitmapFromMetadata(metadata: MediaMetadata): ListenableFuture<Bitmap>? {
-        val songUri = metadata.extras?.songUriFromExtras() ?: return super.loadBitmapFromMetadata(metadata)
-        val albumArtUri = metadata.artworkUri?.toString()
+        val extras = metadata.extras
+        val songUri = extras?.songUriFromExtras() ?: return super.loadBitmapFromMetadata(metadata)
+        val albumArtUri = extras.artworkUriFromExtras() ?: metadata.artworkUri?.toString()
 
         // Resolve the notification-sized cache entry and any resizing on the
         // worker rather than returning an arbitrary UI bitmap inline.

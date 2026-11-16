@@ -267,6 +267,29 @@ class ListeningStatsTest {
         assertEquals(listOf(listOf("1")), dumpSql("SELECT id FROM songs WHERE is_favorite = 1"))
     }
 
+    @Test
+    fun `a rolling period never borrows the calendar month's figures`() {
+        // An existing event log: the repository's one-time background backfill stays out of the way.
+        db.openHelper.writableDatabase.execSQL(
+            "INSERT INTO listening_events (song_id, timestamp, duration_ms, is_counted_play) VALUES (3, 0, 0, 0)",
+        )
+        val recap = ListeningStatsRepository(db.listeningStatsDao(), db.listeningEventDao(), { now }, { ZoneOffset.UTC })
+        now = at(2026, 10, 2, 12, 0)
+        runBlocking {
+            recap.recordPlay(1)
+            recap.recordPlay(2)
+        }
+        now = at(2026, 10, 20, 12, 0)
+
+        val week = runBlocking { recap.observePeriodStats(StatsPeriod.LAST_7_DAYS).first() }
+        assertEquals(0, week.totalPlays)
+        assertTrue(week.topSongs.isEmpty())
+
+        val month = runBlocking { recap.observePeriodStats(StatsPeriod.THIS_MONTH).first() }
+        assertEquals(2, month.totalPlays)
+        assertEquals(setOf(1L, 2L), month.topSongs.map { it.song.id }.toSet())
+    }
+
     private fun dump(table: String): List<List<String?>> = dumpSql("SELECT * FROM $table")
 
     private fun dumpSql(sql: String): List<List<String?>> =

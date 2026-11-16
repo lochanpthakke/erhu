@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -44,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -53,6 +56,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -77,6 +82,7 @@ import com.erhu.erhu.core.model.RepeatMode
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.playback.repository.PlaybackRepository
 import com.erhu.erhu.feature.library.components.rememberCoverVideoHost
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /** The blurred artwork background is fully there over the first part of the expansion. */
@@ -135,6 +141,14 @@ fun NowPlayingScreen(
     /** The outcome of an Add to playlist started here ("Added to â€¦", "Already in â€¦"), shown once. */
     playlistMessage: String? = null,
     onPlaylistMessageShown: () -> Unit = {},
+    onOpenArtist: ((Long) -> Unit)? = null,
+    onOpenAlbum: ((Long) -> Unit)? = null,
+    onOpenPlaylist: ((Long) -> Unit)? = null,
+    originatingPlaylistName: String? = null,
+    onShareSongCard: ((Song) -> Unit)? = null,
+    onCustomArtwork: ((Song) -> Unit)? = null,
+    customArtworkPath: String? = null,
+    isCustomAnimated: Boolean = false,
 ) {
     // Stable state only; the position is read by PlaybackProgress and the lyrics alone, so the
     // rest of this screen does not recompose four times per second.
@@ -217,6 +231,7 @@ fun NowPlayingScreen(
 
     val menuActions =
         NowPlayingMenuActions(
+            hasLocalFile = !com.erhu.erhu.core.model.RemoteRef.isStreamUri(song?.uri),
             onMusicInfo = { song?.let(onShowMusicInfo) },
             onAudioDetails = { showAudioDetails = true },
             onAddBookmark = {
@@ -260,6 +275,8 @@ fun NowPlayingScreen(
             },
             onVisualizer = { showVisualizer = true },
             onEqualizer = onOpenEqualizer,
+            onShareSongCard = onShareSongCard?.let { action -> { song?.let { action(it) } } },
+            onCustomArtwork = onCustomArtwork?.let { action -> { song?.let { action(it) } } },
         )
 
     // The backdrop sits behind the whole scaffold, so it also fills the area
@@ -267,8 +284,16 @@ fun NowPlayingScreen(
     // The artwork backdrop is what the glass controls frost.
     // Already a strong blur of the artwork: the glass over it needs no blur of its own.
     val artworkBackdrop = rememberGlassBackdrop("nowPlayingArtwork", preBlurred = true)
+    LaunchedEffect(transition, artworkBackdrop) {
+        if (transition != null) {
+            snapshotFlow { transition.fraction > 0f && transition.fraction < 1f }
+                .distinctUntilChanged()
+                .collect { moving -> artworkBackdrop.frozen = moving }
+        }
+    }
     // The lyrics surfaces take their colours from the playing song's artwork (cached per artwork).
-    val lyricsColors = rememberLyricsColors(song)
+    // Applied once a skip's card motion has settled, so the colour fade never shares its frames.
+    val lyricsColors = rememberLyricsColors(song, changeDelayMs = TRACK_CHANGE_SETTLE_MS)
     val opaquePlayerBackground = MaterialTheme.colorScheme.background.copy(alpha = 1f)
     Box(modifier = modifier.fillMaxSize()) {
         // Draw outside both the animated graphics layer and the recorded glass source.
@@ -287,7 +312,8 @@ fun NowPlayingScreen(
                     .revealWithPlayer(transition, start = 0f, end = BACKDROP_REVEAL_END, rise = 0.dp)
                     .glassBackdropSource(artworkBackdrop),
         ) {
-            GlassArtworkBackdrop(song = song)
+            // The neighbours' backdrops are rendered ahead, so a skip never blurs live mid-animation.
+            GlassArtworkBackdrop(song = song, upcoming = listOf(playbackState.nextSong, playbackState.previousSong))
         }
         AppScaffold(
             containerColor = Color.Transparent,
@@ -298,7 +324,43 @@ fun NowPlayingScreen(
             topBar = {
                 AppTopBar(
                     navigation = TopBarNavigation.Detail(onBackClick),
-                    title = stringResource(R.string.player_title),
+                    title = {
+                        val playlistId =
+                            playbackState.currentCollection?.takeIf {
+                                it.kind == com.erhu.erhu.core.model.CollectionKind.PLAYLIST
+                            }?.id
+                        if (playlistId != null && !originatingPlaylistName.isNullOrBlank() && onOpenPlaylist != null) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier =
+                                    Modifier.clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = { onOpenPlaylist(playlistId) },
+                                    ),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.playing_from_playlist).uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                                Text(
+                                    text = originatingPlaylistName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = stringResource(R.string.player_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    },
                     actions = {
                         NowPlayingMenu(
                             actions = menuActions,
@@ -374,11 +436,15 @@ fun NowPlayingScreen(
                                             }
                                         },
                                         selectable = !stacked,
-                                        // The cover moves only while the player is open (it stays composed when collapsed).
-                                        isPlaying = isPlaying && transition?.isOpen != false,
+                                        // The live cover plays only while Now Playing is settled open (never while expanding or collapsing).
+                                        isPlaying = isPlaying && (transition == null || transition.isSettledOpen),
                                         libraryRepository = libraryRepository,
                                         animatedArtworkRepository = animatedArtworkRepository,
                                         coverVideo = coverVideo,
+                                        onOpenArtist = onOpenArtist,
+                                        onOpenAlbum = onOpenAlbum,
+                                        customArtworkPath = if (isCurrent) customArtworkPath else null,
+                                        isCustomAnimated = if (isCurrent) isCustomAnimated else false,
                                     )
                                 }
 

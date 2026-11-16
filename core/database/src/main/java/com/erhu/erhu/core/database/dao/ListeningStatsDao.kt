@@ -36,6 +36,7 @@ data class SongMonthPlays(
 data class MonthTotals(
     @ColumnInfo(name = "plays") val plays: Int,
     @ColumnInfo(name = "listened_ms") val listenedMs: Long,
+    @ColumnInfo(name = "unique_tracks") val uniqueTracks: Int = 0,
 )
 
 /**
@@ -165,7 +166,9 @@ interface ListeningStatsDao {
 
     @Query(
         """
-        SELECT COALESCE(SUM(play_count), 0) AS plays, COALESCE(SUM(listened_ms), 0) AS listened_ms
+        SELECT COALESCE(SUM(play_count), 0) AS plays,
+               COALESCE(SUM(listened_ms), 0) AS listened_ms,
+               COUNT(DISTINCT CASE WHEN play_count > 0 THEN song_id END) AS unique_tracks
         FROM listening_stats WHERE month_key = :monthKey
         """,
     )

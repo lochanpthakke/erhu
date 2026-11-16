@@ -91,8 +91,24 @@ object LyricsParser {
     private const val DECI_TO_MS = 100L
     private const val MILLI_DIGITS = 3
     private const val FRACTION_GROUP = 3
+    private const val PARSE_CACHE_SIZE = 4
 
-    fun parse(text: String?): Lyrics? = text?.takeIf { it.isNotBlank() }?.let(::parseText)
+    /**
+     * The same lyrics are parsed by several readers when a track changes (panel, view, timing).
+     * The last few results are kept, so the main thread parses each text once.
+     */
+    private val recent = LinkedHashMap<String, Lyrics?>(PARSE_CACHE_SIZE, 0.75f, true)
+
+    fun parse(text: String?): Lyrics? {
+        if (text == null || text.isBlank()) return null
+        synchronized(recent) { if (recent.containsKey(text)) return recent[text] }
+        val parsed = parseText(text)
+        synchronized(recent) {
+            recent[text] = parsed
+            while (recent.size > PARSE_CACHE_SIZE) recent.remove(recent.keys.first())
+        }
+        return parsed
+    }
 
     private fun parseText(text: String): Lyrics? {
         val rawLines = text.replace("\r\n", "\n").replace('\r', '\n').split('\n')

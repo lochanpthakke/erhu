@@ -34,6 +34,7 @@ object PlayerProviderModule {
         customEqAudioProcessor: CustomEqAudioProcessor,
         audioTap: PlaybackAudioTap,
         transitionGain: TransitionGainProcessor,
+        mediaSources: com.erhu.erhu.core.playback.RemoteMediaSources,
     ): Player {
         val renderersFactory =
             object : DefaultRenderersFactory(context) {
@@ -63,6 +64,8 @@ object PlayerProviderModule {
         // every command source — app UI, notification, lock screen, widget.
         return ExoPlayer
             .Builder(context, renderersFactory)
+            // Device files as before; remote tracks are resolved to their stream when opened.
+            .setMediaSourceFactory(mediaSources.mediaSourceFactory())
             .setAudioAttributes(musicAttributes, true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
@@ -81,6 +84,13 @@ abstract class PlaybackBindModule {
     @Binds
     @Singleton
     abstract fun bindPlaybackController(impl: PlaybackControllerImpl): PlaybackController
+
+    /** Each remote provider adds its resolver to this set; with none connected it is empty. */
+    @dagger.multibindings.Multibinds
+    abstract fun remoteStreamResolvers(): Set<com.erhu.erhu.core.model.RemoteStreamResolver>
+
+    @dagger.multibindings.Multibinds
+    abstract fun remoteArtworkSources(): Set<com.erhu.erhu.core.model.RemoteArtworkSource>
 }
 
 /**

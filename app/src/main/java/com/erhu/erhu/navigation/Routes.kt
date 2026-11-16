@@ -91,3 +91,22 @@ data class RadioStationDetail(
 /** Replays the introduction without resetting the completion preference. */
 @Serializable
 object Introduction
+
+/** Remote Libraries: the connected music servers. */
+@Serializable
+object RemoteLibraries
+
+/** A connected Google Drive account's folder browser. */
+@Serializable
+data class DriveBrowse(
+    val sourceId: Long,
+)
+
+/** One page of a server's browser ([kind] is a RemotePageKind name; [itemId] the artist, album or playlist). */
+@Serializable
+data class RemoteBrowse(
+    val sourceId: Long,
+    val kind: String = "HOME",
+    val itemId: String = "",
+    val title: String = "",
+)

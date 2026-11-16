@@ -7,9 +7,11 @@ import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Info
@@ -61,10 +63,18 @@ internal fun NowPlayingMenu(
                     action()
                 }
             }
-            Group(stringResource(R.string.player_menu_group_track))
-            MenuItem(stringResource(R.string.player_menu_music_info), Icons.Outlined.Info, close(actions.onMusicInfo))
-            MenuItem(stringResource(R.string.player_menu_audio_details), Icons.Outlined.Tune, close(actions.onAudioDetails))
-            GroupDivider()
+            if (actions.hasLocalFile) {
+                Group(stringResource(R.string.player_menu_group_track))
+                MenuItem(stringResource(R.string.player_menu_music_info), Icons.Outlined.Info, close(actions.onMusicInfo))
+                MenuItem(stringResource(R.string.player_menu_audio_details), Icons.Outlined.Tune, close(actions.onAudioDetails))
+                actions.onShareSongCard?.let {
+                    MenuItem(stringResource(R.string.share_card_title), Icons.Default.Share, close(it))
+                }
+                actions.onCustomArtwork?.let {
+                    MenuItem(stringResource(R.string.custom_artwork_title), Icons.Default.Image, close(it))
+                }
+                GroupDivider()
+            }
             Group(stringResource(R.string.player_menu_group_library))
             MenuItem(stringResource(R.string.player_menu_bookmark_moment), Icons.Default.BookmarkAdd, close(actions.onAddBookmark))
             MenuItem(

@@ -54,12 +54,30 @@ import com.erhu.erhu.MainActivity
 import com.erhu.erhu.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
+import com.erhu.erhu.core.designsystem.theme.ArtworkColors
 import com.erhu.erhu.core.designsystem.theme.DominantColorExtractor
 import com.erhu.erhu.core.model.PlaybackStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 private const val ALBUM_ART_SIZE_PX = 400
+private const val VINYL_BACKGROUND_PX = 480
+
+/** The decoded empty record per theme (dark = true); shared by every Vinyl widget instance. */
+private val vinylBackgrounds = ConcurrentHashMap<Boolean, Bitmap>()
+
+/** The current song's artwork as the Vinyl widget shows it: cropped round, and its colours. */
+private class VinylArt(
+    val circular: Bitmap?,
+    val colors: ArtworkColors?,
+) {
+    companion object {
+        val NONE = VinylArt(null, null)
+    }
+}
 
 class VinylMusicWidget : GlanceAppWidget() {
     override val sizeMode = androidx.glance.appwidget.SizeMode.Exact
@@ -85,7 +103,7 @@ class VinylMusicWidget : GlanceAppWidget() {
                 title = localized.getString(R.string.widget_idle_title),
                 artist = localized.getString(R.string.widget_idle_hint),
                 artwork = null,
-                rawArtwork = null,
+                colors = null,
                 isPlaying = false,
                 hasSong = false,
             )
@@ -123,24 +141,24 @@ class VinylMusicWidget : GlanceAppWidget() {
             val initialState = remember(context) { context.playbackController().playbackState.value }
             val playbackState by throttledPlaybackFlow.collectAsState(initial = initialState)
             val song = playbackState.currentSong
-            val rawArtwork by produceState<Bitmap?>(initialValue = null, song?.id) {
-                if (song != null) {
-                    value = ArtworkLoader.load(context, song.uri, song.artworkUri, ALBUM_ART_SIZE_PX)
-                } else {
-                    value = null
-                }
+            // Glance composes on the main thread: crop the artwork and read its colours on a worker.
+            val art by produceState(VinylArt.NONE, song?.id) {
+                value =
+                    if (song == null) {
+                        VinylArt.NONE
+                    } else {
+                        val raw = ArtworkLoader.load(context, song.uri, song.artworkUri, ALBUM_ART_SIZE_PX)
+                        withContext(Dispatchers.Default) {
+                            VinylArt(raw?.toCircularBitmap(), raw?.let { DominantColorExtractor.extractColors(it) })
+                        }
+                    }
             }
-
-            val circularArtwork =
-                remember(rawArtwork) {
-                    rawArtwork?.toCircularBitmap()
-                }
 
             WidgetContent(
                 title = song?.title ?: AppLocaleManager.localizedContext(context).getString(R.string.widget_idle_title),
                 artist = song?.artist.orEmpty(),
-                artwork = circularArtwork,
-                rawArtwork = rawArtwork,
+                artwork = art.circular,
+                colors = art.colors,
                 hasSong = song != null,
                 isPlaying =
                     playbackState.status == PlaybackStatus.PLAYING ||
@@ -154,7 +172,7 @@ class VinylMusicWidget : GlanceAppWidget() {
         title: String,
         artist: String,
         artwork: Bitmap?,
-        rawArtwork: Bitmap?,
+        colors: ArtworkColors?,
         isPlaying: Boolean,
         hasSong: Boolean,
     ) {
@@ -165,9 +183,8 @@ class VinylMusicWidget : GlanceAppWidget() {
         val mutedTextColor = ColorProvider(day = Color(0xFF6E6E73), night = Color(0xFFA1A1A6))
 
         // Extract dynamic dominant accent color from album artwork
-        val extractedColors = remember(rawArtwork) { rawArtwork?.let { DominantColorExtractor.extractColors(it) } }
         val rawAccent =
-            extractedColors?.accentColor?.let {
+            colors?.accentColor?.let {
                 androidx.compose.ui.graphics.lerp(
                     it,
                     if (isDark) Color.White else Color.Black,
@@ -178,38 +195,7 @@ class VinylMusicWidget : GlanceAppWidget() {
         val controlIconColor = if (rawAccent != null) ColorProvider(day = rawAccent, night = rawAccent) else adaptiveTextColor
 
         val compositedBackground by produceState<Bitmap?>(initialValue = null, artwork, isDark) {
-            val options = BitmapFactory.Options().apply { inMutable = true }
-            val rawBg = BitmapFactory.decodeResource(context.resources, R.drawable.ic_vinyl_widget_bg, options)
-            if (rawBg != null) {
-                val targetSize = 480
-                val baseBg =
-                    if (rawBg.width != targetSize) {
-                        val scaled = Bitmap.createScaledBitmap(rawBg, targetSize, targetSize, true)
-                        rawBg.recycle()
-                        scaled
-                    } else {
-                        rawBg
-                    }
-                val canvas = Canvas(baseBg)
-                val w = baseBg.width
-                val h = baseBg.height
-                val cx = w * 0.5030f // Exact spindle pin center
-                val cy = if (isDark) h * 0.3926f else h * 0.4030f // Exact spindle pin center
-                val radius = w * 0.2007f // Exact record label circle radius
-
-                if (artwork != null) {
-                    val srcRect = Rect(0, 0, artwork.width, artwork.height)
-                    val dstRect = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
-                    canvas.drawBitmap(artwork, srcRect, dstRect, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
-
-                    // Draw white spindle dot in the center of the record
-                    val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.parseColor("#FFFDF5") }
-                    canvas.drawCircle(cx, cy, w * 0.009f, dotPaint)
-                }
-                value = baseBg
-            } else {
-                value = null
-            }
+            value = withContext(Dispatchers.Default) { composeBackground(context, artwork, isDark) }
         }
 
         Box(
@@ -294,6 +280,53 @@ class VinylMusicWidget : GlanceAppWidget() {
             modifier = modifier.height(24.dp),
         )
     }
+
+    /** The record background with [artwork] on its label, or null if the drawable cannot be read. */
+    private fun composeBackground(
+        context: Context,
+        artwork: Bitmap?,
+        isDark: Boolean,
+    ): Bitmap? {
+        val baseBg = vinylBackground(context, isDark)?.copy(Bitmap.Config.ARGB_8888, true) ?: return null
+        val canvas = Canvas(baseBg)
+        val w = baseBg.width
+        val h = baseBg.height
+        val cx = w * 0.5030f // Exact spindle pin center
+        val cy = if (isDark) h * 0.3926f else h * 0.4030f // Exact spindle pin center
+        val radius = w * 0.2007f // Exact record label circle radius
+
+        if (artwork != null) {
+            val srcRect = Rect(0, 0, artwork.width, artwork.height)
+            val dstRect = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
+            canvas.drawBitmap(artwork, srcRect, dstRect, Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+
+            // Draw white spindle dot in the center of the record
+            val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.parseColor("#FFFDF5") }
+            canvas.drawCircle(cx, cy, w * 0.009f, dotPaint)
+        }
+        return baseBg
+    }
+
+    /**
+     * The empty record, decoded once per theme. The drawable lives in the mdpi bucket, so a plain
+     * decodeResource scaled the 600 px image up to the display density (1800 px on a 480 dpi phone)
+     * on every track change before it was shrunk again.
+     */
+    private fun vinylBackground(
+        context: Context,
+        isDark: Boolean,
+    ): Bitmap? =
+        vinylBackgrounds[isDark] ?: run {
+            val options = BitmapFactory.Options().apply { inScaled = false }
+            val raw = BitmapFactory.decodeResource(context.resources, R.drawable.ic_vinyl_widget_bg, options) ?: return null
+            val base =
+                if (raw.width != VINYL_BACKGROUND_PX) {
+                    Bitmap.createScaledBitmap(raw, VINYL_BACKGROUND_PX, VINYL_BACKGROUND_PX, true).also { raw.recycle() }
+                } else {
+                    raw
+                }
+            vinylBackgrounds.putIfAbsent(isDark, base) ?: base
+        }
 
     private fun Bitmap.toCircularBitmap(): Bitmap {
         val minDim = minOf(width, height)

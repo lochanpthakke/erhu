@@ -8,9 +8,67 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 val MIGRATION_15_16 =
     object : Migration(15, 16) {
         override fun migrate(db: SupportSQLiteDatabase) {
-            db.execSQL("ALTER TABLE `songs` ADD COLUMN `date_added_ms` INTEGER NOT NULL DEFAULT 0")
+            // A database can reach v15 by another path: development builds briefly used v15 for the
+            // remote library tables, without the playlist display order. Add it if it is missing.
+            if (!db.hasColumn("playlist_song_cross_ref", "sort_order")) {
+                db.execSQL("ALTER TABLE `playlist_song_cross_ref` ADD COLUMN `sort_order` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE `playlist_song_cross_ref` SET `sort_order` = `position`")
+            }
+            if (!db.hasColumn("songs", "date_added_ms")) {
+                db.execSQL("ALTER TABLE `songs` ADD COLUMN `date_added_ms` INTEGER NOT NULL DEFAULT 0")
+            }
         }
     }
+
+internal fun SupportSQLiteDatabase.hasColumn(
+    table: String,
+    column: String,
+): Boolean =
+    query("PRAGMA table_info(`$table`)").use { cursor ->
+        val name = cursor.getColumnIndex("name")
+        generateSequence { if (cursor.moveToNext()) cursor.getString(name) else null }.any { it == column }
+    }
+
+/**
+ * v16 -> v17: custom song artwork overrides and listening events for recap statistics.
+ */
+val MIGRATION_16_17 = object : Migration(16, 17) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `custom_song_artwork` (
+                `song_id` INTEGER NOT NULL,
+                `file_path` TEXT NOT NULL,
+                `mime_type` TEXT NOT NULL,
+                `is_animated` INTEGER NOT NULL,
+                `updated_at_epoch_ms` INTEGER NOT NULL,
+                PRIMARY KEY(`song_id`)
+            )
+            """.trimIndent(),
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `listening_events` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `song_id` INTEGER NOT NULL,
+                `timestamp` INTEGER NOT NULL,
+                `duration_ms` INTEGER NOT NULL,
+                `is_counted_play` INTEGER NOT NULL
+            )
+            """.trimIndent(),
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_listening_events_timestamp` ON `listening_events` (`timestamp`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_listening_events_song_id` ON `listening_events` (`song_id`)")
+        db.execSQL(
+            """
+            INSERT INTO `listening_events` (`song_id`, `timestamp`, `duration_ms`, `is_counted_play`)
+            SELECT `song_id`, `last_played_at`, `listened_ms`, 1
+            FROM `listening_stats`
+            WHERE `last_played_at` > 0
+            """.trimIndent(),
+        )
+    }
+}
 
 /**
  * v14 â†’ v15: separate playlist display order from each entry's permanent position identity.
@@ -232,3 +290,51 @@ val MIGRATION_13_14 =
             )
         }
     }
+
+/**
+ * v17 → v18: remote libraries. `remote_sources` are the connected accounts/servers and
+ * `remote_tracks` the remote tracks erhu refers to by id. Nothing existing is touched.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_17_18 =
+    object : Migration(17, 18) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_17_18.forEach(db::execSQL)
+            RemoteTrackIdSeed.seed(db)
+        }
+    }
+
+private val STATEMENTS_17_18 =
+    listOf(
+        "CREATE TABLE IF NOT EXISTS `remote_sources` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`provider` TEXT NOT NULL, `name` TEXT NOT NULL, `base_url` TEXT, `account` TEXT, " +
+            "`allow_insecure` INTEGER NOT NULL, `added_at` INTEGER NOT NULL, `last_location` TEXT)",
+        "CREATE TABLE IF NOT EXISTS `remote_tracks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`source_id` INTEGER NOT NULL, `provider` TEXT NOT NULL, `remote_id` TEXT NOT NULL, `title` TEXT NOT NULL, " +
+            "`artist` TEXT NOT NULL, `album` TEXT NOT NULL, `duration_ms` INTEGER NOT NULL, `track_number` INTEGER NOT NULL, " +
+            "`disc_number` INTEGER NOT NULL, `mime_type` TEXT, `artwork_key` TEXT, `is_favorite` INTEGER NOT NULL, " +
+            "`is_unavailable` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, " +
+            "FOREIGN KEY(`source_id`) REFERENCES `remote_sources`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "CREATE UNIQUE INDEX IF NOT EXISTS `index_remote_tracks_source_id_remote_id` ON `remote_tracks` (`source_id`, `remote_id`)",
+    )
+
+/**
+ * Starts `remote_tracks` ids at RemoteIds.FIRST, far above any MediaStore id, wherever the table is
+ * created empty: by the migration, on a fresh install, and after a destructive rebuild.
+ */
+object RemoteTrackIdSeed : androidx.room.RoomDatabase.Callback() {
+    override fun onCreate(db: SupportSQLiteDatabase) = seed(db)
+
+    override fun onDestructiveMigration(db: SupportSQLiteDatabase) = seed(db)
+
+    fun seed(db: SupportSQLiteDatabase) {
+        // Raise the sequence to the remote range, never lower it: the tables may already hold remote tracks.
+        val floor = com.erhu.erhu.core.model.RemoteIds.FIRST - 1
+        db.execSQL("DELETE FROM sqlite_sequence WHERE name = 'remote_tracks' AND seq < $floor")
+        db.execSQL(
+            "INSERT INTO sqlite_sequence (name, seq) SELECT 'remote_tracks', " +
+                "MAX($floor, (SELECT COALESCE(MAX(id), 0) FROM remote_tracks)) " +
+                "WHERE NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = 'remote_tracks')",
+        )
+    }
+}

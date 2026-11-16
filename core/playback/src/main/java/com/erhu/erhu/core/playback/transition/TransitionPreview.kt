@@ -57,6 +57,7 @@ class TransitionPreview
         @param:ApplicationContext private val context: Context,
         private val player: Player,
         private val soundRepository: SoundRepository,
+        private val mediaSources: com.erhu.erhu.core.playback.RemoteMediaSources,
         dispatchers: DispatcherProvider,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + dispatchers.main)
@@ -102,8 +103,8 @@ class TransitionPreview
             player.addListener(mainListener)
 
             val settings = soundRepository.soundSettings.value
-            val outPlayer = ExoTailPlayer(context, settings).also { outgoing = it }
-            val inPlayer = ExoTailPlayer(context, settings).also { incoming = it }
+            val outPlayer = ExoTailPlayer(context, settings, mediaSourceFactory = mediaSources.mediaSourceFactory()).also { outgoing = it }
+            val inPlayer = ExoTailPlayer(context, settings, mediaSourceFactory = mediaSources.mediaSourceFactory()).also { incoming = it }
             val failed =
                 object : TailListener {
                     override fun onAudible() = Unit

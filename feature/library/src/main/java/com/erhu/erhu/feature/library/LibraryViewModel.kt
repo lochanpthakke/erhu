@@ -11,9 +11,13 @@ import com.erhu.erhu.core.common.result.AppError
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.getOrDefault
 import com.erhu.erhu.core.database.library.ArtistArtworkCache
+import com.erhu.erhu.core.database.entity.CustomSongArtworkEntity
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.ArtistArtworkRepository
+import com.erhu.erhu.core.database.repository.CustomSongArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
+import com.erhu.erhu.core.database.repository.ListeningStatsRepository
+import com.erhu.erhu.core.database.repository.PlaylistRepository
 import com.erhu.erhu.core.database.repository.RecentlyPlayedRecorder
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
 import com.erhu.erhu.core.model.Album
@@ -24,6 +28,7 @@ import com.erhu.erhu.core.model.MetadataField
 import com.erhu.erhu.core.model.PersistedRepairBatch
 import com.erhu.erhu.core.model.PersistedRepairItem
 import com.erhu.erhu.core.model.ProviderStatus
+import com.erhu.erhu.core.model.RemoteRef
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.network.lyrics.CachedLyrics
 import com.erhu.erhu.core.network.lyrics.LyricsCandidate
@@ -187,7 +192,17 @@ class LibraryViewModel
         private val metadataWriteAccess: MetadataWriteAccess,
         private val radioRepository: RadioRepository,
         private val lyricsTimingPersistence: com.erhu.erhu.core.datastore.LyricsTimingPersistence,
+        val customSongArtworkRepository: CustomSongArtworkRepository,
+        val listeningStatsRepository: ListeningStatsRepository,
+        private val playlistRepository: PlaylistRepository,
+        private val remoteFavorites: com.erhu.erhu.feature.library.remote.RemoteFavorites,
     ) : ViewModel() {
+        val allCustomArtwork: StateFlow<Map<Long, CustomSongArtworkEntity>> =
+            customSongArtworkRepository.observeAllCustomArtwork()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+
+        fun observePlaylistName(playlistId: Long): Flow<String?> =
+            playlistRepository.observePlaylist(playlistId).map { it?.name }
         internal val artworkUpgrades =
             ArtworkUpgradeController(
                 appContext,
@@ -458,7 +473,14 @@ class LibraryViewModel
         /** Favorite state of the playing song, read from Room (the source of truth). */
         val currentSongIsFavorite: StateFlow<Boolean> =
             currentSongId
-                .flatMapLatest { id -> id?.let { libraryRepository.observeIsFavorite(it) } ?: flowOf(false) }
+                .flatMapLatest { id ->
+                    when {
+                        id == null -> flowOf(false)
+                        // A remote track's favourite is mirrored in its own table, not in the device library.
+                        com.erhu.erhu.core.model.RemoteIds.isRemote(id) -> remoteFavorites.observe(id)
+                        else -> libraryRepository.observeIsFavorite(id)
+                    }
+                }
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
         private val onlineLyricsView = MutableStateFlow<OnlineLyricsView?>(null)
@@ -1599,6 +1621,11 @@ class LibraryViewModel
 
         fun toggleFavorite(song: Song) {
             viewModelScope.launch {
+                if (RemoteRef.isStreamUri(song.uri)) {
+                    // A remote track's favourite lives on its server; an unreachable server leaves it unchanged.
+                    runCatching { remoteFavorites.toggle(song) }
+                    return@launch
+                }
                 libraryRepository.toggleFavorite(song.id)
                 val current =
                     _recentSearchItems.value.map { item ->
@@ -1646,6 +1673,12 @@ class LibraryViewModel
 
         /** The artist's albums in reverse chronological order (newest year first). */
         fun observeArtistAlbums(artistId: Long): Flow<List<Album>> = libraryRepository.getAlbumsByArtistId(artistId)
+
+        /** All credited artists for [songId] in order. */
+        fun observeArtistsForSong(songId: Long): Flow<List<Artist>> = libraryRepository.getArtistsForSong(songId)
+
+        /** The album ID for [songId]. */
+        fun observeAlbumIdForSong(songId: Long): Flow<Long?> = libraryRepository.getAlbumIdForSong(songId)
 
         /** The artist's primary songs (where role = PRIMARY). */
         fun observeArtistPrimarySongs(artistId: Long): Flow<List<Song>> = libraryRepository.getPrimarySongsByArtistId(artistId)

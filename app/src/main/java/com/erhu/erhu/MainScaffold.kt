@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
@@ -123,6 +124,8 @@ import com.erhu.erhu.feature.library.LibrarySection
 import com.erhu.erhu.feature.library.LibraryViewModel
 import com.erhu.erhu.feature.library.LocalLibraryScrollToTopRequests
 import com.erhu.erhu.feature.library.LocalPlayerTransition
+import com.erhu.erhu.core.model.CollectionKind
+import com.erhu.erhu.feature.library.CustomArtworkDialog
 import com.erhu.erhu.feature.library.LocalVybeEnabled
 import com.erhu.erhu.feature.library.MetadataEditorScreen
 import com.erhu.erhu.feature.library.NowPlayingScreen
@@ -142,7 +145,10 @@ import com.erhu.erhu.feature.library.collectStablePlaybackState
 import com.erhu.erhu.feature.library.isVybeMix
 import com.erhu.erhu.feature.library.rememberLibraryChromeState
 import com.erhu.erhu.feature.library.rememberPlayerTransitionState
+import com.erhu.erhu.feature.library.share.SongShareDialog
+import com.erhu.erhu.feature.library.share.StatsShareDialog
 import com.erhu.erhu.feature.library.visibleWithVybe
+import kotlinx.coroutines.flow.flowOf
 import com.erhu.erhu.feature.settings.SettingsCategoryScreen
 import com.erhu.erhu.feature.settings.SettingsScreen
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsViewModel
@@ -196,6 +202,7 @@ private val DRAWER_DESTINATIONS =
         DrawerDestination(CommonR.string.nav_library_builder, Icons.Default.Folder, LibraryBuilder),
         DrawerDestination(CommonR.string.nav_artwork_fetcher, Icons.Default.ImageSearch, ArtworkManager),
         DrawerDestination(CommonR.string.nav_wifi_transfer, Icons.Default.Wifi, WifiTransfer),
+        DrawerDestination(CommonR.string.nav_remote_libraries, Icons.Default.Cloud, com.erhu.erhu.navigation.RemoteLibraries),
         DrawerDestination(CommonR.string.nav_settings, Icons.Default.Settings, Settings),
     )
 
@@ -411,6 +418,10 @@ fun MainScaffold(
 
             // Now Playing's "Music information": the track's tags, in the app's metadata viewer.
             var songForMusicInfo by remember { mutableStateOf<Song?>(null) }
+            var songForShareCard by remember { mutableStateOf<Song?>(null) }
+            var songForCustomArtwork by remember { mutableStateOf<Song?>(null) }
+            var showStatsShareDialog by remember { mutableStateOf(false) }
+            val customArtworkMap by libraryViewModel.allCustomArtwork.collectAsState()
 
             // Glass backdrops: the screens frost under the bottom chrome; the whole
             // shell frosts under the drawer.
@@ -586,12 +597,16 @@ fun MainScaffold(
                                                         onShufflePlayLibrary = { libraryViewModel.shufflePlayLibrary() },
                                                         miniPlayer = { compact ->
                                                             // The collapsed form of the player; the expanding player grows out of it.
+                                                            val currentSongId = playbackState.value.currentSong?.id
+                                                            val currentCustomArtwork = currentSongId?.let { customArtworkMap[it] }
                                                             MiniPlayer(
                                                                 playbackRepository = playbackRepository,
                                                                 onMiniPlayerClick = {
                                                                     openPlayer()
                                                                 },
                                                                 compact = compact,
+                                                                customArtworkPath = currentCustomArtwork?.filePath,
+                                                                isCustomAnimated = currentCustomArtwork?.isAnimated == true,
                                                             )
                                                         },
                                                     )
@@ -747,9 +762,15 @@ fun MainScaffold(
                                                 ProvideMotionScope(this) {
                                                     SoundCapsuleScreen(
                                                         viewModel = hiltViewModel(),
+                                                        onBack = {
+                                                            if (!navController.popBackStack()) {
+                                                                openDrawer()
+                                                            }
+                                                        },
                                                         onOpenDrawer = openDrawer,
                                                         onOpenAlbum = { openAlbum(it) },
                                                         onOpenArtist = { navController.navigate(ArtistDetail(it.id)) },
+                                                        onShareStats = { showStatsShareDialog = true },
                                                     )
                                                 }
                                             }
@@ -812,6 +833,48 @@ fun MainScaffold(
                                                     WifiTransferScreen(onOpenDrawer = openDrawer)
                                                 }
                                             }
+                                            composable<com.erhu.erhu.navigation.RemoteLibraries> {
+                                                ProvideMotionScope(this) {
+                                                    com.erhu.erhu.feature.library.remote.RemoteLibrariesScreen(
+                                                        onOpenDrawer = openDrawer,
+                                                        onOpenSource = {
+                                                            if (it.provider == com.erhu.erhu.core.model.RemoteProvider.GOOGLE_DRIVE) {
+                                                                navController.navigate(com.erhu.erhu.navigation.DriveBrowse(it.id))
+                                                            } else {
+                                                                navController.navigate(
+                                                                    com.erhu.erhu.navigation.RemoteBrowse(sourceId = it.id, title = it.name),
+                                                                )
+                                                            }
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                            composable<com.erhu.erhu.navigation.DriveBrowse> { entry ->
+                                                val route = entry.toRoute<com.erhu.erhu.navigation.DriveBrowse>()
+                                                ProvideMotionScope(this) {
+                                                    com.erhu.erhu.feature.library.remote.DriveBrowseScreen(
+                                                        sourceId = route.sourceId,
+                                                        onBack = { navController.popBackStack() },
+                                                    )
+                                                }
+                                            }
+                                            composable<com.erhu.erhu.navigation.RemoteBrowse> { entry ->
+                                                val route = entry.toRoute<com.erhu.erhu.navigation.RemoteBrowse>()
+                                                ProvideMotionScope(this) {
+                                                    com.erhu.erhu.feature.library.remote.RemoteBrowseScreen(
+                                                        sourceId = route.sourceId,
+                                                        kind = com.erhu.erhu.feature.library.remote.RemotePageKind.of(route.kind),
+                                                        itemId = route.itemId,
+                                                        title = route.title,
+                                                        onBack = { navController.popBackStack() },
+                                                        onOpen = { kind, itemId, title ->
+                                                            navController.navigate(
+                                                                com.erhu.erhu.navigation.RemoteBrowse(route.sourceId, kind.name, itemId, title),
+                                                            )
+                                                        },
+                                                    )
+                                                }
+                                            }
                                             composable<Settings> {
                                                 ProvideMotionScope(this) {
                                                     SettingsScreen(
@@ -868,6 +931,16 @@ fun MainScaffold(
                                     val hiddenFromMixes by libraryViewModel.hiddenFromMixes.collectAsState()
                                     val currentSongId by libraryViewModel.currentSongId.collectAsState()
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
+                                    val activeCustomArtwork = currentSongId?.let { customArtworkMap[it] }
+                                    val currentCollection = playerState.currentCollection
+                                    val currentPlaylistId = if (currentCollection?.kind == CollectionKind.PLAYLIST) currentCollection.id else null
+                                    val originatingPlaylistName by produceState<String?>(initialValue = null, currentPlaylistId) {
+                                        if (currentPlaylistId != null) {
+                                            libraryViewModel.observePlaylistName(currentPlaylistId).collect { value = it }
+                                        } else {
+                                            value = null
+                                        }
+                                    }
                                     NowPlayingScreen(
                                         playbackRepository = playbackRepository,
                                         libraryRepository = libraryViewModel.libraryRepository,
@@ -904,6 +977,23 @@ fun MainScaffold(
                                         onRefreshRadio = if (vybeEnabled) libraryViewModel::refreshRadio else null,
                                         playlistMessage = playerPlaylistMessage,
                                         onPlaylistMessageShown = { playerPlaylistMessage = null },
+                                        onOpenArtist = { artistId ->
+                                            minimizePlayer()
+                                            navController.navigate(ArtistDetail(artistId))
+                                        },
+                                        onOpenAlbum = { albumId ->
+                                            minimizePlayer()
+                                            navController.navigate(AlbumDetail(albumId))
+                                        },
+                                        onOpenPlaylist = { playlistId ->
+                                            minimizePlayer()
+                                            navController.navigate(PlaylistDetail(playlistId))
+                                        },
+                                        originatingPlaylistName = originatingPlaylistName,
+                                        onShareSongCard = { songForShareCard = it },
+                                        onCustomArtwork = { songForCustomArtwork = it },
+                                        customArtworkPath = activeCustomArtwork?.filePath,
+                                        isCustomAnimated = activeCustomArtwork?.isAnimated == true,
                                     )
                                 }
                             }
@@ -926,6 +1016,29 @@ fun MainScaffold(
                     viewModel = hiltViewModel(),
                     libraryViewModel = libraryViewModel,
                     onDismiss = { songForMusicInfo = null },
+                )
+            }
+            songForShareCard?.let { song ->
+                val artwork = customArtworkMap[song.id]
+                SongShareDialog(
+                    song = song,
+                    customArtworkPath = artwork?.filePath,
+                    onDismiss = { songForShareCard = null },
+                )
+            }
+            songForCustomArtwork?.let { song ->
+                val artwork = customArtworkMap[song.id]
+                CustomArtworkDialog(
+                    song = song,
+                    customArtworkRepository = libraryViewModel.customSongArtworkRepository,
+                    currentCustomArtworkPath = artwork?.filePath,
+                    onDismiss = { songForCustomArtwork = null },
+                )
+            }
+            if (showStatsShareDialog) {
+                StatsShareDialog(
+                    statsRepository = libraryViewModel.listeningStatsRepository,
+                    onDismiss = { showStatsShareDialog = false },
                 )
             }
         }

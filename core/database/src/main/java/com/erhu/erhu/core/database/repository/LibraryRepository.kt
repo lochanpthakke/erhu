@@ -63,6 +63,9 @@ interface LibraryRepository {
 
     fun getArtistById(id: Long): Flow<Artist?>
 
+    /** All credited artists for [songId] in order, or the track's primary artist as fallback. */
+    fun getArtistsForSong(songId: Long): Flow<List<Artist>>
+
     fun searchSongs(query: String): Flow<List<Song>>
 
     suspend fun updateFilePath(

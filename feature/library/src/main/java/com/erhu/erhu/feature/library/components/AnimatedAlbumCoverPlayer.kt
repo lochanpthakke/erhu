@@ -227,7 +227,7 @@ private fun LoopingCoverVideo(
     }
 
     val videoAlpha by animateFloatAsState(
-        targetValue = if (isFirstFrameRendered) 1f else 0f,
+        targetValue = if (isFirstFrameRendered && isPlaying) 1f else 0f,
         animationSpec = tween(durationMillis = 300),
         label = "VideoAlpha",
     )
@@ -251,9 +251,10 @@ private fun LoopingCoverVideo(
             view.centerCrop()
         },
         onRelease = { view -> (view.surfaceTextureListener as? CoverSurface)?.detach() },
-        // Never exactly 0: a layer at alpha 0 is not drawn, and a TextureView creates its surface and
-        // takes the decoder's frames only when drawn. The still cover underneath shows meanwhile.
-        modifier = Modifier.fillMaxSize().alpha(videoAlpha.coerceAtLeast(MIN_DRAWN_ALPHA)),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .alpha(if (!isPlaying) 0f else videoAlpha.coerceAtLeast(MIN_DRAWN_ALPHA)),
     )
 }
 

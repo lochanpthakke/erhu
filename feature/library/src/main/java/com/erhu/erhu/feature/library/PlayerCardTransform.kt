@@ -87,7 +87,12 @@ internal fun Modifier.playerArtworkTravel(state: PlayerTransitionState?): Modifi
             scaleY = motion.scale
             translationX = motion.translation.x
             translationY = motion.translation.y
-            shape = RoundedCornerShape(motion.cornerRadiusPx / motion.scale.coerceAtLeast(MIN_CARD_SCALE))
+            shape =
+                if (p >= 1f) {
+                    Radius.largeShape
+                } else {
+                    RoundedCornerShape(motion.cornerRadiusPx / motion.scale.coerceAtLeast(MIN_CARD_SCALE))
+                }
             clip = true
         } else {
             shape = Radius.largeShape

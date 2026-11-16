@@ -72,6 +72,7 @@ class PlaybackControllerImpl
         playerDiagnostics: com.erhu.erhu.core.playback.diagnostics.PlayerDiagnosticsTracker,
         private val transitionSettings: TransitionSettingsRepository,
         transitionGain: TransitionGainProcessor,
+        private val mediaSources: RemoteMediaSources,
         utilityEq: com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor =
             com.erhu.erhu.core.sound.dsp
                 .CustomEqAudioProcessor(),
@@ -127,7 +128,9 @@ class PlaybackControllerImpl
                         ExoTailPlayer(
                             context,
                             soundRepository.soundSettings.value,
-                        ) { soundRepository.soundSettings.value.utilities }
+                            { soundRepository.soundSettings.value.utilities },
+                            mediaSources.mediaSourceFactory(),
+                        )
                     },
                 )
             }
@@ -391,7 +394,20 @@ class PlaybackControllerImpl
          */
         private fun handlePlayerError(error: PlaybackException) {
             val failedId = player.currentMediaItem?.mediaId
-            logger.e(TAG, "Playback error for media $failedId: ${error.errorCodeName}", error)
+            val failedUri =
+                player.currentMediaItem
+                    ?.localConfiguration
+                    ?.uri
+                    ?.toString()
+            val isRemote = com.erhu.erhu.core.model.RemoteRef.isStreamUri(failedUri)
+            // A remote failure's cause chain can quote the request, which may carry sign-in parameters: log the code only.
+            logger.e(TAG, "Playback error for media $failedId: ${error.errorCodeName}", error.takeUnless { isRemote })
+            if (errorResponse(isRemote, error.errorCode) == ErrorResponse.WAIT) {
+                // No connection is not a broken track: keep the queue where it is. Play prepares and retries.
+                player.pause()
+                updateStatus()
+                return
+            }
             consecutiveErrors++
             if (consecutiveErrors < player.mediaItemCount && player.hasNextMediaItem()) {
                 player.seekToNextMediaItem()

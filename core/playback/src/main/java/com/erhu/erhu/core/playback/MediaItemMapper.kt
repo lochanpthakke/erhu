@@ -1,6 +1,5 @@
 package com.erhu.erhu.core.playback
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -13,10 +12,14 @@ import com.erhu.erhu.core.model.Song
 private const val EXTRA_DURATION_MS = "duration_ms"
 private const val EXTRA_IS_FAVORITE = "is_favorite"
 private const val EXTRA_SONG_URI = "song_uri"
+private const val EXTRA_ARTWORK_URI = "artwork_uri"
 private const val EXTRA_COLLECTION = "collection"
 
 /** Audio URI of the song, used to read its artwork for the notification. */
 internal fun Bundle.songUriFromExtras(): String? = getString(EXTRA_SONG_URI)?.takeIf { it.isNotBlank() }
+
+/** The song's artwork URI (see [toMediaItem] for why it is not [MediaMetadata.artworkUri]). */
+internal fun Bundle.artworkUriFromExtras(): String? = getString(EXTRA_ARTWORK_URI)?.takeIf { it.isNotBlank() }
 
 /**
  * [origin]: the album or playlist this entry was started from, and which occurrence it is. It
@@ -29,6 +32,7 @@ internal fun Song.toMediaItem(origin: QueueOrigin? = null): MediaItem {
             putLong(EXTRA_DURATION_MS, durationMs)
             putBoolean(EXTRA_IS_FAVORITE, isFavorite)
             putString(EXTRA_SONG_URI, uri)
+            artworkUri?.let { putString(EXTRA_ARTWORK_URI, it) }
             origin?.let { putString(EXTRA_COLLECTION, it.key) }
         }
     val metadataBuilder =
@@ -41,8 +45,10 @@ internal fun Song.toMediaItem(origin: QueueOrigin? = null): MediaItem {
             .setIsPlayable(true)
             .setExtras(extras)
 
-    // Lets the media notification / lock screen load album art on demand.
-    artworkUri?.let { metadataBuilder.setArtworkUri(Uri.parse(it)) }
+    // The artwork URI travels in the extras, never as MediaMetadata.artworkUri: Media3 copies that
+    // into three platform metadata keys, and system_server resolves each content URI's provider
+    // inside every setMetadata call, which blocks the main thread for 10-60 ms per track change.
+    // The notification / lock screen still get the artwork, as the bitmap SongArtworkBitmapLoader loads.
 
     return MediaItem
         .Builder()
@@ -66,7 +72,7 @@ internal fun MediaItem.toSongOrNull(): Song? {
         album = metadata.albumTitle?.toString().orEmpty(),
         durationMs = metadata.extras?.getLong(EXTRA_DURATION_MS) ?: 0L,
         uri = localConfiguration?.uri?.toString().orEmpty(),
-        artworkUri = metadata.artworkUri?.toString(),
+        artworkUri = metadata.extras?.artworkUriFromExtras() ?: metadata.artworkUri?.toString(),
         isFavorite = metadata.extras?.getBoolean(EXTRA_IS_FAVORITE) ?: false,
     )
 }

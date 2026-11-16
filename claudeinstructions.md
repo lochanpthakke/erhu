@@ -1161,3 +1161,67 @@ gap is still unmeasured.
 - Five refinements for user evaluation: Artist/Playlist menu opt-in to verified reveal; whole play/pause button press; queue pickup/landing/cancellation with real row height and guarded single reorder; shared stack icon/card progress; distance/velocity-aware player release. Verified album menu source is unchanged. No new dependencies or audio processing changes.
 - Validation: 50 targeted tests passed; scoped ktlint/detekt passed after correcting formatting/static-analysis findings. Full Actions unit suite, release lint, optimized APK and signature/identity verification passed. New five-motion set has not yet received user visual acceptance; only the album pilot was explicitly verified on-device.
 - Public release stays 1.0.12 until separately authorized. Do not republish or rebuild merely for the source consolidation.
+
+
+## 2026-11-13 — Full 20-Language Localization, CLDR Plurals, Onboarding Language Picker and Deletion Actions
+
+- Comprehensive internationalization across 20 languages with full CLDR plural support: English, Spanish, French, German, Italian, Dutch, Portuguese (Brazil), Russian, Ukrainian, Polish, Romanian, Swedish, Turkish, Arabic (6-form plural support), Indonesian, Vietnamese, Thai, Japanese, Korean, and Simplified Chinese.
+- Added onboarding language selection screen into the initial introduction flow, allowing immediate locale choice before library scanning.
+- Implemented delete song and delete album actions with Android permission handling, storage deletion, and confirmation dialogs.
+- Fixed UI text wrapping issues on action buttons, dialog pair widths, and buttons for longer localized strings.
+- Version bumped across release milestones: 1.0.18 (19) and 1.0.19 (20).
+
+## 2026-11-14 — Mini-Player Optimization, Settings Overhaul and Library Songs View
+
+- Optimized mini-player expand and collapse animations to eliminate live artwork transition lag and jank during gesture tracking.
+- Redesigned Settings screen with clean group cards, improved typographic hierarchy, and intuitive grouped sections.
+- Added dedicated Songs tab inside the Library view for quick browsing and playback.
+- Resolved transparent scaffold status bar rendering issues on Xiaomi / Redmi MIUI devices.
+- Refreshed repository documentation and showcase assets.
+
+## 2026-11-15 — Android Auto / Car Translations and Vybe Model Index Binding
+
+- Completed car translation strings and integrated Android Auto media service localization.
+- Bound Vybe semantic indexes to the verified EmbeddingGemma model with verified asset downloads and cached glass artwork.
+- Merged upstream updates while preserving local enhancements.
+
+## 2026-11-15 to 2026-11-16 — Sound Capsule Redesign, Listening Recap Share Cards and Custom Artwork
+
+- Sound Capsule Full-Screen Redesign:
+  - Removed top modal drag notch / handle and converted Sound Capsule into a standard full-screen destination respecting system status bar and navigation insets.
+  - Implemented standard collapsing toolbar with circular glass back button, title merge on scroll, and share action button.
+  - Month and year navigation placed directly below toolbar with previous/next month controls.
+  - Inline Listening Summary Header: Displays Minutes listened, Plays, and Tracks side-by-side with prominent 38sp bold numerals and descriptive labels, evenly distributed across the screen width using Arrangement.SpaceBetween.
+  - Top Artists: Replaced horizontal row with a vertically stacked list showing rank indices (1..5), 68dp circular profile images, artist names, and play counts.
+  - Top Songs and Top Albums: Implemented horizontal carousels with matching 124dp square artwork and rank badges.
+- Listening Recap Share Sheet:
+  - Added StatsCardType.OVERVIEW rendering a comprehensive listening recap across Story (9:16), Feed/Portrait (4:5), and Square (1:1) aspect ratios.
+  - Enhanced StatsShareDialog: Added 20dp vertical spacing between Time Period chips and the Card Type heading to prevent crowding.
+  - Fixed aspect ratio selection chip formatting: Enabled horizontal scroll, Spacing.xs arrangement, and single-line text constraints so "Portrait (4:5)" renders cleanly on one line without line wrapping.
+- Custom Song Artwork and Database Migration 17:
+  - Room database migration 17 introducing `custom_song_artwork` table and persistent `listening_events` logging.
+  - Added CustomSongArtworkRepository, CustomSongArtworkStore, and CustomArtworkDialog wired into Now Playing menu.
+- Verification and Deployment:
+  - Tested on physical Samsung Galaxy S23 (RZCXA1H43GW) using the benchmark application state (`com.lochanpthakke.empee3.bench`).
+  - Successfully committed and pushed to remote branch `kshitij` (commit 61d8db5).
+
+## 2026-11-16 — Expanded-player track-switch lag (local, uncommitted)
+
+- User report + video: swiping tracks in the expanded Now Playing (glass on) froze the carousel ~330 ms after release on a slow phone. Measured on the S23 `.bench` app (benchmark build type, `cmd package compile -m speed`, same queue, 6 swipe skips per Perfetto trace; scripts/traces in the session scratchpad, not in the repo).
+- Root causes found and fixed (each isolated, revertible):
+  1. `MediaItemMapper`: artworkUri moved to extras (`artworkUriFromExtras`). Media3 copied it into 3 platform metadata URI keys; system_server resolved each provider inside every `setMetadata` (main-thread binder, 10–58 ms). setMetadata 150–197 ms → 4 ms per 6 skips. Notification/lock screen art still via `SongArtworkBitmapLoader` bitmap. Test: `MediaItemArtworkTest`.
+  2. Widgets: Glance composes on Dispatchers.Main. Vinyl widget decoded its mdpi 600 px background scaled to 1800 px per track change (27–47 ms) plus crop/colour work on main. Now cached per theme (inScaled=false, 480 px) and composited/cropped on Dispatchers.Default; Glass widget corner rounding off main.
+  3. `ArtworkLoader.loadForDisplay`/`peekForDisplay`: hardware-bitmap copies for `SongArtwork` so 1500 px artwork uploads happen on a worker, not the RenderThread. Pixel-reading callers still use `load`.
+  4. `TrackCarousel.depthCard`: `CompositingStrategy.Offscreen` while a card is turned. Perspective-turned rounded clips were CPU-rasterized masks re-uploaded every frame (~12/frame, ~6 ms). Recurring uploads 4564 → 0; RT frames >25 ms 14 → 1; frames >16.6 ms RT 25 → 5, main 25 → 10.
+- Remaining (not done): first recompose/layout frame after a track change (~20 ms recompose + up to 23 ms layout); Glance PendingIntent churn (~40 getIntentSender per skip) and notification updates on main.
+- Tests: playback 116, designsystem 59, library 262, app 8 pass. core:common LocalizationResourceParityTest fails on pre-existing missing Polish strings (from 61d8db5), unrelated. `.bench` on the S23 has the fix build; real app untouched. Widget visuals NOT yet visually re-verified (bench widgets not found on the launcher pages checked). No commit/push.
+
+## 2026-11-16 — Sound Capsule audit and recap card rework
+
+- User brief: refine (not redesign) Sound Capsule, Listening Recap editor and share images. User chose to KEEP the vertical Top Artists list on the screen (brief said horizontal row).
+- Screen: library row metrics for artists (ArtworkSize.list, listTitle/listSubtitle), ArtworkSize.shelf cards via one RankedShelfTile, equal-weight totals (headlineMedium bold), shared SectionHeading, spacedBy(Spacing.xl), month arrows aligned with toolbar actions, removed the double-counted 84 dp bottom padding and dead tiles in SoundCapsuleRankings.kt.
+- Editor (StatsShareDialog): ChoiceGroup full-bleed chip rows, one heading style, per-ratio preview size, remembered period flow, share/save error feedback. Exporter no longer reports success on a failed write and deletes pending MediaStore rows.
+- Cards: new share/StatsCardRenderer.kt (one fitted-scale layout engine; Story single column, Portrait/Square side-by-side columns, Square totals beside title), localized labels, centre-cropped images, contrast floor in ShareCardRenderer.drawBackground(keepTextReadable). Fixed boxBlur crash on small covers. StatsCardRendererTest renders every type x ratio to feature/library/build/stats-cards.
+- Data: observePeriodStats only falls back to monthly aggregates for THIS_MONTH (rolling 7/30 days showed month figures). Regression test in ListeningStatsTest. Known, untouched: first-launch event backfill can race a concurrent play and double count.
+- NOT yet verified on the S23 (phone was disconnected): screen vs Songs, month navigation, editor on device, real Save and Android Sharesheet, exported file inspection. Pre-existing failures: IdentityRenameCompatibilityTest (DB 14->17 migration), LocalizationResourceParityTest (Polish strings).
+
