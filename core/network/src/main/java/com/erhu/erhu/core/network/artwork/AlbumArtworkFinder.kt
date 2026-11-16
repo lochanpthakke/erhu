@@ -5,6 +5,8 @@ import com.erhu.erhu.core.model.ProviderStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -65,7 +67,8 @@ class AlbumArtworkFinder(
     suspend fun search(query: AlbumArtworkQuery): AlbumArtworkResult =
         withContext(Dispatchers.IO) {
             searchLock.withLock {
-                val key = cache.key(query, "music-catalogues-v3")
+                val cacheVersion = if (query.forUpgrade) "music-catalogues-upgrade-v1" else "music-catalogues-v3"
+                val key = cache.key(query, cacheVersion)
                 cache.read(key)?.let {
                     return@withLock AlbumArtworkResult(
                         it,
@@ -79,19 +82,33 @@ class AlbumArtworkFinder(
                 fun elapsed() = (System.nanoTime() - started) / 1000000
                 val outcomes = mutableListOf<ProviderOutcome>()
                 val candidates = mutableListOf<AlbumArtworkCandidate>()
-                val releases = mutableListOf<JsonObject>()
                 val validated = mutableListOf<AlbumArtworkCandidate>()
                 val attemptedImages = mutableSetOf<String>()
                 val imageErrors = mutableSetOf<String>()
+                val lookupDeadline = if (query.forUpgrade) budgetMs * 2 / 3 else budgetMs
+                // Provider lookups can complete on different IO threads.
+                val resultLock = Any()
 
-                suspend fun validate(items: List<AlbumArtworkCandidate>) {
+                fun record(outcome: ProviderOutcome, found: List<AlbumArtworkCandidate> = emptyList()) {
+                    synchronized(resultLock) {
+                        candidates.addAll(found)
+                        outcomes.add(outcome)
+                    }
+                }
+
+                suspend fun validate(items: List<AlbumArtworkCandidate>, deadline: Long = budgetMs) {
                     for (candidate in items.distinctBy { it.imageUrl }.sortedByDescending { it.score }.take(10)) {
-                        if (elapsed() >= budgetMs || !attemptedImages.add(candidate.imageUrl)) continue
+                        if (candidate.imageUrl in attemptedImages) continue
+                        if (elapsed() >= deadline) {
+                            imageErrors += "Image verification time budget reached"
+                            continue
+                        }
+                        attemptedImages += candidate.imageUrl
                         currentCoroutineContext().ensureActive()
                         try {
                             val bytes =
                                 cache.bytes(candidate.imageUrl)
-                                    ?: withTimeout(minOf(4500, budgetMs - elapsed()).coerceAtLeast(1)) { download(candidate.imageUrl) }
+                                    ?: withTimeout(minOf(4500, deadline - elapsed()).coerceAtLeast(1)) { download(candidate.imageUrl) }
                             val facts =
                                 inspector.inspect(bytes) ?: run {
                                     imageErrors += "Unsupported image data"
@@ -113,6 +130,7 @@ class AlbumArtworkFinder(
                             e: TimeoutCancellationException,
                         ) {
                             currentCoroutineContext().ensureActive()
+                            imageErrors += "Image verification timed out"
                         } catch (
                             e: CancellationException,
                         ) {
@@ -130,18 +148,16 @@ class AlbumArtworkFinder(
                     block: suspend () -> List<AlbumArtworkCandidate>,
                 ) {
                     currentCoroutineContext().ensureActive()
-                    val remaining = budgetMs - elapsed()
+                    val remaining = lookupDeadline - elapsed()
                     if (remaining <
                         250
                     ) {
-                        outcomes += ProviderOutcome(name, status = ProviderStatus.TIMED_OUT, errorMessage = "Search time budget reached")
+                        record(ProviderOutcome(name, status = ProviderStatus.TIMED_OUT, errorMessage = "Search time budget reached"))
                         return
                     }
                     try {
                         val found = withTimeout(minOf(maxMs, remaining)) { block() }.mapNotNull { AlbumArtworkRanking.rank(query, it) }
-                        candidates += found
-                        outcomes +=
-                            ProviderOutcome(name, found.size, if (found.isEmpty()) ProviderStatus.NO_RESULTS else ProviderStatus.SUCCESS)
+                        record(ProviderOutcome(name, found.size, if (found.isEmpty()) ProviderStatus.NO_RESULTS else ProviderStatus.SUCCESS), found)
                     } catch (e: TimeoutCancellationException) {
                         currentCoroutineContext().ensureActive()
                         outcomes +=
@@ -157,241 +173,274 @@ class AlbumArtworkFinder(
                             } else {
                                 ProviderStatus.FAILED
                             }
-                        outcomes +=
+                        record(
                             ProviderOutcome(
                                 name,
                                 status = status,
                                 errorMessage = if (e is HttpFailure) "HTTP ${e.code}" else "Provider response unavailable or malformed",
-                            )
+                            ),
+                        )
                     }
                 }
-                stage("MusicBrainz release identification", 7500) {
-                    val releaseId = query.releaseId?.takeIf(uuid::matches)
-                    val recordingId = query.recordingId?.takeIf(uuid::matches)
-                    when {
-                        releaseId != null ->
-                            musicBrainzRequest {
-                                get(
-                                    endpoints.musicBrainz,
-                                    "ws/2/release/$releaseId",
-                                    mapOf(
-                                        "fmt" to "json",
-                                        "inc" to "artist-credits+release-groups",
-                                    ),
-                                )
-                            }?.let(releases::add)
-                        recordingId != null -> {
-                            val recording =
+                suspend fun searchArchive() {
+                    val releases = mutableListOf<JsonObject>()
+                    stage("MusicBrainz release identification", 7500) {
+                        val releaseId = query.releaseId?.takeIf(uuid::matches)
+                        val recordingId = query.recordingId?.takeIf(uuid::matches)
+                        when {
+                            releaseId != null ->
                                 musicBrainzRequest {
                                     get(
                                         endpoints.musicBrainz,
-                                        "ws/2/recording/$recordingId",
+                                        "ws/2/release/$releaseId",
                                         mapOf(
                                             "fmt" to "json",
-                                            "inc" to "releases+artist-credits",
+                                            "inc" to "artist-credits+release-groups",
                                         ),
                                     )
+                                }?.let(releases::add)
+                            recordingId != null -> {
+                                val recording =
+                                    musicBrainzRequest {
+                                        get(
+                                            endpoints.musicBrainz,
+                                            "ws/2/recording/$recordingId",
+                                            mapOf(
+                                                "fmt" to "json",
+                                                "inc" to "releases+artist-credits",
+                                            ),
+                                        )
+                                    }
+                                recording?.objects("releases")?.forEach {
+                                    val releaseCredits = it["artist-credit"] ?: recording["artist-credit"] ?: JsonArray(emptyList())
+                                    releases += JsonObject(it + ("artist-credit" to releaseCredits))
                                 }
-                            recording?.objects("releases")?.forEach {
-                                val releaseCredits = it["artist-credit"] ?: recording["artist-credit"] ?: JsonArray(emptyList())
-                                releases += JsonObject(it + ("artist-credit" to releaseCredits))
                             }
-                        }
-                        else -> {
-                            val artistKnown =
-                                AlbumArtworkRanking.normalized(query.artist) !in setOf("", "unknown artist", "various artists", "unknown")
-                            val search =
-                                "release:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"" +
-                                    if (artistKnown) " AND artist:\"${escape(query.artist)}\"" else ""
-                            var result =
-                                musicBrainzRequest {
-                                    get(
-                                        endpoints.musicBrainz,
-                                        "ws/2/release/",
-                                        mapOf(
-                                            "query" to (search + if (query.year > 0) " AND date:${query.year}*" else ""),
-                                            "fmt" to "json",
-                                            "limit" to "12",
-                                        ),
-                                    )
-                                }
-                            if (result?.objects("releases").isNullOrEmpty() &&
-                                query.year > 0
-                            ) {
-                                result =
+                            else -> {
+                                val artistKnown =
+                                    AlbumArtworkRanking.normalized(query.artist) !in setOf("", "unknown artist", "various artists", "unknown")
+                                val search =
+                                    "release:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"" +
+                                        if (artistKnown) " AND artist:\"${escape(query.artist)}\"" else ""
+                                var result =
                                     musicBrainzRequest {
                                         get(
                                             endpoints.musicBrainz,
                                             "ws/2/release/",
                                             mapOf(
-                                                "query" to search,
+                                                "query" to (search + if (query.year > 0) " AND date:${query.year}*" else ""),
                                                 "fmt" to "json",
                                                 "limit" to "12",
                                             ),
                                         )
                                     }
-                            }
-                            releases += result?.objects("releases").orEmpty()
-                        }
-                    }
-                    // Identification is evidence, not an image candidate.
-                    emptyList()
-                }
-                val identified =
-                    releases
-                        .filter { it.text("status").lowercase() !in setOf("bootleg", "pseudo-release") }
-                        .mapNotNull { release -> releaseCandidate(release)?.let { AlbumArtworkRanking.rank(query, it) } }
-                        .sortedByDescending { it.score }
-                val identificationIndex = outcomes.indexOfFirst { it.providerName == "MusicBrainz release identification" }
-                if (identified.isNotEmpty() &&
-                    identificationIndex >= 0
-                ) {
-                    outcomes[identificationIndex] =
-                        ProviderOutcome("MusicBrainz release identification", identified.size, ProviderStatus.SUCCESS)
-                }
-                stage("Cover Art Archive exact release", 7500) {
-                    identified.take(2).flatMap { release -> archive(release, "release", release.releaseId.orEmpty()) }
-                }
-                validate(candidates.filter { it.source == "Cover Art Archive release" })
-                if (validated.none { it.source == "Cover Art Archive release" && it.reviewReasons.isEmpty() }) {
-                    stage("Cover Art Archive release-group fallback", 6000) {
-                        val group = query.releaseGroupId?.takeIf(uuid::matches) ?: identified.firstNotNullOfOrNull { it.releaseGroupId }
-                        if (group !=
-                            null
-                        ) {
-                            archive(
-                                identified.firstOrNull() ?: AlbumArtworkCandidate("", "", query.album, query.artist),
-                                "release-group",
-                                group,
-                            )
-                        } else {
-                            val response =
-                                musicBrainzRequest {
-                                    get(
-                                        endpoints.musicBrainz,
-                                        "ws/2/release-group/",
-                                        mapOf(
-                                            "query" to
-                                                "releasegroup:\"${escape(
-                                                    AlbumArtworkRanking.searchTitle(query.album),
-                                                )}\" AND artist:\"${escape(query.artist)}\"",
-                                            "fmt" to "json",
-                                            "limit" to "3",
-                                        ),
-                                    )
+                                if (result?.objects("releases").isNullOrEmpty() &&
+                                    query.year > 0
+                                ) {
+                                    result =
+                                        musicBrainzRequest {
+                                            get(
+                                                endpoints.musicBrainz,
+                                                "ws/2/release/",
+                                                mapOf(
+                                                    "query" to search,
+                                                    "fmt" to "json",
+                                                    "limit" to "12",
+                                                ),
+                                            )
+                                        }
                                 }
-                            response
-                                ?.objects("release-groups")
-                                .orEmpty()
-                                .mapNotNull { groupObject ->
-                                    val id = groupObject.text("id").takeIf(uuid::matches) ?: return@mapNotNull null
-                                    val release =
-                                        AlbumArtworkCandidate(
-                                            "",
-                                            "",
-                                            groupObject.text("title"),
-                                            credits(groupObject),
-                                            kind = kind(groupObject.text("primary-type")),
-                                            releaseGroupId = id,
+                                releases += result?.objects("releases").orEmpty()
+                            }
+                        }
+                        // Identification is evidence, not an image candidate.
+                        emptyList()
+                    }
+                    val identified =
+                        releases
+                            .filter { it.text("status").lowercase() !in setOf("bootleg", "pseudo-release") }
+                            .mapNotNull { release -> releaseCandidate(release)?.let { AlbumArtworkRanking.rank(query, it) } }
+                            .sortedByDescending { it.score }
+                    if (identified.isNotEmpty()) {
+                        synchronized(resultLock) {
+                            val index = outcomes.indexOfFirst { it.providerName == "MusicBrainz release identification" }
+                            if (index >= 0 && outcomes[index].status == ProviderStatus.NO_RESULTS) {
+                                outcomes[index] = ProviderOutcome("MusicBrainz release identification", identified.size, ProviderStatus.SUCCESS)
+                            }
+                        }
+                    }
+                    stage("Cover Art Archive exact release", 7500) {
+                        identified.take(2).flatMap { release -> archive(release, "release", release.releaseId.orEmpty()) }
+                    }
+                    val exactCovers = synchronized(resultLock) { candidates.filter { it.source == "Cover Art Archive release" } }
+                    validate(exactCovers, lookupDeadline)
+                    if (validated.none { it.source == "Cover Art Archive release" && it.reviewReasons.isEmpty() }) {
+                        stage("Cover Art Archive release-group fallback", 6000) {
+                            val group = query.releaseGroupId?.takeIf(uuid::matches) ?: identified.firstNotNullOfOrNull { it.releaseGroupId }
+                            if (group !=
+                                null
+                            ) {
+                                archive(
+                                    identified.firstOrNull() ?: AlbumArtworkCandidate("", "", query.album, query.artist),
+                                    "release-group",
+                                    group,
+                                )
+                            } else {
+                                val response =
+                                    musicBrainzRequest {
+                                        get(
+                                            endpoints.musicBrainz,
+                                            "ws/2/release-group/",
+                                            mapOf(
+                                                "query" to
+                                                    "releasegroup:\"${escape(
+                                                        AlbumArtworkRanking.searchTitle(query.album),
+                                                    )}\" AND artist:\"${escape(query.artist)}\"",
+                                                "fmt" to "json",
+                                                "limit" to "3",
+                                            ),
                                         )
-                                    AlbumArtworkRanking.rank(query, release)
-                                }.sortedByDescending { it.score }
-                                .take(1)
-                                .flatMap { archive(it, "release-group", it.releaseGroupId.orEmpty()) }
+                                    }
+                                response
+                                    ?.objects("release-groups")
+                                    .orEmpty()
+                                    .mapNotNull { groupObject ->
+                                        val id = groupObject.text("id").takeIf(uuid::matches) ?: return@mapNotNull null
+                                        val release =
+                                            AlbumArtworkCandidate(
+                                                "",
+                                                "",
+                                                groupObject.text("title"),
+                                                credits(groupObject),
+                                                kind = kind(groupObject.text("primary-type")),
+                                                releaseGroupId = id,
+                                            )
+                                        AlbumArtworkRanking.rank(query, release)
+                                    }.sortedByDescending { it.score }
+                                    .take(1)
+                                    .flatMap { archive(it, "release-group", it.releaseGroupId.orEmpty()) }
+                            }
                         }
                     }
                 }
-                stage("Deezer") {
-                    val response =
-                        get(
-                            endpoints.deezer,
-                            "search/album",
-                            mapOf(
-                                "q" to
-                                    "artist:\"${escape(query.artist)}\" album:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"",
-                                "limit" to "12",
-                            ),
-                        )
-                    if (response?.get("error") is JsonObject) throw IOException("Deezer unavailable")
-                    response?.objects("data").orEmpty().mapNotNull { item ->
-                        val url = item.text("cover_xl").ifBlank { item.text("cover_big") }
-                        if (url.isBlank()) return@mapNotNull null
-                        AlbumArtworkCandidate(
-                            url,
-                            "Deezer",
-                            item.text("title"),
-                            item.obj("artist")?.text("name").orEmpty(),
-                            item.text("release_date").take(4).toIntOrNull() ?: 0,
-                            kind = kind(item.text("record_type")),
-                            catalogId = item.text("id"),
-                        )
-                    }
-                }
-                stage("iTunes / Apple Search") {
-                    val wait = lastAppleAt + 3500 - System.currentTimeMillis()
-                    if (wait > 0) kotlinx.coroutines.delay(wait)
-                    lastAppleAt = System.currentTimeMillis()
-                    val response =
-                        get(
-                            endpoints.itunes,
-                            "search",
-                            mapOf(
-                                "term" to AlbumArtworkRanking.searchTitle(query.album),
-                                "attribute" to "albumTerm",
-                                "entity" to "album",
-                                "limit" to "50",
-                            ),
-                        )
-                    response?.objects("results").orEmpty().mapNotNull { item ->
-                        if (item.text("collectionType").isNotEmpty() && item.text("collectionType") != "Album") return@mapNotNull null
-                        val raw = item.text("artworkUrl100").ifBlank { item.text("artworkUrl60") }
-                        if (raw.isBlank()) return@mapNotNull null
-                        val title = item.text("collectionName")
-                        val type =
-                            when {
-                                Regex("(?i)(?:-|–)\\s*single$").containsMatchIn(title) -> ArtworkReleaseKind.SINGLE
-                                Regex("(?i)(?:-|–)\\s*ep$").containsMatchIn(title) -> ArtworkReleaseKind.EP
-                                else -> ArtworkReleaseKind.ALBUM
-                            }
-                        AlbumArtworkCandidate(
-                            raw.replace(Regex("\\d+x\\d+(bb)?"), "1000x1000bb"),
-                            "iTunes / Apple Search",
-                            title,
-                            item.text("artistName"),
-                            item.text("releaseDate").take(4).toIntOrNull() ?: 0,
-                            kind = type,
-                            catalogId = item.text("collectionId"),
-                        )
-                    }
-                }
-                if (audioDbKey.isNotBlank()) {
-                    stage("TheAudioDB") {
-                        val wait = lastAudioDbAt + 2100 - System.currentTimeMillis()
-                        if (wait > 0) kotlinx.coroutines.delay(wait)
-                        lastAudioDbAt = System.currentTimeMillis()
-                        val response = get(endpoints.audioDb, "$audioDbKey/searchalbum.php", mapOf("s" to query.artist, "a" to query.album))
-                        response?.objects("album").orEmpty().mapNotNull { item ->
-                            val url = item.text("strAlbumThumb")
+
+                suspend fun searchDeezer() {
+                    stage("Deezer") {
+                        val response =
+                            get(
+                                endpoints.deezer,
+                                "search/album",
+                                mapOf(
+                                    "q" to
+                                        "artist:\"${escape(query.artist)}\" album:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"",
+                                    "limit" to "12",
+                                ),
+                            )
+                        if (response?.get("error") is JsonObject) throw IOException("Deezer unavailable")
+                        response?.objects("data").orEmpty().mapNotNull { item ->
+                            val url = item.text("cover_xl").ifBlank { item.text("cover_big") }
                             if (url.isBlank()) return@mapNotNull null
                             AlbumArtworkCandidate(
                                 url,
-                                "TheAudioDB",
-                                item.text("strAlbum"),
-                                item.text("strArtist"),
-                                item.text("intYearReleased").toIntOrNull() ?: 0,
-                                kind = kind(item.text("strReleaseFormat")),
-                                catalogId = item.text("idAlbum"),
-                                releaseGroupId = item.text("strMusicBrainzID").takeIf(uuid::matches),
+                                "Deezer",
+                                item.text("title"),
+                                item.obj("artist")?.text("name").orEmpty(),
+                                item.text("release_date").take(4).toIntOrNull() ?: 0,
+                                kind = kind(item.text("record_type")),
+                                catalogId = item.text("id"),
                             )
                         }
                     }
-                } else {
-                    outcomes +=
-                        ProviderOutcome(
-                            "TheAudioDB",
-                            status = ProviderStatus.UNAVAILABLE,
-                            errorMessage = "Production access is not configured; other catalogues remain available",
+                }
+
+                suspend fun searchApple() {
+                    stage("iTunes / Apple Search") {
+                        val wait = lastAppleAt + 3500 - System.currentTimeMillis()
+                        if (wait > 0) kotlinx.coroutines.delay(wait)
+                        lastAppleAt = System.currentTimeMillis()
+                        val response =
+                            get(
+                                endpoints.itunes,
+                                "search",
+                                mapOf(
+                                    "term" to AlbumArtworkRanking.searchTitle(query.album),
+                                    "attribute" to "albumTerm",
+                                    "entity" to "album",
+                                    "limit" to "50",
+                                ),
+                            )
+                        response?.objects("results").orEmpty().mapNotNull { item ->
+                            if (item.text("collectionType").isNotEmpty() && item.text("collectionType") != "Album") return@mapNotNull null
+                            val raw = item.text("artworkUrl100").ifBlank { item.text("artworkUrl60") }
+                            if (raw.isBlank()) return@mapNotNull null
+                            val title = item.text("collectionName")
+                            val type =
+                                when {
+                                    Regex("(?i)(?:-|–)\\s*single$").containsMatchIn(title) -> ArtworkReleaseKind.SINGLE
+                                    Regex("(?i)(?:-|–)\\s*ep$").containsMatchIn(title) -> ArtworkReleaseKind.EP
+                                    else -> ArtworkReleaseKind.ALBUM
+                                }
+                            AlbumArtworkCandidate(
+                                raw.replace(Regex("\\d+x\\d+(bb)?"), "1000x1000bb"),
+                                "iTunes / Apple Search",
+                                title,
+                                item.text("artistName"),
+                                item.text("releaseDate").take(4).toIntOrNull() ?: 0,
+                                kind = type,
+                                catalogId = item.text("collectionId"),
+                            )
+                        }
+                    }
+                }
+
+                suspend fun searchAudioDb() {
+                    if (audioDbKey.isNotBlank()) {
+                        stage("TheAudioDB") {
+                            val wait = lastAudioDbAt + 2100 - System.currentTimeMillis()
+                            if (wait > 0) kotlinx.coroutines.delay(wait)
+                            lastAudioDbAt = System.currentTimeMillis()
+                            val response = get(endpoints.audioDb, "$audioDbKey/searchalbum.php", mapOf("s" to query.artist, "a" to query.album))
+                            response?.objects("album").orEmpty().mapNotNull { item ->
+                                val url = item.text("strAlbumThumb")
+                                if (url.isBlank()) return@mapNotNull null
+                                AlbumArtworkCandidate(
+                                    url,
+                                    "TheAudioDB",
+                                    item.text("strAlbum"),
+                                    item.text("strArtist"),
+                                    item.text("intYearReleased").toIntOrNull() ?: 0,
+                                    kind = kind(item.text("strReleaseFormat")),
+                                    catalogId = item.text("idAlbum"),
+                                    releaseGroupId = item.text("strMusicBrainzID").takeIf(uuid::matches),
+                                )
+                            }
+                        }
+                    } else {
+                        record(
+                            ProviderOutcome(
+                                "TheAudioDB",
+                                status = ProviderStatus.UNAVAILABLE,
+                                errorMessage = "Production access is not configured; other catalogues remain available",
+                            ),
                         )
+                    }
+                }
+
+                if (query.forUpgrade) {
+                    coroutineScope {
+                        val lookups = listOf(
+                            async { searchArchive() },
+                            async { searchDeezer() },
+                            async { searchApple() },
+                            async { searchAudioDb() },
+                        )
+                        lookups.forEach { it.await() }
+                    }
+                } else {
+                    searchArchive()
+                    searchDeezer()
+                    searchApple()
+                    searchAudioDb()
                 }
 
                 validate(candidates)
@@ -399,7 +448,11 @@ class AlbumArtworkFinder(
                     ProviderOutcome(
                         "Artwork image verification",
                         validated.size,
-                        if (validated.isEmpty()) ProviderStatus.NO_RESULTS else ProviderStatus.SUCCESS,
+                        when {
+                            validated.isNotEmpty() -> ProviderStatus.SUCCESS
+                            imageErrors.isNotEmpty() -> ProviderStatus.FAILED
+                            else -> ProviderStatus.NO_RESULTS
+                        },
                         imageErrors.takeIf { it.isNotEmpty() }?.joinToString("; "),
                     )
                 val ranked = AlbumArtworkRanking.deduplicate(validated)

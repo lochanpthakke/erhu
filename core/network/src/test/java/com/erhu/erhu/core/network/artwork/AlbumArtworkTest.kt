@@ -148,6 +148,44 @@ class AlbumArtworkTest {
         } finally { server.shutdown() }
     }
 
+    @Test fun upgradeValidatesAppleCoverEvenWhenMusicBrainzConsumesItsLookupBudget() = runBlocking {
+        MockWebServer().use { server ->
+            val png = ByteArrayOutputStream().apply {
+                ImageIO.write(BufferedImage(600, 600, BufferedImage.TYPE_INT_RGB), "png", this)
+            }.toByteArray()
+            server.start()
+            server.dispatcher = object : Dispatcher() {
+                override fun dispatch(request: RecordedRequest): MockResponse = when (request.requestUrl!!.encodedPath) {
+                    "/mb/ws/2/release/" -> MockResponse().setSocketPolicy(okhttp3.mockwebserver.SocketPolicy.NO_RESPONSE)
+                    "/apple/search" -> MockResponse().setBody(
+                        """{"results":[{"collectionName":"Discovery","artistName":"Daft Punk","artworkUrl100":"${server.url("/image.png")}"}]}""",
+                    )
+                    "/image.png" -> MockResponse().setHeader("Content-Type", "image/png").setBody(Buffer().write(png))
+                    else -> MockResponse().setBody("{}")
+                }
+            }
+            val endpoints = AlbumArtworkFinder.Endpoints(
+                server.url("/mb/").toString(), server.url("/caa/").toString(),
+                server.url("/deezer/").toString(), server.url("/apple/").toString(),
+            )
+            val folder = kotlin.io.path.createTempDirectory("upgrade-art").toFile()
+            try {
+                val finder = AlbumArtworkFinder(
+                    OkHttpClient(), Json, AlbumArtworkCache(folder), JvmArtworkInspector,
+                    endpoints = endpoints, musicBrainzRequest = { it() }, budgetMs = 4500,
+                )
+                val result = finder.search(query.copy(forUpgrade = true))
+                assertEquals("iTunes / Apple Search", result.candidates.single().source)
+                assertTrue(result.outcomes.any {
+                    it.providerName == "MusicBrainz release identification" && it.status.name == "TIMED_OUT"
+                })
+                assertTrue(finder.search(query.copy(forUpgrade = true)).fromCache)
+            } finally {
+                folder.deleteRecursively()
+            }
+        }
+    }
+
     @Test fun cancellingSearchCancelsTheHttpCall() = runBlocking {
         val server = MockWebServer()
         server.start()

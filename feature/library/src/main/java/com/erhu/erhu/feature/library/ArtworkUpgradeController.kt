@@ -3,6 +3,7 @@ package com.erhu.erhu.feature.library
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.util.Log
 import com.erhu.erhu.core.common.artwork.ArtworkLoader
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
@@ -14,6 +15,7 @@ import com.erhu.erhu.core.database.repository.ArtistArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.model.ProviderStatus
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.network.artwork.AlbumArtworkQuery
 import com.erhu.erhu.core.network.artwork.ArtworkUpgradeImages
@@ -25,6 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -38,6 +41,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileNotFoundException
 import java.util.UUID
 import com.erhu.erhu.core.common.R as CommonR
 
@@ -66,7 +70,10 @@ internal data class ArtworkUpgradeState(
     val saving: Boolean = false,
     val checked: Int = 0,
     val total: Int = 0,
-    val skipped: Int = 0,
+    val missingOriginals: Int = 0,
+    val unreadableOriginals: Int = 0,
+    val noMatch: Int = 0,
+    val requestFailures: Int = 0,
     val finished: Boolean = false,
     val results: List<ArtworkUpgradeResult> = emptyList(),
     val message: String? = null,
@@ -120,20 +127,31 @@ internal class ArtworkUpgradeController(
                     mutableState.update { it.copy(total = targets.size) }
                     for (target in targets) {
                         currentCoroutineContext().ensureActive()
-                        try {
-                            withTimeout(TARGET_TIMEOUT_MS) { find(target) }?.let { result ->
+                        val outcome =
+                            try {
+                                withTimeout(TARGET_TIMEOUT_MS) { find(target) }
+                            } catch (_: TimeoutCancellationException) {
                                 currentCoroutineContext().ensureActive()
-                                mutableState.update { it.copy(results = it.results + result) }
+                                reportFailure(target, "Target timed out")
+                                ScanOutcome.RequestFailed
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Exception) {
+                                currentCoroutineContext().ensureActive()
+                                reportFailure(target, "Scan", error)
+                                ScanOutcome.RequestFailed
                             }
-                        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
-                            currentCoroutineContext().ensureActive()
-                            mutableState.update { it.copy(skipped = it.skipped + 1) }
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (_: Exception) {
-                            mutableState.update { it.copy(skipped = it.skipped + 1) }
+                        currentCoroutineContext().ensureActive()
+                        mutableState.update { state ->
+                            val checked = state.copy(checked = state.checked + 1)
+                            when (outcome) {
+                                is ScanOutcome.Match -> checked.copy(results = checked.results + outcome.result)
+                                ScanOutcome.MissingOriginal -> checked.copy(missingOriginals = checked.missingOriginals + 1)
+                                ScanOutcome.UnreadableOriginal -> checked.copy(unreadableOriginals = checked.unreadableOriginals + 1)
+                                ScanOutcome.NoMatch -> checked.copy(noMatch = checked.noMatch + 1)
+                                ScanOutcome.RequestFailed -> checked.copy(requestFailures = checked.requestFailures + 1)
+                            }
                         }
-                        mutableState.update { it.copy(checked = it.checked + 1) }
                         if (cacheLimitReached()) {
                             mutableState.update {
                                 it.copy(
@@ -167,58 +185,107 @@ internal class ArtworkUpgradeController(
                     .map { ArtworkUpgradeTarget(artist = it) }
         }
 
+    private sealed interface ScanOutcome {
+        data class Match(val result: ArtworkUpgradeResult) : ScanOutcome
+
+        data object MissingOriginal : ScanOutcome
+
+        data object UnreadableOriginal : ScanOutcome
+
+        data object NoMatch : ScanOutcome
+
+        data object RequestFailed : ScanOutcome
+    }
+
+    private sealed interface Original {
+        data class Image(val bytes: ByteArray, val facts: UpgradeImageFacts) : Original
+
+        data object Missing : Original
+
+        data object Unreadable : Original
+    }
+
+    private data class CandidateSearch(
+        val images: List<Pair<String, String>>,
+        val blocked: Boolean = false,
+    )
+
     @Suppress("ReturnCount") // Guard clauses reject unusable originals before any network work.
-    private suspend fun find(target: ArtworkUpgradeTarget): ArtworkUpgradeResult? {
-        val originalBytes = readOriginal(target) ?: error("No readable existing image")
-        val original = ArtworkUpgradeImages.inspect(originalBytes) ?: error("Unsupported existing image")
-        if (maxOf(original.width, original.height) > ArtworkUpgradeMatch.MAX_SAVED_PIXELS / ArtworkUpgradeMatch.MIN_GAIN) return null
-        for ((url, source) in candidates(target, original).distinctBy { it.first }.take(MAX_CANDIDATES)) {
+    private suspend fun find(target: ArtworkUpgradeTarget): ScanOutcome {
+        val image =
+            when (val original = readOriginal(target)) {
+                is Original.Image -> original
+                Original.Missing -> return ScanOutcome.MissingOriginal
+                Original.Unreadable -> return ScanOutcome.UnreadableOriginal
+            }
+        val original = image.facts
+        if (maxOf(original.width, original.height) > ArtworkUpgradeMatch.MAX_SAVED_PIXELS / ArtworkUpgradeMatch.MIN_GAIN) {
+            return ScanOutcome.NoMatch
+        }
+        val search = candidates(target, original)
+        var requestFailed = search.blocked
+        for ((url, source) in search.images.distinctBy { it.first }.take(MAX_CANDIDATES)) {
             currentCoroutineContext().ensureActive()
-            val bytes = matchingBytes(original, url, target.album == null) ?: continue
+            val bytes =
+                try {
+                    matchingBytes(original, url, target.album == null)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    reportFailure(target, "Candidate image from $source", error)
+                    requestFailed = true
+                    continue
+                } ?: continue
             val savedFacts = checkNotNull(ArtworkUpgradeImages.inspect(bytes))
             currentCoroutineContext().ensureActive()
             val file = File(directory, "${target.id}.img").apply { writeBytes(bytes) }
-            val preview = File(directory, "${target.id}-original.img").apply { writeBytes(originalBytes) }
-            return ArtworkUpgradeResult(target, original, savedFacts, file, preview, source)
+            val preview = File(directory, "${target.id}-original.img").apply { writeBytes(image.bytes) }
+            return ScanOutcome.Match(ArtworkUpgradeResult(target, original, savedFacts, file, preview, source))
         }
-        return null
+        return if (requestFailed) ScanOutcome.RequestFailed else ScanOutcome.NoMatch
     }
 
     private suspend fun candidates(
         target: ArtworkUpgradeTarget,
         original: UpgradeImageFacts,
-    ): List<Pair<String, String>> {
+    ): CandidateSearch {
         val album = target.album
         if (album == null) {
             val result =
                 metadata.fetchArtistArtworkCandidatesDetailed(target.artist!!.name).getOrNull()
-                    ?: error("Artist search unavailable")
+                    ?: return failedSearch(target, "Artist catalogue lookup")
             val sourceLabel = localized().getString(CommonR.string.artwork_source_deezer_artist)
-            return result.candidates.map { it to sourceLabel }
+            return CandidateSearch(result.candidates.map { it to sourceLabel })
         }
         val result =
-            metadata.searchAlbumArtwork(AlbumArtworkQuery(album.title, album.artist, album.year)).getOrNull()
-                ?: error("Album search unavailable")
-        check(result.candidates.isNotEmpty() || result.outcomes.none { it.status in FAILED_STATUSES }) { "Providers unavailable" }
-        return result.candidates
-            .filter {
-                it.verifiedImage &&
-                    ArtworkUpgradeMatch.isLarger(it.width, it.height, original.width, original.height)
-            }.sortedByDescending { it.width.toLong() * it.height }
-            .map { it.imageUrl to it.source }
+            metadata.searchAlbumArtwork(AlbumArtworkQuery(album.title, album.artist, album.year, forUpgrade = true)).getOrNull()
+                ?: return failedSearch(target, "Album catalogue lookup")
+        val failures = result.outcomes.filter { it.status in FAILED_STATUSES }
+        for (failure in failures) reportFailure(target, "${failure.providerName}: ${failure.status.name}")
+        return CandidateSearch(
+            images =
+                result.candidates
+                    .filter {
+                        it.verifiedImage &&
+                            ArtworkUpgradeMatch.isLarger(it.width, it.height, original.width, original.height)
+                    }.sortedByDescending { it.width.toLong() * it.height }
+                    .map { it.imageUrl to it.source },
+            blocked = result.candidates.isEmpty() && failures.isNotEmpty(),
+        )
     }
 
-    @Suppress("ReturnCount") // Each decoding/geometry check is an independent rejection gate.
+    private suspend fun failedSearch(target: ArtworkUpgradeTarget, stage: String): CandidateSearch {
+        currentCoroutineContext().ensureActive()
+        reportFailure(target, stage)
+        return CandidateSearch(emptyList(), blocked = true)
+    }
+
     private suspend fun matchingBytes(original: UpgradeImageFacts, url: String, preserveTransparency: Boolean): ByteArray? {
-        val downloaded = metadata.downloadArtwork(url).getOrNull()
-        val facts = downloaded?.let(ArtworkUpgradeImages::inspect)
-        if (downloaded == null || facts == null) {
-            mutableState.update { it.copy(skipped = it.skipped + 1) }
-            return null
-        }
+        val downloaded = checkNotNull(metadata.downloadArtwork(url).getOrNull())
+        val facts = checkNotNull(ArtworkUpgradeImages.inspect(downloaded))
         if (!matches(original, facts)) return null
-        val bytes = ArtworkUpgradeImages.prepare(downloaded, preserveTransparency) ?: return null
-        val savedFacts = ArtworkUpgradeImages.inspect(bytes) ?: return null
+        val bytes = checkNotNull(ArtworkUpgradeImages.prepare(downloaded, preserveTransparency))
+        val savedFacts = checkNotNull(ArtworkUpgradeImages.inspect(bytes))
         return bytes.takeIf { matches(original, savedFacts) }
     }
 
@@ -229,24 +296,46 @@ internal class ArtworkUpgradeController(
         ArtworkUpgradeMatch.isLarger(candidate.width, candidate.height, original.width, original.height) &&
             ArtworkUpgradeMatch.resembles(original.signature, candidate.signature)
 
-    @Suppress("ReturnCount") // Album embedded bytes take precedence over a MediaStore thumbnail.
-    private suspend fun readOriginal(target: ArtworkUpgradeTarget): ByteArray? {
-        target.album?.let { album ->
-            val first = library.getSongsByAlbumId(album.id).first().firstOrNull()
-            first?.let { embedded(it) }?.let { return it }
-            return readImage(album.artworkUri)
+    /** Prefer a decodable embedded cover to the MediaStore artwork stream. */
+    private suspend fun readOriginal(target: ArtworkUpgradeTarget): Original {
+        var unreadable = false
+        suspend fun inspect(stage: String, read: suspend () -> ByteArray?): Original.Image? =
+            try {
+                val bytes = read()
+                if (bytes == null) {
+                    null
+                } else {
+                    val facts = checkNotNull(ArtworkUpgradeImages.inspect(bytes))
+                    Original.Image(bytes, facts)
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: FileNotFoundException) {
+                // MediaStore can assign artwork URIs even when it has no cached cover.
+                null
+            } catch (error: Exception) {
+                unreadable = true
+                reportFailure(target, stage, error)
+                null
+            }
+
+        val album = target.album
+        if (album != null) {
+            for (song in library.getSongsByAlbumId(album.id).first()) {
+                currentCoroutineContext().ensureActive()
+                inspect("Embedded cover") { embedded(song) }?.let { return it }
+            }
         }
-        val artist = library.getArtistById(target.artist!!.id).first() ?: return null
-        return readImage(artist.artworkUri)
+        val uri = if (album != null) album.artworkUri else library.getArtistById(target.artist!!.id).first()?.artworkUri
+        return inspect(if (album != null) "MediaStore cover" else "Artist photo") { readImage(uri) }
+            ?: if (unreadable) Original.Unreadable else Original.Missing
     }
 
     private fun embedded(song: Song): ByteArray? {
         val retriever = MediaMetadataRetriever()
         return try {
             retriever.setDataSource(context, Uri.parse(song.uri))
-            retriever.embeddedPicture?.takeIf { it.size <= ArtworkUpgradeImages.MAX_BYTES }
-        } catch (_: Exception) {
-            null
+            retriever.embeddedPicture?.also { check(it.size <= ArtworkUpgradeImages.MAX_BYTES) }
         } finally {
             retriever.release()
         }
@@ -256,7 +345,7 @@ internal class ArtworkUpgradeController(
         if (value.isNullOrBlank()) return null
         val uri = Uri.parse(value)
         return if (uri.scheme in listOf("http", "https")) {
-            metadata.downloadArtwork(value).getOrNull()
+            checkNotNull(metadata.downloadArtwork(value).getOrNull())
         } else {
             context.contentResolver.openInputStream(uri)?.use(::readBoundedImage)
         }
@@ -305,7 +394,7 @@ internal class ArtworkUpgradeController(
     }
 
     private suspend fun checkedBytes(result: ArtworkUpgradeResult): ByteArray {
-        val current = readOriginal(result.target)?.let(ArtworkUpgradeImages::inspect)
+        val current = (readOriginal(result.target) as? Original.Image)?.facts
         check(current?.hash == result.original.hash) { localized().getString(CommonR.string.artwork_upgrade_msg_original_changed) }
         val bytes = result.file.readBytes()
         val facts = ArtworkUpgradeImages.inspect(bytes)
@@ -323,7 +412,15 @@ internal class ArtworkUpgradeController(
             val bytes = checkedBytes(result)
             var written = 0
             for (song in songs) {
-                val facts = embedded(song)?.let(ArtworkUpgradeImages::inspect)
+                val facts =
+                    try {
+                        embedded(song)?.let(ArtworkUpgradeImages::inspect)
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        reportFailure(result.target, "Embedded cover during save", error)
+                        null
+                    }
                 if (facts == null || !matches(facts, result.replacement)) continue
                 when (
                     metadata.writeTagsToFile(
@@ -363,6 +460,11 @@ internal class ArtworkUpgradeController(
         }
     }
 
+    private fun reportFailure(target: ArtworkUpgradeTarget, stage: String, error: Exception? = null) {
+        val type = error?.javaClass?.simpleName?.let { " ($it)" }.orEmpty()
+        Log.w(TAG, "${target.id}: $stage$type")
+    }
+
     private fun localized(): Context = AppLocaleManager.localizedContext(context)
 
     private fun saved(
@@ -382,6 +484,7 @@ internal class ArtworkUpgradeController(
         state.value.results.size >= MAX_RESULTS || directory.listFiles().orEmpty().sumOf { it.length() } >= MAX_CACHE_BYTES
 
     private companion object {
+        const val TAG = "ArtworkUpgrade"
         const val TARGET_TIMEOUT_MS = 60000L
         const val SEARCH_PAUSE_MS = 300L
         const val MAX_CANDIDATES = 12
@@ -389,9 +492,11 @@ internal class ArtworkUpgradeController(
         const val MAX_CACHE_BYTES = 64L * 1024 * 1024
         val FAILED_STATUSES =
             setOf(
-                com.erhu.erhu.core.model.ProviderStatus.FAILED,
-                com.erhu.erhu.core.model.ProviderStatus.RATE_LIMITED,
-                com.erhu.erhu.core.model.ProviderStatus.TIMED_OUT,
+                ProviderStatus.FAILED,
+                ProviderStatus.RATE_LIMITED,
+                ProviderStatus.TIMED_OUT,
+                ProviderStatus.NETWORK_ERROR,
+                ProviderStatus.AUTH_FAILED,
             )
     }
 }

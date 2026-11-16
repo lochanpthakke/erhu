@@ -1586,6 +1586,22 @@
         <item quantity="one">%1$s image or request could not be checked.</item>
         <item quantity="other">%1$s images or requests could not be checked.</item>
     </plurals>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s item has no existing artwork.</item>
+        <item quantity="other">%1$s items have no existing artwork.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Couldn’t read the existing artwork for %1$s item.</item>
+        <item quantity="other">Couldn’t read the existing artwork for %1$s items.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">No higher-resolution match for %1$s item.</item>
+        <item quantity="other">No higher-resolution matches for %1$s items.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Couldn’t complete the artwork check for %1$s item.</item>
+        <item quantity="other">Couldn’t complete the artwork check for %1$s items.</item>
+    </plurals>
     <string name="artwork_upgrade_saving">Saving artwork…</string>
     <string name="artwork_upgrade_section_matches">Higher-resolution matches</string>
     <string name="artwork_upgrade_review_hint">Likely same image · Review</string>

@@ -161,17 +161,19 @@ internal fun ArtworkUpgradeScreen(
                             )
                         }
                     }
-                    if (state.skipped >
-                        0
-                    ) {
-                        Text(
-                            pluralStringResource(
-                                CommonR.plurals.artwork_upgrade_skipped_count,
-                                state.skipped,
-                                LocaleFormatters.formatInteger(state.skipped, locale),
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                    val checkSummary = listOf(
+                        CommonR.plurals.artwork_upgrade_missing_originals to state.missingOriginals,
+                        CommonR.plurals.artwork_upgrade_unreadable_originals to state.unreadableOriginals,
+                        CommonR.plurals.artwork_upgrade_no_match to state.noMatch,
+                        CommonR.plurals.artwork_upgrade_request_failures to state.requestFailures,
+                    )
+                    for ((description, count) in checkSummary) {
+                        if (count > 0) {
+                            Text(
+                                pluralStringResource(description, count, LocaleFormatters.formatInteger(count, locale)),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                     state.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
                     if (state.saving) Text(stringResource(CommonR.string.artwork_upgrade_saving))

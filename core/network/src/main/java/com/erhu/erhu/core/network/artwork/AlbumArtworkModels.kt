@@ -16,6 +16,7 @@ data class AlbumArtworkQuery(
     val releaseGroupId: String? = null,
     val recordingId: String? = null,
     val sourcePath: String? = null,
+    val forUpgrade: Boolean = false,
 )
 
 @Serializable

@@ -71,7 +71,7 @@ class ArtworkUpgradeTest {
             assertTrue(h.controller.state.value.results.isEmpty())
             h.originalFile.writeBytes("invalid".toByteArray())
             h.scan()
-            assertEquals(1, h.controller.state.value.skipped)
+            assertEquals(1, h.controller.state.value.unreadableOriginals)
             assertEquals(0, h.searches)
         }
     }
@@ -121,7 +121,8 @@ class ArtworkUpgradeTest {
     @Test fun wrongArtworkAndMalformedResponsesAreNotOfferedAsUpgrades() = runBlocking {
         Harness().use { h ->
             h.candidate = image(1200, moved = true)
-            h.scan()
+            h.scan(ArtworkUpgradeKind.ALBUMS)
+            assertEquals(1, h.controller.state.value.noMatch)
             assertTrue(h.controller.state.value.results.isEmpty())
             h.candidate = "bad image".toByteArray()
             h.scan()
@@ -151,7 +152,7 @@ class ArtworkUpgradeTest {
         Harness().use { h ->
             h.failSearch = true
             h.scan()
-            assertEquals(1, h.controller.state.value.skipped)
+            assertEquals(1, h.controller.state.value.requestFailures)
             h.failSearch = false
             h.scan()
             h.failSave = true
@@ -174,6 +175,48 @@ class ArtworkUpgradeTest {
             assertEquals(1, h.searches)
             assertTrue(h.controller.state.value.results.isEmpty())
             assertFalse(h.controller.state.value.finished)
+        }
+    }
+
+    @Test fun laterTrackSuppliesCoverWhenFirstTrackCannotBeDecoded() = runBlocking {
+        Harness().use { h ->
+            UpgradeRetriever.pictures[h.songs[0].uri] = "unreadable".toByteArray()
+            UpgradeRetriever.pictures[h.songs[1].uri] = h.original
+            h.scan(ArtworkUpgradeKind.ALBUMS)
+            val state = h.controller.state.value
+            assertEquals(1, state.checked)
+            assertEquals(0, state.unreadableOriginals)
+            h.controller.apply(state.results.single())
+            h.awaitSave()
+            assertEquals(h.songs[1].uri, h.writes.single().contentUri)
+        }
+    }
+
+    @Test fun albumWithoutAnyCoverDoesNotQueryProviders() = runBlocking {
+        Harness().use { h ->
+            UpgradeRetriever.pictures.clear()
+            h.scan(ArtworkUpgradeKind.ALBUMS)
+            val state = h.controller.state.value
+            assertEquals(1, state.checked)
+            assertEquals(1, state.missingOriginals)
+            assertEquals(0, state.requestFailures)
+            assertEquals(0, h.searches)
+        }
+    }
+
+    @Test fun failedDownloadsCountOnceAndAWorkingCandidateTakesPrecedence() = runBlocking {
+        Harness().use { h ->
+            h.failedCandidateCount = 3
+            h.candidate = "invalid".toByteArray()
+            h.scan(ArtworkUpgradeKind.ALBUMS)
+            assertEquals(1, h.controller.state.value.checked)
+            assertEquals(1, h.controller.state.value.requestFailures)
+            assertTrue(h.controller.state.value.results.isEmpty())
+            h.candidate = image(1200)
+            h.scan(ArtworkUpgradeKind.ALBUMS)
+            assertEquals(1, h.controller.state.value.checked)
+            assertEquals(0, h.controller.state.value.requestFailures)
+            assertEquals(1, h.controller.state.value.results.size)
         }
     }
 
@@ -209,6 +252,7 @@ class ArtworkUpgradeTest {
         val album = Album(1, "Example album", "Example", 1, 2, 2024)
         val songs = (1L..2L).map { Song(it, "Track $it", "Example", "Example album", 1000, "content://songs/$it", filePath = "/music/$it.mp3") }
         var candidate = image(1200)
+        var failedCandidateCount = 0
         var searches = 0
         var saves = 0
         var failSearch = false
@@ -241,12 +285,20 @@ class ArtworkUpgradeTest {
                         entered.countDown()
                         if (slowSearch) Thread.sleep(500)
                         if (failSearch) AppResult.Error(AppError.Unknown())
-                        else if (name == "searchAlbumArtwork") AppResult.Success(AlbumArtworkResult(listOf(
-                            AlbumArtworkCandidate("https://example.test/art", "Test catalogue", album.title, album.artist, width = 1200, height = 1200, verifiedImage = true),
-                        ), emptyList(), 0))
+                        else if (name == "searchAlbumArtwork") {
+                            check((args[0] as com.erhu.erhu.core.network.artwork.AlbumArtworkQuery).forUpgrade)
+                            val working = AlbumArtworkCandidate(
+                                "https://example.test/art", "Test catalogue", album.title, album.artist,
+                                width = 1200, height = 1200, verifiedImage = true,
+                            )
+                            val failing = List(failedCandidateCount) { working.copy(imageUrl = "https://example.test/broken/$it") }
+                            AppResult.Success(AlbumArtworkResult(failing + working, emptyList(), 0))
+                        }
                         else AppResult.Success(ArtistArtworkSearchResponse(listOf("https://example.test/art")))
                     }
-                    "downloadArtwork" -> AppResult.Success(candidate)
+                    "downloadArtwork" ->
+                        if ((args[0] as String).contains("/broken/")) AppResult.Error(AppError.Unknown())
+                        else AppResult.Success(candidate)
                     "writeTagsToFile" -> { writes += args[0] as TagWriteRequest; AppResult.Success(Unit) }
                     else -> error(name)
                 }
