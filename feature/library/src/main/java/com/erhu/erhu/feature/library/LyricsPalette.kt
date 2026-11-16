@@ -27,6 +27,7 @@ import com.erhu.erhu.core.designsystem.theme.LocalGlassTokens
 import com.erhu.erhu.core.designsystem.theme.glassPanel
 import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -460,24 +461,26 @@ data class LyricsColors(
  * for a song no longer playing is dropped (the load is keyed to the song).
  */
 @Composable
-fun rememberLyricsColors(song: Song?): LyricsColors {
+fun rememberLyricsColors(
+    song: Song?,
+    changeDelayMs: Long = 0L,
+): LyricsColors {
     val context = LocalContext.current
     val key = song?.let { it.artworkUri ?: it.uri }
+    val initialKey = remember { key }
     val palette by produceState(initialValue = remember { key?.let(LyricsPaletteCache::get) ?: LyricsPalette.FALLBACK }, key) {
         if (key == null) {
             value = LyricsPalette.FALLBACK
             return@produceState
         }
-        LyricsPaletteCache.get(key)?.let {
-            value = it
-            return@produceState
-        }
         val derived =
-            withContext(Dispatchers.Default) {
+            LyricsPaletteCache.get(key) ?: withContext(Dispatchers.Default) {
                 val bitmap = ArtworkLoader.load(context, song.uri, song.artworkUri, SAMPLE_PX)
                 bitmap?.let { paletteOf(it) } ?: LyricsPalette.FALLBACK
-            }
-        LyricsPaletteCache.put(key, derived)
+            }.also { LyricsPaletteCache.put(key, it) }
+        // The cross-fade recomposes every colour consumer on each frame: hold it until a
+        // track change's own motion has finished (rapid skips cancel the pending fade).
+        if (key != initialKey && changeDelayMs > 0) delay(changeDelayMs)
         value = derived
     }
     val spec = tween<Color>(Motion.HERO, easing = Motion.Standard)

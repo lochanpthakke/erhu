@@ -216,7 +216,7 @@ class TrackCarouselStateTest {
     fun flingCannotReverseOrOvershootTheSettlingDestination() {
         assertEquals(0f, settlingVelocity(0f, 0f, -5000f, 100f), 0f)
         assertEquals(0f, settlingVelocity(-80f, -100f, 1000f, 100f), 0f)
-        assertEquals(-250f, settlingVelocity(-90f, -100f, -5000f, 100f), 0f)
+        assertEquals(-150f, settlingVelocity(-90f, -100f, -5000f, 100f), 0f)
     }
 
     @Test

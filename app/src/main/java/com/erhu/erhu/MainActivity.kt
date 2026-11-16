@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         announcements.requestFromNotification(intent.getStringExtra(com.erhu.erhu.announcements.ANNOUNCEMENT_EXTRA))
     }
 
+    @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         openMetadataRepair(intent)
@@ -50,6 +51,9 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         // Debug builds: slow frames logged with what the app was doing (no-op otherwise).
         FrameDiagnostics.install(this)
+        // Compose otherwise reports every appearing UI node to the system content-capture service
+        // on the main thread; on Samsung that work lands in the frames of each track change.
+        androidx.compose.ui.contentcapture.ContentCaptureManager.isEnabled = false
         setContent {
             ErhuTheme {
                 com.erhu.erhu.onboarding

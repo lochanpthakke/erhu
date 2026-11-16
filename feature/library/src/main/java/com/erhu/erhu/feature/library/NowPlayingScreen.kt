@@ -292,7 +292,8 @@ fun NowPlayingScreen(
         }
     }
     // The lyrics surfaces take their colours from the playing song's artwork (cached per artwork).
-    val lyricsColors = rememberLyricsColors(song)
+    // Applied once a skip's card motion has settled, so the colour fade never shares its frames.
+    val lyricsColors = rememberLyricsColors(song, changeDelayMs = TRACK_CHANGE_SETTLE_MS)
     val opaquePlayerBackground = MaterialTheme.colorScheme.background.copy(alpha = 1f)
     Box(modifier = modifier.fillMaxSize()) {
         // Draw outside both the animated graphics layer and the recorded glass source.
@@ -311,7 +312,8 @@ fun NowPlayingScreen(
                     .revealWithPlayer(transition, start = 0f, end = BACKDROP_REVEAL_END, rise = 0.dp)
                     .glassBackdropSource(artworkBackdrop),
         ) {
-            GlassArtworkBackdrop(song = song)
+            // The neighbours' backdrops are rendered ahead, so a skip never blurs live mid-animation.
+            GlassArtworkBackdrop(song = song, upcoming = listOf(playbackState.nextSong, playbackState.previousSong))
         }
         AppScaffold(
             containerColor = Color.Transparent,
