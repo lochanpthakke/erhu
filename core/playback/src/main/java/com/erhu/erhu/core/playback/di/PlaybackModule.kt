@@ -62,14 +62,35 @@ object PlayerProviderModule {
         // ExoPlayer owns audio focus (pause on loss, duck, resume after transient
         // loss) and pauses when headphones/Bluetooth disconnect. This applies to
         // every command source — app UI, notification, lock screen, widget.
-        return ExoPlayer
-            .Builder(context, renderersFactory)
-            // Device files as before; remote tracks are resolved to their stream when opened.
-            .setMediaSourceFactory(mediaSources.mediaSourceFactory())
-            .setAudioAttributes(musicAttributes, true)
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_LOCAL)
-            .build()
+        val player =
+            ExoPlayer
+                .Builder(context, renderersFactory)
+                // Device files as before; remote tracks are resolved to their stream when opened.
+                .setMediaSourceFactory(mediaSources.mediaSourceFactory())
+                .setAudioAttributes(musicAttributes, true)
+                .setHandleAudioBecomingNoisy(true)
+                .setWakeMode(C.WAKE_MODE_LOCAL)
+                .build()
+        // With the screen off (earbuds, phone in a pocket), phones put Wi-Fi to sleep: a Google Drive or
+        // Subsonic stream then stutters or stops. While the queue holds a streamed track, the player also
+        // holds a Wi-Fi lock (only while playing); a queue of device files keeps the CPU-only lock.
+        player.addListener(
+            object : Player.Listener {
+                override fun onTimelineChanged(
+                    timeline: androidx.media3.common.Timeline,
+                    reason: Int,
+                ) {
+                    val streams =
+                        (0 until player.mediaItemCount).any { index ->
+                            com.erhu.erhu.core.model.RemoteRef.isStreamUri(
+                                player.getMediaItemAt(index).localConfiguration?.uri?.toString(),
+                            )
+                        }
+                    player.setWakeMode(if (streams) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)
+                }
+            },
+        )
+        return player
     }
 
     /** The main player's transition gain stage (see TransitionCoordinator). */
