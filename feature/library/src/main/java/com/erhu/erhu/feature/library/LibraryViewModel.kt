@@ -196,6 +196,7 @@ class LibraryViewModel
         val listeningStatsRepository: ListeningStatsRepository,
         private val playlistRepository: PlaylistRepository,
         private val remoteFavorites: com.erhu.erhu.feature.library.remote.RemoteFavorites,
+        private val driveLibrarySync: com.erhu.erhu.feature.library.remote.DriveLibrarySync,
     ) : ViewModel() {
         val allCustomArtwork: StateFlow<Map<Long, CustomSongArtworkEntity>> =
             customSongArtworkRepository.observeAllCustomArtwork()
@@ -763,6 +764,8 @@ class LibraryViewModel
         init {
             triggerScan()
             resolveArtistArtwork()
+            // Google Drive folders added to the Library pick up files added or removed in Drive.
+            driveLibrarySync.syncAllOnce()
         }
 
         /** Keys of artists whose image the user chose (custom artwork always wins over Deezer). */

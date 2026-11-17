@@ -65,8 +65,9 @@ import com.erhu.erhu.core.database.entity.WaveformCacheEntity
         ListeningEventEntity::class,
         RemoteSourceEntity::class,
         RemoteTrackEntity::class,
+        com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
 )
 abstract class ErhuDatabase : RoomDatabase() {

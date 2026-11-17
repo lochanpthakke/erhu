@@ -73,4 +73,43 @@ data class RemoteTrackEntity(
     val isUnavailable: Boolean = false,
     @ColumnInfo(name = "updated_at")
     val updatedAt: Long,
+    /** The synced folder ([RemoteLibraryFolderEntity]) that puts this track in the Library; null when it is not in it. */
+    @ColumnInfo(name = "library_folder_id")
+    val libraryFolderId: Long? = null,
+    /** The provider folder directly holding the file; the Library groups albums by it. */
+    @ColumnInfo(name = "parent_folder")
+    val parentFolder: String? = null,
+)
+
+/**
+ * A remote folder the user added to the Library. Its audio, subfolders included, is listed on every
+ * sync and shown with the device's music (Songs, Albums, Artists, search).
+ */
+@Entity(
+    tableName = "remote_library_folders",
+    indices = [Index(value = ["source_id", "folder_id"], unique = true)],
+    foreignKeys = [
+        ForeignKey(
+            entity = RemoteSourceEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["source_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class RemoteLibraryFolderEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L,
+    @ColumnInfo(name = "source_id")
+    val sourceId: Long,
+    @ColumnInfo(name = "folder_id")
+    val folderId: String,
+    /** The shared drive holding the folder, when it is in one. */
+    @ColumnInfo(name = "drive_id")
+    val driveId: String? = null,
+    val name: String,
+    @ColumnInfo(name = "added_at")
+    val addedAt: Long,
+    @ColumnInfo(name = "synced_at")
+    val syncedAt: Long = 0L,
 )

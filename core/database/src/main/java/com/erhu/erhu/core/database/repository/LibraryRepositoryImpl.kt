@@ -207,6 +207,8 @@ class LibraryRepositoryImpl
                 val song = songDao.getSongById(songId)
                 if (song != null) {
                     songDao.setFavorite(songId, !song.isFavorite)
+                    // A Google Drive / Subsonic track in the Library: its remote record says the same.
+                    if (com.erhu.erhu.core.model.RemoteIds.isRemote(songId)) songDao.setRemoteFavorite(songId, !song.isFavorite)
                 }
             }
 
