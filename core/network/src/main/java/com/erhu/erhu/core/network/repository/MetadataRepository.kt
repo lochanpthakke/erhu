@@ -20,7 +20,11 @@ data class ArtistArtworkSearchResponse(
     val candidates: List<String>,
     val providerCandidates: Map<String, List<String>> = emptyMap(),
     val resolvedMbid: String? = null,
-)
+    val providerOutcomes: List<ProviderOutcome> = emptyList(),
+    val previewUrls: Map<String, String> = emptyMap(),
+) {
+    fun providerFor(url: String): String? = providerCandidates.entries.firstOrNull { url in it.value }?.key
+}
 
 /** Outcome of a genre lookup for a matched track. */
 sealed interface GenreLookup {

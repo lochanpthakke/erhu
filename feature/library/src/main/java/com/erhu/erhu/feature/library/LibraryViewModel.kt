@@ -937,7 +937,9 @@ class LibraryViewModel
             _selectedEnlargedArtworkUrl.value = null
         }
 
-        fun artworkPreviewUrl(url: String): String = metadataRepository.artworkPreviewUrl(url)
+        fun artworkPreviewUrl(url: String): String =
+            _artworkSearchDiagnostics.value?.candidates?.firstOrNull { it.url == url }?.previewUrl
+                ?: metadataRepository.artworkPreviewUrl(url)
 
         fun selectEnlargedArtwork(url: String?) {
             _selectedEnlargedArtworkUrl.value = url
@@ -1036,31 +1038,22 @@ class LibraryViewModel
                         val data = (result as? AppResult.Success)?.data
                         if (requestSequence != artworkRequestSequence) return@launch
                         val urls = data?.candidates.orEmpty()
-                        val deezerName = localized().getString(CommonR.string.artwork_source_deezer_artist)
                         _artworkCandidates.value = urls
                         _artworkSearchDiagnostics.value =
                             ArtworkSearchDiagnostics(
                                 artist.name,
                                 artist.name,
-                                providerOutcomes =
-                                    listOf(
-                                        com.erhu.erhu.core.model.ProviderOutcome(
-                                            deezerName,
-                                            urls.size,
-                                            if (urls.isEmpty()) {
-                                                com.erhu.erhu.core.model.ProviderStatus.NO_RESULTS
-                                            } else {
-                                                com.erhu.erhu.core.model.ProviderStatus.SUCCESS
-                                            },
-                                        ),
-                                    ),
+                                providerOutcomes = data?.providerOutcomes.orEmpty(),
                                 candidates =
-                                    urls.map {
-                                        ArtworkCandidateDetail(
-                                            it,
-                                            deezerName,
-                                            matchedArtist = artist.name,
-                                        )
+                                    urls.mapNotNull { url ->
+                                        data?.providerFor(url)?.let { provider ->
+                                            ArtworkCandidateDetail(
+                                                url,
+                                                provider,
+                                                matchedArtist = artist.name,
+                                                previewUrl = data.previewUrls[url] ?: url,
+                                            )
+                                        }
                                     },
                             )
                     } finally {
