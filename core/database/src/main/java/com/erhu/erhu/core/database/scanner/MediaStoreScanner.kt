@@ -424,13 +424,15 @@ internal fun com.erhu.erhu.core.database.entity.RemoteTrackEntity.toLibrarySong(
         uri = com.erhu.erhu.core.model.RemoteRef(provider, sourceId, remoteId).streamUri(),
         filePath = "",
         trackNumber = trackNumber,
-        year = 0,
+        year = year,
         dateModified = 0L,
         artworkUri = artworkKey?.let { com.erhu.erhu.core.model.RemoteRef.artworkUri(provider, sourceId, it) },
         isEnriched = true,
         discNumber = discNumber.coerceAtLeast(1),
         isFavorite = isFavorite,
         dateAddedMs = updatedAt,
+        genre = genre,
+        lyrics = lyrics,
     )
 }
 

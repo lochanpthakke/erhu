@@ -342,6 +342,20 @@ private val STATEMENTS_18_19 =
             "ON `remote_library_folders` (`source_id`, `folder_id`)",
     )
 
+/** v19 -> v20: genre, year and lyrics of remote tracks, and whether they were looked for. */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_19_20 =
+    object : Migration(19, 20) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            listOf(
+                "ALTER TABLE `remote_tracks` ADD COLUMN `genre` TEXT",
+                "ALTER TABLE `remote_tracks` ADD COLUMN `year` INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE `remote_tracks` ADD COLUMN `lyrics` TEXT",
+                "ALTER TABLE `remote_tracks` ADD COLUMN `details_version` INTEGER NOT NULL DEFAULT 0",
+            ).forEach(db::execSQL)
+        }
+    }
+
 /**
  * Starts `remote_tracks` ids at RemoteIds.FIRST, far above any MediaStore id, wherever the table is
  * created empty: by the migration, on a fresh install, and after a destructive rebuild.

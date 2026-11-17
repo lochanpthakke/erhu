@@ -619,5 +619,5 @@ private fun librarySummary(status: FolderSyncStatus): String =
         status.running && status.found == 0 -> "Looking for music in Drive..."
         status.running -> "Syncing: ${status.found} songs found, ${status.tagged} read"
         status.message != null -> "Last sync failed: ${status.message}. Tap to try again"
-        else -> "Tap to sync now. It also syncs in the background every few hours"
+        else -> "Tap to sync now. Syncing carries on with erhu minimised, and repeats every few hours"
     }

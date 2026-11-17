@@ -41,7 +41,8 @@ fun AlbumArtwork(
         val iconSize = maxWidth / PLACEHOLDER_ICON_FRACTION
         val sizePx = with(LocalDensity.current) { maxWidth.roundToPx() }.coerceAtLeast(1)
         val bitmap by produceState(initialValue = artworkUri?.let(ArtworkLoader::peek), artworkUri, sizePx) {
-            value = artworkUri?.let { ArtworkLoader.load(context, it, it, sizePx) }
+            // A cover that fails for now (network, storage not ready at launch) is retried, not left blank.
+            value = artworkUri?.let { ArtworkLoader.loadWithRetry(context, it, it, sizePx) }
         }
         val loaded = bitmap
         if (loaded != null) {

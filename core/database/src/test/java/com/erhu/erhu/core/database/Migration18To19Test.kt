@@ -46,7 +46,28 @@ class Migration18To19Test {
         }
     }
 
+    @Test
+    fun `v20 adds genre, year and lyrics, with every known track still to be looked at`() {
+        helper.createDatabase(DB_20, 19).use { db ->
+            db.execSQL("INSERT INTO remote_sources (provider, name, allow_insecure, added_at) VALUES ('drive', 'me', 0, 1)")
+            db.execSQL(
+                "INSERT INTO remote_tracks (id, source_id, provider, remote_id, title, artist, album, duration_ms, track_number, " +
+                    "disc_number, is_favorite, is_unavailable, updated_at) VALUES (${RemoteIds.FIRST + 2}, 1, 'drive', 'f', 't', '', '', 0, 0, 1, 0, 0, 1)",
+            )
+        }
+        helper.runMigrationsAndValidate(DB_20, 20, true, MIGRATION_19_20).use { db ->
+            db.query("SELECT genre, year, lyrics, details_version FROM remote_tracks").use {
+                assertTrue(it.moveToFirst())
+                assertTrue(it.isNull(0))
+                assertEquals(0, it.getInt(1))
+                assertTrue(it.isNull(2))
+                assertEquals(0, it.getInt(3))
+            }
+        }
+    }
+
     private companion object {
+        const val DB_20 = "migration-19-20"
         const val DB = "migration-18-19"
     }
 }

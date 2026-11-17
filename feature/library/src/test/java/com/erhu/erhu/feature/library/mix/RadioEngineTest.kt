@@ -108,6 +108,19 @@ class RadioEngineTest {
     }
 
     @Test
+    fun aMostPlayedArtist_doesNotOutrankCloserSongs_inAnUnrelatedStation() {
+        // Artist 1 is played a lot but sounds furthest from the untagged seed artist 6; artists 2-3 are a bit closer.
+        val p = profile(plays = (1L..10L).map { played(it, 40, daysAgo = 2) })
+        val sound = library.associate { it.songId to when (artistOf(it.songId)) { 4L, 5L -> 0.9f; 2L, 3L -> 0.3f; 1L -> 0.2f; else -> 0f } }
+        val plan = radio(RadioSeed.Artist(6), p, similarity = sound)
+        val firstPlayed = plan.songIds.indexOfFirst { artistOf(it) == 1L }
+        val order = plan.songIds.map(::artistOf).toString()
+        // Artists 2-3 fill their full share (3 each) before the merely most-played artist 1 appears at all.
+        val closerBefore = plan.songIds.take(if (firstPlayed == -1) plan.songIds.size else firstPlayed).count { artistOf(it) in 2L..3L }
+        assertTrue(order, closerBefore >= 6)
+    }
+
+    @Test
     fun anAlbumRadio_reachesBeyondTheAlbum() {
         val plan = radio(RadioSeed.Album(100 + 1))
         val albumSongs = library.filter { it.albumId == 101L }.map { it.songId }.toSet()

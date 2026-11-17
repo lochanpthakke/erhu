@@ -64,6 +64,15 @@ interface RemoteLibraryDao {
         durationMs: Long,
     )
 
+    @Query("UPDATE remote_tracks SET genre = :genre, year = :year, lyrics = :lyrics, details_version = :version WHERE id = :id")
+    suspend fun setDetails(
+        id: Long,
+        genre: String?,
+        year: Int,
+        lyrics: String?,
+        version: Int,
+    )
+
     @Query("SELECT is_favorite FROM remote_tracks WHERE id = :id")
     fun observeFavorite(id: Long): Flow<Boolean?>
 
@@ -168,7 +177,15 @@ interface RemoteLibraryDao {
                     } else {
                         fresh.copy(id = known.id)
                     }
-                merged.copy(libraryFolderId = known.libraryFolderId, parentFolder = known.parentFolder).also { updateTrack(it) }
+                merged
+                    .copy(
+                        libraryFolderId = known.libraryFolderId,
+                        parentFolder = known.parentFolder,
+                        genre = known.genre,
+                        year = known.year,
+                        lyrics = known.lyrics,
+                        detailsVersion = known.detailsVersion,
+                    ).also { updateTrack(it) }
             } else {
                 val id = insertTrack(fresh.copy(id = 0L))
                 // The id sequence is seeded when the table is created; anything lower could collide with a device file.

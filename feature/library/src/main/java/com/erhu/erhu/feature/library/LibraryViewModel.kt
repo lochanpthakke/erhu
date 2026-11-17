@@ -138,6 +138,19 @@ data class ArtistArtworkQueueItem(
     val failureReason: String? = null,
 )
 
+private const val SEARCH_HISTORY_PREFS = "search_history"
+private const val SEARCH_HISTORY_KEY = "items"
+private const val RECENT_SEARCH_LIMIT = 15
+
+/** One saved line per item: the kind and id (a playlist also keeps its name and size). */
+private fun RecentSearchItem.savedKey(): String =
+    when (this) {
+        is RecentSearchItem.SongItem -> "song:${song.id}"
+        is RecentSearchItem.AlbumItem -> "album:${album.id}"
+        is RecentSearchItem.ArtistItem -> "artist:${artist.id}"
+        is RecentSearchItem.PlaylistItem -> "playlist:$playlistId\t$trackCount\t${title.replace('\n', ' ')}"
+    }
+
 sealed interface RecentSearchItem {
     val key: String
 
@@ -770,6 +783,7 @@ class LibraryViewModel
             resolveArtistArtwork()
             // Google Drive folders added to the Library pick up files added or removed in Drive.
             driveLibrarySync.syncAllOnce()
+            restoreRecentSearches()
         }
 
         /** Keys of artists whose image the user chose (custom artwork always wins over Deezer). */
@@ -1438,6 +1452,47 @@ class LibraryViewModel
             }
         }
 
+        /** The history shown under the search bar, saved so it survives erhu being closed. */
+        private fun setRecentSearches(items: List<RecentSearchItem>) {
+            _recentSearchItems.value = items
+            val saved = items.joinToString("\n") { it.savedKey() }
+            runCatching { searchHistoryPrefs().edit().putString(SEARCH_HISTORY_KEY, saved).apply() }
+        }
+
+        // A function, not a property: init (above) reads it before later properties are initialised.
+        private fun searchHistoryPrefs() = appContext.getSharedPreferences(SEARCH_HISTORY_PREFS, android.content.Context.MODE_PRIVATE)
+
+        /** Brings back the saved history; entries whose song, album, artist or playlist is gone are dropped. */
+        private fun restoreRecentSearches() {
+            viewModelScope.launch(Dispatchers.IO) {
+                val saved = runCatching { searchHistoryPrefs().getString(SEARCH_HISTORY_KEY, null) }.getOrNull().orEmpty()
+                val lines = saved.lines().filter { it.isNotBlank() }
+                if (lines.isEmpty()) return@launch
+                val songIds = lines.mapNotNull { it.removePrefix("song:").takeIf { _ -> it.startsWith("song:") }?.toLongOrNull() }
+                val songs = runCatching { libraryRepository.getSongsByIds(songIds) }.getOrDefault(emptyList()).associateBy { it.id }
+                val restored =
+                    lines.mapNotNull { line ->
+                        val type = line.substringBefore(':')
+                        val rest = line.substringAfter(':')
+                        runCatching {
+                            when (type) {
+                                "song" -> songs[rest.toLong()]?.let { RecentSearchItem.SongItem(it) }
+                                "album" -> libraryRepository.getAlbumById(rest.toLong()).first()?.let { RecentSearchItem.AlbumItem(it) }
+                                "artist" -> libraryRepository.getArtistById(rest.toLong()).first()?.let { RecentSearchItem.ArtistItem(it) }
+                                "playlist" -> {
+                                    val (id, count, title) = rest.split('\t', limit = 3)
+                                    RecentSearchItem.PlaylistItem(id.toLong(), title, count.toInt())
+                                }
+                                else -> null
+                            }
+                        }.getOrNull()
+                    }
+                // Anything searched since launch stays on top.
+                val merged = (_recentSearchItems.value + restored).distinctBy { it.key }.take(RECENT_SEARCH_LIMIT)
+                setRecentSearches(merged)
+            }
+        }
+
         fun setLibrarySearchQuery(query: String) {
             _librarySearchQuery.value = query
         }
@@ -1446,21 +1501,21 @@ class LibraryViewModel
             val current = _recentSearchItems.value.toMutableList()
             current.removeAll { it is RecentSearchItem.AlbumItem && it.album.id == album.id }
             current.add(0, RecentSearchItem.AlbumItem(album))
-            _recentSearchItems.value = current.take(15)
+            setRecentSearches(current.take(RECENT_SEARCH_LIMIT))
         }
 
         fun addRecentArtist(artist: Artist) {
             val current = _recentSearchItems.value.toMutableList()
             current.removeAll { it is RecentSearchItem.ArtistItem && it.artist.id == artist.id }
             current.add(0, RecentSearchItem.ArtistItem(artist))
-            _recentSearchItems.value = current.take(15)
+            setRecentSearches(current.take(RECENT_SEARCH_LIMIT))
         }
 
         fun addRecentSong(song: Song) {
             val current = _recentSearchItems.value.toMutableList()
             current.removeAll { it is RecentSearchItem.SongItem && it.song.id == song.id }
             current.add(0, RecentSearchItem.SongItem(song))
-            _recentSearchItems.value = current.take(15)
+            setRecentSearches(current.take(RECENT_SEARCH_LIMIT))
         }
 
         fun addRecentPlaylist(
@@ -1471,17 +1526,17 @@ class LibraryViewModel
             val current = _recentSearchItems.value.toMutableList()
             current.removeAll { it is RecentSearchItem.PlaylistItem && it.playlistId == playlistId }
             current.add(0, RecentSearchItem.PlaylistItem(playlistId, title, trackCount))
-            _recentSearchItems.value = current.take(15)
+            setRecentSearches(current.take(RECENT_SEARCH_LIMIT))
         }
 
         fun removeRecentSearchItem(item: RecentSearchItem) {
             val current = _recentSearchItems.value.toMutableList()
             current.removeAll { it.key == item.key }
-            _recentSearchItems.value = current
+            setRecentSearches(current)
         }
 
         fun clearRecentSearchItems() {
-            _recentSearchItems.value = emptyList()
+            setRecentSearches(emptyList())
         }
 
         fun enqueueSongForRepair(song: Song) {
@@ -1638,7 +1693,7 @@ class LibraryViewModel
                             item
                         }
                     }
-                _recentSearchItems.value = current
+                setRecentSearches(current)
             }
         }
 

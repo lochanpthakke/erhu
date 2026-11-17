@@ -171,7 +171,7 @@ internal fun RadioStationHero(
 }
 
 @Composable
-private fun RadioPortraitImage(
+internal fun RadioPortraitImage(
     portrait: RadioPortrait,
     modifier: Modifier = Modifier,
 ) {

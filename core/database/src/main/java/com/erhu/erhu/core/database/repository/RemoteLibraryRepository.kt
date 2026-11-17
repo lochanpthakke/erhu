@@ -132,6 +132,18 @@ class RemoteLibraryRepository
             dao.setLibraryFolderSynced(folderId, timeSource.now())
         }
 
+        /** The stored rows of [songIds] (what a sync has already read about them). */
+        suspend fun getTracks(songIds: List<Long>): Map<Long, RemoteTrackEntity> =
+            songIds.chunked(DETAILS_CHUNK).flatMap { dao.getTracksByIds(it) }.associateBy { it.id }
+
+        /** Stores what the details pass found; the track is not looked at again until [RemoteDetails.VERSION] changes. */
+        suspend fun applyDetails(
+            songId: Long,
+            genre: String?,
+            year: Int,
+            lyrics: String?,
+        ) = dao.setDetails(songId, genre?.takeIf { it.isNotBlank() }, year, lyrics?.takeIf { it.isNotBlank() }, com.erhu.erhu.core.database.entity.RemoteDetails.VERSION)
+
         fun observeIsFavorite(songId: Long): Flow<Boolean> = dao.observeFavorite(songId).map { it == true }
 
         suspend fun setFavorite(
@@ -170,3 +182,6 @@ internal fun RemoteTrackEntity.toSong(): Song? {
         mimeType = mimeType,
     )
 }
+
+/** Stay below SQLite's bound-variable limit. */
+private const val DETAILS_CHUNK = 500

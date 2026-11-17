@@ -123,9 +123,13 @@ fun StatsShareDialog(
                 }
             }
 
-            // Load top albums artwork
+            // Top albums: erhu's own cover loader first (what the album grids use, so the card matches the
+            // app), Coil only as a fallback. Coil alone opened MediaStore album art directly, which works only
+            // while the system has the cover cached: covers showed in the morning and were blank later.
             periodStats.topAlbums.take(5).forEach { ranked ->
-                fetchBitmap(StatsCardRenderer.albumKey(ranked.album.id), ranked.album.artworkUri)
+                val uri = ranked.album.artworkUri ?: return@forEach
+                val bm = ArtworkLoader.load(context, uri, uri, ARTWORK_PX)
+                if (bm != null) map[StatsCardRenderer.albumKey(ranked.album.id)] = bm else fetchBitmap(StatsCardRenderer.albumKey(ranked.album.id), uri)
             }
 
             // Load top artists artwork
