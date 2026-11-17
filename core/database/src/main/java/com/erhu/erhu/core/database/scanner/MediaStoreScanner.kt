@@ -43,7 +43,9 @@ class MediaStoreScanner
         private val jaudioTaggerEnricher: JAudioTaggerEnricher,
         private val logger: Logger,
         private val remoteLibraryDao: RemoteLibraryDao,
+        private val songDao: com.erhu.erhu.core.database.dao.SongDao,
     ) {
+        private val scanPrefs by lazy { context.getSharedPreferences(SCAN_PREFS, Context.MODE_PRIVATE) }
         @Suppress(
             "DEPRECATION",
             "LongMethod",
@@ -75,8 +77,12 @@ class MediaStoreScanner
                 val customPath = proto?.customScanLocationPath.orEmpty().trim()
                 val customUri = proto?.customScanLocationUri.orEmpty().trim()
 
-                triggerMediaScannerForStorage()
-                delay(SCAN_INDEXING_DELAY_MS)
+                val scanStartedAt = System.currentTimeMillis()
+                // Only files new or changed since the last finished scan; MediaStore indexes the rest itself.
+                val handedToIndexer = triggerMediaScannerForStorage(scanPrefs.getLong(LAST_SCAN_KEY, 0L))
+                if (handedToIndexer > 0) delay(SCAN_INDEXING_DELAY_MS)
+                // Stored path, modification time and year: an unchanged file's year is never parsed again.
+                val stamps = songDao.getScanStamps().associateBy { it.id }
 
                 val projection = scanProjection(Build.VERSION.SDK_INT)
                 val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 1000"
@@ -182,7 +188,13 @@ class MediaStoreScanner
 
                             var year = c.getInt(yearColumn)
                             if (year !in 1900..2099) {
-                                year = jaudioTaggerEnricher.extractYearFromId3Header(filePath)
+                                // The tag parse is the scan's costliest step; an unchanged file keeps last scan's answer.
+                                val stamp = stamps[id]
+                                val modifiedSec = c.getLong(dateModifiedColumn)
+                                val unchanged =
+                                    stamp != null && stamp.filePath == filePath &&
+                                        (stamp.dateModified == modifiedSec || stamp.dateModified == modifiedSec * 1000L)
+                                year = if (unchanged) stamp!!.year else jaudioTaggerEnricher.extractYearFromId3Header(filePath)
                             }
                             year = year.takeIf { it in 1900..2099 } ?: 0
 
@@ -279,6 +291,7 @@ class MediaStoreScanner
                 val summary = libraryWriter.write(model.toEntities(songs, artwork))
                 logger.i(TAG, "Scan applied: ${summary.upserted} songs, ${summary.removed} removed, ${model.albums.size} albums")
 
+                scanPrefs.edit().putLong(LAST_SCAN_KEY, scanStartedAt).apply()
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
 
@@ -321,8 +334,13 @@ class MediaStoreScanner
             return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
 
+        /**
+         * Hands audio files modified after [sinceMs] (all of them when 0, the first scan) to the system
+         * indexer, and returns how many. Re-indexing every file on each launch made the system do a
+         * full library pass every time the app opened.
+         */
         @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth")
-        fun triggerMediaScannerForStorage() {
+        fun triggerMediaScannerForStorage(sinceMs: Long = 0L): Int {
             try {
                 val pathsToScan = mutableListOf<String>()
                 val storageRoots = mutableSetOf<File>()
@@ -365,7 +383,7 @@ class MediaStoreScanner
                             if (name != "android" && !name.startsWith(".")) {
                                 collectAudioFiles(file, depth + 1)
                             }
-                        } else if (file.isFile && isAudioFile(file.name)) {
+                        } else if (file.isFile && isAudioFile(file.name) && file.lastModified() > sinceMs - CLOCK_MARGIN_MS) {
                             pathsToScan.add(file.absolutePath)
                         }
                     }
@@ -383,9 +401,11 @@ class MediaStoreScanner
                         null,
                     )
                 }
+                return pathsToScan.size
             } catch (e: Exception) {
                 logger.d(TAG, "Fallback media scan skipped: ${e.message}", e)
             }
+            return 0
         }
 
         private fun isAudioFile(name: String): Boolean {
@@ -402,6 +422,11 @@ class MediaStoreScanner
             private const val TAG = "MediaStoreScanner"
             private const val EMISSION_BATCH_SIZE = 50
             private const val SCAN_INDEXING_DELAY_MS = 800L
+            private const val SCAN_PREFS = "library_scan"
+            private const val LAST_SCAN_KEY = "last_finished_scan_ms"
+
+            /** Files copied with an older timestamp, or a clock change, still count as new within this window. */
+            private const val CLOCK_MARGIN_MS = 24L * 60 * 60 * 1000
 
             private val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
         }
