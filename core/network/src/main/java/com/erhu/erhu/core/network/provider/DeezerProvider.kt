@@ -125,17 +125,7 @@ class DeezerProvider
             val trimmed = artistName.trim()
             if (trimmed.isBlank() || trimmed.equals("Unknown Artist", ignoreCase = true)) return emptyList()
             return try {
-                val response = deezerApi.searchArtist(trimmed)
-                val candidates = response.data.orEmpty()
-                // 1. Filter to exact case-insensitive normalized name equality
-                val exactMatches = candidates.filter { it.name.trim().equals(trimmed, ignoreCase = true) }
-                // 2. Sort by fan count descending
-                val sorted = (if (exactMatches.isNotEmpty()) exactMatches else candidates).sortedByDescending { it.nbFan }
-                // 3. Extract pictureXl / pictureBig, requiring a valid 32-hex character hash segment
-                sorted
-                    .mapNotNull { it.pictureXl ?: it.pictureBig ?: it.pictureMedium }
-                    .filter { url -> url.isNotBlank() && DEEZER_ARTIST_HASH_REGEX.containsMatchIn(url) }
-                    .distinct()
+                searchArtistPortraits(trimmed)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -144,8 +134,25 @@ class DeezerProvider
             }
         }
 
+        internal suspend fun searchArtistPortraits(artistName: String): List<String> {
+            val trimmed = artistName.trim()
+            val response = deezerApi.searchArtist(trimmed)
+            response.error?.let { error ->
+                if (error.code == DEEZER_QUOTA_EXCEEDED) throw ProviderRateLimitedException("Deezer artist search quota exceeded")
+                throw ProviderUnavailableException("Deezer returned an artist search error")
+            }
+            val candidates = response.data ?: throw ProviderUnavailableException("Deezer returned no artist data field")
+            val exactMatches = candidates.filter { it.name.trim().equals(trimmed, ignoreCase = true) }
+            return (exactMatches.ifEmpty { candidates })
+                .sortedByDescending { it.nbFan }
+                .mapNotNull { it.pictureXl ?: it.pictureBig ?: it.pictureMedium }
+                .filter { url -> url.isNotBlank() && DEEZER_ARTIST_HASH_REGEX.containsMatchIn(url) }
+                .distinct()
+        }
+
         companion object {
             private const val TAG = "DeezerProvider"
+            private const val DEEZER_QUOTA_EXCEEDED = 4
             private val DEEZER_ARTIST_HASH_REGEX = Regex("""/images/artist/([a-fA-F0-9]{32})/""")
         }
     }

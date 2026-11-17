@@ -93,7 +93,7 @@
     <string name="onboarding_permission_retry">Retry music access</string>
     <string name="onboarding_permission_allow">Allow music access</string>
     <string name="onboarding_vybe_title">Enable VYBE</string>
-    <string name="onboarding_vybe_summary">Show VYBE in navigation and Home.</string>
+    <string name="onboarding_vybe_summary">Enable VYBE discovery and make its shortcut available.</string>
     <string name="onboarding_glass_title">Glass Effect</string>
     <string name="onboarding_glass_summary">Backdrop blur requires Android 12 or later. Glass effects may reduce performance on some devices. Older devices use a simplified appearance.</string>
     <string name="onboarding_permission_badge_later">Music access can be added later</string>

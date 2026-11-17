@@ -183,7 +183,7 @@ private object IntroductionMotifs {
     ) {
         when (page) {
             IntroductionPage.LANGUAGE, IntroductionPage.WELCOME, IntroductionPage.LISTENING -> drawWaves(path, angle, hairline)
-            IntroductionPage.LIBRARY -> drawLibraryTiles(angle)
+            IntroductionPage.LIBRARY, IntroductionPage.QUICK_ACCESS -> drawLibraryTiles(angle)
             IntroductionPage.ARTWORK -> drawArtworkLight(angle)
             IntroductionPage.TAGS -> drawDocuments(angle, false)
             IntroductionPage.BUILDER -> drawDocuments(angle, true)

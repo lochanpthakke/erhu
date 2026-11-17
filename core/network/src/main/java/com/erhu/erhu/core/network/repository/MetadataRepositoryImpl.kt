@@ -10,6 +10,7 @@ import com.erhu.erhu.core.model.MetadataCandidate
 import com.erhu.erhu.core.model.MetadataProvider
 import com.erhu.erhu.core.model.ProviderOutcome
 import com.erhu.erhu.core.model.ProviderStatus
+import com.erhu.erhu.core.network.artwork.ArtistPortraitSearch
 import com.erhu.erhu.core.network.cleaner.CleanedFilename
 import com.erhu.erhu.core.network.cleaner.FilenameCleaner
 import com.erhu.erhu.core.network.model.MusicBrainzGenreDto
@@ -44,6 +45,7 @@ class MetadataRepositoryImpl
         private val lrclibProvider: LrclibProvider,
         private val iTunesProvider: com.erhu.erhu.core.network.provider.ITunesProvider,
         private val albumArtworkFinder: com.erhu.erhu.core.network.artwork.AlbumArtworkFinder,
+        private val artistPortraitSearch: ArtistPortraitSearch,
         private val filenameCleaner: FilenameCleaner,
         private val scorer: MetadataScorer,
         private val tagWriter: JAudioTaggerWriter,
@@ -180,8 +182,7 @@ class MetadataRepositoryImpl
             sourceProvider: String,
         ): AppResult<ArtistArtworkSearchResponse> =
             appResultOf {
-                val urls = deezerProvider.fetchArtistPortraitList(artistName)
-                ArtistArtworkSearchResponse(urls, mapOf("Deezer" to urls))
+                artistPortraitSearch.search(artistName)
             }
 
         override suspend fun lookupGenre(match: MetadataCandidate): GenreLookup = lookupGenre(match, emptyList())

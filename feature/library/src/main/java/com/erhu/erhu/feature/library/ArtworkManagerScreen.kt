@@ -338,6 +338,8 @@ fun ArtworkManagerScreen(
                 }
             var showDiagnosticsExpanded by remember { mutableStateOf(false) }
             val diagnostics by viewModel.artworkSearchDiagnostics.collectAsState()
+            var unavailablePreviews by remember(artworkCandidates) { mutableStateOf(emptySet<String>()) }
+            val visibleCandidates = artworkCandidates.filterNot { it in unavailablePreviews }
 
             if (currentContextTitle != null) {
                 Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
@@ -374,7 +376,7 @@ fun ArtworkManagerScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                        } else if (artworkCandidates.isNotEmpty()) {
+                        } else if (visibleCandidates.isNotEmpty()) {
                             Text(
                                 stringResource(CommonR.string.artwork_tap_candidate_hint),
                                 style = MaterialTheme.typography.bodySmall,
@@ -387,7 +389,7 @@ fun ArtworkManagerScreen(
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
                             ) {
-                                items(artworkCandidates) { candidateUrl ->
+                                items(visibleCandidates, key = { it }) { candidateUrl ->
                                     SquareArtworkCandidateCard(
                                         imageUrl = candidateUrl,
                                         detail = diagnostics?.candidates?.firstOrNull { it.url == candidateUrl },
@@ -398,6 +400,9 @@ fun ArtworkManagerScreen(
                                                         diagnostics?.candidates?.any { it.url == candidateUrl && it.recommended } == true
                                                 ),
                                         onClick = { viewModel.selectEnlargedArtwork(candidateUrl) },
+                                        onUnavailable = currentProcessingArtist?.let {
+                                            { unavailablePreviews = unavailablePreviews + candidateUrl }
+                                        },
                                     )
                                 }
                             }
@@ -492,7 +497,7 @@ fun ArtworkManagerScreen(
                                             Text(
                                                 text =
                                                     when (outcome.status) {
-                                                        ProviderStatus.SUCCESS ->
+                                                        ProviderStatus.SUCCESS, ProviderStatus.CANDIDATES_FOUND ->
                                                             pluralStringResource(
                                                                 CommonR.plurals.artwork_provider_found_candidates,
                                                                 outcome.candidateCount,
@@ -502,7 +507,7 @@ fun ArtworkManagerScreen(
                                                     },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color =
-                                                    if (outcome.status == ProviderStatus.SUCCESS) {
+                                                    if (outcome.status == ProviderStatus.SUCCESS || outcome.status == ProviderStatus.CANDIDATES_FOUND) {
                                                         MaterialTheme.colorScheme.primary
                                                     } else {
                                                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -617,14 +622,10 @@ fun ArtworkManagerScreen(
             title = { Text(stringResource(CommonR.string.artwork_inspect_title, targetTitle)) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AsyncImage(
-                        model =
-                            ImageRequest
-                                .Builder(LocalContext.current)
-                                .data(selectedEnlargedArtworkUrl?.let(viewModel::artworkPreviewUrl))
-                                .setHeader("User-Agent", USER_AGENT)
-                                .crossfade(true)
-                                .build(),
+                    val originalUrl = selectedEnlargedArtworkUrl.orEmpty()
+                    ArtworkPreviewImage(
+                        previewUrl = viewModel.artworkPreviewUrl(originalUrl),
+                        originalFallback = originalUrl.takeIf { currentProcessingArtist != null },
                         contentDescription = stringResource(CommonR.string.artwork_cd_enlarged),
                         contentScale = ContentScale.Fit,
                         modifier =
@@ -751,11 +752,41 @@ private fun RowThumb(
 }
 
 @Composable
+private fun ArtworkPreviewImage(
+    previewUrl: String,
+    originalFallback: String?,
+    contentDescription: String,
+    contentScale: ContentScale,
+    modifier: Modifier = Modifier,
+    onUnavailable: (() -> Unit)? = null,
+) {
+    var url by remember(previewUrl, originalFallback) { mutableStateOf(previewUrl) }
+    val context = LocalContext.current
+    val request = remember(context, url) {
+        ImageRequest.Builder(context).data(url).setHeader("User-Agent", USER_AGENT).crossfade(true).build()
+    }
+    AsyncImage(
+        model = request,
+        contentDescription = contentDescription,
+        contentScale = contentScale,
+        modifier = modifier,
+        onError = {
+            if (originalFallback != null && url != originalFallback) {
+                url = originalFallback
+            } else {
+                onUnavailable?.invoke()
+            }
+        },
+    )
+}
+
+@Composable
 private fun SquareArtworkCandidateCard(
     imageUrl: String,
     detail: ArtworkCandidateDetail?,
     selected: Boolean,
     onClick: () -> Unit,
+    onUnavailable: (() -> Unit)? = null,
 ) {
     val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -772,17 +803,13 @@ private fun SquareArtworkCandidateCard(
                         MaterialTheme.shapes.small,
                     ).clickable(role = Role.Button, onClick = onClick),
         ) {
-            AsyncImage(
-                model =
-                    ImageRequest
-                        .Builder(LocalContext.current)
-                        .data(detail?.previewUrl ?: imageUrl)
-                        .setHeader("User-Agent", USER_AGENT)
-                        .crossfade(true)
-                        .build(),
+            ArtworkPreviewImage(
+                previewUrl = detail?.previewUrl ?: imageUrl,
+                originalFallback = imageUrl.takeIf { onUnavailable != null },
                 contentDescription = stringResource(CommonR.string.artwork_cd_candidate),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
+                onUnavailable = onUnavailable,
             )
             Box(
                 modifier =

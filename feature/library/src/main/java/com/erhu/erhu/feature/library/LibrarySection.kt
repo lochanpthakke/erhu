@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Album
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -32,6 +33,7 @@ enum class LibrarySection(
     ALBUMS("Albums", CommonR.string.library_section_albums),
     LIBRARY("Library", CommonR.string.library_section_library),
     VYBE("VYBE", CommonR.string.library_section_vybe),
+    ARTISTS("Artists", CommonR.string.library_shelf_artists),
     ;
 
     val icon: ImageVector
@@ -40,6 +42,7 @@ enum class LibrarySection(
                 TRACKS -> Icons.Outlined.Home
                 ALBUMS -> Icons.Outlined.Album
                 LIBRARY -> Icons.Outlined.LibraryMusic
+                ARTISTS -> Icons.Outlined.Person
                 VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
             }
 
@@ -49,8 +52,28 @@ enum class LibrarySection(
                 TRACKS -> Icons.Filled.Home
                 ALBUMS -> Icons.Filled.Album
                 LIBRARY -> Icons.Filled.LibraryMusic
+                ARTISTS -> Icons.Filled.Person
                 VYBE -> ImageVector.vectorResource(R.drawable.ic_boombox)
             }
+}
+
+const val NAVIGATION_SHORTCUT_LIMIT = 4
+
+/** Resolve saved names, preserving order and keeping Home in the first slot. */
+fun navigationQuickAccess(
+    saved: List<String>,
+    vybeEnabled: Boolean,
+): List<LibrarySection> {
+    val sections =
+        if (saved.isEmpty()) {
+            listOf(LibrarySection.ALBUMS, LibrarySection.LIBRARY, LibrarySection.VYBE)
+        } else {
+            saved.mapNotNull { name -> LibrarySection.entries.firstOrNull { it.name == name } }
+        }
+    return (listOf(LibrarySection.TRACKS) + sections)
+        .distinct()
+        .filter { vybeEnabled || it != LibrarySection.VYBE }
+        .take(NAVIGATION_SHORTCUT_LIMIT)
 }
 
 /** The full shelves the Library overview opens with "More". */

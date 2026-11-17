@@ -254,8 +254,12 @@ internal class ArtworkUpgradeController(
             val result =
                 metadata.fetchArtistArtworkCandidatesDetailed(target.artist!!.name).getOrNull()
                     ?: return failedSearch(target, "Artist catalogue lookup")
-            val sourceLabel = localized().getString(CommonR.string.artwork_source_deezer_artist)
-            return CandidateSearch(result.candidates.map { it to sourceLabel })
+            val failures = result.providerOutcomes.filter { it.status in FAILED_STATUSES || it.status == ProviderStatus.UNAVAILABLE }
+            for (failure in failures) reportFailure(target, "${failure.providerName}: ${failure.status.name}")
+            return CandidateSearch(
+                images = result.candidates.map { it to result.providerFor(it).orEmpty() },
+                blocked = result.candidates.isEmpty() && failures.isNotEmpty(),
+            )
         }
         val result =
             metadata.searchAlbumArtwork(AlbumArtworkQuery(album.title, album.artist, album.year, forUpgrade = true)).getOrNull()

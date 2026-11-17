@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_quick_access_title">Navigation quick access</string>
+    <string name="onboarding_quick_access_description">Home stays first. Tap up to three other shortcuts in the order you want them. Tap again to remove a shortcut.</string>
+    <string name="onboarding_quick_access_preview">Preview</string>
+    <string name="onboarding_quick_access_confirm">Confirm shortcuts</string>
+</resources>

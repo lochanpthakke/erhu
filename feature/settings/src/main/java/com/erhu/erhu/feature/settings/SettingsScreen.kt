@@ -280,13 +280,12 @@ private fun NavigationSettingsSubPage(
         }
         SettingsSection(
             title = stringResource(R.string.settings_nav_home_page_title),
-            footer = stringResource(R.string.settings_nav_home_page_footer),
         ) {
             SettingsGroup(selectable = true) {
                 listOf(
                     Triple(
                         "TRACKS",
-                        R.string.settings_nav_home_tracks_title,
+                        R.string.library_section_home,
                         R.string.settings_nav_home_tracks_summary,
                     ),
                     Triple(

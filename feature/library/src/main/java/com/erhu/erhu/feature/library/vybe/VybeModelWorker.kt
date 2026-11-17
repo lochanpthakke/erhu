@@ -13,12 +13,15 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.erhu.erhu.core.common.locale.AppLocaleManager
+import com.erhu.erhu.core.datastore.repository.ThemeRepository
 import com.erhu.erhu.feature.library.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -37,10 +40,17 @@ class VybeModelWorker
         @Assisted private val context: Context,
         @Assisted parameters: WorkerParameters,
         private val store: VybeModelStore,
+        private val themeRepository: ThemeRepository,
     ) : CoroutineWorker(context, parameters) {
         @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "TooGenericExceptionCaught")
         override suspend fun doWork(): Result =
             withContext(Dispatchers.IO) {
+                // Requests scheduled by earlier versions never had explicit download consent.
+                if (!inputData.getBoolean(VybeModelStore.USER_REQUESTED, false) ||
+                    !themeRepository.vybeEnabled.filterNotNull().first()
+                ) {
+                    return@withContext Result.failure()
+                }
                 val staging = File(store.directory, "embedding_gemma.task.installing")
                 try {
                     if (store.isInstalled()) return@withContext Result.success()

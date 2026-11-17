@@ -81,6 +81,8 @@ message PlaybackStateProto {
   string songs_sort = 41;
   string songs_genre = 42;
   string songs_mood = 43;
+  // A confirmed configuration always includes Home. Empty means setup is pending.
+  repeated string navigation_quick_access = 44;
 }
 
 message LyricsTimingAdjustmentProto {

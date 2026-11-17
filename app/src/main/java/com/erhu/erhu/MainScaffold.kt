@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.ImageSearch
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Cloud
@@ -191,11 +192,13 @@ private class DrawerDestination(
     @StringRes val labelRes: Int,
     val icon: ImageVector,
     val route: Any,
+    val section: LibrarySection? = null,
 )
 
 private val DRAWER_DESTINATIONS =
     listOf(
-        DrawerDestination(CommonR.string.nav_library, Icons.AutoMirrored.Filled.LibraryBooks, Library),
+        DrawerDestination(CommonR.string.library_section_home, Icons.Default.Home, Library, LibrarySection.TRACKS),
+        DrawerDestination(CommonR.string.nav_library, Icons.AutoMirrored.Filled.LibraryBooks, Library, LibrarySection.LIBRARY),
         DrawerDestination(CommonR.string.nav_sound_capsule, Icons.Default.Insights, SoundCapsule),
         DrawerDestination(CommonR.string.nav_equalizer, Icons.Default.Equalizer, Equalizer),
         DrawerDestination(CommonR.string.nav_auto_fix_tags, Icons.Default.EditNote, MetadataEditor),
@@ -352,7 +355,8 @@ fun MainScaffold(
 
             val persistedVybeEnabled by themeViewModel.vybeEnabled.collectAsState()
             val vybeEnabled = persistedVybeEnabled == true
-            val defaultStartSectionName by themeViewModel.defaultStartSection.collectAsState()
+            val navigationSetup by themeViewModel.navigationSetup.collectAsState()
+            val defaultStartSectionName = navigationSetup?.defaultStartSection.orEmpty()
             val defaultStartSection =
                 remember(defaultStartSectionName) {
                     try {
@@ -366,8 +370,8 @@ fun MainScaffold(
             // Library section lives here because its navigation is part of the shell's bottom chrome.
             var librarySection by rememberSaveable { mutableStateOf(if (startAtHome) LibrarySection.TRACKS else defaultStartSection) }
             var hasInitializedSection by rememberSaveable { mutableStateOf(startAtHome) }
-            LaunchedEffect(defaultStartSection) {
-                if (!hasInitializedSection) {
+            LaunchedEffect(navigationSetup != null, defaultStartSection) {
+                if (navigationSetup != null && !hasInitializedSection) {
                     hasInitializedSection = true
                     librarySection = defaultStartSection
                 }
@@ -533,7 +537,10 @@ fun MainScaffold(
                                     icon = { Icon(destination.icon, contentDescription = null) },
                                     label = { Text(stringResource(destination.labelRes), fontWeight = FontWeight.Medium) },
                                     selected =
-                                        currentDestination?.hasRoute(destination.route::class) == true ||
+                                        (
+                                            currentDestination?.hasRoute(destination.route::class) == true &&
+                                                (destination.section == null || visibleLibrarySection == destination.section)
+                                        ) ||
                                             (
                                                 destination.route == Settings &&
                                                     currentDestination?.hasRoute(
@@ -542,6 +549,10 @@ fun MainScaffold(
                                             ),
                                     onClick = {
                                         scope.launch { drawerState.close() }
+                                        destination.section?.let { section ->
+                                            librarySection = section
+                                            isLibrarySearchActive = false
+                                        }
                                         navController.navigateTopLevel(destination.route)
                                     },
                                     modifier = Modifier.padding(horizontal = Spacing.md),
@@ -582,7 +593,7 @@ fun MainScaffold(
                                                                 librarySection = section.visibleWithVybe(vybeEnabled)
                                                             }
                                                         },
-                                                        defaultStartSection = defaultStartSection,
+                                                        quickAccess = navigationSetup?.shortcuts.orEmpty(),
                                                         onSearch = {
                                                             if (isOnSongs) {
                                                                 isSongsSearchActive = true

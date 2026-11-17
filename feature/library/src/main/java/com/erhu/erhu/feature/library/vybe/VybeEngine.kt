@@ -141,12 +141,21 @@ class VybeEngine
             }
         }
 
-        /** Acquires the exact model if missing, then loads and indexes it once. */
-        fun start() {
+        /** Loads an installed model, or acquires it in response to the download button. */
+        fun start(downloadRequested: Boolean = false) {
             if (started?.isActive == true) return
+            if (!downloadRequested && !modelFile().isFile) {
+                _status.value = VybeStatus.NoModel
+                return
+            }
             started =
                 scope.launch {
-                    if (!models.ensure { _status.value = it }) return@launch
+                    if (downloadRequested) {
+                        if (!models.ensure { _status.value = it }) return@launch
+                    } else if (!withContext(kotlinx.coroutines.Dispatchers.IO) { models.isInstalled() }) {
+                        _status.value = VybeStatus.NoModel
+                        return@launch
+                    }
                     if (!loadModel()) return@launch
                     combine(
                         libraryRepository.observeSongTags().distinctUntilChanged(),
