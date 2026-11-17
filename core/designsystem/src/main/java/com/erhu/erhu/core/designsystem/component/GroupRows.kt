@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 
@@ -37,9 +38,12 @@ private const val GROUP_DIVIDER_ALPHA = 0.14f
 
 /** Hairline between the rows or parts of a group, inset from its edges. */
 @Composable
-fun GroupDivider(modifier: Modifier = Modifier) {
+fun GroupDivider(
+    modifier: Modifier = Modifier,
+    horizontalPadding: Dp = Spacing.lg,
+) {
     HorizontalDivider(
-        modifier = modifier.padding(horizontal = Spacing.lg),
+        modifier = modifier.padding(horizontal = horizontalPadding),
         thickness = GROUP_EDGE_WIDTH,
         color = MaterialTheme.colorScheme.outline.copy(alpha = GROUP_DIVIDER_ALPHA),
     )
@@ -58,15 +62,20 @@ fun GroupRow(
     icon: ImageVector? = null,
     trailing: ImageVector? = null,
     enabled: Boolean = true,
+    horizontalPadding: Dp = Spacing.lg,
 ) {
     GroupRowLayout(
         title = title,
         summary = summary,
         icon = icon,
         enabled = enabled,
+        horizontalPadding = horizontalPadding,
         modifier = modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick),
     ) {
-        if (trailing != null) Icon(imageVector = trailing, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (trailing != null) {
+            Spacer(modifier = Modifier.width(Spacing.md))
+            Icon(imageVector = trailing, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -80,14 +89,17 @@ fun GroupToggleRow(
     summary: String? = null,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    horizontalPadding: Dp = Spacing.lg,
 ) {
     GroupRowLayout(
         title = title,
         summary = summary,
         icon = icon,
         enabled = enabled,
+        horizontalPadding = horizontalPadding,
         modifier = modifier.toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange),
     ) {
+        Spacer(modifier = Modifier.width(Spacing.md))
         Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
@@ -98,6 +110,7 @@ private fun GroupRowLayout(
     summary: String?,
     icon: ImageVector?,
     enabled: Boolean,
+    horizontalPadding: Dp,
     modifier: Modifier,
     trailing: @Composable RowScope.() -> Unit,
 ) {
@@ -107,7 +120,7 @@ private fun GroupRowLayout(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = GROUP_ROW_MIN_HEIGHT)
-                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                .padding(horizontal = horizontalPadding, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -130,7 +143,6 @@ private fun GroupRowLayout(
                 )
             }
         }
-        Spacer(modifier = Modifier.width(Spacing.md))
         trailing()
     }
 }

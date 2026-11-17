@@ -77,6 +77,7 @@ import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
+import com.erhu.erhu.core.designsystem.component.GroupDivider
 import com.erhu.erhu.core.designsystem.component.GroupRow
 import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
 import com.erhu.erhu.core.designsystem.component.OverlayHeader
@@ -218,7 +219,6 @@ fun ArtworkManagerScreen(
                         stringResource(CommonR.string.artwork_tab_artists),
                     ),
                 selectedIndex = selectedTab,
-                showTrack = false,
                 onSelect = { index ->
                     if (selectedTab != index && !busy) {
                         selectedTab = index
@@ -230,7 +230,6 @@ fun ArtworkManagerScreen(
 
             SearchField(
                 value = searchQuery,
-                showContainer = false,
                 onValueChange = {
                     searchQuery = it
                     viewModel.searchLocalLibrary(it)
@@ -245,6 +244,7 @@ fun ArtworkManagerScreen(
                 val minResFormatted = LocaleFormatters.formatInteger(minResolution, locale)
                 SectionHeading(
                     title = stringResource(CommonR.string.artwork_section_resolution_target),
+                    horizontalPadding = 0.dp,
                     trailing = stringResource(CommonR.string.artwork_resolution_target_trailing, minResFormatted, minResFormatted),
                 )
                 SegmentedSelector(
@@ -253,7 +253,6 @@ fun ArtworkManagerScreen(
                             stringResource(CommonR.string.artwork_resolution_chip, LocaleFormatters.formatInteger(it, locale))
                         },
                     selectedIndex = RESOLUTION_TARGETS.indexOf(minResolution),
-                    showTrack = false,
                     onSelect = { index ->
                         val res = RESOLUTION_TARGETS[index]
                         if (minResolution != res) viewModel.setMinArtworkResolution(res)
@@ -293,8 +292,8 @@ fun ArtworkManagerScreen(
             }
 
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = stringResource(R.string.artwork_quick_actions))
-                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                SectionHeading(title = stringResource(R.string.artwork_quick_actions), horizontalPadding = 0.dp)
+                Column(modifier = Modifier.fillMaxWidth()) {
                     GroupRow(
                         title =
                             stringResource(
@@ -308,7 +307,9 @@ fun ArtworkManagerScreen(
                             if (selectedTab == 0) viewModel.scanForMissingCovers() else viewModel.scanForMissingArtistPhotos()
                         },
                         enabled = !busy,
+                        horizontalPadding = 0.dp,
                     )
+                    GroupDivider(horizontalPadding = 0.dp)
                     GroupRow(
                         title =
                             stringResource(
@@ -317,6 +318,8 @@ fun ArtworkManagerScreen(
                         summary = stringResource(CommonR.string.artwork_upgrade_summary),
                         onClick = { upgradeTab = selectedTab },
                         enabled = !busy,
+                        trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        horizontalPadding = 0.dp,
                     )
                 }
             }
@@ -518,6 +521,7 @@ fun ArtworkManagerScreen(
                 val doneFormatted = LocaleFormatters.formatInteger(doneCount, locale)
                 val totalFormatted = LocaleFormatters.formatInteger(activeQueueCount, locale)
                 SectionHeading(
+                    horizontalPadding = 0.dp,
                     title =
                         stringResource(
                             if (selectedTab == 0) {
@@ -593,16 +597,15 @@ fun ArtworkManagerScreen(
 
             // ---- More: a quiet row, not a competing button.
             Column(modifier = Modifier.fillMaxWidth()) {
-                SectionHeading(title = stringResource(CommonR.string.artwork_more_section))
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    GroupRow(
-                        icon = Icons.Default.Settings,
-                        title = stringResource(CommonR.string.artwork_utility_settings_title),
-                        summary = stringResource(CommonR.string.artwork_utility_settings_summary),
-                        onClick = onNavigateToMetadataSettings,
-                        trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    )
-                }
+                SectionHeading(title = stringResource(CommonR.string.artwork_more_section), horizontalPadding = 0.dp)
+                GroupRow(
+                    icon = Icons.Default.Settings,
+                    title = stringResource(CommonR.string.artwork_utility_settings_title),
+                    summary = stringResource(CommonR.string.artwork_utility_settings_summary),
+                    onClick = onNavigateToMetadataSettings,
+                    trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    horizontalPadding = 0.dp,
+                )
             }
         }
     }

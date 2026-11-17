@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -144,6 +145,7 @@ fun SongsScreen(
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
+        containerColor = Color.Transparent,
     ) { padding ->
         val scroll = padding.forScrollingContent(topOverlay = true)
         val alphabetLabels =
@@ -163,12 +165,12 @@ fun SongsScreen(
             topInset = scroll.contentTop,
             bottomInset = scroll.contentBottom,
             onJump = { listState.requestScrollToItem(it + 1) }, // The filters occupy item zero.
-            modifier = Modifier.fillMaxSize().padding(scroll.container),
+            modifier = Modifier.fillMaxSize().nestedScroll(chromeScroll),
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().nestedScroll(chromeScroll),
-                contentPadding = PaddingValues(top = scroll.contentTop + Spacing.sm, bottom = scroll.contentBottom + Spacing.lg),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = scroll.contentTop + Spacing.sm, bottom = scroll.contentBottom + Spacing.sm),
             ) {
                 item(key = "filters") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.screenGutter)) {

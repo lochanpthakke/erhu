@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Motion
@@ -107,9 +108,10 @@ fun SectionHeading(
     title: String,
     modifier: Modifier = Modifier,
     trailing: String? = null,
+    horizontalPadding: Dp = Spacing.lg,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.sm),
+        modifier = modifier.fillMaxWidth().padding(start = horizontalPadding, end = horizontalPadding, bottom = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

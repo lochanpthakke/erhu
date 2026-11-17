@@ -222,6 +222,10 @@ fun NowPlayingScreen(
     }
 
     fun next() {
+        lyricsExpanded = false
+        if (pageScroll.value != 0 || pageScroll.isScrollInProgress) {
+            scope.launch { pageScroll.scrollTo(0) }
+        }
         if (latestState.nextSong != null) {
             carousel.skipFromButton(1) { playbackRepository.skipNext() }
         } else {

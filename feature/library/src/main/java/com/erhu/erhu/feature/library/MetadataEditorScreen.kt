@@ -236,14 +236,13 @@ fun MetadataEditorScreen(
             // ---- Find: search the library or scan it for tracks with bad tags.
             item(key = "find") {
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl)) {
-                    SectionHeading(title = stringResource(CommonR.string.repair_section_find))
+                    SectionHeading(title = stringResource(CommonR.string.repair_section_find), horizontalPadding = 0.dp)
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         SearchField(
                             value = searchQuery,
-                            showContainer = false,
                             onValueChange = {
                                 searchQuery = it
                                 viewModel.searchLocalLibrary(it)
@@ -346,11 +345,12 @@ fun MetadataEditorScreen(
             // ---- Options: how the fix runs.
             item(key = "options") {
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.xl)) {
-                    SectionHeading(title = stringResource(CommonR.string.repair_section_options))
+                    SectionHeading(title = stringResource(CommonR.string.repair_section_options), horizontalPadding = 0.dp)
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Box {
                             GroupRow(
                                 title = stringResource(CommonR.string.repair_option_source),
+                                horizontalPadding = 0.dp,
                                 summary = providerOptions.find { it.first == selectedProvider }?.second ?: selectedProvider,
                                 icon = Icons.Default.Cloud,
                                 trailing = Icons.Default.ArrowDropDown,
@@ -371,10 +371,11 @@ fun MetadataEditorScreen(
                                 }
                             }
                         }
-                        GroupDivider()
+                        GroupDivider(horizontalPadding = 0.dp)
                         Box {
                             GroupRow(
                                 title = stringResource(CommonR.string.repair_option_fields),
+                                horizontalPadding = 0.dp,
                                 summary = fieldsLabel,
                                 icon = Icons.Default.Tag,
                                 trailing = Icons.Default.ArrowDropDown,
@@ -408,10 +409,11 @@ fun MetadataEditorScreen(
                                 }
                             }
                         }
-                        GroupDivider()
+                        GroupDivider(horizontalPadding = 0.dp)
                         Box {
                             GroupRow(
                                 title = stringResource(CommonR.string.repair_option_mode),
+                                horizontalPadding = 0.dp,
                                 summary =
                                     stringResource(
                                         if (repairMode == LibraryViewModel.RepairMode.AUTOMATIC) {
@@ -444,8 +446,9 @@ fun MetadataEditorScreen(
                                 )
                             }
                         }
-                        GroupDivider()
+                        GroupDivider(horizontalPadding = 0.dp)
                         GroupToggleRow(
+                            horizontalPadding = 0.dp,
                             title = stringResource(CommonR.string.repair_force_fix_title),
                             summary = stringResource(CommonR.string.repair_force_fix_summary),
                             checked = forceFixTags,
@@ -460,6 +463,7 @@ fun MetadataEditorScreen(
                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm)) {
                     SectionHeading(
                         title = stringResource(CommonR.string.repair_queue_title),
+                        horizontalPadding = 0.dp,
                         trailing =
                             pluralStringResource(
                                 CommonR.plurals.repair_queue_progress_trailing,
@@ -469,7 +473,7 @@ fun MetadataEditorScreen(
                             ),
                     )
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
                         ProgressBar(progress = { progressFloat })
@@ -606,7 +610,7 @@ fun MetadataEditorScreen(
                         text = stringResource(CommonR.string.repair_queue_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(Spacing.lg),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.lg),
                     )
                 }
             } else {
@@ -615,7 +619,7 @@ fun MetadataEditorScreen(
                 if (needsReview.isNotEmpty()) {
                     item(key = "needs-review-header") {
                         Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm, top = Spacing.md)) {
-                            SectionHeading(title = stringResource(CommonR.string.repair_section_needs_review))
+                            SectionHeading(title = stringResource(CommonR.string.repair_section_needs_review), horizontalPadding = 0.dp)
                         }
                     }
                     items(needsReview, key = { it.song.id }) { queueItem ->
@@ -645,7 +649,7 @@ fun MetadataEditorScreen(
                 if (others.isNotEmpty()) {
                     item(key = "others-header") {
                         Column(modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.sm, top = Spacing.md)) {
-                            SectionHeading(title = stringResource(CommonR.string.repair_section_others))
+                            SectionHeading(title = stringResource(CommonR.string.repair_section_others), horizontalPadding = 0.dp)
                         }
                     }
                     items(others, key = { it.song.id }) { queueItem ->
@@ -676,16 +680,15 @@ fun MetadataEditorScreen(
             // ---- More: a quiet row, not a competing button.
             item(key = "more") {
                 Column(modifier = Modifier.fillMaxWidth().padding(top = Spacing.xl)) {
-                    SectionHeading(title = stringResource(CommonR.string.artwork_more_section))
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        GroupRow(
-                            title = stringResource(CommonR.string.artwork_utility_settings_title),
-                            summary = stringResource(CommonR.string.artwork_utility_settings_summary),
-                            icon = Icons.Default.Settings,
-                            trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            onClick = onNavigateToMetadataSettings,
-                        )
-                    }
+                    SectionHeading(title = stringResource(CommonR.string.artwork_more_section), horizontalPadding = 0.dp)
+                    GroupRow(
+                        title = stringResource(CommonR.string.artwork_utility_settings_title),
+                        summary = stringResource(CommonR.string.artwork_utility_settings_summary),
+                        icon = Icons.Default.Settings,
+                        trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        onClick = onNavigateToMetadataSettings,
+                        horizontalPadding = 0.dp,
+                    )
                 }
             }
         }
@@ -927,14 +930,14 @@ private fun RepairQueueCard(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (queueItem.status == "FIXING") {
-            ProgressBar(modifier = Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.sm))
+            ProgressBar(modifier = Modifier.padding(top = Spacing.sm))
         }
 
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(Spacing.md),
+                    .padding(vertical = Spacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
