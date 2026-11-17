@@ -614,7 +614,7 @@ private fun Breadcrumbs(
 }
 
 /** One line for a synced folder: progress while syncing, the failure, or how to sync again. */
-private fun librarySummary(status: FolderSyncStatus): String =
+internal fun librarySummary(status: FolderSyncStatus): String =
     when {
         status.running && status.found == 0 -> "Looking for music in Drive..."
         status.running -> "Syncing: ${status.found} songs found, ${status.tagged} read"

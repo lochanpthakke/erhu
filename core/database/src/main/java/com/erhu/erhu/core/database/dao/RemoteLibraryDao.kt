@@ -181,8 +181,9 @@ interface RemoteLibraryDao {
                     .copy(
                         libraryFolderId = known.libraryFolderId,
                         parentFolder = known.parentFolder,
-                        genre = known.genre,
-                        year = known.year,
+                        // The server's current genre/year when it reports one, else what a details pass found.
+                        genre = fresh.genre ?: known.genre,
+                        year = fresh.year.takeIf { it > 0 } ?: known.year,
                         lyrics = known.lyrics,
                         detailsVersion = known.detailsVersion,
                     ).also { updateTrack(it) }

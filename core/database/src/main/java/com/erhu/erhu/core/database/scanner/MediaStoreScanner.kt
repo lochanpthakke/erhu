@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -285,6 +286,16 @@ class MediaStoreScanner
                     songs += song
                 }
 
+                // The same track twice (a copy in Downloads and Music, a re-download, a Drive copy of a phone
+                // file) is listed once: the copy already in the library, else the first found (device files
+                // come before remote ones). The files themselves are never touched.
+                val kept = duplicateFreeIds(songs, stamps.keys)
+                if (kept.size < songs.size) {
+                    logger.i(TAG, "Skipped ${songs.size - kept.size} duplicate songs")
+                    songs.retainAll { it.id in kept }
+                    rawTracks.retainAll { it.songId in kept }
+                }
+
                 val aliases = libraryModelDao.getAliases().associate { it.aliasKey to it.canonicalKey }
                 val artwork = libraryModelDao.getArtworkByKey().associate { it.artistKey to it.artworkUri }
                 val model = LibraryModelBuilder.build(rawTracks, aliases)
@@ -460,6 +471,43 @@ internal fun com.erhu.erhu.core.database.entity.RemoteTrackEntity.toLibrarySong(
         lyrics = lyrics,
     )
 }
+
+/**
+ * Ids of [songs] to keep when the same track appears more than once. Two songs are the same track
+ * when title, artist and album match (ignoring case, spacing and punctuation) and their lengths are
+ * within [DUPLICATE_LENGTH_MS]: a single and its album version, live or remastered takes, and
+ * different songs with one name all stay. Of each set, an id already in the library ([known]) is
+ * kept, so its favourite, plays and playlist entries stay with it; otherwise the first in [songs].
+ */
+internal fun duplicateFreeIds(
+    songs: List<SongEntity>,
+    known: Set<Long>,
+): Set<Long> {
+    val kept = LinkedHashSet<Long>()
+    songs
+        .groupBy { song ->
+            // Untagged songs say nothing about what they are: never matched to each other.
+            if (duplicateKey(song.title) in UNTAGGED || duplicateKey(song.artist) in UNTAGGED) {
+                "#${song.id}"
+            } else {
+                listOf(song.title, song.artist, song.album).joinToString("|") { text -> duplicateKey(text) }
+            }
+        }
+        .values
+        .forEach { group ->
+            val chosen = mutableListOf<SongEntity>()
+            group.sortedBy { if (it.id in known) 0 else 1 }.forEach { song ->
+                if (chosen.none { abs(it.durationMs - song.durationMs) <= DUPLICATE_LENGTH_MS }) chosen += song
+            }
+            chosen.forEach { kept += it.id }
+        }
+    return kept
+}
+
+private fun duplicateKey(text: String): String = text.lowercase().filter { it.isLetterOrDigit() }
+
+private const val DUPLICATE_LENGTH_MS = 2_000L
+private val UNTAGGED = setOf("", "unknowntitle", "unknownartist", "unknown")
 
 /** MediaStore columns read by a scan; Album Artist and the compilation flag exist from API 30. */
 @SuppressLint("InlinedApi")

@@ -21,6 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.LibraryAddCheck
+import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
@@ -97,6 +100,7 @@ fun RemoteBrowseScreen(
     LaunchedEffect(sourceId, kind, itemId) { viewModel.start(sourceId, kind, itemId) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val libraryEntry by viewModel.libraryEntry.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     val searching = kind == RemotePageKind.HOME && query.isNotBlank()
 
@@ -142,6 +146,37 @@ fun RemoteBrowseScreen(
                     )
                 }
                 if (!searching) item(key = "menu") { HomeMenu(onOpen) }
+                if (!searching) {
+                    item(key = "library") {
+                        Column(Modifier.padding(Spacing.screenGutter).fillMaxWidth().groupSurface()) {
+                            val entry = libraryEntry
+                            if (entry == null) {
+                                GroupRow(
+                                    "Add to Library",
+                                    viewModel::addLibraryToErhu,
+                                    summary = "Show this server's music with your other songs",
+                                    icon = Icons.Default.LibraryAdd,
+                                )
+                            } else {
+                                val (folder, status) = entry
+                                GroupRow(
+                                    "In your Library",
+                                    { viewModel.syncLibraryNow(folder) },
+                                    summary = librarySummary(status),
+                                    icon = Icons.Default.LibraryAddCheck,
+                                    enabled = !status.running,
+                                )
+                                GroupDivider()
+                                GroupRow(
+                                    "Remove from Library",
+                                    { viewModel.removeLibraryFromErhu(folder) },
+                                    summary = "The server is not changed",
+                                    icon = Icons.Default.RemoveCircleOutline,
+                                )
+                            }
+                        }
+                    }
+                }
             }
             if (state.loading) {
                 item(key = "loading") { ProgressBar(Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.lg)) }

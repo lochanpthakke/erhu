@@ -71,6 +71,8 @@ class RemoteLibraryRepository
                             mimeType = it.mimeType,
                             artworkKey = it.artworkKey,
                             isFavorite = it.isFavorite,
+                            genre = it.genre,
+                            year = it.year,
                             updatedAt = now,
                         )
                     },

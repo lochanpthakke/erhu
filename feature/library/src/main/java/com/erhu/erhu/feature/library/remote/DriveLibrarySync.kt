@@ -31,6 +31,7 @@ import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.database.repository.RemoteLibraryRepository
 import com.erhu.erhu.core.model.RemoteAccessException
 import com.erhu.erhu.core.model.RemoteProvider
+import com.erhu.erhu.core.model.RemoteTrack
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.model.remote
 import com.erhu.erhu.core.network.remote.drive.DriveClient
@@ -84,6 +85,8 @@ class DriveLibrarySync
         private val dispatchers: DispatcherProvider,
         private val metadata: MetadataRepository,
         private val theme: ThemeRepository,
+        private val subsonic: com.erhu.erhu.core.network.remote.subsonic.SubsonicClient,
+        private val subsonicConnections: com.erhu.erhu.core.network.remote.subsonic.SubsonicConnections,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + dispatchers.io)
         private val lock = Mutex()
@@ -174,16 +177,16 @@ class DriveLibrarySync
         @Suppress("TooGenericExceptionCaught")
         private suspend fun sync(folder: RemoteLibraryFolderEntity) =
             lock.withLock {
-                val source = repository.getSource(folder.sourceId)?.takeIf { it.provider == RemoteProvider.GOOGLE_DRIVE } ?: return@withLock
+                val source = repository.getSource(folder.sourceId) ?: return@withLock
                 set(folder.id) { FolderSyncStatus(running = true) }
                 try {
-                    val found = list(folder)
+                    val found = if (source.provider == RemoteProvider.SUBSONIC) listServer(folder) else list(folder).map { (item, parent) -> item.toTrack() to parent }
                     set(folder.id) { it.copy(found = found.size) }
-                    val songs = repository.toSongs(source, found.map { it.first.toTrack() })
+                    val songs = repository.toSongs(source, found.map { it.first })
                     repository.setLibraryFolderTracks(folder.id, songs.zip(found).associate { (song, item) -> song.id to item.second })
                     // Shown at once by file name; the tag pass below fills in titles, artists, albums and covers.
                     library.requestRescanAfterChange()
-                    readTags(folder, songs)
+                    readTags(folder, songs, readsFiles = source.provider == RemoteProvider.GOOGLE_DRIVE)
                     set(folder.id) { it.copy(running = false) }
                 } catch (e: CancellationException) {
                     throw e
@@ -212,6 +215,24 @@ class DriveLibrarySync
                 } while (pageToken != null)
             }
             return files.distinctBy { it.first.id }
+        }
+
+        /**
+         * Every song of a Subsonic/Navidrome server (the whole library is its one "folder"), album by
+         * album, each paired with its album id: albums then group as on the server.
+         */
+        private suspend fun listServer(folder: RemoteLibraryFolderEntity): List<Pair<RemoteTrack, String>> {
+            val connection = withContext(dispatchers.io) { subsonicConnections.connection(folder.sourceId) }
+            val tracks = mutableListOf<Pair<RemoteTrack, String>>()
+            var offset = 0
+            while (tracks.size < MAX_FILES) {
+                val albums = subsonic.albums(connection, offset, SERVER_PAGE)
+                if (albums.isEmpty()) break
+                albums.forEach { album -> subsonic.albumTracks(connection, album.id).forEach { tracks += it to album.id } }
+                offset += albums.size
+            }
+            set(folder.id) { it.copy(found = tracks.size) }
+            return tracks.distinctBy { it.first.remoteId }
         }
 
         /** A token Google rejects is dropped and asked for once more. */
@@ -246,13 +267,15 @@ class DriveLibrarySync
         private suspend fun readTags(
             folder: RemoteLibraryFolderEntity,
             songs: List<Song>,
+            readsFiles: Boolean,
         ) {
             val stored = repository.getTracks(songs.map { it.id })
             var sinceRescan = 0
             songs.forEach { listed ->
                 val fileId = listed.remote?.remoteId ?: return@forEach
                 val row = stored[listed.id]
-                val needsFile = listed.durationMs == 0L || tags.cachedCover(folder.sourceId, fileId) == null || (row?.detailsVersion ?: 0) < RemoteDetails.VERSION
+                // A Subsonic server already reports tags and serves covers: only Drive files are read.
+                val needsFile = readsFiles && listed.durationMs == 0L || tags.cachedCover(folder.sourceId, fileId) == null || (row?.detailsVersion ?: 0) < RemoteDetails.VERSION
                 val needsDetails = (row?.detailsVersion ?: 0) < RemoteDetails.VERSION
                 if (!needsFile && !needsDetails) return@forEach
                 var song = listed
@@ -332,6 +355,10 @@ class DriveLibrarySync
             const val MAX_DEPTH = 8
             const val MAX_FILES = 5_000
             const val RESCAN_EVERY = 40
+            const val SERVER_PAGE = 100
+
+            /** The folder id that stands for a Subsonic server's whole library. */
+            const val WHOLE_SERVER = "@library"
             const val ONLINE_GAP_MS = 1_100L
             val YEARS = 1900..2099
         }
@@ -381,7 +408,7 @@ class DriveLibrarySyncWorker
                 NotificationCompat
                     .Builder(applicationContext, CHANNEL)
                     .setSmallIcon(android.R.drawable.stat_notify_sync)
-                    .setContentTitle("Syncing Google Drive music")
+                    .setContentTitle("Syncing remote music")
                     .setContentText(if (found == 0) "Looking for songs..." else "$read of $found songs read")
                     .setProgress(found, read, found == 0)
                     .setOngoing(true)

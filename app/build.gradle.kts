@@ -45,6 +45,24 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Only the languages erhu is translated into (res/xml/locales_config.xml). Libraries ship strings for
+    // ~80 more, which only grew resources.arsc: in those languages erhu's own text is English anyway.
+    androidResources {
+        localeFilters +=
+            listOf(
+                "en", "ar", "de", "es", "fr", "in", "id", "it", "ja", "ko", "nl", "pl",
+                "pt", "pt-rBR", "ro", "ru", "sv", "th", "tr", "uk", "vi", "zh-rCN",
+            )
+    }
+
+    packaging {
+        jniLibs {
+            // MediaPipe tasks-text also ships its text-generation runtime (15.6 MB per ABI), loaded only by
+            // TextProofreader and TextSummarizer. VYBE's TextEmbedder loads libmediapipe_tasks_jni (kept).
+            excludes += "**/libmediapipe_tasks_textgenai_jni.so"
+        }
+    }
+
     val keystorePropertiesFile = rootProject.file("keystore.properties")
     val hasReleaseKeystore = keystorePropertiesFile.exists()
 

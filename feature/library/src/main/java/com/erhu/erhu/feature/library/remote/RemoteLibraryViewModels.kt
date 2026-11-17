@@ -304,7 +304,29 @@ class RemoteBrowseViewModel
         private val favorites: RemoteFavorites,
         private val playback: PlaybackRepository,
         private val dispatchers: DispatcherProvider,
+        private val librarySync: DriveLibrarySync,
     ) : ViewModel() {
+        private val shownSource = MutableStateFlow(-1L)
+
+        /** This server's whole library when it is in erhu's Library, with what its sync is doing. */
+        val libraryEntry =
+            kotlinx.coroutines.flow
+                .combine(librarySync.folders, librarySync.status, shownSource) { folders, status, source ->
+                    folders.firstOrNull { it.sourceId == source }?.let { it to (status[it.id] ?: FolderSyncStatus()) }
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+
+        fun addLibraryToErhu() {
+            val id = shownSource.value.takeIf { it > 0 } ?: return
+            viewModelScope.launch {
+                val name = repository.getSource(id)?.name ?: "Server library"
+                librarySync.add(id, DriveLibrarySync.WHOLE_SERVER, null, name)
+            }
+        }
+
+        fun syncLibraryNow(folder: com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) = librarySync.syncNow(folder)
+
+        fun removeLibraryFromErhu(folder: com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) = librarySync.remove(folder)
+
         private val _state = MutableStateFlow(RemotePageState())
         val state: StateFlow<RemotePageState> = _state.asStateFlow()
 
@@ -325,6 +347,7 @@ class RemoteBrowseViewModel
             kind: RemotePageKind,
             itemId: String,
         ) {
+            shownSource.value = sourceId
             if (started) return
             started = true
             this.sourceId = sourceId

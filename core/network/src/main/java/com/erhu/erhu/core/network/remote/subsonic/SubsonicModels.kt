@@ -152,6 +152,8 @@ internal class SongDto(
     /** A timestamp when the user starred the song; absent otherwise. */
     val starred: String? = null,
     val isDir: Boolean = false,
+    val genre: String? = null,
+    val year: Int = 0,
 ) {
     fun toModel() =
         RemoteTrack(
@@ -165,6 +167,8 @@ internal class SongDto(
             mimeType = contentType?.takeIf { it.isNotBlank() },
             artworkKey = coverArt?.takeIf { it.isNotBlank() },
             isFavorite = !starred.isNullOrBlank(),
+            genre = genre?.trim()?.takeIf { it.isNotEmpty() },
+            year = year.takeIf { it in 1900..2099 } ?: 0,
         )
 
     private companion object {
