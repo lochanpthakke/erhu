@@ -49,7 +49,7 @@ fun LibraryBottomChrome(
     searching: Boolean,
     miniPlayer: @Composable (compact: () -> Float) -> Unit,
     modifier: Modifier = Modifier,
-    defaultStartSection: LibrarySection = LibrarySection.TRACKS,
+    quickAccess: List<String> = emptyList(),
     hasCurrentSong: Boolean = true,
     onShufflePlayLibrary: () -> Unit = {},
 ) {
@@ -70,7 +70,7 @@ fun LibraryBottomChrome(
                     LibraryNavigationBar(
                         selected = selected,
                         onSelect = onSelect,
-                        defaultStartSection = defaultStartSection,
+                        quickAccess = quickAccess,
                         searching = searching,
                         compact = compact,
                         onExpand = onExpand,

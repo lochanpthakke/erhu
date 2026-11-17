@@ -2,6 +2,11 @@ package com.erhu.erhu.feature.library.components
 
 import android.text.format.Formatter
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,10 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalConfiguration
@@ -76,11 +83,14 @@ import com.erhu.erhu.core.model.AnimatedArtOrientation
 import com.erhu.erhu.core.model.ArtworkCompressionState
 import com.erhu.erhu.feature.library.LiveCoverFailureKind
 import com.erhu.erhu.feature.library.LiveCoverUi
+import com.erhu.erhu.feature.library.R
 import com.erhu.erhu.core.common.R as CommonR
 
 private val POPUP_MAX_WIDTH = 300.dp
 private val POPUP_MARGIN = 16.dp
 private val THUMBNAIL_SIZE = 64.dp
+private const val SEARCH_FILL_DURATION_MS = 1200
+private const val SEARCH_UNFILLED_ALPHA = 0.4f
 
 private enum class BitrateTier { LOW, MEDIUM, HIGH }
 
@@ -190,6 +200,7 @@ private fun LiveCoverButton(
                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             is LiveCoverUi.Saved ->
                 Icon(Icons.Filled.DownloadDone, contentDescription = stringResource(CommonR.string.live_cover_cd_saved))
+            LiveCoverUi.Searching -> LiveCoverSearchingIcon()
             is LiveCoverUi.RateLimited ->
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -206,6 +217,29 @@ private fun LiveCoverButton(
                 }
             else -> Icon(DownloadArrowBarIcon, contentDescription = stringResource(CommonR.string.live_cover_cd_download))
         }
+    }
+}
+
+@Composable
+private fun LiveCoverSearchingIcon() {
+    val transition = rememberInfiniteTransition(label = "liveCoverSearch")
+    val fill by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(SEARCH_FILL_DURATION_MS, easing = LinearEasing)),
+        label = "downloadIconFill",
+    )
+    val color = MaterialTheme.colorScheme.onSurface
+    Box(contentAlignment = Alignment.Center) {
+        Icon(DownloadArrowBarIcon, contentDescription = null, tint = color.copy(alpha = SEARCH_UNFILLED_ALPHA))
+        Icon(
+            DownloadArrowBarIcon,
+            contentDescription = stringResource(R.string.live_cover_searching),
+            tint = color,
+            modifier = Modifier.drawWithContent {
+                clipRect(bottom = size.height * fill) { this@drawWithContent.drawContent() }
+            },
+        )
     }
 }
 
@@ -228,7 +262,7 @@ private fun LiveCoverCard(
             is LiveCoverUi.Offer -> state.offer
             is LiveCoverUi.Downloading -> state.offer
             is LiveCoverUi.Failed -> state.offer
-            LiveCoverUi.Hidden, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
+            LiveCoverUi.Hidden, LiveCoverUi.Searching, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
         }
     val variants = offer?.variants.orEmpty()
 
@@ -521,7 +555,7 @@ private fun LiveCoverActions(
                     } ?: state.message
                 Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
-        LiveCoverUi.Hidden -> Unit
+        LiveCoverUi.Hidden, LiveCoverUi.Searching -> Unit
     }
 }
 
@@ -563,6 +597,7 @@ private fun details(state: LiveCoverUi): String {
             is LiveCoverUi.Downloading -> offerParts(state.offer, size)
             is LiveCoverUi.Failed -> offerParts(state.offer, size)
             is LiveCoverUi.RateLimited -> listOf(stringResource(CommonR.string.live_cover_rate_limited))
+            LiveCoverUi.Searching -> listOf(stringResource(R.string.live_cover_searching))
             LiveCoverUi.Hidden -> emptyList()
         }
     return (listOf(stringResource(CommonR.string.live_cover_source_apple_music)) + parts).joinToString(" · ")

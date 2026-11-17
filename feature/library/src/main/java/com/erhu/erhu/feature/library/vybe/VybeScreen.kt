@@ -158,7 +158,7 @@ fun VybeScreen(
                     keyboardActions = KeyboardActions(onSearch = { submit(text) }),
                 )
                 Spacer(Modifier.height(Spacing.sm))
-                StatusLine(status, timings, onRetry = viewModel::start, onCancel = viewModel::cancelDownload)
+                StatusLine(status, timings, onRetry = viewModel::downloadModel, onCancel = viewModel::cancelDownload)
                 message?.let {
                     Text(it, style = TextStyles.metadata, color = MaterialTheme.colorScheme.primary)
                     LaunchedEffect(it) {

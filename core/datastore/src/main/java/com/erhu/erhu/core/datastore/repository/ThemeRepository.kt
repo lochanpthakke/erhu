@@ -8,6 +8,13 @@ import com.erhu.erhu.core.designsystem.theme.ThemeManifest
 import kotlinx.coroutines.flow.StateFlow
 import java.io.InputStream
 
+data class NavigationSetup(
+    val introductionCompleted: Boolean,
+    val shortcuts: List<String>,
+    val vybeEnabled: Boolean,
+    val defaultStartSection: String,
+)
+
 interface ThemeRepository {
     /**
      * The resolved app theme. For System Default this is Default Dark (no device
@@ -37,6 +44,10 @@ interface ThemeRepository {
 
     /** Null while loading; absent/false means the introduction has not been completed. */
     val onboardingCompleted: StateFlow<Boolean?>
+
+    val navigationSetup: StateFlow<NavigationSetup?>
+
+    suspend fun saveNavigationQuickAccess(sections: List<String>, completeIntroduction: Boolean): AppResult<Unit>
 
     suspend fun completeOnboarding(): AppResult<Unit>
 

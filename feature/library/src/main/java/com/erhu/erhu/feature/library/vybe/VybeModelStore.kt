@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.feature.library.R
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -55,6 +56,7 @@ class VybeModelStore
             val manager = WorkManager.getInstance(context)
             val request =
                 OneTimeWorkRequestBuilder<VybeModelWorker>()
+                    .setInputData(workDataOf(USER_REQUESTED to true))
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                     .setBackoffCriteria(BackoffPolicy.LINEAR, MODEL_RETRY_SECONDS, TimeUnit.SECONDS)
                     .build()
@@ -98,7 +100,8 @@ class VybeModelStore
         }
 
         companion object {
-            const val WORK_NAME = "vybe-exact-model"
+            const val WORK_NAME = "vybe-exact-model-manual"
+            const val USER_REQUESTED = "user_requested"
             const val ASSET = "vybe-embeddinggemma-300m-int4int8.zip"
 
             // Updated to the release being prepared before publication; never an expiring CDN URL.

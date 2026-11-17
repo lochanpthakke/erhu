@@ -6,6 +6,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class IntroductionPagesTest {
+    @Test fun initialSetupOffersQuickAccessImmediatelyAfterVybe() {
+        for (enabled in listOf(false, true)) {
+            val pages = introductionPages(enabled, widgetsAvailable = false, initialSetup = true)
+            assertEquals(IntroductionPage.QUICK_ACCESS, pages[pages.indexOf(IntroductionPage.VYBE) + 1])
+        }
+    }
+
     @Test fun allAvailableFeaturesHaveThirteenPagesWithBookends() {
         val pages = introductionPages(true, true)
         assertEquals(13, pages.size)

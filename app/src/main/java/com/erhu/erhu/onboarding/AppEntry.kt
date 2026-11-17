@@ -21,28 +21,30 @@ import com.erhu.erhu.findActivity
 /** Wait for persisted completion before composing either navigation tree. Playback remains independent. */
 @Composable
 fun AppEntry(viewModel: ThemeViewModel = hiltViewModel()) {
-    val completed by viewModel.onboardingCompleted.collectAsState()
-    val vybeEnabled by viewModel.vybeEnabled.collectAsState()
+    val persistedSetup by viewModel.navigationSetup.collectAsState()
+    val setup = persistedSetup
     val glassEffectEnabled by viewModel.glassEffectEnabled.collectAsState()
     var startAtHome by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
-    when (completed) {
-        true ->
+    when {
+        setup == null -> Box(Modifier.fillMaxSize().background(Color(0xff101112)))
+        setup.introductionCompleted && setup.shortcuts.isNotEmpty() ->
             com.erhu.erhu.announcements.AnnouncementHost { openAnnouncements ->
                 MainScaffold(startAtHome = startAtHome, onOpenAnnouncements = openAnnouncements)
             }
-        false ->
+        else ->
             OnboardingScreen(
-                vybeEnabled = vybeEnabled == true,
+                vybeEnabled = setup.vybeEnabled,
                 onVybeEnabledChange = viewModel::setVybeEnabled,
                 glassEffectEnabled = glassEffectEnabled,
                 onGlassEffectEnabledChange = viewModel::setGlassEffectEnabled,
-                onFinish = {
-                    startAtHome = true
-                    viewModel.completeOnboarding() is AppResult.Success
-                },
                 onExit = { context.findActivity()?.finish() },
+                quickAccessOnly = setup.introductionCompleted,
+                legacyStartSection = setup.defaultStartSection,
+                onConfirmShortcuts = { shortcuts ->
+                    startAtHome = !setup.introductionCompleted
+                    viewModel.saveNavigationQuickAccess(shortcuts, completeIntroduction = !setup.introductionCompleted) is AppResult.Success
+                },
             )
-        null -> Box(Modifier.fillMaxSize().background(Color(0xff101112)))
     }
 }

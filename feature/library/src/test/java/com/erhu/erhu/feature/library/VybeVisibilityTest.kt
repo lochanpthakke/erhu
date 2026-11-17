@@ -8,21 +8,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VybeVisibilityTest {
-    @Test fun enabledNavigationKeepsAllExistingOrders() {
-        for (start in LibrarySection.entries) {
-            val sections = getOrderedSections(start, true)
-            assertEquals(start, sections.first())
-            assertEquals(4, sections.size)
-            assertEquals(LibrarySection.entries.toSet(), sections.toSet())
-        }
+    @Test fun enabledNavigationPinsHomeAndPreservesShortcutOrder() {
+        val sections = navigationQuickAccess(listOf("ARTISTS", "TRACKS", "ALBUMS", "VYBE", "LIBRARY"), true)
+        assertEquals(listOf(LibrarySection.TRACKS, LibrarySection.ARTISTS, LibrarySection.ALBUMS, LibrarySection.VYBE), sections)
     }
-    @Test fun hiddenNavigationHasThreeSlotsAndSafeRestoredSelection() {
-        for (start in LibrarySection.entries) {
-            val sections = getOrderedSections(start, false)
-            assertEquals(3, sections.size)
-            assertFalse(LibrarySection.VYBE in sections)
-            assertTrue(start.visibleWithVybe(false) in sections)
-        }
+    @Test fun hiddenVybeCompactsNavigationAndHasSafeRestoredSelection() {
+        val sections = navigationQuickAccess(listOf("TRACKS", "ARTISTS", "VYBE", "ALBUMS"), false)
+        assertEquals(listOf(LibrarySection.TRACKS, LibrarySection.ARTISTS, LibrarySection.ALBUMS), sections)
         assertEquals(LibrarySection.TRACKS, LibrarySection.VYBE.visibleWithVybe(false))
         assertEquals(LibrarySection.VYBE, LibrarySection.VYBE.visibleWithVybe(true))
     }

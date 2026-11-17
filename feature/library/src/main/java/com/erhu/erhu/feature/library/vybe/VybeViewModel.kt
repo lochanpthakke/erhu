@@ -117,6 +117,8 @@ class VybeViewModel
         /** Loads the model and indexes, if not already (VYBE was opened). */
         fun start() = engine.start()
 
+        fun downloadModel() = engine.start(downloadRequested = true)
+
         fun setVisible(visible: Boolean) = engine.setScreenVisible(visible)
 
         fun cancelDownload() = engine.cancelDownload()

@@ -324,8 +324,8 @@ fun LibraryScreen(
                                     bottomInset = scroll.contentBottom,
                                     onAlbumClick = onOpenAlbum,
                                 )
-                            LibrarySection.LIBRARY ->
-                                if (activeShelf == null) {
+                            LibrarySection.LIBRARY, LibrarySection.ARTISTS ->
+                                if (activeSection == LibrarySection.LIBRARY && activeShelf == null) {
                                     LibraryOverview(
                                         playlists = playlists,
                                         favoriteSongs = favoriteSongs,
@@ -348,7 +348,7 @@ fun LibraryScreen(
                                     )
                                 } else {
                                     LibraryHub(
-                                        shelf = activeShelf,
+                                        shelf = activeShelf ?: LibraryShelf.ARTISTS,
                                         playlists = playlists,
                                         favoriteSongs = favoriteSongs,
                                         artistArtwork = artistArtwork,

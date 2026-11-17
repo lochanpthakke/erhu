@@ -26,8 +26,10 @@ enum class LiveCoverFailureKind {
 
 /** What an album page shows for the album's live cover (see [LiveCoverViewModel]). */
 sealed interface LiveCoverUi {
-    /** Nothing: still checking, no live cover, or the check failed (tried again on the next visit). */
+    /** No live cover, or the check failed (tried again on the next visit). */
     data object Hidden : LiveCoverUi
+
+    data object Searching : LiveCoverUi
 
     data class Offer(
         val offer: LiveCoverCheck.Downloadable,
@@ -79,6 +81,7 @@ class LiveCoverViewModel
         fun bind(album: Album) {
             if (this.album?.id == album.id) return
             this.album = album
+            _state.value = LiveCoverUi.Searching
             compressionObservation?.cancel()
             compressionObservation =
                 viewModelScope.launch {
@@ -227,7 +230,7 @@ class LiveCoverViewModel
                 is LiveCoverUi.Offer -> state.offer
                 is LiveCoverUi.Downloading -> state.offer
                 is LiveCoverUi.Failed -> state.offer
-                LiveCoverUi.Hidden, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
+                LiveCoverUi.Hidden, LiveCoverUi.Searching, is LiveCoverUi.Saved, is LiveCoverUi.RateLimited -> null
             }
     }
 

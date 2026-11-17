@@ -81,6 +81,33 @@ class ThemeRepositoryImpl
                 .map { it.onboardingCompleted }
                 .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
 
+        override val navigationSetup: StateFlow<NavigationSetup?> =
+            dataStore.data
+                .map {
+                    NavigationSetup(
+                        introductionCompleted = it.onboardingCompleted,
+                        shortcuts = it.navigationQuickAccessList.toList(),
+                        vybeEnabled = it.vybeEnabledOrDefault(),
+                        defaultStartSection = it.defaultStartSection,
+                    )
+                }
+                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+
+        override suspend fun saveNavigationQuickAccess(
+            sections: List<String>,
+            completeIntroduction: Boolean,
+        ): AppResult<Unit> =
+            appResultOf {
+                dataStore.updateData { current ->
+                    current.toBuilder()
+                        .clearNavigationQuickAccess()
+                        .addAllNavigationQuickAccess(sections)
+                        .setOnboardingCompleted(current.onboardingCompleted || completeIntroduction)
+                        .build()
+                }
+                Unit
+            }
+
         override suspend fun completeOnboarding(): AppResult<Unit> =
             appResultOf {
                 dataStore.updateData { it.toBuilder().setOnboardingCompleted(true).build() }

@@ -80,6 +80,8 @@ import com.erhu.erhu.R
 import com.erhu.erhu.audioPermission
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.foundation.Motion
+import com.erhu.erhu.feature.library.LibrarySection
+import com.erhu.erhu.feature.library.navigationQuickAccess
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.findActivity
 import kotlinx.coroutines.launch
@@ -95,11 +97,14 @@ private val IntroductionBackground = Color(0xff0b0e11)
 fun OnboardingScreen(
     vybeEnabled: Boolean,
     onVybeEnabledChange: (Boolean) -> Unit,
-    onFinish: suspend () -> Boolean,
+    onFinish: suspend () -> Boolean = { false },
     onExit: () -> Unit,
     glassEffectEnabled: Boolean,
     onGlassEffectEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    quickAccessOnly: Boolean = false,
+    legacyStartSection: String = "",
+    onConfirmShortcuts: (suspend (List<String>) -> Boolean)? = null,
 ) {
     val context = LocalContext.current
     DisposableEffect(context) {
@@ -158,7 +163,23 @@ fun OnboardingScreen(
                 available.containsAll(receivers)
             }.getOrDefault(false)
         }
-    val pages = remember(vybeEnabled, widgetsAvailable) { introductionPages(vybeEnabled, widgetsAvailable) }
+    val initialSetup = onConfirmShortcuts != null && !quickAccessOnly
+    val pages =
+        remember(vybeEnabled, widgetsAvailable, quickAccessOnly, initialSetup) {
+            if (quickAccessOnly) listOf(IntroductionPage.QUICK_ACCESS) else introductionPages(vybeEnabled, widgetsAvailable, initialSetup)
+        }
+    var shortcutDraft by rememberSaveable {
+        val initial =
+            if (quickAccessOnly) {
+                val legacy = navigationQuickAccess(emptyList(), vybeEnabled).map { it.name }
+                val start = legacy.firstOrNull { it.equals(legacyStartSection, ignoreCase = true) }
+                navigationQuickAccess(listOfNotNull(start) + legacy, vybeEnabled)
+            } else {
+                listOf(LibrarySection.TRACKS)
+            }
+        mutableStateOf(ArrayList(initial.map { it.name }))
+    }
+    val shortcuts = navigationQuickAccess(shortcutDraft, vybeEnabled)
     val initialLanguageTag =
         remember(context) {
             AppLocaleManager.selectedLanguageTag(context)
@@ -168,12 +189,14 @@ fun OnboardingScreen(
     var finishing by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val finish: () -> Unit = {
+    fun finish(skip: Boolean = false) {
         if (!finishing) {
             finishing = true
             saveError = false
             scope.launch {
-                if (!onFinish()) {
+                val selection = if (skip && shortcutDraft.size == 1) navigationQuickAccess(emptyList(), vybeEnabled) else shortcuts
+                val confirmed = onConfirmShortcuts?.invoke(selection.map { it.name }) ?: onFinish()
+                if (!confirmed) {
                     finishing = false
                     saveError = true
                 }
@@ -241,7 +264,9 @@ fun OnboardingScreen(
                                 Modifier.width(82.dp).height(32.dp),
                             )
                         }
-                        TextButton(onClick = finish, enabled = !finishing) { Text(stringResource(CommonR.string.action_skip)) }
+                        if (!quickAccessOnly) {
+                            TextButton(onClick = { finish(skip = true) }, enabled = !finishing) { Text(stringResource(CommonR.string.action_skip)) }
+                        }
                     }
                     HorizontalPager(
                         state = pager,
@@ -250,7 +275,18 @@ fun OnboardingScreen(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     ) { index ->
                         val page = pages[index]
-                        IntroductionContent(
+                        if (page == IntroductionPage.QUICK_ACCESS) {
+                            NavigationQuickAccessPage(
+                                selected = shortcuts,
+                                vybeEnabled = vybeEnabled,
+                                motionEnabled = motionEnabled,
+                                onToggle = { section ->
+                                    toggleQuickAccess(shortcuts, section)?.let { updated ->
+                                        shortcutDraft = ArrayList(updated.map { it.name })
+                                    }
+                                },
+                            )
+                        } else IntroductionContent(
                             page = page,
                             active = resumed && pager.settledPage == index && !pager.isScrollInProgress,
                             motionEnabled = motionEnabled,
@@ -272,6 +308,7 @@ fun OnboardingScreen(
                             },
                             vybeEnabled = vybeEnabled,
                             onVybeEnabledChange = onVybeEnabledChange,
+                            showReadyVybeChoice = !initialSetup,
                             glassEffectEnabled = glassEffectEnabled,
                             onGlassEffectEnabledChange = onGlassEffectEnabledChange,
                             selectedLanguageTag = selectedLanguageTag,
@@ -346,6 +383,7 @@ fun OnboardingScreen(
                                         stringResource(
                                             when {
                                                 finishing -> CommonR.string.action_saving
+                                                quickAccessOnly -> R.string.onboarding_quick_access_confirm
                                                 pager.settledPage == pages.lastIndex -> CommonR.string.onboarding_start_listening
                                                 pager.settledPage == 0 && pages.firstOrNull() == IntroductionPage.LANGUAGE ->
                                                     CommonR.string.action_continue
@@ -379,6 +417,7 @@ private fun IntroductionContent(
     onVybeEnabledChange: (Boolean) -> Unit,
     glassEffectEnabled: Boolean,
     onGlassEffectEnabledChange: (Boolean) -> Unit,
+    showReadyVybeChoice: Boolean,
     selectedLanguageTag: String?,
     onLanguageSelected: (String?) -> Unit,
 ) {
@@ -476,7 +515,7 @@ private fun IntroductionContent(
                 }
             }
         }
-        if (page == IntroductionPage.VYBE || page == IntroductionPage.READY) {
+        if (page == IntroductionPage.VYBE || (page == IntroductionPage.READY && showReadyVybeChoice)) {
             SettingsSwitchRow(
                 title = stringResource(CommonR.string.onboarding_vybe_title),
                 summary = stringResource(CommonR.string.onboarding_vybe_summary),

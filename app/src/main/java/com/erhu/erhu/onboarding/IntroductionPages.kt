@@ -19,6 +19,7 @@ internal enum class IntroductionPage(
     SOUND(CommonR.string.onboarding_page_sound_title, CommonR.string.onboarding_page_sound_desc),
     TRANSITIONS(CommonR.string.onboarding_page_transitions_title, CommonR.string.onboarding_page_transitions_desc),
     VYBE(CommonR.string.onboarding_page_vybe_title, CommonR.string.onboarding_page_vybe_desc),
+    QUICK_ACCESS(R.string.onboarding_quick_access_title, R.string.onboarding_quick_access_description),
     WIDGETS(CommonR.string.onboarding_page_widgets_title, CommonR.string.onboarding_page_widgets_desc),
     READY(CommonR.string.onboarding_page_ready_title, CommonR.string.onboarding_page_ready_desc),
 }
@@ -26,9 +27,12 @@ internal enum class IntroductionPage(
 internal fun introductionPages(
     vybeEnabled: Boolean,
     widgetsAvailable: Boolean,
+    initialSetup: Boolean = false,
 ): List<IntroductionPage> =
     IntroductionPage.entries.filter {
-        (it != IntroductionPage.VYBE || vybeEnabled) && (it != IntroductionPage.WIDGETS || widgetsAvailable)
+        (it != IntroductionPage.VYBE || vybeEnabled || initialSetup) &&
+            (it != IntroductionPage.QUICK_ACCESS || initialSetup) &&
+            (it != IntroductionPage.WIDGETS || widgetsAvailable)
     }
 
 /** Keep identity across changing page counts and process restoration; hidden VYBE advances naturally. */
@@ -88,6 +92,7 @@ internal fun IntroductionPage.previews(): List<IntroductionPreview> =
                 IntroductionPreview(CommonR.string.onboarding_preview_volume_panel, R.drawable.onb_transition_volume),
             )
         IntroductionPage.LANGUAGE,
+        IntroductionPage.QUICK_ACCESS,
         IntroductionPage.READY,
         -> emptyList()
     }
