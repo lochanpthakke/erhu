@@ -24,6 +24,9 @@ internal fun planLibrarySync(
     val upserts =
         scanned.map { fresh ->
             val old = existingById[fresh.id] ?: return@map fresh
+            // A remote track has no file to compare: its genre, year and lyrics come from remote_tracks on
+            // every scan, so they must win over the stored row (which would otherwise keep them empty forever).
+            if (com.erhu.erhu.core.model.RemoteIds.isRemote(fresh.id)) return@map fresh.copy(isFavorite = old.isFavorite)
             val unchangedFile = old.dateModified == fresh.dateModified && old.filePath == fresh.filePath
             if (unchangedFile) {
                 fresh.copy(
