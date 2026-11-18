@@ -157,13 +157,17 @@ internal fun CarouselCard(
     customArtworkPath: String? = null,
     isCustomAnimated: Boolean = false,
 ) {
+    // Remembered per song: a new Room flow on every recomposition would restart both queries
+    // (and their invalidation observers) on each frame of a card transition.
     val artists by if (isCurrent && libraryRepository != null) {
-        libraryRepository.getArtistsForSong(track.id).collectAsState(initial = emptyList())
+        remember(libraryRepository, track.id) { libraryRepository.getArtistsForSong(track.id) }
+            .collectAsState(initial = emptyList())
     } else {
         remember { mutableStateOf(emptyList()) }
     }
     val albumId by if (isCurrent && libraryRepository != null) {
-        libraryRepository.getAlbumIdForSong(track.id).collectAsState(initial = null)
+        remember(libraryRepository, track.id) { libraryRepository.getAlbumIdForSong(track.id) }
+            .collectAsState(initial = null)
     } else {
         remember { mutableStateOf<Long?>(null) }
     }
