@@ -5,6 +5,8 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.OnConflictStrategy
+import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
 import com.erhu.erhu.core.database.entity.RemoteSourceEntity
 import com.erhu.erhu.core.database.entity.RemoteTrackEntity
 import com.erhu.erhu.core.model.RemoteIds
@@ -65,6 +67,13 @@ interface RemoteLibraryDao {
     @Query("SELECT is_favorite FROM remote_tracks WHERE id = :id")
     fun observeFavorite(id: Long): Flow<Boolean?>
 
+    /** The track's Library row (when its folder is in the Library) shows the same favourite. */
+    @Query("UPDATE songs SET is_favorite = :favorite WHERE id = :id")
+    suspend fun setLibraryFavorite(
+        id: Long,
+        favorite: Boolean,
+    )
+
     @Query("UPDATE remote_tracks SET is_favorite = :favorite WHERE id = :id")
     suspend fun setFavorite(
         id: Long,
@@ -76,6 +85,72 @@ interface RemoteLibraryDao {
         id: Long,
         unavailable: Boolean,
     )
+
+    @Query("SELECT * FROM remote_library_folders ORDER BY name")
+    fun observeLibraryFolders(): Flow<List<RemoteLibraryFolderEntity>>
+
+    @Query("SELECT * FROM remote_library_folders ORDER BY name")
+    suspend fun getLibraryFolders(): List<RemoteLibraryFolderEntity>
+
+    /** -1 when the folder is already in the Library. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertLibraryFolder(folder: RemoteLibraryFolderEntity): Long
+
+    @Query("SELECT * FROM remote_library_folders WHERE source_id = :sourceId AND folder_id = :folderId")
+    suspend fun findLibraryFolder(
+        sourceId: Long,
+        folderId: String,
+    ): RemoteLibraryFolderEntity?
+
+    @Query("UPDATE remote_library_folders SET synced_at = :at WHERE id = :id")
+    suspend fun setLibraryFolderSynced(
+        id: Long,
+        at: Long,
+    )
+
+    @Query("DELETE FROM remote_library_folders WHERE id = :id")
+    suspend fun deleteLibraryFolderRow(id: Long)
+
+    @Query("UPDATE remote_tracks SET library_folder_id = NULL WHERE library_folder_id = :folderId")
+    suspend fun clearLibraryFolder(folderId: Long)
+
+    /** The folder leaves the Library; its tracks stay known (queues, playlists) but are no longer listed. */
+    @Transaction
+    suspend fun deleteLibraryFolder(id: Long) {
+        clearLibraryFolder(id)
+        deleteLibraryFolderRow(id)
+    }
+
+    @Query("UPDATE remote_tracks SET library_folder_id = :folderId, parent_folder = :parent WHERE id = :id")
+    suspend fun putInLibraryFolder(
+        id: Long,
+        folderId: Long,
+        parent: String,
+    )
+
+    @Query("SELECT id FROM remote_tracks WHERE library_folder_id = :folderId")
+    suspend fun getLibraryFolderTrackIds(folderId: Long): List<Long>
+
+    @Query("UPDATE remote_tracks SET library_folder_id = NULL WHERE id IN (:ids)")
+    suspend fun removeFromLibrary(ids: List<Long>)
+
+    /** Every track a synced folder puts in the Library, for the library scan. */
+    @Query("SELECT * FROM remote_tracks WHERE library_folder_id IS NOT NULL AND is_unavailable = 0")
+    suspend fun getLibraryTracks(): List<RemoteTrackEntity>
+
+    /**
+     * Makes [tracks] (track id to the folder directly holding it) the whole content of [folderId]:
+     * tracks no longer found there leave the Library.
+     */
+    @Transaction
+    suspend fun replaceLibraryFolderTracks(
+        folderId: Long,
+        tracks: Map<Long, String>,
+    ) {
+        val gone = getLibraryFolderTrackIds(folderId).filterNot { it in tracks }
+        gone.chunked(LIBRARY_CHUNK).forEach { removeFromLibrary(it) }
+        tracks.forEach { (id, parent) -> putInLibraryFolder(id, folderId, parent) }
+    }
 
     /**
      * Stores what the provider says about each track and returns the rows in the same order. A
@@ -93,7 +168,7 @@ interface RemoteLibraryDao {
                     } else {
                         fresh.copy(id = known.id)
                     }
-                merged.also { updateTrack(it) }
+                merged.copy(libraryFolderId = known.libraryFolderId, parentFolder = known.parentFolder).also { updateTrack(it) }
             } else {
                 val id = insertTrack(fresh.copy(id = 0L))
                 // The id sequence is seeded when the table is created; anything lower could collide with a device file.
@@ -102,3 +177,6 @@ interface RemoteLibraryDao {
             }
         }
 }
+
+/** Stay well below SQLite's 999 bound-variable limit. */
+private const val LIBRARY_CHUNK = 500

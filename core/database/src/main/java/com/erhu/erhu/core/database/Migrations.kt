@@ -319,6 +319,30 @@ private val STATEMENTS_17_18 =
     )
 
 /**
+ * v18 -> v19: remote folders added to the Library. `remote_library_folders` lists them; each remote
+ * track remembers the synced folder that includes it and the folder directly holding it.
+ */
+@Suppress("MagicNumber") // schema version numbers
+val MIGRATION_18_19 =
+    object : Migration(18, 19) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            STATEMENTS_18_19.forEach(db::execSQL)
+        }
+    }
+
+private val STATEMENTS_18_19 =
+    listOf(
+        "ALTER TABLE `remote_tracks` ADD COLUMN `library_folder_id` INTEGER",
+        "ALTER TABLE `remote_tracks` ADD COLUMN `parent_folder` TEXT",
+        "CREATE TABLE IF NOT EXISTS `remote_library_folders` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`source_id` INTEGER NOT NULL, `folder_id` TEXT NOT NULL, `drive_id` TEXT, `name` TEXT NOT NULL, " +
+            "`added_at` INTEGER NOT NULL, `synced_at` INTEGER NOT NULL, " +
+            "FOREIGN KEY(`source_id`) REFERENCES `remote_sources`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "CREATE UNIQUE INDEX IF NOT EXISTS `index_remote_library_folders_source_id_folder_id` " +
+            "ON `remote_library_folders` (`source_id`, `folder_id`)",
+    )
+
+/**
  * Starts `remote_tracks` ids at RemoteIds.FIRST, far above any MediaStore id, wherever the table is
  * created empty: by the migration, on a fresh install, and after a destructive rebuild.
  */

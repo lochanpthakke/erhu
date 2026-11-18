@@ -26,6 +26,9 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material.icons.filled.LibraryAddCheck
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +85,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -138,7 +142,26 @@ class DriveBrowseViewModel
         private val favorites: RemoteFavorites,
         private val playback: PlaybackRepository,
         private val dispatchers: DispatcherProvider,
+        private val librarySync: DriveLibrarySync,
     ) : ViewModel() {
+        /** This account's folders that are in the Library, with what each sync is doing. */
+        private val shownSource = MutableStateFlow(-1L)
+
+        val libraryFolders =
+            combine(librarySync.folders, librarySync.status, shownSource) { folders, status, source ->
+                folders.filter { it.sourceId == source }.map { it to (status[it.id] ?: FolderSyncStatus()) }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        /** Adds the folder on screen (subfolders included) to the Library and starts syncing it. */
+        fun addToLibrary() {
+            val folder = _state.value.crumbs.lastOrNull() ?: return
+            librarySync.add(sourceId, folder.id, folder.driveId ?: _state.value.crumbs.firstNotNullOfOrNull { it.driveId }, folder.name)
+        }
+
+        fun syncNow(folder: com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) = librarySync.syncNow(folder)
+
+        fun removeFromLibrary(folder: com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) = librarySync.remove(folder)
+
         private val _state = MutableStateFlow(DriveBrowseState())
         val state: StateFlow<DriveBrowseState> = _state.asStateFlow()
 
@@ -159,6 +182,7 @@ class DriveBrowseViewModel
             if (started) return
             started = true
             this.sourceId = sourceId
+            shownSource.value = sourceId
             viewModelScope.launch {
                 source = repository.getSource(sourceId)
                 // Back where the user left off.
@@ -384,6 +408,7 @@ fun DriveBrowseScreen(
     LaunchedEffect(sourceId) { viewModel.start(sourceId) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val libraryFolders by viewModel.libraryFolders.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var consentLauncher: androidx.activity.result.ActivityResultLauncher<androidx.activity.result.IntentSenderRequest>? = null
     val consent =
@@ -421,6 +446,8 @@ fun DriveBrowseScreen(
         val listState = rememberLazyListState()
         CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) { ReportTitleScroll(listState) }
         val atTop = state.crumbs.isEmpty() && !state.searching
+        val shownFolder = state.crumbs.lastOrNull()?.takeIf { !state.searching && it.id != SHARED_WITH_ME && it.id != SHARED_DRIVES }
+        val synced = shownFolder?.let { shown -> libraryFolders.firstOrNull { it.first.folderId == shown.id } }
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().padding(scroll.container),
@@ -447,6 +474,36 @@ fun DriveBrowseScreen(
                             onSelect = { viewModel.setOrder(DriveOrder.entries[it]) },
                             modifier = Modifier.padding(horizontal = Spacing.screenGutter).padding(bottom = Spacing.sm),
                         )
+                    }
+                }
+            }
+            if (shownFolder != null) {
+                item(key = "library") {
+                    Column(Modifier.padding(horizontal = Spacing.screenGutter).padding(bottom = Spacing.sm).fillMaxWidth().groupSurface()) {
+                        if (synced == null) {
+                            GroupRow(
+                                "Add to Library",
+                                viewModel::addToLibrary,
+                                summary = "Show this folder's music, subfolders included, with your other songs",
+                                icon = Icons.Default.LibraryAdd,
+                            )
+                        } else {
+                            val (folder, status) = synced
+                            GroupRow(
+                                "In your Library",
+                                { viewModel.syncNow(folder) },
+                                summary = librarySummary(status),
+                                icon = Icons.Default.LibraryAddCheck,
+                                enabled = !status.running,
+                            )
+                            GroupDivider()
+                            GroupRow(
+                                "Remove from Library",
+                                { viewModel.removeFromLibrary(folder) },
+                                summary = "Drive is not changed",
+                                icon = Icons.Default.RemoveCircleOutline,
+                            )
+                        }
                     }
                 }
             }
@@ -555,3 +612,12 @@ private fun Breadcrumbs(
         }
     }
 }
+
+/** One line for a synced folder: progress while syncing, the failure, or how to sync again. */
+private fun librarySummary(status: FolderSyncStatus): String =
+    when {
+        status.running && status.found == 0 -> "Looking for music in Drive..."
+        status.running -> "Syncing: ${status.found} songs found, ${status.tagged} read"
+        status.message != null -> "Last sync failed: ${status.message}. Tap to try again"
+        else -> "Tap to sync now. It also syncs in the background every few hours"
+    }

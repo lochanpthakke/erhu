@@ -76,6 +76,12 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC, id ASC LIMIT :limit")
     fun observeFavoriteSongs(limit: Int): Flow<List<SongEntity>>
 
+    @Query("UPDATE remote_tracks SET is_favorite = :isFavorite WHERE id = :id")
+    suspend fun setRemoteFavorite(
+        id: Long,
+        isFavorite: Boolean,
+    )
+
     @Query("UPDATE songs SET is_favorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(
         id: Long,

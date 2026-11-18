@@ -1,6 +1,7 @@
 package com.erhu.erhu.core.database.repository
 
 import com.erhu.erhu.core.database.dao.RemoteLibraryDao
+import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
 import com.erhu.erhu.core.database.entity.RemoteSourceEntity
 import com.erhu.erhu.core.database.entity.RemoteTrackEntity
 import com.erhu.erhu.core.model.RemoteProvider
@@ -102,12 +103,44 @@ class RemoteLibraryRepository
             return updated
         }
 
+        /** Remote folders whose audio is shown in the Library. */
+        fun observeLibraryFolders(): Flow<List<RemoteLibraryFolderEntity>> = dao.observeLibraryFolders()
+
+        suspend fun getLibraryFolders(): List<RemoteLibraryFolderEntity> = dao.getLibraryFolders()
+
+        /** Adds [folderId] of [sourceId] to the Library and returns its row (the existing one when already added). */
+        suspend fun addLibraryFolder(
+            sourceId: Long,
+            folderId: String,
+            driveId: String?,
+            name: String,
+        ): RemoteLibraryFolderEntity {
+            dao.insertLibraryFolder(
+                RemoteLibraryFolderEntity(sourceId = sourceId, folderId = folderId, driveId = driveId, name = name, addedAt = timeSource.now()),
+            )
+            return checkNotNull(dao.findLibraryFolder(sourceId, folderId))
+        }
+
+        suspend fun removeLibraryFolder(id: Long) = dao.deleteLibraryFolder(id)
+
+        /** [tracks] (song id to the folder directly holding it) become the folder's whole Library content. */
+        suspend fun setLibraryFolderTracks(
+            folderId: Long,
+            tracks: Map<Long, String>,
+        ) {
+            dao.replaceLibraryFolderTracks(folderId, tracks)
+            dao.setLibraryFolderSynced(folderId, timeSource.now())
+        }
+
         fun observeIsFavorite(songId: Long): Flow<Boolean> = dao.observeFavorite(songId).map { it == true }
 
         suspend fun setFavorite(
             songId: Long,
             favorite: Boolean,
-        ) = dao.setFavorite(songId, favorite)
+        ) {
+            dao.setFavorite(songId, favorite)
+            dao.setLibraryFavorite(songId, favorite)
+        }
 
         suspend fun setUnavailable(
             songId: Long,

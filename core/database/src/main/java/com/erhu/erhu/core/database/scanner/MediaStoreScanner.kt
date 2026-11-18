@@ -15,6 +15,7 @@ import androidx.datastore.core.DataStore
 import com.erhu.erhu.core.common.logging.Logger
 import com.erhu.erhu.core.common.text.MojibakeText
 import com.erhu.erhu.core.database.dao.LibraryModelDao
+import com.erhu.erhu.core.database.dao.RemoteLibraryDao
 import com.erhu.erhu.core.database.entity.SongEntity
 import com.erhu.erhu.core.database.library.LibraryModelBuilder
 import com.erhu.erhu.core.database.library.RawTrack
@@ -41,6 +42,7 @@ class MediaStoreScanner
         private val dataStore: DataStore<PlaybackStateProto>,
         private val jaudioTaggerEnricher: JAudioTaggerEnricher,
         private val logger: Logger,
+        private val remoteLibraryDao: RemoteLibraryDao,
     ) {
         @Suppress(
             "DEPRECATION",
@@ -251,6 +253,26 @@ class MediaStoreScanner
                     }
                 }
 
+                // Remote folders added to the Library join the scan as tracks of their own, so albums,
+                // artists and the write below (which removes whatever a scan does not list) include them.
+                remoteLibraryDao.getLibraryTracks().forEach { track ->
+                    val song = track.toLibrarySong() ?: return@forEach
+                    if (!seenSongIds.add(song.id)) return@forEach
+                    rawTracks +=
+                        RawTrack(
+                            songId = song.id,
+                            title = song.title,
+                            rawArtist = track.artist,
+                            rawAlbumArtist = null,
+                            album = track.album,
+                            trackNumber = track.trackNumber,
+                            discNumber = track.discNumber,
+                            folder = "${track.provider}:${track.sourceId}:${track.parentFolder.orEmpty()}",
+                            isCompilation = false,
+                        )
+                    songs += song
+                }
+
                 val aliases = libraryModelDao.getAliases().associate { it.aliasKey to it.canonicalKey }
                 val artwork = libraryModelDao.getArtworkByKey().associate { it.artistKey to it.artworkUri }
                 val model = LibraryModelBuilder.build(rawTracks, aliases)
@@ -384,6 +406,33 @@ class MediaStoreScanner
             private val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
         }
     }
+
+/**
+ * A remote Library track as a `songs` row. It has no file: the stream and artwork URIs name the
+ * remote file, and it counts as enriched, so on-device tag reading never tries to open it.
+ */
+internal fun com.erhu.erhu.core.database.entity.RemoteTrackEntity.toLibrarySong(): SongEntity? {
+    val provider = com.erhu.erhu.core.model.RemoteProvider.fromKey(provider) ?: return null
+    return SongEntity(
+        id = id,
+        title = title.ifBlank { "Unknown Title" },
+        artist = artist.ifBlank { "Unknown Artist" },
+        album = album.ifBlank { "Unknown Album" },
+        artistId = 0L,
+        albumId = 0L,
+        durationMs = durationMs,
+        uri = com.erhu.erhu.core.model.RemoteRef(provider, sourceId, remoteId).streamUri(),
+        filePath = "",
+        trackNumber = trackNumber,
+        year = 0,
+        dateModified = 0L,
+        artworkUri = artworkKey?.let { com.erhu.erhu.core.model.RemoteRef.artworkUri(provider, sourceId, it) },
+        isEnriched = true,
+        discNumber = discNumber.coerceAtLeast(1),
+        isFavorite = isFavorite,
+        dateAddedMs = updatedAt,
+    )
+}
 
 /** MediaStore columns read by a scan; Album Artist and the compilation flag exist from API 30. */
 @SuppressLint("InlinedApi")
