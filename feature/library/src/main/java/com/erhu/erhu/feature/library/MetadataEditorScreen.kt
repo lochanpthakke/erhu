@@ -689,6 +689,7 @@ fun MetadataEditorScreen(
                         onClick = onNavigateToMetadataSettings,
                         horizontalPadding = 0.dp,
                     )
+                    UtilityInstructions(UtilityTool.TAGS)
                 }
             }
         }

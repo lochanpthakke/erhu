@@ -1,4 +1,4 @@
-package com.erhu.erhu.onboarding
+package com.erhu.erhu.feature.library
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
@@ -12,15 +12,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.ImageSearch
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,9 +33,23 @@ import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
-internal fun ToolGuideContent(
-    page: IntroductionPage,
-    guide: IntroductionToolGuide,
+internal fun UtilityInstructions(tool: UtilityTool) {
+    var expanded by rememberSaveable(tool.name) { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.utility_instructions))
+        }
+        if (expanded) {
+            val guide = remember(tool) { tool.toolGuide() }
+            ToolGuideContent(tool, guide)
+        }
+    }
+}
+
+@Composable
+private fun ToolGuideContent(
+    page: UtilityTool,
+    guide: UtilityGuide,
 ) {
     var showDetails by rememberSaveable(page.name) { mutableStateOf(false) }
     ToolGuideHeaderCard(page = page, entryPointRes = guide.entryPointRes)
@@ -74,7 +89,7 @@ internal fun ToolGuideContent(
 
 @Composable
 private fun ToolGuideHeaderCard(
-    page: IntroductionPage,
+    page: UtilityTool,
     entryPointRes: Int,
 ) {
     Surface(
@@ -89,9 +104,8 @@ private fun ToolGuideHeaderCard(
         ) {
             Icon(
                 when (page) {
-                    IntroductionPage.ARTWORK -> Icons.Outlined.ImageSearch
-                    IntroductionPage.TAGS -> Icons.Outlined.EditNote
-                    IntroductionPage.TRANSITIONS -> Icons.Outlined.Tune
+                    UtilityTool.ARTWORK -> Icons.Outlined.ImageSearch
+                    UtilityTool.TAGS -> Icons.Outlined.EditNote
                     else -> Icons.Outlined.Folder
                 },
                 contentDescription = null,

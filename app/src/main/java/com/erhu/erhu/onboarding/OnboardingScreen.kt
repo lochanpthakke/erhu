@@ -39,20 +39,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,14 +78,20 @@ import com.erhu.erhu.R
 import com.erhu.erhu.audioPermission
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.foundation.Motion
+import com.erhu.erhu.core.designsystem.theme.ErhuTheme
+import com.erhu.erhu.core.designsystem.theme.LocalGlassBackdrop
+import com.erhu.erhu.core.designsystem.theme.glassBackdropSource
+import com.erhu.erhu.core.designsystem.theme.rememberGlassBackdrop
 import com.erhu.erhu.feature.library.LibrarySection
 import com.erhu.erhu.feature.library.NavigationQuickAccessPicker
 import com.erhu.erhu.feature.library.navigationQuickAccess
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
+import com.erhu.erhu.feature.settings.theme.GlassIntensityControl
 import com.erhu.erhu.findActivity
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
 import com.erhu.erhu.core.common.R as CommonR
+import com.erhu.erhu.feature.library.R as LibraryR
 
 @Suppress("MagicNumber") // Onboarding palette, isolated from the app theme.
 private val IntroductionBackground = Color(0xff0b0e11)
@@ -106,6 +110,8 @@ fun OnboardingScreen(
     quickAccessOnly: Boolean = false,
     legacyStartSection: String = "",
     onConfirmShortcuts: (suspend (List<String>) -> Boolean)? = null,
+    glassIntensity: Float = 0.5f,
+    onGlassIntensityChange: (Float) -> Unit = {},
 ) {
     val context = LocalContext.current
     DisposableEffect(context) {
@@ -165,9 +171,10 @@ fun OnboardingScreen(
             }.getOrDefault(false)
         }
     val initialSetup = onConfirmShortcuts != null && !quickAccessOnly
+    val permissionRequired = initialSetup && !mediaGranted
     val pages =
         remember(vybeEnabled, widgetsAvailable, quickAccessOnly, initialSetup) {
-            if (quickAccessOnly) listOf(IntroductionPage.QUICK_ACCESS) else introductionPages(vybeEnabled, widgetsAvailable, initialSetup)
+            if (quickAccessOnly) listOf(IntroductionPage.QUICK_ACCESS) else introductionPages(vybeEnabled, initialSetup)
         }
     var shortcutDraft by rememberSaveable {
         val initial =
@@ -190,11 +197,19 @@ fun OnboardingScreen(
     var finishing by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
     fun finish(skip: Boolean = false) {
+        refreshPermission()
+        if (initialSetup && !permissionGranted()) return
         if (!finishing) {
             finishing = true
             saveError = false
             scope.launch {
+                refreshPermission()
+                if (initialSetup && !permissionGranted()) {
+                    finishing = false
+                    return@launch
+                }
                 val selection = if (skip && shortcutDraft.size == 1) navigationQuickAccess(emptyList(), vybeEnabled) else shortcuts
                 val confirmed = onConfirmShortcuts?.invoke(selection.map { it.name }) ?: onFinish()
                 if (!confirmed) {
@@ -218,189 +233,231 @@ fun OnboardingScreen(
             onSecondaryContainer = Color.White,
             outline = Color(0xff45494a),
         )
-    MaterialTheme(colorScheme = colors) {
-        Surface(color = IntroductionBackground, contentColor = colors.onSurface) {
-            // Recreate only when available page identities change, preserving the current page's identity.
-            key(pages) {
-                val pager = rememberPagerState(initialPage = restoredIntroductionPage(savedPage, pages), pageCount = { pages.size })
-                LaunchedEffect(pager) {
-                    snapshotFlow { pager.settledPage }.collect { savedPage = pages[it].name }
-                }
-                val previous: () -> Unit = {
-                    if (!finishing) {
-                        if (pager.targetPage == 0) {
-                            onExit()
-                        } else {
-                            scope.launch {
-                                pager.animateScrollToPage(
-                                    (pager.targetPage - 1).coerceAtLeast(0),
-                                    animationSpec = tween(Motion.CONTENT, easing = Motion.Standard),
-                                )
-                            }
-                        }
-                    }
-                }
-                BackHandler(onBack = previous)
-                var entered by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) { entered = true }
-                val entrance by animateFloatAsState(if (entered) 1f else 0f, tween(Motion.CONTENT), label = "introductionEntrance")
-                Column(
-                    modifier
-                        .fillMaxSize()
-                        .background(Brush.verticalGradient(listOf(IntroductionBackground, Color(0xff131a20), IntroductionBackground)))
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
-                        .graphicsLayer { alpha = entrance },
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Image(painterResource(R.drawable.erhu_logo), null, Modifier.size(32.dp))
-                            Image(
-                                painterResource(R.drawable.onb_wordmark),
-                                stringResource(R.string.app_name),
-                                Modifier.width(82.dp).height(32.dp),
-                            )
-                        }
-                        if (!quickAccessOnly) {
-                            TextButton(onClick = { finish(skip = true) }, enabled = !finishing) { Text(stringResource(CommonR.string.action_skip)) }
-                        }
-                    }
-                    HorizontalPager(
-                        state = pager,
-                        key = { pages[it].name },
-                        userScrollEnabled = !finishing,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                    ) { index ->
-                        val page = pages[index]
-                        if (page == IntroductionPage.QUICK_ACCESS) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                Text(
-                                    stringResource(page.titleRes),
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    modifier = Modifier.semantics { heading() },
-                                )
-                                NavigationQuickAccessPicker(
-                                    selected = shortcuts,
-                                    vybeEnabled = vybeEnabled,
-                                    onSelectionChange = { updated -> shortcutDraft = ArrayList(updated.map { it.name }) },
-                                    motionEnabled = motionEnabled,
-                                )
-                            }
-                        } else IntroductionContent(
-                            page = page,
-                            active = resumed && pager.settledPage == index && !pager.isScrollInProgress,
-                            motionEnabled = motionEnabled,
-                            pageOffset = { ((pager.currentPage - index) + pager.currentPageOffsetFraction).absoluteValue },
-                            mediaGranted = mediaGranted,
-                            requested = requested,
-                            permanentlyDenied = permanentlyDenied,
-                            onRequestPermission = {
-                                requested = true
-                                permissionLauncher.launch(permission)
-                            },
-                            onOpenSettings = {
-                                context.startActivity(
-                                    Intent(
-                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.fromParts("package", context.packageName, null),
-                                    ),
-                                )
-                            },
-                            vybeEnabled = vybeEnabled,
-                            onVybeEnabledChange = onVybeEnabledChange,
-                            showReadyVybeChoice = !initialSetup,
-                            glassEffectEnabled = glassEffectEnabled,
-                            onGlassEffectEnabledChange = onGlassEffectEnabledChange,
-                            selectedLanguageTag = selectedLanguageTag,
-                            onLanguageSelected = { tag ->
-                                selectedLanguageTag = tag
-                                AppLocaleManager.setLanguageTag(context, tag)
-                            },
+    OnboardingGlassEnvironment(glassEffectEnabled, glassIntensity) {
+        MaterialTheme(colorScheme = colors) {
+            Surface(color = Color.Transparent, contentColor = colors.onSurface) {
+                // Discard legacy numeric pager state; the saved page identity above owns migration.
+                key("eight-page-onboarding", pages) {
+                    val welcomeIndex = pages.indexOf(IntroductionPage.WELCOME)
+                    val accessiblePageCount = if (permissionRequired) welcomeIndex + 1 else pages.size
+                    val pager =
+                        rememberPagerState(
+                            initialPage = restoredIntroductionPage(savedPage, pages).coerceAtMost(accessiblePageCount - 1),
+                            pageCount = { accessiblePageCount },
                         )
+                    // Also clamp restored pager state and an in-flight scroll after permission revocation.
+                    LaunchedEffect(pager, permissionRequired) {
+                        if (permissionRequired && (pager.currentPage > welcomeIndex || pager.targetPage > welcomeIndex)) {
+                            pager.scrollToPage(welcomeIndex)
+                        }
                     }
-                    Surface(color = Color(0xed11161b), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    pages.indices.forEach { i ->
-                                        val emphasis by animateFloatAsState(
-                                            if (i == pager.currentPage) 1f else .35f,
-                                            tween(Motion.MICRO),
-                                            label = "pageIndicator",
-                                        )
-                                        Box(
-                                            Modifier
-                                                .width(12.dp)
-                                                .height(4.dp)
-                                                .graphicsLayer {
-                                                    scaleX = emphasis
-                                                    alpha = emphasis
-                                                }.background(Color.White, CircleShape),
-                                        )
-                                    }
+                    LaunchedEffect(pager) {
+                        snapshotFlow { pager.settledPage }.collect { savedPage = pages[it].name }
+                    }
+                    val previous: () -> Unit = {
+                        if (!finishing) {
+                            if (pager.targetPage == 0) {
+                                onExit()
+                            } else {
+                                scope.launch {
+                                    pager.animateScrollToPage(
+                                        (pager.targetPage - 1).coerceAtLeast(0),
+                                        animationSpec = tween(if (motionEnabled) Motion.CONTENT else 0, easing = Motion.Standard),
+                                    )
                                 }
-                                Text(
-                                    stringResource(CommonR.string.onboarding_page_indicator, pager.currentPage + 1, pages.size),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            }
+                        }
+                    }
+                    BackHandler(onBack = previous)
+                    var entered by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { entered = true }
+                    val entrance by animateFloatAsState(if (entered) 1f else 0f, tween(Motion.CONTENT), label = "introductionEntrance")
+                    Column(
+                        modifier
+                            .fillMaxSize()
+                            .statusBarsPadding()
+                            .navigationBarsPadding()
+                            .graphicsLayer { alpha = entrance },
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Image(painterResource(R.drawable.erhu_logo), null, Modifier.size(32.dp))
+                                Image(
+                                    painterResource(R.drawable.onb_wordmark),
+                                    stringResource(R.string.app_name),
+                                    Modifier.width(82.dp).height(32.dp),
                                 )
                             }
-                            if (saveError) {
-                                Text(
-                                    stringResource(CommonR.string.onboarding_save_error),
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(top = 8.dp),
-                                )
+                            if (!quickAccessOnly) {
+                                TextButton(onClick = { finish(skip = true) }, enabled = !finishing && !permissionRequired) {
+                                    Text(stringResource(CommonR.string.action_skip))
+                                }
                             }
-                            Spacer(Modifier.height(12.dp))
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(
-                                    onClick = previous,
-                                    enabled = pager.targetPage > 0 && !finishing,
-                                ) { Text(stringResource(CommonR.string.action_back)) }
-                                Spacer(Modifier.weight(1f))
-                                Button(
-                                    onClick = {
-                                        if (pager.settledPage == pages.lastIndex) {
-                                            finish()
-                                        } else {
-                                            scope.launch {
-                                                pager.animateScrollToPage(
-                                                    (pager.targetPage + 1).coerceAtMost(pages.lastIndex),
-                                                    animationSpec = tween(Motion.CONTENT, easing = Motion.Standard),
-                                                )
-                                            }
-                                        }
-                                    },
-                                    enabled = !finishing,
-                                    modifier = Modifier.heightIn(min = 48.dp),
+                        }
+                        HorizontalPager(
+                            state = pager,
+                            key = { pages[it].name },
+                            userScrollEnabled = !finishing,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        ) { index ->
+                            val page = pages[index]
+                            if (page == IntroductionPage.QUICK_ACCESS) {
+                                Column(
+                                    modifier =
+                                        Modifier
+                                            .fillMaxSize()
+                                            .then(if (quickAccessOnly) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
                                     Text(
                                         stringResource(
-                                            when {
-                                                finishing -> CommonR.string.action_saving
-                                                quickAccessOnly -> R.string.onboarding_quick_access_confirm
-                                                pager.settledPage == pages.lastIndex -> CommonR.string.onboarding_start_listening
-                                                pager.settledPage == 0 && pages.firstOrNull() == IntroductionPage.LANGUAGE ->
-                                                    CommonR.string.action_continue
-                                                else -> CommonR.string.action_next
-                                            },
+                                            if (quickAccessOnly) LibraryR.string.navigation_quick_access_title else page.titleRes,
                                         ),
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        modifier = Modifier.semantics { heading() },
                                     )
+                                    NavigationQuickAccessPicker(
+                                        selected = shortcuts,
+                                        vybeEnabled = vybeEnabled,
+                                        onSelectionChange = { updated -> shortcutDraft = ArrayList(updated.map { it.name }) },
+                                        motionEnabled = motionEnabled,
+                                        compact = !quickAccessOnly,
+                                    )
+                                    if (!quickAccessOnly) {
+                                        SettingsSwitchRow(
+                                            title = stringResource(CommonR.string.onboarding_glass_title),
+                                            summary = stringResource(CommonR.string.onboarding_glass_summary),
+                                            checked = glassEffectEnabled,
+                                            onCheckedChange = onGlassEffectEnabledChange,
+                                        )
+                                        GlassIntensityControl(
+                                            opacity = glassIntensity,
+                                            onOpacityChange = onGlassIntensityChange,
+                                            modifier = Modifier.weight(1f),
+                                            compact = true,
+                                            enabled = glassEffectEnabled,
+                                        )
+                                    }
+                                }
+                            } else {
+                                IntroductionContent(
+                                    page = page,
+                                    active = resumed && pager.settledPage == index && !pager.isScrollInProgress,
+                                    motionEnabled = motionEnabled,
+                                    pageOffset = { ((pager.currentPage - index) + pager.currentPageOffsetFraction).absoluteValue },
+                                    mediaGranted = mediaGranted,
+                                    requested = requested,
+                                    permanentlyDenied = permanentlyDenied,
+                                    onRequestPermission = {
+                                        requested = true
+                                        permissionLauncher.launch(permission)
+                                    },
+                                    onOpenSettings = {
+                                        context.startActivity(
+                                            Intent(
+                                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                                Uri.fromParts("package", context.packageName, null),
+                                            ),
+                                        )
+                                    },
+                                    vybeEnabled = vybeEnabled,
+                                    onVybeEnabledChange = onVybeEnabledChange,
+                                    showReadyVybeChoice = !initialSetup,
+                                    widgetsAvailable = widgetsAvailable,
+                                    selectedLanguageTag = selectedLanguageTag,
+                                    onLanguageSelected = { tag ->
+                                        selectedLanguageTag = tag
+                                        AppLocaleManager.setLanguageTag(context, tag)
+                                    },
+                                )
+                            }
+                        }
+                        Surface(color = Color(0xed11161b), shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        pages.indices.forEach { i ->
+                                            val emphasis by animateFloatAsState(
+                                                if (i == pager.currentPage) 1f else .35f,
+                                                tween(Motion.MICRO),
+                                                label = "pageIndicator",
+                                            )
+                                            Box(
+                                                Modifier
+                                                    .width(12.dp)
+                                                    .height(4.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = emphasis
+                                                        alpha = emphasis
+                                                    }.background(Color.White, CircleShape),
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        stringResource(CommonR.string.onboarding_page_indicator, pager.currentPage + 1, pages.size),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (saveError) {
+                                    Text(
+                                        stringResource(CommonR.string.onboarding_save_error),
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(top = 8.dp),
+                                    )
+                                }
+                                Spacer(Modifier.height(12.dp))
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    TextButton(
+                                        onClick = previous,
+                                        enabled = pager.targetPage > 0 && !finishing,
+                                    ) { Text(stringResource(CommonR.string.action_back)) }
+                                    Spacer(Modifier.weight(1f))
+                                    Button(
+                                        onClick = {
+                                            refreshPermission()
+                                            if (pager.settledPage == pages.lastIndex) {
+                                                finish()
+                                            } else {
+                                                scope.launch {
+                                                    val lastAccessiblePage =
+                                                        if (initialSetup && !permissionGranted()) welcomeIndex else pages.lastIndex
+                                                    pager.animateScrollToPage(
+                                                        (pager.targetPage + 1).coerceAtMost(lastAccessiblePage),
+                                                        animationSpec =
+                                                            tween(
+                                                                if (motionEnabled) Motion.CONTENT else 0,
+                                                                easing = Motion.Standard,
+                                                            ),
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        enabled = !finishing && (!permissionRequired || pager.targetPage < welcomeIndex),
+                                        modifier = Modifier.heightIn(min = 48.dp),
+                                    ) {
+                                        Text(
+                                            stringResource(
+                                                when {
+                                                    finishing -> CommonR.string.action_saving
+                                                    quickAccessOnly -> R.string.onboarding_quick_access_confirm
+                                                    pager.settledPage == pages.lastIndex -> CommonR.string.onboarding_start_listening
+                                                    pager.settledPage == 0 && pages.firstOrNull() == IntroductionPage.LANGUAGE ->
+                                                        CommonR.string.action_continue
+                                                    else -> CommonR.string.action_next
+                                                },
+                                            ),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -425,13 +482,12 @@ private fun IntroductionContent(
     onOpenSettings: () -> Unit,
     vybeEnabled: Boolean,
     onVybeEnabledChange: (Boolean) -> Unit,
-    glassEffectEnabled: Boolean,
-    onGlassEffectEnabledChange: (Boolean) -> Unit,
+    widgetsAvailable: Boolean,
     showReadyVybeChoice: Boolean,
     selectedLanguageTag: String?,
     onLanguageSelected: (String?) -> Unit,
 ) {
-    val toolGuide = remember(page) { page.toolGuide() }
+    val carouselPage = page in listOf(IntroductionPage.ARTWORK, IntroductionPage.LYRICS, IntroductionPage.SOUND)
     Column(
         Modifier
             .fillMaxSize()
@@ -439,7 +495,7 @@ private fun IntroductionContent(
                 val offset = if (motionEnabled) pageOffset().coerceIn(0f, 1f) else 0f
                 alpha = 1f - offset * .18f
                 translationY = offset * 6.dp.toPx()
-            }.verticalScroll(rememberScrollState())
+            }.then(if (carouselPage) Modifier else Modifier.verticalScroll(rememberScrollState()))
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -461,15 +517,7 @@ private fun IntroductionContent(
                 },
         )
         Text(
-            stringResource(
-                if (page == IntroductionPage.READY &&
-                    !mediaGranted
-                ) {
-                    CommonR.string.onboarding_library_later_hint
-                } else {
-                    page.descriptionRes
-                },
-            ),
+            stringResource(page.descriptionRes),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -482,48 +530,8 @@ private fun IntroductionContent(
         if (page == IntroductionPage.READY) {
             IntroductionVisual(page, null, active, motionEnabled)
         }
-        if (page == IntroductionPage.LIBRARY) {
-            Surface(shape = RoundedCornerShape(20.dp), color = Color(0xff212426)) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        stringResource(
-                            if (mediaGranted) {
-                                CommonR.string.onboarding_permission_allowed
-                            } else {
-                                CommonR.string.onboarding_permission_private_title
-                            },
-                        ),
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Text(
-                        stringResource(
-                            when {
-                                mediaGranted -> CommonR.string.onboarding_permission_summary_granted
-                                permanentlyDenied -> CommonR.string.onboarding_permission_summary_denied
-                                requested -> CommonR.string.onboarding_permission_summary_retry
-                                else -> CommonR.string.onboarding_permission_summary_default
-                            },
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!mediaGranted) {
-                        OutlinedButton(onClick = if (permanentlyDenied) onOpenSettings else onRequestPermission) {
-                            Text(
-                                stringResource(
-                                    if (permanentlyDenied) {
-                                        CommonR.string.onboarding_permission_open_settings
-                                    } else if (requested) {
-                                        CommonR.string.onboarding_permission_retry
-                                    } else {
-                                        CommonR.string.onboarding_permission_allow
-                                    },
-                                ),
-                            )
-                        }
-                    }
-                }
-            }
+        if (page == IntroductionPage.VYBE) {
+            ExistingPreviewImages(vybePreviews())
         }
         if (page == IntroductionPage.VYBE || (page == IntroductionPage.READY && showReadyVybeChoice)) {
             SettingsSwitchRow(
@@ -534,12 +542,10 @@ private fun IntroductionContent(
             )
         }
         if (page == IntroductionPage.READY) {
-            SettingsSwitchRow(
-                title = stringResource(CommonR.string.onboarding_glass_title),
-                summary = stringResource(CommonR.string.onboarding_glass_summary),
-                checked = glassEffectEnabled,
-                onCheckedChange = onGlassEffectEnabledChange,
-            )
+            if (widgetsAvailable) {
+                Text(stringResource(CommonR.string.onboarding_page_widgets_title), style = MaterialTheme.typography.titleLarge)
+                WidgetPreviewGrid()
+            }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Outlined.CheckCircle, null)
                 Text(
@@ -547,7 +553,7 @@ private fun IntroductionContent(
                         if (mediaGranted) {
                             CommonR.string.onboarding_permission_allowed
                         } else {
-                            CommonR.string.onboarding_permission_badge_later
+                            CommonR.string.permission_music_title
                         },
                     ),
                     style = MaterialTheme.typography.bodyMedium,
@@ -568,13 +574,46 @@ private fun IntroductionContent(
                     )
                 }
             }
-        } else if (page == IntroductionPage.LANGUAGE) {
-            // Language selection page has no preview gallery
-        } else if (toolGuide != null) {
-            PreviewGallery(page, active, motionEnabled)
-            ToolGuideContent(page, toolGuide)
-        } else {
-            PreviewGallery(page, active, motionEnabled)
+        }
+        when (page) {
+            IntroductionPage.WELCOME -> {
+                PairedRecordingPreviews(PreviewRecording.NOW_PLAYING, PreviewRecording.HOME, active)
+                SettingsSwitchRow(
+                    title = stringResource(R.string.onboarding_music_access),
+                    summary = stringResource(CommonR.string.permission_music_rationale),
+                    checked = mediaGranted,
+                    onCheckedChange = { if (mediaGranted || permanentlyDenied) onOpenSettings() else onRequestPermission() },
+                )
+                if (!mediaGranted && requested && permanentlyDenied) {
+                    Text(
+                        stringResource(
+                            if (permanentlyDenied) {
+                                CommonR.string.permission_music_permanently_denied
+                            } else {
+                                CommonR.string.permission_music_rationale
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            IntroductionPage.ARTWORK -> UtilityPreviewCarousel(active, motionEnabled, Modifier.weight(1f))
+            IntroductionPage.LYRICS ->
+                RecordingCarousel(
+                    listOf(PreviewRecording.LYRICS, PreviewRecording.QUEUE),
+                    active,
+                    motionEnabled,
+                    Modifier.weight(1f),
+                )
+            IntroductionPage.SOUND ->
+                RecordingCarousel(
+                    listOf(PreviewRecording.EQUALIZER, PreviewRecording.TRANSITIONS),
+                    active,
+                    motionEnabled,
+                    Modifier.weight(1f),
+                )
+            else -> Unit
         }
         if (page == IntroductionPage.VYBE) {
             Text(
@@ -584,34 +623,6 @@ private fun IntroductionContent(
             )
         }
     }
-}
-
-@Composable
-private fun PreviewGallery(
-    page: IntroductionPage,
-    active: Boolean,
-    motionEnabled: Boolean,
-) {
-    val previews = remember(page) { page.previews() }
-    var selected by rememberSaveable(page.name) { mutableIntStateOf(0) }
-    val shown = previews[selected.coerceIn(previews.indices)]
-    if (previews.size > 1) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            previews.forEachIndexed { index, preview ->
-                FilterChip(
-                    selected = selected == index,
-                    onClick = { selected = index },
-                    label = { Text(stringResource(preview.labelRes)) },
-                )
-            }
-        }
-    }
-    IntroductionVisual(page, shown, active, motionEnabled)
-    Text(
-        stringResource(CommonR.string.onboarding_preview_existing_library),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 @Composable
@@ -719,5 +730,28 @@ private fun LanguageSelectionIndicator(isSelected: Boolean) {
                     .size(20.dp)
                     .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape),
         )
+    }
+}
+
+/** Glass consumers sample only the separately drawn background, never their own surfaces. */
+@Composable
+private fun OnboardingGlassEnvironment(
+    enabled: Boolean,
+    strength: Float,
+    content: @Composable () -> Unit,
+) {
+    ErhuTheme(glassEffectEnabled = enabled, popupGlassOpacity = strength) {
+        val backdrop = rememberGlassBackdrop("onboarding-background", screenCoordinates = true)
+        CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
+            Box(Modifier.fillMaxSize()) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .glassBackdropSource(backdrop)
+                        .background(Brush.verticalGradient(listOf(IntroductionBackground, Color(0xff131a20), IntroductionBackground))),
+                )
+                content()
+            }
+        }
     }
 }

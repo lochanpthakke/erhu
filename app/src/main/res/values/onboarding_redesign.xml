@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_tools_title">Tools to refine and repair</string>
+    <string name="onboarding_tools_summary">Find them in the app sidebar.</string>
+    <string name="onboarding_artwork_summary">Find album covers and artist photos, then review and apply your choices.</string>
+    <string name="onboarding_tags_summary">Repair incomplete tags and review matches before updating your music files.</string>
+    <string name="onboarding_builder_summary">Organize your music into folders using its tags. Review proposed moves before applying them.</string>
+    <string name="onboarding_lyrics_queue_title">Lyrics and queue</string>
+    <string name="onboarding_lyrics_queue_summary">Follow the lyrics while you listen, and arrange what plays next in your queue.</string>
+    <string name="onboarding_sound_title">Equalizer and Transition Studio</string>
+    <string name="onboarding_sound_summary">Shape your sound with the equalizer. Use Transition Studio to fine-tune how playlist tracks flow into one another.</string>
+    <string name="onboarding_navigation_widgets_title">Navigation quick access</string>
+    <string name="onboarding_home_preview">Home</string>
+    <string name="onboarding_welcome_summary">Explore Now Playing and Home. Swipe through your music and discover the gestures that keep it close.</string>
+    <string name="onboarding_preview_pending">%1$s preview placeholder</string>
+    <string name="onboarding_slide_position">Show preview %1$d of %2$d</string>
+    <string name="onboarding_music_access">Music access</string>
+    <string name="onboarding_gradient_widget">Gradient widget</string>
+</resources>

@@ -24,6 +24,7 @@ fun AppEntry(viewModel: ThemeViewModel = hiltViewModel()) {
     val persistedSetup by viewModel.navigationSetup.collectAsState()
     val setup = persistedSetup
     val glassEffectEnabled by viewModel.glassEffectEnabled.collectAsState()
+    val glassIntensity by viewModel.popupGlassOpacity.collectAsState()
     var startAtHome by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     when {
@@ -38,6 +39,8 @@ fun AppEntry(viewModel: ThemeViewModel = hiltViewModel()) {
                 onVybeEnabledChange = viewModel::setVybeEnabled,
                 glassEffectEnabled = glassEffectEnabled,
                 onGlassEffectEnabledChange = viewModel::setGlassEffectEnabled,
+                glassIntensity = glassIntensity,
+                onGlassIntensityChange = viewModel::setPopupGlassOpacity,
                 onExit = { context.findActivity()?.finish() },
                 quickAccessOnly = setup.introductionCompleted,
                 legacyStartSection = setup.defaultStartSection,

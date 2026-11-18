@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -469,7 +470,11 @@ fun NowPlayingScreen(
                                 ) {
                                     // Playback timeline and transport controls maintain natural LTR direction
                                     // in all locales, matching iOS and Android media player guidelines.
-                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                    CompositionLocalProvider(
+                                        LocalLayoutDirection provides LayoutDirection.Ltr,
+                                        // The transparent player scaffold can inherit dark ink when glass is off.
+                                        LocalContentColor provides Color.White,
+                                    ) {
                                         PlaybackProgress(
                                             position = position,
                                             totalDurationMs = totalDurationMs,

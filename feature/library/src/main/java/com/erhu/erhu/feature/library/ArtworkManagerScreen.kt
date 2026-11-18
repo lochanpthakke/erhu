@@ -611,6 +611,7 @@ fun ArtworkManagerScreen(
                     trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     horizontalPadding = 0.dp,
                 )
+                UtilityInstructions(UtilityTool.ARTWORK)
             }
         }
     }

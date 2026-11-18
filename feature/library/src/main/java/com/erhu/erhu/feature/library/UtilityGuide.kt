@@ -1,19 +1,21 @@
-package com.erhu.erhu.onboarding
+package com.erhu.erhu.feature.library
 
 import androidx.annotation.StringRes
 import com.erhu.erhu.core.common.R as CommonR
 
+internal enum class UtilityTool { ARTWORK, TAGS, BUILDER }
+
 /** Usage guidance for existing tools; these pages never enqueue repairs or modify music files. */
-internal data class IntroductionToolGuide(
+internal data class UtilityGuide(
     @StringRes val entryPointRes: Int,
     val steps: List<Pair<Int, Int>>,
     val details: List<Pair<Int, Int>>,
 )
 
-internal fun IntroductionPage.toolGuide(): IntroductionToolGuide? =
+internal fun UtilityTool.toolGuide(): UtilityGuide =
     when (this) {
-        IntroductionPage.ARTWORK ->
-            IntroductionToolGuide(
+        UtilityTool.ARTWORK ->
+            UtilityGuide(
                 entryPointRes = CommonR.string.onboarding_guide_artwork_entry,
                 steps =
                     listOf(
@@ -34,8 +36,8 @@ internal fun IntroductionPage.toolGuide(): IntroductionToolGuide? =
                             CommonR.string.onboarding_guide_artwork_detail3_body,
                     ),
             )
-        IntroductionPage.TAGS ->
-            IntroductionToolGuide(
+        UtilityTool.TAGS ->
+            UtilityGuide(
                 entryPointRes = CommonR.string.onboarding_guide_tags_entry,
                 steps =
                     listOf(
@@ -56,8 +58,8 @@ internal fun IntroductionPage.toolGuide(): IntroductionToolGuide? =
                             CommonR.string.onboarding_guide_tags_detail3_body,
                     ),
             )
-        IntroductionPage.BUILDER ->
-            IntroductionToolGuide(
+        UtilityTool.BUILDER ->
+            UtilityGuide(
                 entryPointRes = CommonR.string.onboarding_guide_builder_entry,
                 steps =
                     listOf(
@@ -78,27 +80,4 @@ internal fun IntroductionPage.toolGuide(): IntroductionToolGuide? =
                             CommonR.string.onboarding_guide_builder_detail2_body,
                     ),
             )
-        IntroductionPage.TRANSITIONS ->
-            IntroductionToolGuide(
-                entryPointRes = CommonR.string.onboarding_guide_transitions_entry,
-                steps =
-                    listOf(
-                        CommonR.string.onboarding_guide_transitions_step1_title to
-                            CommonR.string.onboarding_guide_transitions_step1_body,
-                        CommonR.string.onboarding_guide_transitions_step2_title to
-                            CommonR.string.onboarding_guide_transitions_step2_body,
-                        CommonR.string.onboarding_guide_transitions_step3_title to
-                            CommonR.string.onboarding_guide_transitions_step3_body,
-                    ),
-                details =
-                    listOf(
-                        CommonR.string.onboarding_guide_transitions_detail1_title to
-                            CommonR.string.onboarding_guide_transitions_detail1_body,
-                        CommonR.string.onboarding_guide_transitions_detail2_title to
-                            CommonR.string.onboarding_guide_transitions_detail2_body,
-                        CommonR.string.onboarding_guide_transitions_detail3_title to
-                            CommonR.string.onboarding_guide_transitions_detail3_body,
-                    ),
-            )
-        else -> null
     }

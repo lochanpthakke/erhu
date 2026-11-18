@@ -902,6 +902,8 @@ fun MainScaffold(
                                                     onVybeEnabledChange = themeViewModel::setVybeEnabled,
                                                     glassEffectEnabled = glassEffectEnabled,
                                                     onGlassEffectEnabledChange = themeViewModel::setGlassEffectEnabled,
+                                                    glassIntensity = popupGlassOpacity,
+                                                    onGlassIntensityChange = themeViewModel::setPopupGlassOpacity,
                                                     onFinish = {
                                                         librarySection = LibrarySection.TRACKS
                                                         navController.popBackStack<Library>(false)

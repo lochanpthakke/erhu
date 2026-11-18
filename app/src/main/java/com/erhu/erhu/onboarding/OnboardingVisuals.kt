@@ -93,7 +93,6 @@ internal fun IntroductionVisual(
     val path = remember { Path() }
     val density = LocalDensity.current
     val hairline = remember(density) { Stroke(with(density) { 1.dp.toPx() }) }
-    val curveStroke = remember(density) { Stroke(with(density) { 1.5.dp.toPx() }) }
     val glow = remember { Brush.radialGradient(listOf(Ocean.copy(alpha = .16f), Color.Transparent)) }
     val imageEdge = remember { Brush.linearGradient(listOf(Color.White.copy(alpha = .16f), Color.White.copy(alpha = .02f))) }
     val hero = page == IntroductionPage.WELCOME || page == IntroductionPage.READY
@@ -107,7 +106,7 @@ internal fun IntroductionVisual(
         Canvas(Modifier.fillMaxSize()) {
             val angle = phase.value * (2 * PI).toFloat()
             drawRect(glow)
-            with(IntroductionMotifs) { drawFeature(page, angle, path, hairline, curveStroke) }
+            with(IntroductionMotifs) { drawFeature(page, angle, path, hairline) }
         }
         if (page == IntroductionPage.READY) {
             IntroductionLogo(phase)
@@ -164,7 +163,7 @@ private fun IntroductionArtwork(
         Modifier
             .aspectRatio(ratio, matchHeightConstraintsFirst = true)
             .graphicsLayer {
-                val floats = page == IntroductionPage.WELCOME || page == IntroductionPage.LISTENING || page == IntroductionPage.WIDGETS
+                val floats = page == IntroductionPage.WELCOME
                 translationY = if (floats) sin(phase.value * (2 * PI).toFloat()) * 3.dp.toPx() else 0f
                 shadowElevation = 12.dp.toPx()
                 this.shape = shape
@@ -179,19 +178,14 @@ private object IntroductionMotifs {
         angle: Float,
         path: Path,
         hairline: Stroke,
-        curveStroke: Stroke,
     ) {
         when (page) {
-            IntroductionPage.LANGUAGE, IntroductionPage.WELCOME, IntroductionPage.LISTENING -> drawWaves(path, angle, hairline)
-            IntroductionPage.LIBRARY, IntroductionPage.QUICK_ACCESS -> drawLibraryTiles(angle)
+            IntroductionPage.LANGUAGE, IntroductionPage.WELCOME -> drawWaves(path, angle, hairline)
+            IntroductionPage.QUICK_ACCESS -> drawLibraryTiles(angle)
             IntroductionPage.ARTWORK -> drawArtworkLight(angle)
-            IntroductionPage.TAGS -> drawDocuments(angle, false)
-            IntroductionPage.BUILDER -> drawDocuments(angle, true)
             IntroductionPage.LYRICS -> drawLyricLines(angle)
             IntroductionPage.SOUND -> drawFrequencyBars(angle)
-            IntroductionPage.TRANSITIONS -> drawCrossfade(path, angle, curveStroke)
             IntroductionPage.VYBE, IntroductionPage.READY -> drawDiscoveryRings(angle, hairline)
-            IntroductionPage.WIDGETS -> drawWidgetLayers(angle)
         }
     }
 
@@ -239,30 +233,6 @@ private object IntroductionMotifs {
         }
     }
 
-    private fun DrawScope.drawDocuments(
-        angle: Float,
-        folders: Boolean,
-    ) {
-        repeat(3) { index ->
-            val x = size.width * (.02f + index * .36f)
-            val y = size.height * (.17f + index * .14f) + sin(angle + index) * 2.dp.toPx()
-            val width = size.width * .23f
-            drawRoundRect(Pearl.copy(alpha = .07f), Offset(x, y), Size(width, size.height * .35f), CornerRadius(8.dp.toPx()))
-            if (folders) {
-                drawRoundRect(
-                    Pearl.copy(alpha = .10f),
-                    Offset(x, y - 4.dp.toPx()),
-                    Size(width * .45f, 8.dp.toPx()),
-                    CornerRadius(3.dp.toPx()),
-                )
-            }
-            repeat(3) { line ->
-                val lineY = y + 14.dp.toPx() + line * 9.dp.toPx()
-                drawLine(Pearl.copy(alpha = .16f), Offset(x + 8.dp.toPx(), lineY), Offset(x + width - 8.dp.toPx(), lineY), 2.dp.toPx())
-            }
-        }
-    }
-
     private fun DrawScope.drawLyricLines(angle: Float) {
         repeat(5) { index ->
             val light = (.5f + .5f * sin(angle - index * .8f))
@@ -284,23 +254,6 @@ private object IntroductionMotifs {
         }
     }
 
-    private fun DrawScope.drawCrossfade(
-        path: Path,
-        angle: Float,
-        stroke: Stroke,
-    ) {
-        repeat(2) { curve ->
-            path.reset()
-            repeat(49) { step ->
-                val t = step / 48f
-                val rise = if (curve == 0) t else 1f - t
-                val y = size.height * (.75f - rise * .5f) + sin(angle) * 2.dp.toPx()
-                if (step == 0) path.moveTo(0f, y) else path.lineTo(size.width * t, y)
-            }
-            drawPath(path, if (curve == 0) Pearl.copy(alpha = .22f) else Ocean.copy(alpha = .4f), style = stroke)
-        }
-    }
-
     private fun DrawScope.drawDiscoveryRings(
         angle: Float,
         stroke: Stroke,
@@ -311,17 +264,6 @@ private object IntroductionMotifs {
                 radius = size.minDimension * (.20f + index * .12f) + sin(angle) * 2.dp.toPx(),
                 center = center,
                 style = stroke,
-            )
-        }
-    }
-
-    private fun DrawScope.drawWidgetLayers(angle: Float) {
-        repeat(3) { index ->
-            drawRoundRect(
-                Pearl.copy(alpha = .045f + index * .015f),
-                Offset(size.width * .04f, size.height * (.15f + index * .28f) + sin(angle + index) * 2.dp.toPx()),
-                Size(size.width * .92f, size.height * .19f),
-                CornerRadius(22.dp.toPx()),
             )
         }
     }

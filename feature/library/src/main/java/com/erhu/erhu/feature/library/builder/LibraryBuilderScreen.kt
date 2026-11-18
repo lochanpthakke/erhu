@@ -56,6 +56,8 @@ import com.erhu.erhu.core.designsystem.component.forScrollingContent
 import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.feature.library.UtilityInstructions
+import com.erhu.erhu.feature.library.UtilityTool
 import com.erhu.erhu.core.common.R as CommonR
 
 /**
@@ -116,6 +118,7 @@ fun LibraryBuilderScreen(
                 onResolveClick = { showResolveDialogFor = it },
                 onDone = onNavigateBack,
             )
+            item(key = "instructions") { UtilityInstructions(UtilityTool.BUILDER) }
             item(key = "intro") { IntroGroup(modifier = Modifier.fillParentMaxHeight(0.45f)) }
         }
     }

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -27,9 +29,12 @@ import com.erhu.erhu.core.designsystem.theme.rememberGlassBackdrop
 import com.erhu.erhu.core.common.R as CommonR
 
 @Composable
-fun PopupGlassPreview(modifier: Modifier = Modifier) {
+fun PopupGlassPreview(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
     val backdrop = rememberGlassBackdrop("popup-preview", screenCoordinates = true)
-    Box(modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(20.dp))) {
+    Box(modifier.fillMaxWidth().then(if (compact) Modifier else Modifier.height(180.dp)).clip(RoundedCornerShape(20.dp))) {
         Canvas(Modifier.fillMaxSize().glassBackdropSource(backdrop)) {
             drawRect(Brush.linearGradient(listOf(Color(0xFFE9DBBE), Color(0xFF274D64), Color(0xFF122332))))
             repeat(12) { index ->
@@ -39,11 +44,27 @@ fun PopupGlassPreview(modifier: Modifier = Modifier) {
             drawCircle(Color(0xFFD6A56C), size.height * 0.4f, Offset(size.width * 0.25f, size.height * 0.55f))
         }
         CompositionLocalProvider(LocalPopupGlassBackdrop provides backdrop) {
-            PopupGlassSurface(Modifier.align(Alignment.CenterEnd).padding(16.dp).width(200.dp)) {
-                Column(Modifier.padding(20.dp)) {
-                    Text(stringResource(CommonR.string.theme_popup_preview_title))
-                    Text(stringResource(CommonR.string.theme_popup_preview_play_next), Modifier.padding(top = 12.dp))
-                    Text(stringResource(CommonR.string.theme_popup_preview_add_to_queue), Modifier.padding(top = 12.dp))
+            PopupGlassSurface(
+                Modifier.align(Alignment.CenterEnd).padding(if (compact) 8.dp else 16.dp).width(if (compact) 160.dp else 200.dp),
+            ) {
+                val textStyle = MaterialTheme.typography.bodyLarge
+                ProvideTextStyle(
+                    textStyle.copy(
+                        fontSize = textStyle.fontSize * 0.85f,
+                        lineHeight = textStyle.lineHeight * 0.85f,
+                    ),
+                ) {
+                    Column(Modifier.padding(if (compact) 10.dp else 20.dp)) {
+                        Text(stringResource(CommonR.string.theme_popup_preview_title))
+                        Text(
+                            stringResource(CommonR.string.theme_popup_preview_play_next),
+                            Modifier.padding(top = if (compact) 4.dp else 12.dp),
+                        )
+                        Text(
+                            stringResource(CommonR.string.theme_popup_preview_add_to_queue),
+                            Modifier.padding(top = if (compact) 4.dp else 12.dp),
+                        )
+                    }
                 }
             }
         }

@@ -67,24 +67,27 @@ fun NavigationQuickAccessPicker(
     modifier: Modifier = Modifier,
     motionEnabled: Boolean = !rememberReduceMotion(),
     enabled: Boolean = true,
+    compact: Boolean = false,
 ) {
     val available = LibrarySection.entries.filter { vybeEnabled || it != LibrarySection.VYBE }
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else Spacing.lg),
     ) {
         Text(
             text = stringResource(R.string.navigation_quick_access_description),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyLarge,
+            style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge,
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             available.forEach { section ->
                 FilterChip(
                     selected = section in selected,
                     onClick = { toggleQuickAccess(selected, section)?.let(onSelectionChange) },
-                    enabled = enabled && section != LibrarySection.TRACKS &&
-                        (section in selected || selected.size < NAVIGATION_SHORTCUT_LIMIT),
+                    enabled =
+                        enabled &&
+                            section != LibrarySection.TRACKS &&
+                            (section in selected || selected.size < NAVIGATION_SHORTCUT_LIMIT),
                     label = { Text(stringResource(section.labelRes)) },
                     leadingIcon = { Icon(section.icon, contentDescription = null, Modifier.size(IconSize.small)) },
                 )
@@ -133,10 +136,11 @@ private fun QuickAccessPreview(
                         Box(Modifier.offset(x = x).width(width).align(Alignment.CenterStart), contentAlignment = Alignment.Center) {
                             Column(
                                 modifier =
-                                    Modifier.graphicsLayer {
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }.padding(Spacing.sm),
+                                    Modifier
+                                        .graphicsLayer {
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }.padding(Spacing.sm),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(Spacing.xs),
                             ) {
