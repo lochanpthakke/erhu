@@ -20,7 +20,7 @@ internal object RadioRotation {
     const val BANNER_HOURS = 8
 
     /** Home shows this many stations at a time; a station page recommends [RECOMMENDED] more. */
-    const val HOME_RADIOS = 3
+    const val HOME_RADIOS = 5
     const val RECOMMENDED = 5
 
     /** Stations rotate through the listener's top artists (by plays), then the rest of the library. */
