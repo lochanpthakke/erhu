@@ -1,4 +1,4 @@
-package com.erhu.erhu.onboarding
+package com.erhu.erhu.feature.library
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -9,15 +9,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.erhu.erhu.R
 import com.erhu.erhu.core.designsystem.component.BottomChrome
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Motion
@@ -50,10 +46,8 @@ import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.designsystem.theme.liquidGlass
-import com.erhu.erhu.feature.library.LibrarySection
-import com.erhu.erhu.feature.library.NAVIGATION_SHORTCUT_LIMIT
 
-internal fun toggleQuickAccess(
+private fun toggleQuickAccess(
     selected: List<LibrarySection>,
     section: LibrarySection,
 ): List<LibrarySection>? =
@@ -66,24 +60,21 @@ internal fun toggleQuickAccess(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun NavigationQuickAccessPage(
+fun NavigationQuickAccessPicker(
     selected: List<LibrarySection>,
     vybeEnabled: Boolean,
-    motionEnabled: Boolean,
-    onToggle: (LibrarySection) -> Unit,
+    onSelectionChange: (List<LibrarySection>) -> Unit,
+    modifier: Modifier = Modifier,
+    motionEnabled: Boolean = !rememberReduceMotion(),
+    enabled: Boolean = true,
 ) {
     val available = LibrarySection.entries.filter { vybeEnabled || it != LibrarySection.VYBE }
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 12.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
         Text(
-            text = stringResource(R.string.onboarding_quick_access_title),
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(
-            text = stringResource(R.string.onboarding_quick_access_description),
+            text = stringResource(R.string.navigation_quick_access_description),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge,
         )
@@ -91,15 +82,16 @@ internal fun NavigationQuickAccessPage(
             available.forEach { section ->
                 FilterChip(
                     selected = section in selected,
-                    onClick = { onToggle(section) },
-                    enabled = section != LibrarySection.TRACKS && (section in selected || selected.size < NAVIGATION_SHORTCUT_LIMIT),
+                    onClick = { toggleQuickAccess(selected, section)?.let(onSelectionChange) },
+                    enabled = enabled && section != LibrarySection.TRACKS &&
+                        (section in selected || selected.size < NAVIGATION_SHORTCUT_LIMIT),
                     label = { Text(stringResource(section.labelRes)) },
                     leadingIcon = { Icon(section.icon, contentDescription = null, Modifier.size(IconSize.small)) },
                 )
             }
         }
         Text(
-            text = stringResource(R.string.onboarding_quick_access_preview),
+            text = stringResource(R.string.navigation_quick_access_preview),
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.semantics { heading() },
         )

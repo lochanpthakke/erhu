@@ -81,6 +81,7 @@ import com.erhu.erhu.audioPermission
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.designsystem.foundation.Motion
 import com.erhu.erhu.feature.library.LibrarySection
+import com.erhu.erhu.feature.library.NavigationQuickAccessPicker
 import com.erhu.erhu.feature.library.navigationQuickAccess
 import com.erhu.erhu.feature.settings.component.SettingsSwitchRow
 import com.erhu.erhu.findActivity
@@ -276,16 +277,25 @@ fun OnboardingScreen(
                     ) { index ->
                         val page = pages[index]
                         if (page == IntroductionPage.QUICK_ACCESS) {
-                            NavigationQuickAccessPage(
-                                selected = shortcuts,
-                                vybeEnabled = vybeEnabled,
-                                motionEnabled = motionEnabled,
-                                onToggle = { section ->
-                                    toggleQuickAccess(shortcuts, section)?.let { updated ->
-                                        shortcutDraft = ArrayList(updated.map { it.name })
-                                    }
-                                },
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                Text(
+                                    stringResource(page.titleRes),
+                                    style = MaterialTheme.typography.headlineLarge,
+                                    modifier = Modifier.semantics { heading() },
+                                )
+                                NavigationQuickAccessPicker(
+                                    selected = shortcuts,
+                                    vybeEnabled = vybeEnabled,
+                                    onSelectionChange = { updated -> shortcutDraft = ArrayList(updated.map { it.name }) },
+                                    motionEnabled = motionEnabled,
+                                )
+                            }
                         } else IntroductionContent(
                             page = page,
                             active = resumed && pager.settledPage == index && !pager.isScrollInProgress,

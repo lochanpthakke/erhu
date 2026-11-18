@@ -3,6 +3,7 @@ package com.erhu.erhu.onboarding
 import androidx.annotation.StringRes
 import com.erhu.erhu.R
 import com.erhu.erhu.core.common.R as CommonR
+import com.erhu.erhu.feature.library.R as LibraryR
 
 internal enum class IntroductionPage(
     @StringRes val titleRes: Int,
@@ -19,7 +20,7 @@ internal enum class IntroductionPage(
     SOUND(CommonR.string.onboarding_page_sound_title, CommonR.string.onboarding_page_sound_desc),
     TRANSITIONS(CommonR.string.onboarding_page_transitions_title, CommonR.string.onboarding_page_transitions_desc),
     VYBE(CommonR.string.onboarding_page_vybe_title, CommonR.string.onboarding_page_vybe_desc),
-    QUICK_ACCESS(R.string.onboarding_quick_access_title, R.string.onboarding_quick_access_description),
+    QUICK_ACCESS(LibraryR.string.navigation_quick_access_title, LibraryR.string.navigation_quick_access_description),
     WIDGETS(CommonR.string.onboarding_page_widgets_title, CommonR.string.onboarding_page_widgets_desc),
     READY(CommonR.string.onboarding_page_ready_title, CommonR.string.onboarding_page_ready_desc),
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -43,6 +44,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,17 +57,21 @@ import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
+import com.erhu.erhu.core.common.locale.localizedMessage
+import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.model.VisualizerMode
 import com.erhu.erhu.core.model.VisualizerSensitivity
 import com.erhu.erhu.core.model.VisualizerSmoothing
 import com.erhu.erhu.feature.library.LibraryViewModel
+import com.erhu.erhu.feature.library.NavigationQuickAccessPicker
 import com.erhu.erhu.feature.library.VisualizerViewModel
 import com.erhu.erhu.feature.library.localizedFieldSelectionNote
 import com.erhu.erhu.feature.library.localizedLabel
 import com.erhu.erhu.feature.library.localizedName
 import com.erhu.erhu.feature.library.localizedSummary
+import com.erhu.erhu.feature.library.navigationQuickAccess
 import com.erhu.erhu.feature.settings.component.SettingsChoiceRow
 import com.erhu.erhu.feature.settings.component.SettingsGroup
 import com.erhu.erhu.feature.settings.component.SettingsIcon
@@ -81,6 +88,8 @@ import com.erhu.erhu.feature.settings.sound.SoundSettingsScreen
 import com.erhu.erhu.feature.settings.sound.SoundViewModel
 import com.erhu.erhu.feature.settings.theme.ThemeSettingsScreen
 import com.erhu.erhu.feature.settings.theme.ThemeViewModel
+import kotlinx.coroutines.launch
+import com.erhu.erhu.feature.library.R as LibraryR
 
 private data class SettingCategory(
     val id: String,
@@ -263,18 +272,59 @@ private fun NavigationSettingsSubPage(
     onBack: () -> Unit,
 ) {
     val defaultStartSection by viewModel.defaultStartSection.collectAsState()
-    val vybeEnabled by viewModel.vybeEnabled.collectAsState()
+    val navigationSetup by viewModel.navigationSetup.collectAsState()
+    val setup = navigationSetup
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var shortcutDraft by rememberSaveable { mutableStateOf<ArrayList<String>?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    BackHandler(enabled = saving) {}
 
-    SettingsPage(title = title, navigation = TopBarNavigation.Detail(onBack)) {
+    SettingsPage(title = title, navigation = TopBarNavigation.Detail { if (!saving) onBack() }) {
         SettingsSection(title = stringResource(R.string.settings_nav_section)) {
             SettingsGroup {
                 row {
                     SettingsSwitchRow(
                         title = stringResource(R.string.settings_nav_enable_vybe_title),
                         summary = stringResource(R.string.settings_nav_enable_vybe_summary),
-                        checked = vybeEnabled != false,
-                        onCheckedChange = viewModel::setVybeEnabled,
+                        checked = setup?.vybeEnabled != false,
+                        onCheckedChange = { enabled -> if (!saving && setup != null) viewModel.setVybeEnabled(enabled) },
                     )
+                }
+            }
+        }
+        if (setup != null) {
+            val saved = navigationQuickAccess(setup.shortcuts, setup.vybeEnabled)
+            val selected = shortcutDraft?.let { navigationQuickAccess(it, setup.vybeEnabled) } ?: saved
+            SettingsSection(title = stringResource(LibraryR.string.navigation_quick_access_title)) {
+                NavigationQuickAccessPicker(
+                    selected = selected,
+                    vybeEnabled = setup.vybeEnabled,
+                    onSelectionChange = { updated ->
+                        shortcutDraft = ArrayList(updated.map { it.name })
+                        saveError = null
+                    },
+                    enabled = !saving,
+                )
+                Button(
+                    modifier = Modifier.padding(top = Spacing.md),
+                    enabled = selected != saved && !saving,
+                    onClick = {
+                        saving = true
+                        saveError = null
+                        val shortcuts = selected.map { it.name }
+                        scope.launch {
+                            val result = viewModel.saveNavigationQuickAccess(shortcuts, completeIntroduction = false)
+                            if (result is AppResult.Error) saveError = result.error.localizedMessage(context)
+                            saving = false
+                        }
+                    },
+                ) {
+                    Text(stringResource(if (saving) R.string.action_saving else R.string.action_save))
+                }
+                saveError?.let { message ->
+                    Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
         }
