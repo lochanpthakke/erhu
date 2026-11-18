@@ -16,6 +16,9 @@ data class ArtistForSongs(
 
 @Dao
 interface ArtistDao {
+    @Query("SELECT COUNT(*) FROM artists")
+    suspend fun count(): Int
+
     @Query("SELECT * FROM artist_alias")
     fun observeAliases(): Flow<List<ArtistAliasEntity>>
 

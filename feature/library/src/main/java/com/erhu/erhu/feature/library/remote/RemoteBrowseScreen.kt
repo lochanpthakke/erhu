@@ -21,6 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.LibraryAddCheck
+import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
@@ -94,9 +97,10 @@ fun RemoteBrowseScreen(
     modifier: Modifier = Modifier,
     viewModel: RemoteBrowseViewModel = hiltViewModel(),
 ) {
-    LaunchedEffect(sourceId, kind, itemId) { viewModel.start(sourceId, kind, itemId) }
+    LaunchedEffect(sourceId, kind, itemId) { viewModel.start(sourceId, kind, itemId, title) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val currentSongId by viewModel.currentSongId.collectAsStateWithLifecycle()
+    val libraryEntry by viewModel.libraryEntry.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     val searching = kind == RemotePageKind.HOME && query.isNotBlank()
 
@@ -142,6 +146,24 @@ fun RemoteBrowseScreen(
                     )
                 }
                 if (!searching) item(key = "menu") { HomeMenu(onOpen) }
+            }
+            if (!searching && libraryEntry.available) {
+                item(key = "library") {
+                    LibraryRows(
+                        row = libraryEntry,
+                        addSummary =
+                            when (kind) {
+                                RemotePageKind.ARTIST -> "Show this artist's music with your other songs"
+                                RemotePageKind.ALBUM -> "Show this album with your other songs"
+                                RemotePageKind.PLAYLIST -> "Show this playlist's songs with your other songs"
+                                RemotePageKind.FAVORITES -> "Show your favourites from this server with your other songs"
+                                else -> "Show this server's music with your other songs"
+                            },
+                        onAdd = viewModel::addLibraryToErhu,
+                        onSync = viewModel::syncLibraryNow,
+                        onRemove = viewModel::removeLibraryFromErhu,
+                    )
+                }
             }
             if (state.loading) {
                 item(key = "loading") { ProgressBar(Modifier.padding(horizontal = Spacing.screenGutter, vertical = Spacing.lg)) }
@@ -338,6 +360,43 @@ private fun RemoteCover(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(placeholder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+/** "Add to Library" for the page on screen, or its Library status, sync and removal. */
+@Composable
+private fun LibraryRows(
+    row: LibraryRowState,
+    addSummary: String,
+    onAdd: () -> Unit,
+    onSync: (com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) -> Unit,
+    onRemove: (com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) -> Unit,
+) {
+    Column(Modifier.padding(horizontal = Spacing.screenGutter).padding(bottom = Spacing.md).fillMaxWidth().groupSurface()) {
+        val entry = row.entry
+        when {
+            entry != null -> {
+                val (folder, status) = entry
+                GroupRow(
+                    "In your Library",
+                    { onSync(folder) },
+                    summary = librarySummary(status),
+                    icon = Icons.Default.LibraryAddCheck,
+                    enabled = !status.running,
+                )
+                GroupDivider()
+                GroupRow("Remove from Library", { onRemove(folder) }, summary = "The server is not changed", icon = Icons.Default.RemoveCircleOutline)
+            }
+            row.coveredByServer ->
+                GroupRow(
+                    "In your Library",
+                    {},
+                    summary = "Included: this whole server is in your Library",
+                    icon = Icons.Default.LibraryAddCheck,
+                    enabled = false,
+                )
+            else -> GroupRow("Add to Library", onAdd, summary = addSummary, icon = Icons.Default.LibraryAdd)
         }
     }
 }

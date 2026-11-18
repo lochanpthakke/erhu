@@ -12,6 +12,7 @@ import com.erhu.erhu.core.database.MIGRATION_15_16
 import com.erhu.erhu.core.database.MIGRATION_16_17
 import com.erhu.erhu.core.database.MIGRATION_17_18
 import com.erhu.erhu.core.database.MIGRATION_18_19
+import com.erhu.erhu.core.database.MIGRATION_19_20
 import com.erhu.erhu.core.database.RemoteTrackIdSeed
 import com.erhu.erhu.core.database.MIGRATION_5_6
 import com.erhu.erhu.core.database.MIGRATION_6_7
@@ -71,6 +72,7 @@ object DatabaseModule {
                 MIGRATION_16_17,
                 MIGRATION_17_18,
                 MIGRATION_18_19,
+                MIGRATION_19_20,
             ).addCallback(RemoteTrackIdSeed)
             .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4)
             .fallbackToDestructiveMigrationOnDowngrade(true)

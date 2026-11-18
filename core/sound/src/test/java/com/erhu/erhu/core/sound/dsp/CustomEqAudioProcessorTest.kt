@@ -85,7 +85,7 @@ class CustomEqAudioProcessorTest {
     fun presetGains_areClampedToSafeRange() {
         val processor = CustomEqAudioProcessor()
         processor.setBandGains(FloatArray(CustomEqAudioProcessor.BAND_COUNT) { 99f })
-        processor.getBandGains().forEach { assertEquals(15f, it, 0f) }
+        processor.getBandGains().forEach { assertEquals(CustomEqAudioProcessor.MAX_GAIN_DB, it, 0f) }
     }
 
     @Test(expected = AudioProcessor.UnhandledAudioFormatException::class)

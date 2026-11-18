@@ -7,7 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class SoundSettingsMapperTest {
-    private val custom = EqPreset("custom_a", "Mine", floatArrayOf(1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f), isCustom = true)
+    private val custom = EqPreset("custom_a", "Mine", floatArrayOf(1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f), isCustom = true, mode = EqMode.PARAMETRIC)
 
     private val sampleGains = floatArrayOf(3f, 2f, 1f, 0f, -1f, -2f, -3f, 4f)
 
@@ -38,13 +38,29 @@ class SoundSettingsMapperTest {
     }
 
     @Test
-    fun unknownActivePreset_fallsBackToFlat() {
-        assertEquals(EqPreset.FLAT.id, persisted().copy(activePresetId = "custom_deleted").toSoundSettings().activePresetId)
+    fun unknownActivePreset_highlightsNoPreset() {
+        assertEquals("", persisted().copy(activePresetId = "custom_deleted").toSoundSettings().activePresetId)
     }
 
     @Test
-    fun builtInActivePreset_isKept() {
-        assertEquals(EqPreset.ROCK.id, persisted().copy(activePresetId = EqPreset.ROCK.id).toSoundSettings().activePresetId)
+    fun aClassicPresetSavedBeforeTheModes_becomesTheGraphicSetup_andTheBandsStayParametric() {
+        val old = persisted().copy(activePresetId = EqPreset.ROCK.id, eqMode = "", graphicGains = emptyList(), graphicPresetId = "")
+        val restored = old.toSoundSettings()
+        assertEquals(EqMode.PARAMETRIC, restored.mode)
+        assertEquals(EqPreset.ROCK.id, restored.graphicPresetId)
+        assertEquals(EqPreset.ROCK.bandGains.toList(), restored.graphicGains)
+        assertArrayEquals(sampleGains, restored.currentBandGains, 0f)
+    }
+
+    @Test
+    fun parametricBands_keepTypeSlopeAndEnabledState() {
+        val bands =
+            SoundSettings.defaultBands().toMutableList().also {
+                it[0] = BandConfig(30f, 0f, 0.707f, com.erhu.erhu.core.sound.dsp.FilterType.HIGH_PASS, enabled = true, slope = 48)
+                it[3] = BandConfig(3000f, 0f, 6f, com.erhu.erhu.core.sound.dsp.FilterType.NOTCH, enabled = false)
+            }
+        val original = settings.copy(bands = bands, activeBandCount = 5, mode = EqMode.GRAPHIC, graphicGains = List(8) { it.toFloat() })
+        assertEquals(original, original.toPersisted().toSoundSettings())
     }
 
     @Test

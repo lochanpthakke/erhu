@@ -160,6 +160,10 @@ message EqPresetProto {
   repeated float band_frequencies = 4;
   repeated float band_qs = 5;
   repeated string filter_types = 6;
+  string mode = 7;
+  int32 band_count = 8;
+  repeated bool band_enabled = 9;
+  repeated int32 band_slopes = 10;
 }
 
 message SoundSettingsProto {
@@ -189,6 +193,11 @@ message SoundSettingsProto {
   bool skip_silence = 24;
   int64 sleep_deadline_ms = 25;
   bool sleep_at_track_end = 26;
+  string eq_mode = 27;
+  repeated float graphic_gains = 28;
+  string graphic_preset_id = 29;
+  repeated bool band_enabled = 30;
+  repeated int32 band_slopes = 31;
 }
 
 enum RepeatModeProto {

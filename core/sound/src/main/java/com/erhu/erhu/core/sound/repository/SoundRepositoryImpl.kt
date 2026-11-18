@@ -8,10 +8,12 @@ import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.appResultOf
 import com.erhu.erhu.core.common.result.onError
 import com.erhu.erhu.core.datastore.SoundSettingsPersistence
+import com.erhu.erhu.core.sound.dsp.BandFilter
 import com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor
 import com.erhu.erhu.core.sound.dsp.FilterType
 import com.erhu.erhu.core.sound.dsp.applySettings
 import com.erhu.erhu.core.sound.model.BandConfig
+import com.erhu.erhu.core.sound.model.EqMode
 import com.erhu.erhu.core.sound.model.EqPreset
 import com.erhu.erhu.core.sound.model.SoundSettings
 import com.erhu.erhu.core.sound.model.toPersisted
@@ -134,70 +136,89 @@ class SoundRepositoryImpl
             onUserChange()
         }
 
-        override fun setBandGain(
+        /** Changes the parametric band [index] and applies the result. */
+        private fun updateBand(
+            index: Int,
+            change: (BandConfig) -> BandConfig,
+        ) {
+            if (index !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
+            update { settings ->
+                val bands = settings.bands.toMutableList()
+                bands[index] = change(bands[index])
+                settings.copy(bands = bands, activePresetId = "")
+            }
+        }
+
+        /** Every EQ change goes through here: the new settings reach the processor (which fades them in). */
+        private fun update(change: (SoundSettings) -> SoundSettings) {
+            _soundSettings.update(change)
+            applyToPipeline(_soundSettings.value)
+            onUserChange()
+        }
+
+        override fun setMode(mode: EqMode) = update { it.copy(mode = mode) }
+
+        override fun setGraphicGain(
             bandIndex: Int,
             gainDb: Float,
         ) {
             if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
-            customEqAudioProcessor.setBandGain(bandIndex, gainDb)
-            _soundSettings.update { settings ->
-                val updatedBands = settings.bands.toMutableList()
-                val current = updatedBands[bandIndex]
-                updatedBands[bandIndex] = current.copy(gainDb = gainDb.coerceIn(-15f, 15f))
-                settings.copy(bands = updatedBands)
+            update { settings ->
+                val gains = settings.graphicGains.toMutableList()
+                gains[bandIndex] = gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB)
+                settings.copy(graphicGains = gains, graphicPresetId = "")
             }
-            onUserChange()
         }
+
+        override fun setBandGain(
+            bandIndex: Int,
+            gainDb: Float,
+        ) = updateBand(bandIndex) { it.copy(gainDb = gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB)) }
 
         override fun setBandFrequency(
             bandIndex: Int,
             freqHz: Float,
-        ) {
-            val currentGain =
-                _soundSettings.value.bands
-                    .getOrNull(bandIndex)
-                    ?.gainDb ?: 0f
-            setBandFrequencyAndGain(bandIndex, freqHz, currentGain)
-        }
+        ) = updateBand(bandIndex) { it.copy(frequencyHz = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ)) }
 
         override fun setBandQ(
             bandIndex: Int,
             q: Float,
-        ) {
-            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
-            customEqAudioProcessor.setBandQ(bandIndex, q)
-            _soundSettings.update { settings ->
-                val updatedBands = settings.bands.toMutableList()
-                val current = updatedBands[bandIndex]
-                updatedBands[bandIndex] = current.copy(q = q.coerceIn(CustomEqAudioProcessor.MIN_Q, CustomEqAudioProcessor.MAX_Q))
-                settings.copy(bands = updatedBands)
-            }
-            onUserChange()
-        }
+        ) = updateBand(bandIndex) { it.copy(q = q.coerceIn(CustomEqAudioProcessor.MIN_Q, CustomEqAudioProcessor.MAX_Q)) }
 
         override fun setFilterType(
             bandIndex: Int,
             type: FilterType,
-        ) {
-            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
-            customEqAudioProcessor.setFilterType(bandIndex, type)
-            _soundSettings.update { settings ->
-                val updatedBands = settings.bands.toMutableList()
-                val current = updatedBands[bandIndex]
-                updatedBands[bandIndex] = current.copy(filterType = type)
-                settings.copy(bands = updatedBands)
+        ) = updateBand(bandIndex) { band ->
+            // A pass filter starts as a gentle Butterworth slope; a notch starts narrow.
+            when {
+                type == band.filterType -> band
+                type.isPass -> band.copy(filterType = type, q = PASS_Q, slope = band.slope.takeIf { it in BandFilter.SLOPES } ?: 12)
+                type == FilterType.NOTCH -> band.copy(filterType = type, q = NOTCH_Q)
+                else -> band.copy(filterType = type)
             }
-            onUserChange()
         }
+
+        override fun setBandEnabled(
+            bandIndex: Int,
+            enabled: Boolean,
+        ) = updateBand(bandIndex) { it.copy(enabled = enabled) }
+
+        override fun setBandSlope(
+            bandIndex: Int,
+            slope: Int,
+        ) = updateBand(bandIndex) { it.copy(slope = slope.takeIf { s -> s in BandFilter.SLOPES } ?: 12) }
+
+        override fun resetBand(bandIndex: Int) = updateBand(bandIndex) { SoundSettings.defaultBands()[bandIndex] }
 
         override fun setActiveBandCount(count: Int) {
             val safeCount = count.coerceIn(CustomEqAudioProcessor.MIN_BAND_COUNT, CustomEqAudioProcessor.BAND_COUNT)
-            customEqAudioProcessor.setActiveBandCount(safeCount)
-            _soundSettings.update { settings ->
-                val nextSelected = settings.selectedBandIndex.coerceIn(0, safeCount - 1)
-                settings.copy(activeBandCount = safeCount, selectedBandIndex = nextSelected)
+            update { settings ->
+                settings.copy(
+                    activeBandCount = safeCount,
+                    selectedBandIndex = settings.selectedBandIndex.coerceIn(0, safeCount - 1),
+                    activePresetId = "",
+                )
             }
-            onUserChange()
         }
 
         override fun setSelectedBandIndex(index: Int) {
@@ -207,107 +228,81 @@ class SoundRepositoryImpl
             }
         }
 
+        /** A drag on the curve: frequency and (for gain filters) gain together. Bands may cross freely. */
         override fun setBandFrequencyAndGain(
             bandIndex: Int,
             freqHz: Float,
             gainDb: Float,
-        ) {
-            if (bandIndex !in 0 until CustomEqAudioProcessor.BAND_COUNT) return
-            _soundSettings.update { settings ->
-                val bands = settings.bands.toMutableList()
-                val targetFreq = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ)
-                val targetGain = gainDb.coerceIn(-15f, 15f)
-
-                bands[bandIndex] = bands[bandIndex].copy(frequencyHz = targetFreq, gainDb = targetGain)
-
-                val minRatio = 1.05f
-
-                // Push higher bands (scooch right)
-                for (i in (bandIndex + 1) until settings.activeBandCount) {
-                    val minAllowed = (bands[i - 1].frequencyHz * minRatio).coerceAtMost(CustomEqAudioProcessor.MAX_FREQ_HZ)
-                    if (bands[i].frequencyHz < minAllowed) {
-                        bands[i] = bands[i].copy(frequencyHz = minAllowed)
-                    }
-                }
-
-                // Push lower bands (scooch left)
-                for (i in (bandIndex - 1) downTo 0) {
-                    val maxAllowed = (bands[i + 1].frequencyHz / minRatio).coerceAtLeast(CustomEqAudioProcessor.MIN_FREQ_HZ)
-                    if (bands[i].frequencyHz > maxAllowed) {
-                        bands[i] = bands[i].copy(frequencyHz = maxAllowed)
-                    }
-                }
-
-                val updated = settings.copy(bands = bands)
-                customEqAudioProcessor.configureParametricState(
-                    gainsDb = updated.currentBandGains,
-                    frequenciesHz = updated.currentBandFrequencies,
-                    qs = updated.currentBandQs,
-                    types = updated.currentFilterTypes,
-                    activeCount = updated.activeBandCount,
-                )
-                updated
-            }
-            onUserChange()
+        ) = updateBand(bandIndex) { band ->
+            band.copy(
+                frequencyHz = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ),
+                gainDb = if (band.filterType.hasGain) gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB) else band.gainDb,
+            )
         }
 
         override fun applyPreset(presetId: String) {
-            val targetPreset = _soundSettings.value.allPresets.find { it.id == presetId } ?: return
-            _soundSettings.update { settings ->
-                val updatedBands =
-                    List(CustomEqAudioProcessor.BAND_COUNT) { i ->
-                        BandConfig(
-                            frequencyHz = targetPreset.bandFrequencies.getOrElse(i) { CustomEqAudioProcessor.BAND_FREQUENCIES[i] },
-                            gainDb = targetPreset.bandGains.getOrElse(i) { 0f },
-                            q = targetPreset.bandQs.getOrElse(i) { CustomEqAudioProcessor.DEFAULT_Q },
-                            filterType = targetPreset.filterTypes.getOrElse(i) { FilterType.PEAKING },
-                        )
-                    }
-                val updated =
+            val preset = _soundSettings.value.allPresets.find { it.id == presetId } ?: return
+            update { settings ->
+                if (preset.mode == EqMode.GRAPHIC) {
+                    settings.copy(graphicGains = preset.bandGains.toList(), graphicPresetId = preset.id)
+                } else {
                     settings.copy(
-                        activePresetId = presetId,
-                        bands = updatedBands,
+                        bands = preset.parametricBands(),
+                        activeBandCount = preset.bandCount,
+                        selectedBandIndex = settings.selectedBandIndex.coerceIn(0, preset.bandCount - 1),
+                        activePresetId = preset.id,
                     )
-                customEqAudioProcessor.configureParametricState(
-                    gainsDb = updated.currentBandGains,
-                    frequenciesHz = updated.currentBandFrequencies,
-                    qs = updated.currentBandQs,
-                    types = updated.currentFilterTypes,
-                    activeCount = updated.activeBandCount,
-                )
-                updated
+                }
             }
-            onUserChange()
         }
 
-        override fun resetToFlat() {
-            applyPreset(EqPreset.FLAT.id)
-        }
+        override fun resetToFlat() =
+            applyPreset(if (_soundSettings.value.mode == EqMode.GRAPHIC) EqPreset.FLAT.id else EqPreset.PARAMETRIC_FLAT.id)
 
         override suspend fun saveCustomPreset(name: String): AppResult<EqPreset> =
             appResultOf {
                 if (name.isBlank()) {
                     throw IllegalArgumentException("Preset name cannot be blank")
                 }
-                val currentSettings = _soundSettings.value
+                val current = _soundSettings.value
+                val id = "custom_${UUID.randomUUID()}"
                 val newPreset =
-                    EqPreset(
-                        id = "custom_${UUID.randomUUID()}",
-                        name = name.trim(),
-                        bandGains = currentSettings.currentBandGains,
-                        bandFrequencies = currentSettings.currentBandFrequencies,
-                        bandQs = currentSettings.currentBandQs,
-                        filterTypes = currentSettings.currentFilterTypes,
-                        isCustom = true,
-                    )
+                    if (current.mode == EqMode.GRAPHIC) {
+                        EqPreset(id = id, name = name.trim(), bandGains = current.graphicGains.toFloatArray(), isCustom = true, mode = EqMode.GRAPHIC)
+                    } else {
+                        EqPreset(
+                            id = id,
+                            name = name.trim(),
+                            bandGains = current.currentBandGains,
+                            bandFrequencies = current.currentBandFrequencies,
+                            bandQs = current.currentBandQs,
+                            filterTypes = current.currentFilterTypes,
+                            isCustom = true,
+                            mode = EqMode.PARAMETRIC,
+                            bandCount = current.activeBandCount,
+                            bandEnabled = BooleanArray(current.bands.size) { current.bands[it].enabled },
+                            slopes = IntArray(current.bands.size) { current.bands[it].slope },
+                        )
+                    }
                 _soundSettings.update {
-                    it.copy(
-                        customPresets = it.customPresets + newPreset,
-                        activePresetId = newPreset.id,
-                    )
+                    val withPreset = it.copy(customPresets = it.customPresets + newPreset)
+                    if (current.mode == EqMode.GRAPHIC) withPreset.copy(graphicPresetId = id) else withPreset.copy(activePresetId = id)
                 }
                 onUserChange()
                 newPreset
+            }
+
+        override suspend fun renameCustomPreset(
+            presetId: String,
+            name: String,
+        ): AppResult<Unit> =
+            appResultOf {
+                if (name.isBlank()) throw IllegalArgumentException("Preset name cannot be blank")
+                if (_soundSettings.value.customPresets.none { it.id == presetId }) throw IllegalArgumentException("Preset not found: $presetId")
+                _soundSettings.update { settings ->
+                    settings.copy(customPresets = settings.customPresets.map { if (it.id == presetId) it.copy(name = name.trim()) else it })
+                }
+                onUserChange()
             }
 
         override suspend fun deleteCustomPreset(presetId: String): AppResult<Unit> =
@@ -315,15 +310,13 @@ class SoundRepositoryImpl
                 if (_soundSettings.value.customPresets.none { it.id == presetId }) {
                     throw IllegalArgumentException("Preset not found: $presetId")
                 }
-
+                // The bands stay as they are; only the preset (and its highlight) goes.
                 _soundSettings.update {
-                    val updatedCustoms = it.customPresets.filterNot { p -> p.id == presetId }
-                    val nextActiveId = if (it.activePresetId == presetId) EqPreset.FLAT.id else it.activePresetId
-                    it.copy(customPresets = updatedCustoms, activePresetId = nextActiveId)
-                }
-
-                if (_soundSettings.value.activePresetId == EqPreset.FLAT.id) {
-                    applyPreset(EqPreset.FLAT.id)
+                    it.copy(
+                        customPresets = it.customPresets.filterNot { p -> p.id == presetId },
+                        activePresetId = if (it.activePresetId == presetId) "" else it.activePresetId,
+                        graphicPresetId = if (it.graphicPresetId == presetId) "" else it.graphicPresetId,
+                    )
                 }
                 onUserChange()
             }
@@ -333,5 +326,7 @@ class SoundRepositoryImpl
 
             /** Slider drags fire many changes per second; write once they settle. */
             internal const val SAVE_DEBOUNCE_MS = 400L
+            private const val PASS_Q = 0.707f
+            private const val NOTCH_Q = 4f
         }
     }

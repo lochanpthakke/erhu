@@ -59,6 +59,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -154,13 +157,17 @@ internal fun CarouselCard(
     customArtworkPath: String? = null,
     isCustomAnimated: Boolean = false,
 ) {
+    // Remembered per song: a new Room flow on every recomposition would restart both queries
+    // (and their invalidation observers) on each frame of a card transition.
     val artists by if (isCurrent && libraryRepository != null) {
-        libraryRepository.getArtistsForSong(track.id).collectAsState(initial = emptyList())
+        remember(libraryRepository, track.id) { libraryRepository.getArtistsForSong(track.id) }
+            .collectAsState(initial = emptyList())
     } else {
         remember { mutableStateOf(emptyList()) }
     }
     val albumId by if (isCurrent && libraryRepository != null) {
-        libraryRepository.getAlbumIdForSong(track.id).collectAsState(initial = null)
+        remember(libraryRepository, track.id) { libraryRepository.getAlbumIdForSong(track.id) }
+            .collectAsState(initial = null)
     } else {
         remember { mutableStateOf<Long?>(null) }
     }
@@ -229,7 +236,10 @@ internal fun CarouselCard(
                             .size(artSide)
                             .onGloballyPositioned { coordinates ->
                                 if (transition != null) {
-                                    val bounds = coordinates.boundsInRoot()
+                                    // Where the artwork really is, also when the page has scrolled it partly or fully
+                                    // off screen: boundsInRoot() clips to what is visible, so a close from the lyrics
+                                    // started the artwork from a cut-off box, or from its old resting place.
+                                    val bounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
                                     if (bounds.width > 0f && transition.measuredCardArtworkBounds != bounds) {
                                         transition.measuredCardArtworkBounds = bounds
                                     }

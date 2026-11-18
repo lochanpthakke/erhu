@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
+import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,7 +44,9 @@ class MediaStoreScanner
         private val jaudioTaggerEnricher: JAudioTaggerEnricher,
         private val logger: Logger,
         private val remoteLibraryDao: RemoteLibraryDao,
+        private val songDao: com.erhu.erhu.core.database.dao.SongDao,
     ) {
+        private val scanPrefs by lazy { context.getSharedPreferences(SCAN_PREFS, Context.MODE_PRIVATE) }
         @Suppress(
             "DEPRECATION",
             "LongMethod",
@@ -75,8 +78,12 @@ class MediaStoreScanner
                 val customPath = proto?.customScanLocationPath.orEmpty().trim()
                 val customUri = proto?.customScanLocationUri.orEmpty().trim()
 
-                triggerMediaScannerForStorage()
-                delay(SCAN_INDEXING_DELAY_MS)
+                val scanStartedAt = System.currentTimeMillis()
+                // Only files new or changed since the last finished scan; MediaStore indexes the rest itself.
+                val handedToIndexer = triggerMediaScannerForStorage(scanPrefs.getLong(LAST_SCAN_KEY, 0L))
+                if (handedToIndexer > 0) delay(SCAN_INDEXING_DELAY_MS)
+                // Stored path, modification time and year: an unchanged file's year is never parsed again.
+                val stamps = songDao.getScanStamps().associateBy { it.id }
 
                 val projection = scanProjection(Build.VERSION.SDK_INT)
                 val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 1000"
@@ -182,7 +189,13 @@ class MediaStoreScanner
 
                             var year = c.getInt(yearColumn)
                             if (year !in 1900..2099) {
-                                year = jaudioTaggerEnricher.extractYearFromId3Header(filePath)
+                                // The tag parse is the scan's costliest step; an unchanged file keeps last scan's answer.
+                                val stamp = stamps[id]
+                                val modifiedSec = c.getLong(dateModifiedColumn)
+                                val unchanged =
+                                    stamp != null && stamp.filePath == filePath &&
+                                        (stamp.dateModified == modifiedSec || stamp.dateModified == modifiedSec * 1000L)
+                                year = if (unchanged) stamp!!.year else jaudioTaggerEnricher.extractYearFromId3Header(filePath)
                             }
                             year = year.takeIf { it in 1900..2099 } ?: 0
 
@@ -273,12 +286,23 @@ class MediaStoreScanner
                     songs += song
                 }
 
+                // The same track twice (a copy in Downloads and Music, a re-download, a Drive copy of a phone
+                // file) is listed once: the copy already in the library, else the first found (device files
+                // come before remote ones). The files themselves are never touched.
+                val kept = duplicateFreeIds(songs, stamps.keys)
+                if (kept.size < songs.size) {
+                    logger.i(TAG, "Skipped ${songs.size - kept.size} duplicate songs")
+                    songs.retainAll { it.id in kept }
+                    rawTracks.retainAll { it.songId in kept }
+                }
+
                 val aliases = libraryModelDao.getAliases().associate { it.aliasKey to it.canonicalKey }
                 val artwork = libraryModelDao.getArtworkByKey().associate { it.artistKey to it.artworkUri }
                 val model = LibraryModelBuilder.build(rawTracks, aliases)
                 val summary = libraryWriter.write(model.toEntities(songs, artwork))
                 logger.i(TAG, "Scan applied: ${summary.upserted} songs, ${summary.removed} removed, ${model.albums.size} albums")
 
+                scanPrefs.edit().putLong(LAST_SCAN_KEY, scanStartedAt).apply()
                 emit(ScanProgress(scannedCount = totalCount, totalCount = totalCount, isComplete = true))
             }.flowOn(Dispatchers.IO)
 
@@ -321,8 +345,13 @@ class MediaStoreScanner
             return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
 
+        /**
+         * Hands audio files modified after [sinceMs] (all of them when 0, the first scan) to the system
+         * indexer, and returns how many. Re-indexing every file on each launch made the system do a
+         * full library pass every time the app opened.
+         */
         @Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth")
-        fun triggerMediaScannerForStorage() {
+        fun triggerMediaScannerForStorage(sinceMs: Long = 0L): Int {
             try {
                 val pathsToScan = mutableListOf<String>()
                 val storageRoots = mutableSetOf<File>()
@@ -365,7 +394,7 @@ class MediaStoreScanner
                             if (name != "android" && !name.startsWith(".")) {
                                 collectAudioFiles(file, depth + 1)
                             }
-                        } else if (file.isFile && isAudioFile(file.name)) {
+                        } else if (file.isFile && isAudioFile(file.name) && file.lastModified() > sinceMs - CLOCK_MARGIN_MS) {
                             pathsToScan.add(file.absolutePath)
                         }
                     }
@@ -383,9 +412,11 @@ class MediaStoreScanner
                         null,
                     )
                 }
+                return pathsToScan.size
             } catch (e: Exception) {
                 logger.d(TAG, "Fallback media scan skipped: ${e.message}", e)
             }
+            return 0
         }
 
         private fun isAudioFile(name: String): Boolean {
@@ -402,6 +433,11 @@ class MediaStoreScanner
             private const val TAG = "MediaStoreScanner"
             private const val EMISSION_BATCH_SIZE = 50
             private const val SCAN_INDEXING_DELAY_MS = 800L
+            private const val SCAN_PREFS = "library_scan"
+            private const val LAST_SCAN_KEY = "last_finished_scan_ms"
+
+            /** Files copied with an older timestamp, or a clock change, still count as new within this window. */
+            private const val CLOCK_MARGIN_MS = 24L * 60 * 60 * 1000
 
             private val ALBUM_ART_BASE_URI: Uri = Uri.parse("content://media/external/audio/albumart")
         }
@@ -424,15 +460,54 @@ internal fun com.erhu.erhu.core.database.entity.RemoteTrackEntity.toLibrarySong(
         uri = com.erhu.erhu.core.model.RemoteRef(provider, sourceId, remoteId).streamUri(),
         filePath = "",
         trackNumber = trackNumber,
-        year = 0,
+        year = year,
         dateModified = 0L,
         artworkUri = artworkKey?.let { com.erhu.erhu.core.model.RemoteRef.artworkUri(provider, sourceId, it) },
         isEnriched = true,
         discNumber = discNumber.coerceAtLeast(1),
         isFavorite = isFavorite,
         dateAddedMs = updatedAt,
+        genre = genre,
+        lyrics = lyrics,
     )
 }
+
+/**
+ * Ids of [songs] to keep when the same track appears more than once. Two songs are the same track
+ * when title, artist and album match (ignoring case, spacing and punctuation) and their lengths are
+ * within [DUPLICATE_LENGTH_MS]: a single and its album version, live or remastered takes, and
+ * different songs with one name all stay. Of each set, an id already in the library ([known]) is
+ * kept, so its favourite, plays and playlist entries stay with it; otherwise the first in [songs].
+ */
+internal fun duplicateFreeIds(
+    songs: List<SongEntity>,
+    known: Set<Long>,
+): Set<Long> {
+    val kept = LinkedHashSet<Long>()
+    songs
+        .groupBy { song ->
+            // Untagged songs say nothing about what they are: never matched to each other.
+            if (duplicateKey(song.title) in UNTAGGED || duplicateKey(song.artist) in UNTAGGED) {
+                "#${song.id}"
+            } else {
+                listOf(song.title, song.artist, song.album).joinToString("|") { text -> duplicateKey(text) }
+            }
+        }
+        .values
+        .forEach { group ->
+            val chosen = mutableListOf<SongEntity>()
+            group.sortedBy { if (it.id in known) 0 else 1 }.forEach { song ->
+                if (chosen.none { abs(it.durationMs - song.durationMs) <= DUPLICATE_LENGTH_MS }) chosen += song
+            }
+            chosen.forEach { kept += it.id }
+        }
+    return kept
+}
+
+private fun duplicateKey(text: String): String = text.lowercase().filter { it.isLetterOrDigit() }
+
+private const val DUPLICATE_LENGTH_MS = 2_000L
+private val UNTAGGED = setOf("", "unknowntitle", "unknownartist", "unknown")
 
 /** MediaStore columns read by a scan; Album Artist and the compilation flag exist from API 30. */
 @SuppressLint("InlinedApi")

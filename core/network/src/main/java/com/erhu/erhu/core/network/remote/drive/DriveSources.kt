@@ -34,6 +34,8 @@ class DriveTags(
     val artist: String?,
     val album: String?,
     val durationMs: Long,
+    val genre: String? = null,
+    val year: Int = 0,
 )
 
 /**
@@ -70,6 +72,12 @@ class DriveMetadataReader
                                 ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
                         album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM),
                         durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L,
+                        genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE)?.let(::readableGenre),
+                        year =
+                            (
+                                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR)
+                                    ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE)
+                            )?.let(::yearOf) ?: 0,
                     )
                 covers.mkdirs()
                 coverFile(sourceId, fileId).writeBytes(retriever.embeddedPicture ?: ByteArray(0))
@@ -124,3 +132,16 @@ class DriveArtworkSource
             const val ON_DEMAND_MIN_PX = 256
         }
     }
+
+/** A plausible year from a YEAR or DATE tag ("2018", "2018-05-04", "20180504T..."); null otherwise. */
+@Suppress("MagicNumber")
+internal fun yearOf(text: String): Int? = Regex("""(19|20)\d{2}""").find(text)?.value?.toIntOrNull()?.takeIf { it in 1900..2099 }
+
+/**
+ * A genre tag as text. Old ID3 files store a number ("(17)" or "17"): those, and empty or
+ * placeholder values, count as no genre so the online lookup can fill it in.
+ */
+internal fun readableGenre(text: String): String? =
+    text
+        .trim()
+        .takeUnless { it.isEmpty() || it.matches(Regex("""\(?\d+\)?""")) || it.equals("other", true) || it.equals("unknown", true) }

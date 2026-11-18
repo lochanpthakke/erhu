@@ -27,7 +27,7 @@ class RescanPersistenceTest {
             .inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), ErhuDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-    private val writer = LibraryWriter(db, db.songDao(), db.albumDao(), db.artistDao(), db.libraryModelDao())
+    private val writer = LibraryWriter(db, db.songDao(), db.albumDao(), db.artistDao(), db.libraryModelDao(), androidx.test.core.app.ApplicationProvider.getApplicationContext())
 
     private val raw =
         listOf(

@@ -208,6 +208,16 @@ class MusicPlaybackService : MediaLibraryService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
 
+    /**
+     * Swiping erhu away from Recents ends playback instead of leaving it playing with no app open.
+     * The queue and position are kept, so playback can resume from the notification or the app.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        player.playWhenReady = false
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         // The player is an app-wide singleton shared with PlaybackController, so
         // only the session is released here — never the player itself.

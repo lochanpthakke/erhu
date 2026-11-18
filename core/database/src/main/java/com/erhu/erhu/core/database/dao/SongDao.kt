@@ -33,11 +33,15 @@ interface SongDao {
     @Upsert
     suspend fun upsertAll(songs: List<SongEntity>)
 
-    @Query("SELECT * FROM songs ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT $SONG_LIST_COLUMNS FROM songs ORDER BY title COLLATE NOCASE ASC")
     fun getAllSongs(): Flow<List<SongEntity>>
 
     @Query("SELECT * FROM songs")
     suspend fun getAllSongsOnce(): List<SongEntity>
+
+    /** Path, modification time and year of every stored song: lets a scan skip re-reading unchanged files. */
+    @Query("SELECT id, file_path, date_modified, year FROM songs")
+    suspend fun getScanStamps(): List<SongScanStamp>
 
     @Query("UPDATE songs SET file_path = :newPath WHERE id = :songId")
     suspend fun updateFilePath(
@@ -59,21 +63,21 @@ interface SongDao {
     @Query("SELECT title FROM songs ORDER BY title COLLATE NOCASE ASC, id ASC")
     fun observeSongTitles(): Flow<List<String>>
 
-    @Query("SELECT * FROM songs ORDER BY title COLLATE NOCASE ASC, id ASC")
+    @Query("SELECT $SONG_LIST_COLUMNS FROM songs ORDER BY title COLLATE NOCASE ASC, id ASC")
     fun getSongsPaged(): PagingSource<Int, SongEntity>
 
-    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT $SONG_LIST_COLUMNS FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
     fun getFavoriteSongsPaged(): PagingSource<Int, SongEntity>
 
-    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT $SONG_LIST_COLUMNS FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC")
     fun getFavoriteSongs(): Flow<List<SongEntity>>
 
     /** Newest in the library first: the file's MediaStore modification time (when it was added or last changed). */
-    @Query("SELECT * FROM songs ORDER BY date_modified DESC, id DESC LIMIT :limit")
+    @Query("SELECT $SONG_LIST_COLUMNS FROM songs ORDER BY date_modified DESC, id DESC LIMIT :limit")
     fun observeRecentlyAddedSongs(limit: Int): Flow<List<SongEntity>>
 
     /** Favorite songs by title, at most [limit] (-1 = all). */
-    @Query("SELECT * FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC, id ASC LIMIT :limit")
+    @Query("SELECT $SONG_LIST_COLUMNS FROM songs WHERE is_favorite = 1 ORDER BY title COLLATE NOCASE ASC, id ASC LIMIT :limit")
     fun observeFavoriteSongs(limit: Int): Flow<List<SongEntity>>
 
     @Query("UPDATE remote_tracks SET is_favorite = :isFavorite WHERE id = :id")
@@ -146,7 +150,7 @@ interface SongDao {
 
     @Query(
         """
-        SELECT * FROM songs
+        SELECT $SONG_LIST_COLUMNS FROM songs
         WHERE title LIKE '%' || :query || '%'
            OR artist LIKE '%' || :query || '%'
            OR album LIKE '%' || :query || '%'
@@ -238,4 +242,19 @@ data class SongTagsRow(
     val year: Int,
     val bpm: Int?,
     val lyricsExcerpt: String?,
+)
+
+/**
+ * Every `songs` column except the lyrics text, which can be several KB a song and is read only by the
+ * lyrics views (by id). Lists of thousands of songs, re-read on each library change, skip it.
+ */
+const val SONG_LIST_COLUMNS =
+    "id, title, artist, album, artist_id, album_id, duration_ms, uri, file_path, track_number, year, date_modified, " +
+        "artwork_uri, is_enriched, NULL AS lyrics, disc_number, composer, genre, is_favorite, bpm, date_added_ms"
+
+data class SongScanStamp(
+    val id: Long,
+    @androidx.room.ColumnInfo(name = "file_path") val filePath: String,
+    @androidx.room.ColumnInfo(name = "date_modified") val dateModified: Long,
+    val year: Int,
 )

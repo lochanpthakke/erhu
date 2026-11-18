@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AlbumDao {
+    @Query("SELECT COUNT(*) FROM albums")
+    suspend fun count(): Int
+
     @Upsert
     suspend fun upsertAll(albums: List<AlbumEntity>)
 

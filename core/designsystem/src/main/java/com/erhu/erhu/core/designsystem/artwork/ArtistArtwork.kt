@@ -1,5 +1,14 @@
 package com.erhu.erhu.core.designsystem.artwork
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import coil.request.ImageRequest
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,15 +39,35 @@ fun ArtistArtwork(
             if (clipToCircle) modifier.clip(CircleShape) else modifier,
         contentAlignment = Alignment.Center,
     ) {
+        // The initial shows while the photo loads and if it cannot; a failed photo is asked for again
+        // a few times (slow network at launch) instead of leaving an empty circle.
+        ArtistMonogramCover(name = artistName, clipToCircle = clipToCircle)
         if (!artworkUri.isNullOrBlank()) {
+            var attempt by remember(artworkUri) { mutableIntStateOf(0) }
+            val context = LocalContext.current
+            val request =
+                remember(artworkUri, attempt) {
+                    ImageRequest
+                        .Builder(context)
+                        .data(artworkUri)
+                        .setParameter("attempt", attempt, memoryCacheKey = null)
+                        .crossfade(true)
+                        .build()
+                }
+            var failed by remember(artworkUri, attempt) { mutableStateOf(false) }
             AsyncImage(
-                model = artworkUri,
+                model = request,
                 contentDescription = artistName,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
+                onError = { failed = true },
             )
-        } else {
-            ArtistMonogramCover(name = artistName, clipToCircle = clipToCircle)
+            if (failed && attempt < ARTIST_PHOTO_RETRIES) {
+                LaunchedEffect(artworkUri, attempt) {
+                    delay(ARTIST_PHOTO_RETRY_MS * (attempt + 1))
+                    attempt++
+                }
+            }
         }
     }
 }
@@ -65,3 +94,6 @@ fun ArtistMonogramCover(
         )
     }
 }
+
+private const val ARTIST_PHOTO_RETRIES = 3
+private const val ARTIST_PHOTO_RETRY_MS = 2_000L

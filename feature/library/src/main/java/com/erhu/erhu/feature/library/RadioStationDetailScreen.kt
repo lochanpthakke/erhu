@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import com.erhu.erhu.core.designsystem.foundation.ArtworkSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -54,6 +55,8 @@ fun RadioStationDetailScreen(
     albumId: Long,
     featuredAlbums: List<com.erhu.erhu.core.model.Album>,
     viewModel: RadioStationViewModel,
+    radioPool: List<com.erhu.erhu.core.model.Album> = emptyList(),
+    onOpenRadio: (albumId: Long) -> Unit = {},
     libraryViewModel: LibraryViewModel,
     playlistsViewModel: PlaylistsViewModel,
     onBack: () -> Unit,
@@ -128,6 +131,14 @@ fun RadioStationDetailScreen(
                 return@AppScaffold
             }
             val songs = content.songs
+            val window by rememberRotationSlot(RadioRotation.RADIO_HOURS)
+            val recommended =
+                remember(content.album, content.artists, radioPool, window) {
+                    val stationArtists = content.artists.map { it.artist.id }
+                    RadioRotation
+                        .recommendations(radioPool, content.album, stationArtists, window)
+                        .map { FeaturedSetlists.radioFor(it, radioPool + featuredAlbums, emptyMap()) }
+                }
             val scroll = innerPadding.forScrollingContent(topOverlay = true)
             CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) {
                 ReportTitleScroll(listState)
@@ -173,6 +184,27 @@ fun RadioStationDetailScreen(
                             onClick = { libraryViewModel.playSongsFromQueue(songs, index) },
                             actions = actions,
                         )
+                    }
+                }
+                if (recommended.isNotEmpty()) {
+                    item(key = "more-stations") {
+                        Text(
+                            "More stations",
+                            style = TextStyles.sectionTitle,
+                            modifier = Modifier.padding(start = Spacing.screenGutter, top = Spacing.xl, bottom = Spacing.sm),
+                        )
+                        androidx.compose.foundation.lazy.LazyRow(
+                            contentPadding = PaddingValues(horizontal = Spacing.screenGutter),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                        ) {
+                            items(recommended.size, key = { recommended[it].key }) { i ->
+                                RadioTile(
+                                    radio = recommended[i],
+                                    onClick = { onOpenRadio(recommended[i].album.id) },
+                                    modifier = Modifier.width(ArtworkSize.shelf),
+                                )
+                            }
+                        }
                     }
                 }
             }

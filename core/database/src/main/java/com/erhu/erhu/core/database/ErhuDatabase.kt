@@ -67,7 +67,7 @@ import com.erhu.erhu.core.database.entity.WaveformCacheEntity
         RemoteTrackEntity::class,
         com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
 )
 abstract class ErhuDatabase : RoomDatabase() {

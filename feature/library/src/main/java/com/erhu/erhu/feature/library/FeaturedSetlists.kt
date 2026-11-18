@@ -26,7 +26,7 @@ internal sealed interface FeaturedSetlist {
 
 /** Small adapter over the existing daily/history-ranked picks; no new library read or ranking. */
 internal object FeaturedSetlists {
-    private const val RADIO_LIMIT = 3
+    private const val RADIO_LIMIT = 5
 
     fun select(
         albums: List<Album>,

@@ -2,6 +2,14 @@
 
 package com.erhu.erhu.feature.settings.sound
 
+import com.erhu.erhu.core.sound.model.EqMode
+import com.erhu.erhu.core.sound.dsp.BandFilter
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.Switch
+import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -82,89 +90,114 @@ fun SoundSettingsScreen(
     val soundSettings by viewModel.soundSettings.collectAsState()
 
     var showSaveDialog by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf<EqPreset?>(null) }
 
     val selectedBandIndex = soundSettings.selectedBandIndex.coerceIn(0, soundSettings.activeBandCount - 1)
     val selectedBand = soundSettings.bands.getOrElse(selectedBandIndex) { SoundSettings.defaultBands()[selectedBandIndex] }
+    val graphic = soundSettings.mode == EqMode.GRAPHIC
+    val eqOn = soundSettings.isEqEnabled
 
     SettingsPage(title = title, navigation = navigation, modifier = modifier) {
+        // The Equalizer comes first: on/off, mode, presets and the curve, then the mode's own controls.
         SettingsGroup {
             row {
                 SettingsSwitchRow(
                     title = stringResource(CommonR.string.eq_title),
-                    summary = stringResource(if (soundSettings.isEqEnabled) CommonR.string.eq_state_on else CommonR.string.eq_state_off),
+                    summary = stringResource(if (eqOn) CommonR.string.eq_state_on else CommonR.string.eq_state_off),
                     icon = Icons.Default.Equalizer,
-                    checked = soundSettings.isEqEnabled,
+                    checked = eqOn,
                     onCheckedChange = { viewModel.setEqEnabled(it) },
                 )
             }
         }
 
-        AudioUtilityControls(soundSettings.utilities, viewModel::updateUtilities)
-
         SettingsSection(title = stringResource(CommonR.string.eq_preset_curve_section)) {
             SettingsPanel {
+                SettingsSegmentedControl(
+                    options = listOf("Graphic", "Parametric"),
+                    selectedIndex = if (graphic) 0 else 1,
+                    onSelect = { viewModel.setMode(if (it == 0) EqMode.GRAPHIC else EqMode.PARAMETRIC) },
+                    enabled = eqOn,
+                )
+                Spacer(modifier = Modifier.height(Spacing.md))
                 PresetAndResetHeader(
                     soundSettings = soundSettings,
                     onPresetSelected = { viewModel.applyPreset(it) },
                     onSaveCustomClick = { showSaveDialog = true },
+                    onRenameCustomClick = { renaming = it },
                     onDeleteCustomClick = { viewModel.deleteCustomPreset(it) },
                     onResetClick = { viewModel.resetToFlat() },
                 )
 
                 Spacer(modifier = Modifier.height(Spacing.md))
 
+                val shown = soundSettings.effectiveBands()
                 Eq8CurveCanvas(
-                    bands = soundSettings.bands,
-                    activeBandCount = soundSettings.activeBandCount,
-                    selectedBandIndex = selectedBandIndex,
-                    customEqAudioProcessor = viewModel.customEqAudioProcessor,
+                    bands = shown,
+                    selectedBandIndex = if (graphic) -1 else selectedBandIndex,
+                    sampleRate = viewModel.customEqAudioProcessor.sampleRate(),
+                    frequencyEditable = !graphic,
+                    enabled = eqOn,
                     onNodeDrag = { index, freqHz, gainDb ->
-                        viewModel.setBandFrequencyAndGain(index, freqHz, gainDb)
+                        if (graphic) viewModel.setGraphicGain(index, gainDb) else viewModel.setBandFrequencyAndGain(index, freqHz, gainDb)
                     },
-                    onNodeSelect = { index ->
-                        viewModel.setSelectedBandIndex(index)
-                    },
+                    onNodeSelect = { index -> if (!graphic) viewModel.setSelectedBandIndex(index) },
                 )
             }
         }
 
-        SettingsSection(title = stringResource(CommonR.string.eq_bands_section)) {
-            val bandDescriptions =
-                List(soundSettings.activeBandCount) {
-                    stringResource(CommonR.string.eq_band_numbered, LocaleFormatters.formatInteger(it + 1, locale))
-                }
-            SettingsPanel {
-                BandCountSelectorRow(
-                    activeCount = soundSettings.activeBandCount,
+        if (graphic) {
+            SettingsSection(title = stringResource(CommonR.string.eq_bands_section)) {
+                GraphicBandsPanel(
+                    gains = soundSettings.graphicGains,
                     locale = locale,
-                    enabled = soundSettings.isEqEnabled,
-                    onCountSelected = { viewModel.setActiveBandCount(it) },
+                    enabled = eqOn,
+                    onGainChange = { index, gain -> viewModel.setGraphicGain(index, gain) },
                 )
-                Spacer(modifier = Modifier.height(Spacing.md))
-                SettingsSegmentedControl(
-                    options = List(soundSettings.activeBandCount) { LocaleFormatters.formatInteger(it + 1, locale) },
-                    selectedIndex = selectedBandIndex,
-                    onSelect = { viewModel.setSelectedBandIndex(it) },
-                    describe = { bandDescriptions[it] },
+            }
+        } else {
+            SettingsSection(title = stringResource(CommonR.string.eq_bands_section)) {
+                val bandDescriptions =
+                    List(soundSettings.activeBandCount) {
+                        stringResource(CommonR.string.eq_band_numbered, LocaleFormatters.formatInteger(it + 1, locale))
+                    }
+                SettingsPanel {
+                    BandCountSelectorRow(
+                        activeCount = soundSettings.activeBandCount,
+                        locale = locale,
+                        enabled = eqOn,
+                        onCountSelected = { viewModel.setActiveBandCount(it) },
+                    )
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    SettingsSegmentedControl(
+                        options = List(soundSettings.activeBandCount) { LocaleFormatters.formatInteger(it + 1, locale) },
+                        selectedIndex = selectedBandIndex,
+                        onSelect = { viewModel.setSelectedBandIndex(it) },
+                        describe = { bandDescriptions[it] },
+                    )
+                }
+            }
+
+            SettingsSection(
+                title = stringResource(CommonR.string.eq_band_numbered, LocaleFormatters.formatInteger(selectedBandIndex + 1, locale)),
+            ) {
+                SelectedBandPanel(
+                    band = selectedBand,
+                    locale = locale,
+                    enabled = eqOn,
+                    onEnabledChange = { viewModel.setBandEnabled(selectedBandIndex, it) },
+                    onFreqChange = { viewModel.setBandFrequency(selectedBandIndex, it) },
+                    onGainChange = { viewModel.setBandGain(selectedBandIndex, it) },
+                    onQChange = { viewModel.setBandQ(selectedBandIndex, it) },
+                    onSlopeChange = { viewModel.setBandSlope(selectedBandIndex, it) },
+                    onFilterTypeChange = { viewModel.setFilterType(selectedBandIndex, it) },
+                    onReset = { viewModel.resetBand(selectedBandIndex) },
                 )
             }
         }
 
-        SettingsSection(
-            title = stringResource(CommonR.string.eq_band_numbered, LocaleFormatters.formatInteger(selectedBandIndex + 1, locale)),
-        ) {
-            SelectedBandPanel(
-                selectedBandIndex = selectedBandIndex,
-                activeBandCount = soundSettings.activeBandCount,
-                band = selectedBand,
-                locale = locale,
-                enabled = soundSettings.isEqEnabled,
-                onFreqChange = { viewModel.setBandFrequency(selectedBandIndex, it) },
-                onGainChange = { viewModel.setBandGain(selectedBandIndex, it) },
-                onQChange = { viewModel.setBandQ(selectedBandIndex, it) },
-                onFilterTypeChange = { viewModel.setFilterType(selectedBandIndex, it) },
-            )
-        }
+        // Mono, balance, preamp and the other audio settings, below the Equalizer.
+        AudioUtilityControls(soundSettings.utilities, viewModel::updateUtilities)
     }
 
     if (showSaveDialog) {
@@ -175,6 +208,39 @@ fun SoundSettingsScreen(
                 showSaveDialog = false
             },
         )
+    }
+    renaming?.let { preset ->
+        SavePresetDialog(
+            initialName = preset.name,
+            title = "Rename preset",
+            onDismiss = { renaming = null },
+            onSave = { name ->
+                viewModel.renameCustomPreset(preset.id, name)
+                renaming = null
+            },
+        )
+    }
+}
+
+/** Graphic mode: the 8 fixed bands' gains. */
+@Composable
+private fun GraphicBandsPanel(
+    gains: List<Float>,
+    locale: Locale,
+    enabled: Boolean,
+    onGainChange: (Int, Float) -> Unit,
+) {
+    SettingsPanel {
+        CustomEqAudioProcessor.BAND_FREQUENCIES.forEachIndexed { index, frequency ->
+            val gain = gains.getOrElse(index) { 0f }
+            SliderLabel(label = formatFrequency(frequency, locale), value = formatGain(gain, locale))
+            Slider(
+                value = gain.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB),
+                onValueChange = { onGainChange(index, (it * 2f).roundToInt() / 2f) },
+                valueRange = CustomEqAudioProcessor.MIN_GAIN_DB..CustomEqAudioProcessor.MAX_GAIN_DB,
+                enabled = enabled,
+            )
+        }
     }
 }
 
@@ -215,77 +281,180 @@ private fun BandCountSelectorRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-@Suppress("MagicNumber", "LongMethod")
+@Suppress("MagicNumber", "LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 private fun SelectedBandPanel(
-    selectedBandIndex: Int,
-    activeBandCount: Int,
     band: BandConfig,
     locale: Locale,
     enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
     onFreqChange: (Float) -> Unit,
     onGainChange: (Float) -> Unit,
     onQChange: (Float) -> Unit,
+    onSlopeChange: (Int) -> Unit,
     onFilterTypeChange: (FilterType) -> Unit,
+    onReset: () -> Unit,
 ) {
-    val isFirstBand = selectedBandIndex == 0
-    val isLastBand = selectedBandIndex == activeBandCount - 1
-
+    var editingFrequency by remember { mutableStateOf(false) }
+    val editable = enabled && band.enabled
     SettingsPanel {
-        // Filter type: only the first and last active band can be a shelf.
-        if (isFirstBand || isLastBand) {
-            val shelfType = if (isFirstBand) FilterType.LOW_SHELF else FilterType.HIGH_SHELF
-            Text(stringResource(CommonR.string.eq_filter_type_label), style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            SettingsSegmentedControl(
-                options =
-                    listOf(
-                        stringResource(CommonR.string.eq_filter_type_bell),
-                        stringResource(CommonR.string.eq_filter_type_shelf),
-                    ),
-                selectedIndex = if (band.filterType == shelfType) 1 else 0,
-                onSelect = { onFilterTypeChange(if (it == 1) shelfType else FilterType.PEAKING) },
-                enabled = enabled,
-            )
-            Spacer(modifier = Modifier.height(Spacing.lg))
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Band on", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(checked = band.enabled, onCheckedChange = onEnabledChange, enabled = enabled)
         }
+        Spacer(modifier = Modifier.height(Spacing.md))
 
-        // 1. Logarithmic Center Frequency Slider
-        SliderLabel(
-            label = stringResource(CommonR.string.eq_center_frequency_label),
-            value = formatFrequency(band.frequencyHz, locale),
-        )
+        Text(stringResource(CommonR.string.eq_filter_type_label), style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            FilterType.entries.forEach { type ->
+                FilterChip(
+                    selected = band.filterType == type,
+                    onClick = { onFilterTypeChange(type) },
+                    label = { Text(filterTypeName(type)) },
+                    enabled = editable,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        // Frequency: a log slider, and the value itself opens precise entry.
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(CommonR.string.eq_center_frequency_label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            TextButton(onClick = { editingFrequency = true }, enabled = editable) { Text(formatPreciseFrequency(band.frequencyHz)) }
+        }
         Slider(
             value = frequencyToNormalized(band.frequencyHz),
             onValueChange = { norm -> onFreqChange(normalizedToFrequency(norm)) },
             valueRange = 0f..1f,
-            enabled = enabled,
+            enabled = editable,
         )
 
-        // 2. Gain Slider
-        SliderLabel(
-            label = stringResource(CommonR.string.eq_gain_label),
-            value = formatGain(band.gainDb, locale),
-        )
-        Slider(
-            value = band.gainDb,
-            onValueChange = onGainChange,
-            valueRange = -15f..15f,
-            enabled = enabled,
-        )
+        if (band.filterType.hasGain) {
+            SliderLabel(label = stringResource(CommonR.string.eq_gain_label), value = formatGain(band.gainDb, locale))
+            Slider(
+                value = band.gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB),
+                onValueChange = { onGainChange((it * 10f).roundToInt() / 10f) },
+                valueRange = CustomEqAudioProcessor.MIN_GAIN_DB..CustomEqAudioProcessor.MAX_GAIN_DB,
+                enabled = editable,
+            )
+        }
 
-        // 3. Q Factor Slider
-        SliderLabel(
-            label = stringResource(CommonR.string.eq_q_factor_label),
-            value = LocaleFormatters.formatDecimal(band.q.toDouble(), 2, locale),
-        )
-        Slider(
-            value = band.q,
-            onValueChange = onQChange,
-            valueRange = CustomEqAudioProcessor.MIN_Q..CustomEqAudioProcessor.MAX_Q,
-            enabled = enabled,
+        if (band.filterType.isPass) {
+            Text("Slope", style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            SettingsSegmentedControl(
+                options = BandFilter.SLOPES.map { "$it dB/oct" },
+                selectedIndex = BandFilter.SLOPES.indexOf(band.slope).coerceAtLeast(0),
+                onSelect = { onSlopeChange(BandFilter.SLOPES[it]) },
+                enabled = editable,
+            )
+            Spacer(modifier = Modifier.height(Spacing.md))
+        }
+
+        // Steeper pass filters are fixed Butterworth cascades: Q only shapes the 12 dB/octave slope.
+        if (!band.filterType.isPass || band.slope == 12) {
+            SliderLabel(
+                label = stringResource(CommonR.string.eq_q_factor_label),
+                value = LocaleFormatters.formatDecimal(band.q.toDouble(), 2, locale),
+            )
+            Slider(
+                value = qToNormalized(band.q),
+                onValueChange = { onQChange(normalizedToQ(it)) },
+                valueRange = 0f..1f,
+                enabled = editable,
+            )
+            Text(
+                text = if (band.filterType.isPass) "Higher Q adds a resonant peak at the cutoff" else "Lower Q = wider band, higher Q = narrower band",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+        TextButton(onClick = onReset, enabled = enabled) {
+            Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(IconSize.standard))
+            Spacer(modifier = Modifier.width(Spacing.sm))
+            Text("Reset band")
+        }
+    }
+
+    if (editingFrequency) {
+        FrequencyEntryDialog(
+            initialHz = band.frequencyHz,
+            onDismiss = { editingFrequency = false },
+            onSet = { hz ->
+                onFreqChange(hz)
+                editingFrequency = false
+            },
         )
     }
+}
+
+private fun filterTypeName(type: FilterType): String =
+    when (type) {
+        FilterType.PEAKING -> "Peak"
+        FilterType.LOW_SHELF -> "Low shelf"
+        FilterType.HIGH_SHELF -> "High shelf"
+        FilterType.LOW_PASS -> "Low pass"
+        FilterType.HIGH_PASS -> "High pass"
+        FilterType.NOTCH -> "Notch"
+    }
+
+/** 1 Hz below 1 kHz, 10 Hz above: "250 Hz", "2.45 kHz". */
+@Suppress("MagicNumber")
+private fun formatPreciseFrequency(hz: Float): String =
+    if (hz >= 1000f) {
+        "${"%.2f".format(java.util.Locale.ROOT, hz / 1000f).trimEnd('0').trimEnd('.')} kHz"
+    } else {
+        "${hz.roundToInt()} Hz"
+    }
+
+/** Precise frequency entry, 20 Hz - 20 kHz. */
+@Composable
+private fun FrequencyEntryDialog(
+    initialHz: Float,
+    onDismiss: () -> Unit,
+    onSet: (Float) -> Unit,
+) {
+    var text by remember { mutableStateOf(initialHz.roundToInt().toString()) }
+    val value = text.replace(',', '.').toFloatOrNull()
+    val valid = value != null && value >= CustomEqAudioProcessor.MIN_FREQ_HZ && value <= CustomEqAudioProcessor.MAX_FREQ_HZ
+    GlassAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(CommonR.string.eq_center_frequency_label)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it.filter { c -> c.isDigit() || c == '.' || c == ',' }.take(8) },
+                label = { Text("Hz (20 - 20000)") },
+                singleLine = true,
+                isError = !valid,
+                shape = MaterialTheme.shapes.small,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            )
+        },
+        confirmButton = {
+            Button(onClick = { value?.let(onSet) }, enabled = valid) { Text(stringResource(CommonR.string.action_save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.action_cancel)) } },
+    )
+}
+
+/** Q on a log scale, 0.1 - 10, so narrow and wide settings get equal room. */
+private fun qToNormalized(q: Float): Float {
+    val min = log10(CustomEqAudioProcessor.MIN_Q)
+    val max = log10(CustomEqAudioProcessor.MAX_Q)
+    return (log10(q.coerceIn(CustomEqAudioProcessor.MIN_Q, CustomEqAudioProcessor.MAX_Q)) - min) / (max - min)
+}
+
+@Suppress("MagicNumber")
+private fun normalizedToQ(norm: Float): Float {
+    val min = log10(CustomEqAudioProcessor.MIN_Q)
+    val max = log10(CustomEqAudioProcessor.MAX_Q)
+    val q = 10f.pow(min + norm.coerceIn(0f, 1f) * (max - min))
+    return (q * 100f).roundToInt() / 100f
 }
 
 /** A slider's name with its current value on the right, in the accent. */
@@ -307,13 +476,13 @@ private fun PresetAndResetHeader(
     soundSettings: SoundSettings,
     onPresetSelected: (String) -> Unit,
     onSaveCustomClick: () -> Unit,
+    onRenameCustomClick: (EqPreset) -> Unit,
     onDeleteCustomClick: (String) -> Unit,
     onResetClick: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val activePreset =
-        soundSettings.allPresets.find { it.id == soundSettings.activePresetId }
-            ?: EqPreset.FLAT
+    val presets = soundSettings.presetsForMode
+    val activePreset = presets.find { it.id == soundSettings.presetIdForMode }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -325,7 +494,7 @@ private fun PresetAndResetHeader(
             modifier = Modifier.weight(1f),
         ) {
             OutlinedTextField(
-                value = localizedPresetName(activePreset),
+                value = activePreset?.let { localizedPresetName(it) } ?: "Custom",
                 onValueChange = {},
                 readOnly = true,
                 singleLine = true,
@@ -341,7 +510,7 @@ private fun PresetAndResetHeader(
                 containerColor = Color.Transparent,
                 shape = RoundedCornerShape(28.dp),
             ) {
-                for (preset in soundSettings.allPresets) {
+                for (preset in presets) {
                     DropdownMenuItem(
                         text = {
                             Row(
@@ -349,8 +518,14 @@ private fun PresetAndResetHeader(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(localizedPresetName(preset))
+                                Text(localizedPresetName(preset), modifier = Modifier.weight(1f))
                                 if (preset.isCustom) {
+                                    IconButton(onClick = {
+                                        expanded = false
+                                        onRenameCustomClick(preset)
+                                    }) {
+                                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Rename preset")
+                                    }
                                     IconButton(onClick = { onDeleteCustomClick(preset.id) }) {
                                         Icon(
                                             imageVector = Icons.Default.Delete,
@@ -403,12 +578,14 @@ private fun localizedPresetName(preset: EqPreset): String =
 private fun SavePresetDialog(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit,
+    initialName: String = "",
+    title: String? = null,
 ) {
-    var presetName by remember { mutableStateOf("") }
+    var presetName by remember { mutableStateOf(initialName) }
 
     GlassAlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(CommonR.string.eq_save_preset_dialog_title)) },
+        title = { Text(title ?: stringResource(CommonR.string.eq_save_preset_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = presetName,

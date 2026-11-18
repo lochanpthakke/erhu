@@ -143,7 +143,7 @@ object ArtworkLoader {
         // A cover that could not be fetched (offline, server down) is retried later, not remembered as missing.
         var failedForNow = false
         val bitmap =
-            withContext(Dispatchers.IO) {
+            withContext(decodeDispatcher) {
                 decoding(+1)
                 try {
                     traced("Artwork decode") {
@@ -152,10 +152,17 @@ object ArtworkLoader {
                                 // A remote track has no local file to read a picture from: only its provider's cover.
                                 // A remote album or artist has no track at all and passes its cover as both arguments.
                                 loadRemote(albumArtUri ?: songUri, sizePx) { failedForNow = true }
+                            } else if (songUri == albumArtUri || isImageUri(songUri)) {
+                                // An album or artist cover (no song): read the image itself. Opening it as a song
+                                // (metadata reader, then thumbnail) only wasted seconds before this direct read.
+                                // MediaStore album art opens reliably through the thumbnail API on Android 10+;
+                                // reading its stream only works while the system still has the cover cached.
+                                (if (songUri.startsWith("content://")) loadThumbnail(context, songUri, sizePx) else null)
+                                    ?: loadFromStream(context, songUri, sizePx) { failedForNow = true }
                             } else {
                                 loadEmbeddedPicture(context, songUri, sizePx)
                                     ?: loadThumbnail(context, songUri, sizePx)
-                                    ?: albumArtUri?.let { loadFromStream(context, it, sizePx) }
+                                    ?: albumArtUri?.let { loadFromStream(context, it, sizePx) { failedForNow = true } }
                             }
                     }
                 } finally {
@@ -252,31 +259,75 @@ object ArtworkLoader {
         }
     }
 
+    /**
+     * Reads an image from a content, file or web address. Only "this cover does not exist" (a missing
+     * file, HTTP 404) counts as no artwork; anything else (slow network, storage not ready right after
+     * launch) calls [transient], so the cover is retried instead of staying blank until a restart.
+     */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun loadFromStream(
         context: Context,
         uri: String,
         sizePx: Int,
+        transient: () -> Unit,
     ): Bitmap? =
         try {
             val parsedUri = Uri.parse(uri)
             val bytes =
-                if (parsedUri.scheme == "http" || parsedUri.scheme == "https") {
-                    java.net
-                        .URL(uri)
-                        .openConnection()
-                        .apply {
-                            connectTimeout = 3000
-                            readTimeout = 3000
-                        }.getInputStream()
-                        .use { it.readBytes() }
-                } else {
-                    context.contentResolver.openInputStream(parsedUri)?.use { it.readBytes() }
+                when (parsedUri.scheme) {
+                    "http", "https" -> {
+                        val connection =
+                            java.net.URL(uri).openConnection().apply {
+                                connectTimeout = NETWORK_TIMEOUT_MS
+                                readTimeout = NETWORK_TIMEOUT_MS
+                            }
+                        connection.getInputStream().use { it.readBytes() }
+                    }
+                    null, "file" -> java.io.File(parsedUri.path ?: uri).takeIf { it.isFile }?.readBytes()
+                    else -> context.contentResolver.openInputStream(parsedUri)?.use { it.readBytes() }
                 }
-            bytes?.let { decodeSampled(it, sizePx) }
+            val decoded = bytes?.let { decodeSampled(it, sizePx) }
+            // Bytes that do not decode were most likely cut short.
+            if (bytes != null && decoded == null) transient()
+            decoded
+        } catch (e: java.io.FileNotFoundException) {
+            null
         } catch (e: Exception) {
+            transient()
             null
         }
+
+    private fun isImageUri(uri: String): Boolean =
+        uri.startsWith("http://") || uri.startsWith("https://") || uri.startsWith("/") || uri.startsWith("file://") ||
+            uri.startsWith("content://media/external/audio/albumart")
+
+    /**
+     * A failed cover that may load later is retried a few times, waiting longer each time: a blank
+     * cover right after launch fills in by itself instead of waiting for the next app start.
+     */
+    suspend fun loadWithRetry(
+        context: Context,
+        songUri: String,
+        albumArtUri: String?,
+        sizePx: Int,
+        customArtworkPath: String? = null,
+    ): Bitmap? {
+        RETRY_DELAYS_MS.forEach { wait ->
+            load(context, songUri, albumArtUri, sizePx, customArtworkPath)?.let { return it }
+            val key = "${customArtworkPath ?: albumArtUri?.takeIf { it.startsWith(REMOTE_ARTWORK_PREFIX) } ?: songUri}@$sizePx"
+            if (missCache.get(key) != null) return null
+            kotlinx.coroutines.delay(wait)
+        }
+        return load(context, songUri, albumArtUri, sizePx, customArtworkPath)
+    }
+
+    /** At most a few covers decode at once, so the first screen after launch is not starved by dozens. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val decodeDispatcher = Dispatchers.IO.limitedParallelism(DECODE_PARALLELISM)
+
+    private const val NETWORK_TIMEOUT_MS = 10_000
+    private const val DECODE_PARALLELISM = 6
+    private val RETRY_DELAYS_MS = listOf(1_500L, 4_000L, 10_000L)
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun loadEmbeddedPicture(

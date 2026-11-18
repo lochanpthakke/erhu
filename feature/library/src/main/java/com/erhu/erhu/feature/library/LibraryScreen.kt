@@ -292,13 +292,16 @@ fun LibraryScreen(
                             LibrarySection.TRACKS -> {
                                 // Collected only on the Tracks section, which shows the smart mix cards.
                                 val smartMixes by viewModel.smartMixes.collectAsState()
-                                val featuredAlbums by hiltViewModel<FeaturedAlbumsViewModel>().albums.collectAsState()
+                                val featuredViewModel = hiltViewModel<FeaturedAlbumsViewModel>()
+                                val featuredAlbums by featuredViewModel.albums.collectAsState()
+                                val radioAlbums by featuredViewModel.homeRadios.collectAsState()
                                 val songTitles by viewModel.songTitles.collectAsState(initial = emptyList())
                                 HomeFeed(
                                     songs = songs,
                                     songTitles = songTitles,
                                     smartMixes = smartMixes,
                                     featuredAlbums = featuredAlbums,
+                                    radioAlbums = radioAlbums,
                                     artistArtwork = artistArtwork,
                                     recentAlbums = recentAlbums,
                                     recentPlaylists = recentPlaylists,

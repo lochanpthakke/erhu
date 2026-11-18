@@ -58,6 +58,7 @@ internal fun HomeFeed(
     songTitles: List<String>,
     smartMixes: SmartMixes?,
     featuredAlbums: List<Album>,
+    radioAlbums: List<Album> = emptyList(),
     artistArtwork: Map<Long, String>,
     recentAlbums: List<Album>,
     recentPlaylists: List<Playlist>,
@@ -139,6 +140,7 @@ internal fun HomeFeed(
                         onAlbumClick,
                         onOpenRadio,
                         onPlaylistClick,
+                        radioAlbums = radioAlbums,
                     )
                 }
             }
@@ -189,9 +191,18 @@ private fun AlbumShelves(
     onAlbumClick: (Album) -> Unit,
     onOpenRadio: (Long) -> Unit,
     onPlaylistClick: (Playlist) -> Unit,
+    radioAlbums: List<Album> = emptyList(),
 ) {
     val setlists = remember(featuredAlbums, artistArtwork) { FeaturedSetlists.select(featuredAlbums, artistArtwork) }
-    val radios = setlists.filterIsInstance<FeaturedSetlist.RadioPick>()
+    // Stations rotate every few hours (RadioRotation); before the pool is ready, the featured ones.
+    val radios =
+        remember(radioAlbums, featuredAlbums, artistArtwork, setlists) {
+            if (radioAlbums.isEmpty()) {
+                setlists.filterIsInstance<FeaturedSetlist.RadioPick>()
+            } else {
+                radioAlbums.map { FeaturedSetlists.radioFor(it, radioAlbums + featuredAlbums, artistArtwork) }
+            }
+        }
     val albums = setlists.filterIsInstance<FeaturedSetlist.AlbumPick>()
     if (LocalVybeEnabled.current && radios.isNotEmpty()) {
         Shelf(title = stringResource(CommonR.string.library_home_featured_radios)) {

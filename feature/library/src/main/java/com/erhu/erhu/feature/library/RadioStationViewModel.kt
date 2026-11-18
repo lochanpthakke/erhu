@@ -7,7 +7,6 @@ import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.ArtistOnSongs
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.mix.RadioPlan
-import com.erhu.erhu.feature.library.mix.RadioRepository
 import com.erhu.erhu.feature.library.mix.RadioSeed
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -54,8 +53,9 @@ class RadioStationViewModel internal constructor(
     private val observeSongs: (List<Long>) -> Flow<List<Song>>,
 ) : ViewModel() {
     @Inject
-    constructor(library: LibraryRepository, radio: RadioRepository) : this(
-        RadioStationLoader({ library.getAlbumById(it).first() }, { radio.build(it) }),
+    constructor(library: LibraryRepository, plans: RadioStationPlans) : this(
+        // The same generated station as its Home tile (see RadioStationPlans).
+        RadioStationLoader({ library.getAlbumById(it).first() }, { plans.build(it) }),
         library::observeArtistsForSongs,
         library::observeSongsByIds,
     )

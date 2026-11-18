@@ -116,7 +116,8 @@ internal fun SmartMixHero(
     onPlay: (mixKey: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val featured = remember(mixes) { HomeSession.feature(mixes, MAX_BANNERS) }
+    val window by rememberRotationSlot(RadioRotation.BANNER_HOURS)
+    val featured = remember(mixes, window) { HomeSession.feature(mixes, MAX_BANNERS, sessionSeed = window) }
     val pageCount = featured.size + if (needsMoreListening) 1 else 0
     if (pageCount == 0) return
     val pager = rememberPagerState { pageCount }

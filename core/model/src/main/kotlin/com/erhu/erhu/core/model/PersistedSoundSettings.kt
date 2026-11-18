@@ -24,6 +24,12 @@ data class PersistedSoundSettings(
     val activeBandCount: Int = 8,
     val selectedBandIndex: Int = 0,
     val utilities: AudioUtilities = AudioUtilities(),
+    /** "GRAPHIC" or "PARAMETRIC"; empty in settings saved before the two modes existed. */
+    val eqMode: String = "",
+    val graphicGains: List<Float> = emptyList(),
+    val graphicPresetId: String = "",
+    val bandEnabled: List<Boolean> = emptyList(),
+    val bandSlopes: List<Int> = emptyList(),
 )
 
 data class PersistedEqPreset(
@@ -33,4 +39,8 @@ data class PersistedEqPreset(
     val bandFrequencies: List<Float> = emptyList(),
     val bandQs: List<Float> = emptyList(),
     val filterTypes: List<String> = emptyList(),
+    val mode: String = "",
+    val bandCount: Int = 0,
+    val bandEnabled: List<Boolean> = emptyList(),
+    val bandSlopes: List<Int> = emptyList(),
 )

@@ -199,6 +199,9 @@ object RadioEngine {
     private const val SAME_ALBUM = 0.15f
     private const val SEED_ARTIST = 0.8f
 
+    /** Relatedness at which listening history counts in full; less related songs get a share of it. */
+    private const val RELEVANCE_FOR_FULL_BOOST = 0.5f
+
     private fun score(
         profile: ListeningProfile,
         reference: Reference,
@@ -206,36 +209,45 @@ object RadioEngine {
         track: TrackFacts,
     ): Scored {
         val signals = mutableSetOf<RadioSignal>()
-        var total = 0f
+        // How related the song is to the seed: sound, genre, the seed's own artists and albums.
+        var relevance = 0f
 
         sound[track.songId]?.let { similarity ->
-            total += W_SOUND * similarity
+            // Squared: only songs that really sound close count for much, not the middle of the library.
+            relevance += W_SOUND * similarity * similarity
             if (similarity > 0f) signals += RadioSignal.SOUND
         }
 
         genreMatch(track, reference)?.let { match ->
-            total += W_GENRE * match
+            relevance += W_GENRE * match
             signals += RadioSignal.GENRE
         }
+
+        if (track.artistId in reference.artists) {
+            relevance += reference.artistWeight
+            signals += RadioSignal.SAME_ARTIST
+        }
+        if (track.albumId in reference.albums) relevance += SAME_ALBUM
+
+        var total = relevance
+        // Tempo orders songs but, being a weak hint, does not make one related enough for the history boost below.
         tempoMatch(track, reference)?.let { match ->
             total += W_TEMPO * match
             signals += RadioSignal.TEMPO
         }
 
-        if (track.artistId in reference.artists) {
-            total += reference.artistWeight
-            signals += RadioSignal.SAME_ARTIST
-        }
-        if (track.albumId in reference.albums) total += SAME_ALBUM
-
+        // Listening history only orders songs that already fit the seed. Before, it was a flat bonus,
+        // so the most-played artist leaked into unrelated stations (Travis Scott in a Radiohead radio)
+        // whenever sound or genre said little. Unrelated songs now only fill a station left short.
+        val fit = (relevance / RELEVANCE_FOR_FULL_BOOST).coerceIn(0f, 1f)
         val history = profile.history(track.songId)
         val familiar = (history.lasting / reference.maxLasting + if (track.isFavorite) FAVOURITE_FAMILIARITY else 0f).coerceAtMost(1f)
         val liked = profile.artist(track)
-        if (familiar > 0f || liked > 0f) {
-            total += W_FAMILIAR * familiar + W_LIKED_ARTIST * liked
+        if (fit > 0f && (familiar > 0f || liked > 0f)) {
+            total += fit * (W_FAMILIAR * familiar + W_LIKED_ARTIST * liked)
             signals += RadioSignal.LISTENING
         }
-        if (history.plays == 0) total += W_UNHEARD
+        if (history.plays == 0) total += fit * W_UNHEARD
 
         return Scored(track, total, signals)
     }

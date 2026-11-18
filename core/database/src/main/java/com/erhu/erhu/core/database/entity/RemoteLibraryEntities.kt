@@ -79,7 +79,21 @@ data class RemoteTrackEntity(
     /** The provider folder directly holding the file; the Library groups albums by it. */
     @ColumnInfo(name = "parent_folder")
     val parentFolder: String? = null,
+    /** From the file's tag, else a confident online match (the Fix Tags lookup); null when neither knows. */
+    val genre: String? = null,
+    @ColumnInfo(defaultValue = "0")
+    val year: Int = 0,
+    /** Plain lyrics from LRCLIB, for VYBE's descriptions and the lyrics panel. */
+    val lyrics: String? = null,
+    /** Which details pass ran for the track ([RemoteDetails.VERSION]); 0 = genre and lyrics never looked for. */
+    @ColumnInfo(name = "details_version", defaultValue = "0")
+    val detailsVersion: Int = 0,
 )
+
+/** The version of the genre/year/lyrics pass; bumping it makes every Library track be looked at again. */
+object RemoteDetails {
+    const val VERSION = 1
+}
 
 /**
  * A remote folder the user added to the Library. Its audio, subfolders included, is listed on every

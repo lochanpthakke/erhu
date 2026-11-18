@@ -19,7 +19,7 @@ class FeaturedSetlistsTest {
         val albums = (1L..5L).map { album(it) }
         val picks = FeaturedSetlists.select(albums, emptyMap())
         assertEquals(albums, picks.filterIsInstance<FeaturedSetlist.AlbumPick>().map { it.album })
-        assertEquals(8, picks.size)
+        assertEquals(10, picks.size)
         assertEquals(picks.size, picks.map { it.key }.toSet().size)
         assertEquals(listOf("album:1", "radio:1", "album:2", "radio:2"), picks.take(4).map { it.key })
     }

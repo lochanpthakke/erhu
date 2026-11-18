@@ -110,7 +110,7 @@ class PlaylistArtworkAndHistoryTest {
             val raw = listOf(RawTrack(1, "Rich Flex", "Drake/21 Savage", null, "Her Loss", 1, 1, "/m", false))
             val song = SongEntity(id = 1, title = "Rich Flex", artist = "Drake/21 Savage", album = "Her Loss", artistId = 0, albumId = 0,
                 durationMs = 1, uri = "u1", filePath = "/m/1.mp3", trackNumber = 1, year = 2022, dateModified = 1)
-            val writer = LibraryWriter(db, db.songDao(), db.albumDao(), db.artistDao(), db.libraryModelDao())
+            val writer = LibraryWriter(db, db.songDao(), db.albumDao(), db.artistDao(), db.libraryModelDao(), androidx.test.core.app.ApplicationProvider.getApplicationContext())
             writer.write(LibraryModelBuilder.build(raw, emptyMap()).toEntities(listOf(song), emptyMap()))
             writer.write(LibraryModelBuilder.build(raw, emptyMap()).toEntities(listOf(song), emptyMap()))
             assertEquals(uri, playlist(id).artworkUri)

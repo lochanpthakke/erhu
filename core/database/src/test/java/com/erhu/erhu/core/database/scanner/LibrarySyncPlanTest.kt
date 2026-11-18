@@ -37,6 +37,18 @@ class LibrarySyncPlanTest {
     }
 
     @Test
+    fun rescan_remoteTrack_takesItsNewDetails_andKeepsFavorite() {
+        val id = com.erhu.erhu.core.model.RemoteIds.FIRST + 1
+        val old = entity(id, dateModified = 0, filePath = "").copy(isEnriched = true, isFavorite = true)
+        val fresh = entity(id, dateModified = 0, filePath = "").copy(isEnriched = true, genre = "Hip-Hop", lyrics = "la la", year = 2018)
+        val result = planLibrarySync(scanned = listOf(fresh), existing = listOf(old)).upserts.single()
+        assertEquals("Hip-Hop", result.genre)
+        assertEquals("la la", result.lyrics)
+        assertEquals(2018, result.year)
+        assertTrue(result.isFavorite)
+    }
+
+    @Test
     fun rescan_unchangedFile_keepsEnrichment() {
         val enriched = entity(1).copy(isEnriched = true, lyrics = "la la", genre = "Pop; Synth-pop", discNumber = 2, bpm = 78)
         val plan = planLibrarySync(scanned = listOf(entity(1)), existing = listOf(enriched))

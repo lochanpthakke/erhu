@@ -98,12 +98,27 @@ class LibraryWriter
         private val albumDao: AlbumDao,
         private val artistDao: ArtistDao,
         private val libraryModelDao: LibraryModelDao,
+        @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     ) {
+        private val prefs by lazy { context.getSharedPreferences(WRITER_PREFS, android.content.Context.MODE_PRIVATE) }
+
         suspend fun write(entities: LibraryEntities): WriteSummary =
             database.withTransaction {
-                val plan = planLibrarySync(scanned = entities.songs, existing = songDao.getAllSongsOnce())
+                val existing = songDao.getAllSongsOnce()
+                val plan = planLibrarySync(scanned = entities.songs, existing = existing)
                 plan.deletedIds.chunked(CHUNK).forEach { songDao.deleteSongsByIds(it) }
-                plan.upserts.chunked(CHUNK).forEach { songDao.upsertAll(it) }
+                // Every write wakes every screen watching the songs table; rows that came out identical are skipped.
+                val existingById = existing.associateBy { it.id }
+                val changed = plan.upserts.filter { it != existingById[it.id] }
+                changed.chunked(CHUNK).forEach { songDao.upsertAll(it) }
+                // Albums, artists and credits are rebuilt only when the computed model differs from the last
+                // one written (and the tables still hold it); a launch with no library change writes nothing.
+                val fingerprint = derivedFingerprint(entities)
+                val unchanged =
+                    prefs.getString(FINGERPRINT_KEY, null) == fingerprint &&
+                        albumDao.count() == entities.albums.size &&
+                        artistDao.count() == entities.artists.size
+                if (unchanged) return@withTransaction WriteSummary(upserted = changed.size, removed = plan.deletedIds.size)
                 val crossRefs = database.songArtistCrossRefDao()
                 crossRefs.deleteAll()
                 entities.crossRefs.chunked(CHUNK).forEach { crossRefs.upsertAll(it) }
@@ -117,11 +132,22 @@ class LibraryWriter
                 artistDao.syncAllArtwork()
                 entities.albumArtists.chunked(CHUNK).forEach { libraryModelDao.insertAlbumArtists(it) }
                 entities.unverified.chunked(CHUNK).forEach { libraryModelDao.insertUnverifiedSegments(it) }
-                WriteSummary(upserted = plan.upserts.size, removed = plan.deletedIds.size)
+                prefs.edit().putString(FINGERPRINT_KEY, fingerprint).apply()
+                WriteSummary(upserted = changed.size, removed = plan.deletedIds.size)
             }
 
         private companion object {
             /** Stay well below SQLite's 999 bound-variable limit on API < 30. */
             const val CHUNK = 500
+            const val WRITER_PREFS = "library_writer"
+            const val FINGERPRINT_KEY = "derived_fingerprint"
         }
     }
+
+/**
+ * A fingerprint of everything derived from a scan (albums, artists, credits, album artists, unverified
+ * segments), from the entities' own values: equal fingerprints mean the same rows would be written.
+ */
+internal fun derivedFingerprint(entities: LibraryEntities): String =
+    listOf(entities.albums, entities.artists, entities.crossRefs, entities.albumArtists, entities.unverified)
+        .joinToString("/") { "${it.size}:${it.hashCode()}:${it.toString().hashCode()}" }

@@ -114,7 +114,9 @@ class SoundRepositoryImplTest {
         SoundSettings(
             isEqEnabled = false,
             bands = List(8) { i -> BandConfig(CustomEqAudioProcessor.BAND_FREQUENCIES[i], sampleGains[i]) },
-            activePresetId = EqPreset.BASS_BOOSTER.id,
+            activePresetId = EqPreset.PARAMETRIC_FLAT.id,
+            graphicGains = EqPreset.BASS_BOOSTER.bandGains.toList(),
+            graphicPresetId = EqPreset.BASS_BOOSTER.id,
             customPresets = listOf(EqPreset("custom_1", "Car", FloatArray(8) { 2f }, isCustom = true)),
         ).toPersisted()
 
@@ -249,15 +251,16 @@ class SoundRepositoryImplTest {
             val h = Harness(this, disk)
             runCurrent()
 
+            h.repository.setMode(com.erhu.erhu.core.sound.model.EqMode.GRAPHIC)
             h.repository.applyPreset(EqPreset.JAZZ.id)
             disk.readGate!!.complete(Unit)
             advanceUntilIdle()
 
             val state = h.repository.soundSettings.value
-            assertEquals(EqPreset.JAZZ.id, state.activePresetId)
+            assertEquals(EqPreset.JAZZ.id, state.graphicPresetId)
             assertArrayEquals(EqPreset.JAZZ.bandGains, h.processor.getBandGains(), 0f)
             assertEquals(listOf("custom_1"), state.customPresets.map { it.id })
-            assertEquals(EqPreset.JAZZ.id, disk.stored.value!!.activePresetId)
+            assertEquals(EqPreset.JAZZ.id, disk.stored.value!!.graphicPresetId)
         }
 
     @Test

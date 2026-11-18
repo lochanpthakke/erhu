@@ -22,7 +22,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,7 +54,10 @@ internal fun RadioTile(
     radio: FeaturedSetlist.RadioPick,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    covers: RadioCoversViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(radio.album.id) { covers.load(radio.album.id) }
+    val portraits by covers.portraits.collectAsStateWithLifecycle()
     val interaction = remember { MutableInteractionSource() }
     val openDescription = stringResource(CommonR.string.radio_cd_open, radio.album.title, radio.album.artist)
     Column(
@@ -59,7 +67,12 @@ internal fun RadioTile(
                     contentDescription = openDescription
                 }.clickable(interactionSource = interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick),
     ) {
-        RadioArtwork(radio, Modifier.fillMaxWidth().aspectRatio(1f).pressScale(interaction, ARTWORK_PRESSED_SCALE))
+        val stationPortraits = portraits[radio.album.id]
+        if (stationPortraits.isNullOrEmpty()) {
+            RadioArtwork(radio, Modifier.fillMaxWidth().aspectRatio(1f).pressScale(interaction, ARTWORK_PRESSED_SCALE))
+        } else {
+            RadioCover(stationPortraits, Modifier.fillMaxWidth().aspectRatio(1f).pressScale(interaction, ARTWORK_PRESSED_SCALE))
+        }
         Spacer(Modifier.height(Spacing.sm))
         Text(
             stringResource(CommonR.string.radio_title_format, radio.identity),
@@ -110,6 +123,43 @@ internal fun RadioArtwork(
         )
         RadioBadgeHeader(ink)
         RadioIdentityLabel(radio.identity, ink, Modifier.align(Alignment.BottomStart).height(side * 0.30f))
+    }
+}
+
+/**
+ * The station page's cover at tile size: its lead artist centred, two more of the station's artists
+ * behind on either side, over the lead portrait's colours, under the RADIO badge.
+ */
+@Composable
+internal fun RadioCover(
+    portraits: List<RadioPortrait>,
+    modifier: Modifier = Modifier,
+) {
+    val palette by rememberRadioPalette(portraits.firstOrNull())
+    val colors = MaterialTheme.colorScheme
+    val tint = palette?.gradient?.first()?.let(::Color) ?: colors.surfaceVariant
+    val ink = palette?.content?.let(::Color) ?: colors.onSurfaceVariant
+    MaterialTheme(colorScheme = radioColorScheme(colors, palette)) {
+        BoxWithConstraints(
+            modifier
+                .clip(Radius.mediumShape)
+                .background(Brush.verticalGradient(listOf(tint, colors.background))),
+        ) {
+            val side = maxWidth
+            portraits.drop(1).take(2).forEachIndexed { index, portrait ->
+                RadioPortraitImage(
+                    portrait,
+                    Modifier
+                        .align(if (index == 0) Alignment.CenterStart else Alignment.CenterEnd)
+                        .offset(x = side * if (index == 0) -0.12f else 0.12f, y = side * 0.08f)
+                        .size(side * 0.44f),
+                )
+            }
+            portraits.firstOrNull()?.let { lead ->
+                RadioPortraitImage(lead, Modifier.align(Alignment.Center).offset(y = side * 0.08f).size(side * 0.62f))
+            }
+            RadioBadgeHeader(ink)
+        }
     }
 }
 

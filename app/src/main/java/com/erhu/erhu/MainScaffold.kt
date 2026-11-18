@@ -710,13 +710,15 @@ fun MainScaffold(
                                                     ProvideMotionScope(this) {
                                                         val route = entry.toRoute<RadioStationDetail>()
                                                         val homeEntry = remember(entry) { navController.getBackStackEntry<Library>() }
-                                                        val featured by hiltViewModel<FeaturedAlbumsViewModel>(
-                                                            homeEntry,
-                                                        ).albums.collectAsState()
+                                                        val featuredViewModel = hiltViewModel<FeaturedAlbumsViewModel>(homeEntry)
+                                                        val featured by featuredViewModel.albums.collectAsState()
+                                                        val radioPool by featuredViewModel.radioPool.collectAsState()
                                                         RadioStationDetailScreen(
                                                             albumId = route.albumId,
                                                             featuredAlbums = featured,
                                                             viewModel = hiltViewModel(),
+                                                            radioPool = radioPool,
+                                                            onOpenRadio = { navController.navigate(RadioStationDetail(it)) },
                                                             libraryViewModel = libraryViewModel,
                                                             playlistsViewModel = playlistsViewModel,
                                                             onBack = { navController.popBackStack() },

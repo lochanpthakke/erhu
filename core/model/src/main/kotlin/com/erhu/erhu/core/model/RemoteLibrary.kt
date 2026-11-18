@@ -44,6 +44,9 @@ data class RemoteTrack(
     /** Provider-side handle of the cover (cover-art id, file id), or null when there is none. */
     val artworkKey: String? = null,
     val isFavorite: Boolean = false,
+    /** The server's genre and year, when it reports them (Subsonic does; Drive knows only file names). */
+    val genre: String? = null,
+    val year: Int = 0,
 )
 
 /**
