@@ -39,6 +39,7 @@ import com.erhu.erhu.core.designsystem.component.IconBadge
 import com.erhu.erhu.core.designsystem.component.LocalCollapsingTitle
 import com.erhu.erhu.core.designsystem.component.OverlayHeader
 import com.erhu.erhu.core.designsystem.component.ReportTitleScroll
+import com.erhu.erhu.core.designsystem.component.ScrollingPadding
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
@@ -54,6 +55,8 @@ private val ICON_TEXT_GAP = 14.dp
  * One Settings page: the app's floating header (round back / drawer button and title, the same
  * header as the album and playlist pages) over a scrolling column with the standard gutters.
  * Content scrolls underneath the header and stays clear of the mini player.
+ * With [pinnedContent], the header and pinned content stay above the scroll viewport,
+ * which ends at the bottom chrome.
  */
 @Composable
 fun SettingsPage(
@@ -62,29 +65,47 @@ fun SettingsPage(
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
+    pinnedContent: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     // The page title merges into the header button as the page scrolls.
     val collapsingTitle = rememberCollapsingTitleState()
     AppScaffold(
-        topBar = { OverlayHeader(navigation = navigation, title = title, collapsingTitle = collapsingTitle, actions = actions) },
+        topBar = {
+            OverlayHeader(
+                navigation = navigation,
+                title = title,
+                collapsingTitle = collapsingTitle.takeIf { pinnedContent == null },
+                actions = actions,
+            )
+        },
         snackbarHost = snackbarHost,
         modifier = modifier,
     ) { innerPadding ->
-        val scroll = innerPadding.forScrollingContent(topOverlay = true)
+        val scroll =
+            if (pinnedContent == null) {
+                innerPadding.forScrollingContent(topOverlay = true)
+            } else {
+                ScrollingPadding(container = innerPadding, contentBottom = 0.dp)
+            }
         val scrollState = rememberScrollState()
-        CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) { ReportTitleScroll(scrollState) }
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(scroll.container)
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = Spacing.screenGutter)
-                    .padding(top = scroll.contentTop + Spacing.sm, bottom = scroll.contentBottom + Spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xl),
-            content = content,
-        )
+        if (pinnedContent == null) {
+            CompositionLocalProvider(LocalCollapsingTitle provides collapsingTitle) { ReportTitleScroll(scrollState) }
+        }
+        Column(Modifier.fillMaxSize().padding(scroll.container)) {
+            pinnedContent?.invoke()
+            Column(
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(scrollState)
+                        .padding(horizontal = Spacing.screenGutter)
+                        .padding(top = scroll.contentTop + Spacing.sm, bottom = scroll.contentBottom + Spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
+                content = content,
+            )
+        }
     }
 }
 

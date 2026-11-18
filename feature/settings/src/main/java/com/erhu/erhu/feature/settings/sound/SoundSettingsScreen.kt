@@ -8,13 +8,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Switch
 import androidx.compose.material3.FilterChip
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,6 +63,7 @@ import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.designsystem.theme.popupGlass
 import com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor
 import com.erhu.erhu.core.sound.dsp.FilterType
@@ -97,8 +101,35 @@ fun SoundSettingsScreen(
     val graphic = soundSettings.mode == EqMode.GRAPHIC
     val eqOn = soundSettings.isEqEnabled
 
-    SettingsPage(title = title, navigation = navigation, modifier = modifier) {
-        // The Equalizer comes first: on/off, mode, presets and the curve, then the mode's own controls.
+    SettingsPage(
+        title = title,
+        navigation = navigation,
+        modifier = modifier,
+        pinnedContent = {
+            BoxWithConstraints(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(ErhuGlass.backdropColor(MaterialTheme.colorScheme.background))
+                        .padding(horizontal = Spacing.screenGutter),
+            ) {
+                // Leave most of the inset-adjusted height for controls in short windows.
+                val graphHeight = minOf(220.dp, maxHeight * 0.42f)
+                Eq8CurveCanvas(
+                    bands = soundSettings.effectiveBands(),
+                    selectedBandIndex = if (graphic) -1 else selectedBandIndex,
+                    sampleRate = viewModel.customEqAudioProcessor.sampleRate(),
+                    modifier = Modifier.height(graphHeight),
+                    frequencyEditable = !graphic,
+                    enabled = eqOn,
+                    onNodeDrag = { index, freqHz, gainDb ->
+                        if (graphic) viewModel.setGraphicGain(index, gainDb) else viewModel.setBandFrequencyAndGain(index, freqHz, gainDb)
+                    },
+                    onNodeSelect = { index -> if (!graphic) viewModel.setSelectedBandIndex(index) },
+                )
+            }
+        },
+    ) {
         SettingsGroup {
             row {
                 SettingsSwitchRow(
@@ -127,21 +158,6 @@ fun SoundSettingsScreen(
                     onRenameCustomClick = { renaming = it },
                     onDeleteCustomClick = { viewModel.deleteCustomPreset(it) },
                     onResetClick = { viewModel.resetToFlat() },
-                )
-
-                Spacer(modifier = Modifier.height(Spacing.md))
-
-                val shown = soundSettings.effectiveBands()
-                Eq8CurveCanvas(
-                    bands = shown,
-                    selectedBandIndex = if (graphic) -1 else selectedBandIndex,
-                    sampleRate = viewModel.customEqAudioProcessor.sampleRate(),
-                    frequencyEditable = !graphic,
-                    enabled = eqOn,
-                    onNodeDrag = { index, freqHz, gainDb ->
-                        if (graphic) viewModel.setGraphicGain(index, gainDb) else viewModel.setBandFrequencyAndGain(index, freqHz, gainDb)
-                    },
-                    onNodeSelect = { index -> if (!graphic) viewModel.setSelectedBandIndex(index) },
                 )
             }
         }
