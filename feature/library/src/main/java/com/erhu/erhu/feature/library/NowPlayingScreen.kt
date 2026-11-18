@@ -170,6 +170,17 @@ fun NowPlayingScreen(
     // The page scrolls (artwork and controls, then the lyrics); dragging down collapses the player
     // only while it is at the top, otherwise the drag scrolls back up.
     val pageScroll = rememberScrollState()
+    // Closing while scrolled down (Back from the lyrics): the page scrolls back to the top as the player
+    // closes, so the artwork travels from the card in view to the mini player instead of from off screen.
+    if (transition != null) {
+        LaunchedEffect(transition) {
+            snapshotFlow { transition.progress.targetValue == 0f && transition.fraction < 1f }
+                .distinctUntilChanged()
+                .collect { closing ->
+                    if (closing && pageScroll.value > 0) pageScroll.animateScrollTo(0, tween(CLOSE_SCROLL_MS, easing = Motion.Standard))
+                }
+        }
+    }
     val collapseDrag =
         if (transition != null) {
             Modifier.playerDrag(transition, expandsUpward = false, canStart = { pageScroll.value == 0 })
@@ -677,3 +688,6 @@ private fun RepeatMode.next(): RepeatMode =
         RepeatMode.ALL -> RepeatMode.ONE
         RepeatMode.ONE -> RepeatMode.OFF
     }
+
+/** How long a scrolled page takes to return to the top when the player closes. */
+private const val CLOSE_SCROLL_MS = 260

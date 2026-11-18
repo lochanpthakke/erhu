@@ -35,6 +35,11 @@ fun PersistedSoundSettings.toProto(): SoundSettingsProto =
         .setSkipSilence(utilities.skipSilence)
         .setSleepDeadlineMs(utilities.sleepDeadlineMs)
         .setSleepAtTrackEnd(utilities.sleepAtTrackEnd)
+        .setEqMode(eqMode)
+        .addAllGraphicGains(graphicGains)
+        .setGraphicPresetId(graphicPresetId)
+        .addAllBandEnabled(bandEnabled)
+        .addAllBandSlopes(bandSlopes)
         .build()
 
 fun SoundSettingsProto.toDomain(): PersistedSoundSettings =
@@ -72,6 +77,11 @@ fun SoundSettingsProto.toDomain(): PersistedSoundSettings =
                     sleepDeadlineMs = sleepDeadlineMs,
                     sleepAtTrackEnd = sleepAtTrackEnd,
                 ).sanitized(),
+        eqMode = eqMode,
+        graphicGains = graphicGainsList,
+        graphicPresetId = graphicPresetId,
+        bandEnabled = bandEnabledList,
+        bandSlopes = bandSlopesList,
     )
 
 private fun PersistedEqPreset.toProto(): EqPresetProto =
@@ -83,6 +93,10 @@ private fun PersistedEqPreset.toProto(): EqPresetProto =
         .addAllBandFrequencies(bandFrequencies)
         .addAllBandQs(bandQs)
         .addAllFilterTypes(filterTypes)
+        .setMode(mode)
+        .setBandCount(bandCount)
+        .addAllBandEnabled(bandEnabled)
+        .addAllBandSlopes(bandSlopes)
         .build()
 
 private fun EqPresetProto.toDomain(): PersistedEqPreset =
@@ -93,6 +107,10 @@ private fun EqPresetProto.toDomain(): PersistedEqPreset =
         bandFrequencies = bandFrequenciesList,
         bandQs = bandQsList,
         filterTypes = filterTypesList,
+        mode = mode,
+        bandCount = bandCount,
+        bandEnabled = bandEnabledList,
+        bandSlopes = bandSlopesList,
     )
 
 /** Writes the sound settings into [existing], keeping playback and theme fields. */

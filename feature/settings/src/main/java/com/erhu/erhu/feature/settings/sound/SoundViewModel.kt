@@ -132,4 +132,30 @@ class SoundViewModel
                 soundRepository.deleteCustomPreset(presetId)
             }
         }
+
+        fun setMode(mode: com.erhu.erhu.core.sound.model.EqMode) = soundRepository.setMode(mode)
+
+        fun setGraphicGain(
+            index: Int,
+            gainDb: Float,
+        ) = soundRepository.setGraphicGain(index, gainDb)
+
+        fun setBandEnabled(
+            index: Int,
+            enabled: Boolean,
+        ) = soundRepository.setBandEnabled(index, enabled)
+
+        fun setBandSlope(
+            index: Int,
+            slope: Int,
+        ) = soundRepository.setBandSlope(index, slope)
+
+        fun resetBand(index: Int) = soundRepository.resetBand(index)
+
+        fun renameCustomPreset(
+            presetId: String,
+            name: String,
+        ) {
+            viewModelScope.launch { soundRepository.renameCustomPreset(presetId, name) }
+        }
     }

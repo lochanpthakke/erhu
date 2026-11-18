@@ -124,6 +124,21 @@ class FeaturedAlbumsViewModel
                 .flowOn(Dispatchers.Default)
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
+        /** Every artist that can lead a radio (see [RadioRotation.pool]), most played first. */
+        val radioPool: StateFlow<List<Album>> =
+            combine(library.getAllAlbums(), history.observeTracks(), history.observePlays()) { albums, tracks, plays ->
+                RadioRotation.pool(albums, tracks, plays)
+            }.debounce(REBUILD_DEBOUNCE_MS)
+                .distinctUntilChanged()
+                .flowOn(Dispatchers.Default)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
+        /** Home's stations: a new draw from the pool every [RadioRotation.RADIO_HOURS] hours. */
+        val homeRadios: StateFlow<List<Album>> =
+            combine(radioPool, RadioRotation.slots(RadioRotation.RADIO_HOURS)) { pool, slot -> RadioRotation.stations(pool, slot) }
+                .distinctUntilChanged()
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
+
         private companion object {
             /** The Recently Played shelf's length (LibraryViewModel's limit). */
             const val RECENT_SHELF_LIMIT = 12

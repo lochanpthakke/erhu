@@ -308,18 +308,33 @@ class RemoteBrowseViewModel
     ) : ViewModel() {
         private val shownSource = MutableStateFlow(-1L)
 
-        /** This server's whole library when it is in erhu's Library, with what its sync is doing. */
+        /** The Library entry the page on screen stands for (see [libraryKeyFor]); null where there is none. */
+        private val shownKey = MutableStateFlow<String?>(null)
+        private var shownTitle = ""
+
+        /** The page's entry in erhu's Library and its sync, and whether the whole server already covers it. */
         val libraryEntry =
             kotlinx.coroutines.flow
-                .combine(librarySync.folders, librarySync.status, shownSource) { folders, status, source ->
-                    folders.firstOrNull { it.sourceId == source }?.let { it to (status[it.id] ?: FolderSyncStatus()) }
-                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
+                .combine(librarySync.folders, librarySync.status, shownSource, shownKey) { folders, status, source, key ->
+                    val mine = folders.filter { it.sourceId == source }
+                    LibraryRowState(
+                        entry = mine.firstOrNull { it.folderId == key }?.let { it to (status[it.id] ?: FolderSyncStatus()) },
+                        coveredByServer = key != DriveLibrarySync.WHOLE_SERVER && mine.any { it.folderId == DriveLibrarySync.WHOLE_SERVER },
+                        available = key != null,
+                    )
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryRowState())
 
         fun addLibraryToErhu() {
             val id = shownSource.value.takeIf { it > 0 } ?: return
+            val key = shownKey.value ?: return
             viewModelScope.launch {
-                val name = repository.getSource(id)?.name ?: "Server library"
-                librarySync.add(id, DriveLibrarySync.WHOLE_SERVER, null, name)
+                val name =
+                    if (key == DriveLibrarySync.WHOLE_SERVER) {
+                        repository.getSource(id)?.name ?: "Server library"
+                    } else {
+                        shownTitle.ifBlank { "Server music" }
+                    }
+                librarySync.add(id, key, null, name)
             }
         }
 
@@ -346,8 +361,11 @@ class RemoteBrowseViewModel
             sourceId: Long,
             kind: RemotePageKind,
             itemId: String,
+            title: String = "",
         ) {
             shownSource.value = sourceId
+            shownKey.value = libraryKeyFor(kind, itemId)
+            shownTitle = title
             if (started) return
             started = true
             this.sourceId = sourceId
@@ -477,4 +495,25 @@ class RemoteBrowseViewModel
             const val ALBUM_PAGE = 100
             const val SEARCH_DEBOUNCE_MS = 350L
         }
+    }
+
+/** What a server page's "Add to Library" row shows. */
+data class LibraryRowState(
+    val entry: Pair<com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity, FolderSyncStatus>? = null,
+    val coveredByServer: Boolean = false,
+    val available: Boolean = false,
+)
+
+/** The Library entry a server page adds: lists of everything add the whole server; a playlist list has none. */
+internal fun libraryKeyFor(
+    kind: RemotePageKind,
+    itemId: String,
+): String? =
+    when (kind) {
+        RemotePageKind.HOME, RemotePageKind.ARTISTS, RemotePageKind.ALBUMS -> DriveLibrarySync.WHOLE_SERVER
+        RemotePageKind.ARTIST -> DriveLibrarySync.ARTIST_PREFIX + itemId
+        RemotePageKind.ALBUM -> DriveLibrarySync.ALBUM_PREFIX + itemId
+        RemotePageKind.PLAYLIST -> DriveLibrarySync.PLAYLIST_PREFIX + itemId
+        RemotePageKind.FAVORITES -> DriveLibrarySync.FAVORITES
+        RemotePageKind.PLAYLISTS -> null
     }

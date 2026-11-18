@@ -59,6 +59,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -229,7 +232,10 @@ internal fun CarouselCard(
                             .size(artSide)
                             .onGloballyPositioned { coordinates ->
                                 if (transition != null) {
-                                    val bounds = coordinates.boundsInRoot()
+                                    // Where the artwork really is, also when the page has scrolled it partly or fully
+                                    // off screen: boundsInRoot() clips to what is visible, so a close from the lyrics
+                                    // started the artwork from a cut-off box, or from its old resting place.
+                                    val bounds = Rect(coordinates.positionInRoot(), coordinates.size.toSize())
                                     if (bounds.width > 0f && transition.measuredCardArtworkBounds != bounds) {
                                         transition.measuredCardArtworkBounds = bounds
                                     }

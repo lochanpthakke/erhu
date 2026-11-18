@@ -38,6 +38,30 @@ interface SoundRepository {
 
     fun setActiveBandCount(count: Int)
 
+    fun setMode(mode: com.erhu.erhu.core.sound.model.EqMode)
+
+    fun setGraphicGain(
+        bandIndex: Int,
+        gainDb: Float,
+    )
+
+    fun setBandEnabled(
+        bandIndex: Int,
+        enabled: Boolean,
+    )
+
+    fun setBandSlope(
+        bandIndex: Int,
+        slope: Int,
+    )
+
+    fun resetBand(bandIndex: Int)
+
+    suspend fun renameCustomPreset(
+        presetId: String,
+        name: String,
+    ): AppResult<Unit>
+
     fun setSelectedBandIndex(index: Int)
 
     fun setBandFrequencyAndGain(

@@ -119,7 +119,12 @@ class DriveLibrarySync
                     repository.removeLibraryFolder(folder.id)
                     _status.update { it - folder.id }
                 }
-                if (repository.getLibraryFolders().isEmpty()) WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                if (repository.getLibraryFolders().isEmpty()) {
+                    WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                } else {
+                    // Tracks the removed entry shared with another (an artist inside the whole server) come back.
+                    runInBackground()
+                }
                 library.requestRescanAfterChange()
             }
         }
@@ -224,12 +229,29 @@ class DriveLibrarySync
         private suspend fun listServer(folder: RemoteLibraryFolderEntity): List<Pair<RemoteTrack, String>> {
             val connection = withContext(dispatchers.io) { subsonicConnections.connection(folder.sourceId) }
             val tracks = mutableListOf<Pair<RemoteTrack, String>>()
-            var offset = 0
-            while (tracks.size < MAX_FILES) {
-                val albums = subsonic.albums(connection, offset, SERVER_PAGE)
-                if (albums.isEmpty()) break
-                albums.forEach { album -> subsonic.albumTracks(connection, album.id).forEach { tracks += it to album.id } }
-                offset += albums.size
+            val key = folder.folderId
+            when {
+                key.startsWith(ARTIST_PREFIX) ->
+                    subsonic.albumsOfArtist(connection, key.removePrefix(ARTIST_PREFIX)).forEach { album ->
+                        subsonic.albumTracks(connection, album.id).forEach { tracks += it to album.id }
+                    }
+                key.startsWith(ALBUM_PREFIX) -> {
+                    val albumId = key.removePrefix(ALBUM_PREFIX)
+                    subsonic.albumTracks(connection, albumId).forEach { tracks += it to albumId }
+                }
+                // A playlist or the favourites mix albums: each track is grouped by its own album name.
+                key.startsWith(PLAYLIST_PREFIX) ->
+                    subsonic.playlistTracks(connection, key.removePrefix(PLAYLIST_PREFIX)).forEach { tracks += it to "album-name:${it.album}" }
+                key == FAVORITES -> subsonic.starred(connection).tracks.forEach { tracks += it to "album-name:${it.album}" }
+                else -> {
+                    var offset = 0
+                    while (tracks.size < MAX_FILES) {
+                        val albums = subsonic.albums(connection, offset, SERVER_PAGE)
+                        if (albums.isEmpty()) break
+                        albums.forEach { album -> subsonic.albumTracks(connection, album.id).forEach { tracks += it to album.id } }
+                        offset += albums.size
+                    }
+                }
             }
             set(folder.id) { it.copy(found = tracks.size) }
             return tracks.distinctBy { it.first.remoteId }
@@ -357,8 +379,12 @@ class DriveLibrarySync
             const val RESCAN_EVERY = 40
             const val SERVER_PAGE = 100
 
-            /** The folder id that stands for a Subsonic server's whole library. */
+            /** Library entry ids of a Subsonic server: the whole library, or one artist, album, playlist, the favourites. */
             const val WHOLE_SERVER = "@library"
+            const val FAVORITES = "@favorites"
+            const val ARTIST_PREFIX = "artist:"
+            const val ALBUM_PREFIX = "album:"
+            const val PLAYLIST_PREFIX = "playlist:"
             const val ONLINE_GAP_MS = 1_100L
             val YEARS = 1900..2099
         }
