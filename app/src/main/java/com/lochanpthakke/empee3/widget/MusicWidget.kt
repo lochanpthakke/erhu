@@ -3,14 +3,12 @@ package com.lochanpthakke.empee3.widget
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -23,7 +21,6 @@ import androidx.glance.LocalSize
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.action.actionRunCallback
@@ -41,9 +38,11 @@ import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.erhu.erhu.MainActivity
@@ -51,12 +50,14 @@ import com.erhu.erhu.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
+import com.erhu.erhu.core.designsystem.theme.DominantColorExtractor
 import com.erhu.erhu.core.model.PlaybackStatus
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.util.Locale
 
 private const val ALBUM_ART_SIZE_PX = 400
+private const val MAX_ARTWORK_WIDTH_FRACTION = 0.6f
 
 class MusicWidget : GlanceAppWidget() {
     override val sizeMode = androidx.glance.appwidget.SizeMode.Exact
@@ -163,19 +164,18 @@ class MusicWidget : GlanceAppWidget() {
         positionMs: Long,
         durationMs: Long,
     ) {
-        val compact = LocalSize.current.height < 170.dp
-        val extractedColors =
-            remember(artwork) {
-                artwork?.let {
-                    com.erhu.erhu.core.designsystem.theme.DominantColorExtractor
-                        .extractColors(it)
-                }
-            }
-        val accent =
-            androidx.compose.ui.graphics
-                .lerp(extractedColors?.accentColor ?: Color(0xFFD2B48C), Color.White, 0.65f)
+        val widgetSize = LocalSize.current
+        val compact = widgetSize.height < 160.dp
+        // Match this gap in the bottom inset to keep the progress row near its current height.
+        val controlsTopPadding = (widgetSize.height - 174.dp).coerceIn(0.dp, 8.dp)
+        // A square fills the right half at 2:1. Cap it on tall widgets to leave room for the text.
+        val artworkSize = minOf(widgetSize.height, widgetSize.width * MAX_ARTWORK_WIDTH_FRACTION)
+        val accent = remember(artwork) { artwork?.let { DominantColorExtractor.extractColors(it).accentColor } ?: Color(0xFFD2B48C) }
         val tint = ColorProvider(day = accent, night = accent)
         val muted = ColorProvider(day = accent.copy(alpha = 0.7f), night = accent.copy(alpha = 0.7f))
+        val track = ColorProvider(day = accent.copy(alpha = 0.2f), night = accent.copy(alpha = 0.2f))
+        val localizedContext = AppLocaleManager.localizedContext(LocalContext.current)
+        val locale = AppLocaleManager.activeLocale(localizedContext)
         Box(
             GlanceModifier
                 .fillMaxWidth()
@@ -185,53 +185,60 @@ class MusicWidget : GlanceAppWidget() {
                 ).appWidgetBackground()
                 .clickable(actionStartActivity<MainActivity>()),
         ) {
-            Row(GlanceModifier.fillMaxWidth().fillMaxHeight(), horizontalAlignment = Alignment.End) {
-                Box(GlanceModifier.width(160.dp).fillMaxHeight()) {
-                    if (artwork !=
-                        null
-                    ) {
+            if (artwork != null) {
+                Box(GlanceModifier.fillMaxWidth().fillMaxHeight(), contentAlignment = Alignment.CenterEnd) {
+                    Box(GlanceModifier.size(artworkSize)) {
                         Image(
                             ImageProvider(artwork),
                             null,
                             GlanceModifier.fillMaxWidth().fillMaxHeight(),
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
+                        )
+                        Image(
+                            ImageProvider(R.drawable.widget_cinematic_gradient),
+                            null,
+                            GlanceModifier.fillMaxWidth().fillMaxHeight(),
+                            contentScale = ContentScale.FillBounds,
                         )
                     }
-                    Image(
-                        ImageProvider(R.drawable.widget_cinematic_gradient),
-                        null,
-                        GlanceModifier.fillMaxWidth().fillMaxHeight(),
-                        contentScale = ContentScale.FillBounds,
-                    )
                 }
             }
-            Column(GlanceModifier.fillMaxWidth().fillMaxHeight().padding(12.dp)) {
-                val localizedContext = AppLocaleManager.localizedContext(LocalContext.current)
-                val locale = AppLocaleManager.activeLocale(localizedContext)
-                if (!compact) Text(localizedContext.getString(R.string.app_name), style = TextStyle(color = muted, fontSize = 12.sp))
-                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(GlanceModifier.defaultWeight()) {
-                        MarqueeTitle(title, accent, GlanceModifier.fillMaxWidth(), compact)
-                        Text(artist, style = TextStyle(color = muted, fontSize = 13.sp), maxLines = 1)
-                    }
-                    if (hasSong) {
-                        WidgetControl(
-                            if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border,
-                            localizedContext.getString(R.string.widget_cd_favorite),
-                            actionRunCallback<ToggleFavoriteAction>(),
-                            tint,
-                        )
-                    }
+            Column(
+                GlanceModifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .padding(top = if (compact) 6.dp else 18.dp, bottom = if (compact) 4.dp else 14.dp + controlsTopPadding),
+            ) {
+                Column(GlanceModifier.fillMaxWidth().padding(start = 20.dp, end = if (hasSong) 56.dp else 20.dp)) {
+                    Text(
+                        localizedContext.getString(R.string.app_name),
+                        modifier = GlanceModifier.padding(bottom = 2.dp),
+                        style = TextStyle(color = muted, fontSize = 13.sp),
+                    )
+                    Text(
+                        title,
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        style = TextStyle(color = tint, fontSize = 20.sp, fontWeight = FontWeight.Bold),
+                        maxLines = if (widgetSize.height < 200.dp) 1 else 2,
+                    )
+                    Text(
+                        artist,
+                        modifier = GlanceModifier.padding(bottom = if (compact) 0.dp else 4.dp),
+                        style = TextStyle(color = muted, fontSize = if (compact) 13.sp else 14.sp),
+                        maxLines = 1,
+                    )
                 }
-                Spacer(GlanceModifier.defaultWeight())
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = GlanceModifier.padding(start = 12.dp, top = controlsTopPadding),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     WidgetControl(
                         R.drawable.ic_widget_skip_previous,
                         localizedContext.getString(R.string.widget_cd_previous),
                         (if (hasSong) actionRunCallback<SkipPreviousAction>() else actionStartActivity<MainActivity>()),
                         tint,
                     )
-                    Spacer(GlanceModifier.width(12.dp))
+                    Spacer(GlanceModifier.width(14.dp))
                     WidgetControl(
                         if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
                         localizedContext.getString(if (isPlaying) R.string.widget_cd_pause else R.string.widget_cd_play),
@@ -239,7 +246,7 @@ class MusicWidget : GlanceAppWidget() {
                         tint,
                         iconSize = 36,
                     )
-                    Spacer(GlanceModifier.width(12.dp))
+                    Spacer(GlanceModifier.width(14.dp))
                     WidgetControl(
                         R.drawable.ic_widget_skip_next,
                         localizedContext.getString(R.string.widget_cd_next),
@@ -247,21 +254,24 @@ class MusicWidget : GlanceAppWidget() {
                         tint,
                     )
                 }
-                if (!compact) {
-                    val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(formatTime(positionMs, locale), style = TextStyle(color = muted, fontSize = 11.sp))
-                        Box(GlanceModifier.defaultWeight().height(20.dp).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                            LinearProgressIndicator(
-                                progress,
-                                GlanceModifier.fillMaxWidth().height(2.dp),
-                                color = tint,
-                                backgroundColor = muted,
-                            )
-                            Row(GlanceModifier.fillMaxWidth().height(20.dp)) {
+                // Keep the progress row low without crowding the controls when the launcher shrinks the widget.
+                Spacer(GlanceModifier.defaultWeight())
+                val progressHeight = if (compact) 16.dp else 20.dp
+                val progress = if (durationMs > 0) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+                Row(GlanceModifier.fillMaxWidth().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(formatTime(positionMs, locale), style = TextStyle(color = muted, fontSize = 11.sp))
+                    Box(GlanceModifier.defaultWeight().height(progressHeight).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                        LinearProgressIndicator(
+                            progress,
+                            GlanceModifier.fillMaxWidth().height(2.dp),
+                            color = tint,
+                            backgroundColor = track,
+                        )
+                        if (hasSong) {
+                            Row(GlanceModifier.fillMaxWidth().height(progressHeight)) {
                                 repeat(10) { i ->
                                     Box(
-                                        GlanceModifier.defaultWeight().height(20.dp).clickable(
+                                        GlanceModifier.defaultWeight().height(progressHeight).clickable(
                                             actionRunCallback<SeekToPercentAction>(
                                                 actionParametersOf(
                                                     SeekToPercentAction.KEY_PERCENT to (i + 0.5f) / 10f,
@@ -272,34 +282,27 @@ class MusicWidget : GlanceAppWidget() {
                                 }
                             }
                         }
-                        Text(formatTime(durationMs, locale), style = TextStyle(color = muted, fontSize = 11.sp))
                     }
+                    Text(formatTime(durationMs, locale), style = TextStyle(color = muted, fontSize = 11.sp))
+                }
+                if (!compact) Spacer(GlanceModifier.defaultWeight())
+            }
+            if (hasSong) {
+                Box(GlanceModifier.fillMaxWidth().padding(top = if (compact) 0.dp else 4.dp, end = 8.dp), contentAlignment = Alignment.TopEnd) {
+                    WidgetControl(
+                        if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border,
+                        localizedContext.getString(R.string.widget_cd_favorite),
+                        actionRunCallback<ToggleFavoriteAction>(),
+                        tint,
+                        iconSize = 24,
+                    )
                 }
             }
         }
     }
 
-    @Composable
-    private fun MarqueeTitle(
-        title: String,
-        textColor: Color,
-        modifier: GlanceModifier,
-        compact: Boolean = false,
-    ) {
-        val packageName = LocalContext.current.packageName
-        AndroidRemoteViews(
-            remoteViews =
-                RemoteViews(packageName, R.layout.widget_title_marquee).apply {
-                    setTextViewText(R.id.widget_title_text, title)
-                    setInt(R.id.widget_title_text, "setMaxLines", if (compact) 1 else 2)
-                    setTextColor(R.id.widget_title_text, textColor.toArgb())
-                },
-            modifier = modifier.height(if (compact) 24.dp else 44.dp),
-        )
-    }
-
     private fun formatTime(
         ms: Long,
-        locale: java.util.Locale,
+        locale: Locale,
     ): String = LocaleFormatters.formatDurationClock(ms, locale)
 }

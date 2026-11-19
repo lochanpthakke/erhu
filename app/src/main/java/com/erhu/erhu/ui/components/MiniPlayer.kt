@@ -3,6 +3,7 @@ package com.erhu.erhu.ui.components
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -119,24 +120,12 @@ fun MiniPlayer(
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (glass) 0.dp else BottomChrome.elevation),
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            LinearProgressIndicator(
-                progress = {
-                    if (durationMs > 0) (position.value.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
-                },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(ComponentSize.miniProgress),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = ErhuGlass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
-            )
-
+        Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm + ComponentSize.miniProgress / 2),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Artwork and title move together when the track changes.
@@ -255,6 +244,20 @@ fun MiniPlayer(
                     }
                 }
             }
+
+            // Keep the progress line out of the row's layout so the content centers in the capsule.
+            LinearProgressIndicator(
+                progress = {
+                    if (durationMs > 0) (position.value.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+                },
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(ComponentSize.miniProgress),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = ErhuGlass.containerColor(MaterialTheme.colorScheme.surfaceVariant),
+            )
         }
     }
 }

@@ -19,14 +19,18 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
+import androidx.glance.action.Action
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
@@ -45,6 +49,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
@@ -198,67 +203,84 @@ class VinylMusicWidget : GlanceAppWidget() {
             value = withContext(Dispatchers.Default) { composeBackground(context, artwork, isDark) }
         }
 
+        val hostSize = LocalSize.current
+        val cardSide = minOf(hostSize.width, hostSize.height)
+        val controlWidth = (cardSide * 0.165f).coerceIn(30.dp, 48.dp)
+        val skipIconSize = (cardSide * 0.10f).coerceIn(18.dp, 24.dp)
+        val playIconSize = (cardSide * 0.12f).coerceIn(24.dp, 32.dp)
+        val localizedContext = AppLocaleManager.localizedContext(context)
+        val openApp = actionStartActivity<MainActivity>()
+
         Box(
-            modifier =
-                GlanceModifier
-                    .fillMaxSize()
-                    .appWidgetBackground()
-                    .clickable(actionStartActivity<MainActivity>()),
+            modifier = GlanceModifier.fillMaxSize().appWidgetBackground(),
             contentAlignment = Alignment.Center,
         ) {
-            if (compositedBackground != null) {
+            // A wider launcher slot centers the whole card, including the footer.
+            Box(GlanceModifier.size(cardSide).clickable(openApp)) {
                 Image(
-                    provider = ImageProvider(compositedBackground!!),
+                    provider = compositedBackground?.let { ImageProvider(it) } ?: ImageProvider(R.drawable.ic_vinyl_widget_bg),
                     contentDescription = null,
                     modifier = GlanceModifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,
                 )
-            } else {
-                Image(
-                    provider = ImageProvider(R.drawable.ic_vinyl_widget_bg),
-                    contentDescription = null,
-                    modifier = GlanceModifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
-            }
 
-            Column(
-                modifier =
-                    GlanceModifier
-                        .fillMaxSize()
-                        .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 12.dp),
-            ) {
-                val localizedContext = AppLocaleManager.localizedContext(LocalContext.current)
-                Spacer(modifier = GlanceModifier.defaultWeight())
+                Column(
+                    modifier =
+                        GlanceModifier.fillMaxSize().padding(start = cardSide * 0.08f, end = cardSide * 0.06f, bottom = cardSide * 0.03f),
+                ) {
+                    Spacer(GlanceModifier.defaultWeight())
+                    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                        Column(GlanceModifier.defaultWeight().padding(end = 4.dp)) {
+                            Text(
+                                artist.ifEmpty { localizedContext.getString(R.string.widget_idle_hint) },
+                                style = TextStyle(color = mutedTextColor, fontSize = 12.sp),
+                                maxLines = 1,
+                            )
+                            MarqueeTitle(title, titleTextColor, GlanceModifier.fillMaxWidth())
+                        }
 
-                // A 3x3 host may be only 180dp wide; do not squeeze labels and 3 controls into one row.
-                Text(
-                    artist.ifEmpty { localizedContext.getString(R.string.widget_idle_hint) },
-                    style = TextStyle(color = mutedTextColor, fontSize = 12.sp),
-                    maxLines = 1,
-                )
-                MarqueeTitle(title, titleTextColor, GlanceModifier.fillMaxWidth())
-                Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    WidgetControl(
-                        R.drawable.ic_widget_skip_previous,
-                        localizedContext.getString(R.string.widget_cd_previous),
-                        (if (hasSong) actionRunCallback<VinylSkipPreviousAction>() else actionStartActivity<MainActivity>()),
-                        controlIconColor,
-                    )
-                    WidgetControl(
-                        if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
-                        localizedContext.getString(if (isPlaying) R.string.widget_cd_pause else R.string.widget_cd_play),
-                        (if (hasSong) actionRunCallback<VinylPlayPauseAction>() else actionStartActivity<MainActivity>()),
-                        controlIconColor,
-                        iconSize = 32,
-                    )
-                    WidgetControl(
-                        R.drawable.ic_widget_skip_next,
-                        localizedContext.getString(R.string.widget_cd_next),
-                        (if (hasSong) actionRunCallback<VinylSkipNextAction>() else actionStartActivity<MainActivity>()),
-                        controlIconColor,
-                    )
+                        VinylControl(
+                            R.drawable.ic_widget_skip_previous,
+                            localizedContext.getString(R.string.widget_cd_previous),
+                            if (hasSong) actionRunCallback<VinylSkipPreviousAction>() else openApp,
+                            controlIconColor,
+                            controlWidth,
+                            skipIconSize,
+                        )
+                        VinylControl(
+                            if (isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play,
+                            localizedContext.getString(if (isPlaying) R.string.widget_cd_pause else R.string.widget_cd_play),
+                            if (hasSong) actionRunCallback<VinylPlayPauseAction>() else openApp,
+                            controlIconColor,
+                            controlWidth,
+                            playIconSize,
+                        )
+                        VinylControl(
+                            R.drawable.ic_widget_skip_next,
+                            localizedContext.getString(R.string.widget_cd_next),
+                            if (hasSong) actionRunCallback<VinylSkipNextAction>() else openApp,
+                            controlIconColor,
+                            controlWidth,
+                            skipIconSize,
+                        )
+                    }
                 }
+            }
+        }
+    }
+
+    @Composable
+    private fun VinylControl(
+        icon: Int,
+        label: String,
+        action: Action,
+        tint: androidx.glance.unit.ColorProvider,
+        width: Dp,
+        iconSize: Dp,
+    ) {
+        Box(GlanceModifier.width(width).height(48.dp).clickable(action), contentAlignment = Alignment.BottomCenter) {
+            Box(GlanceModifier.height(32.dp), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(icon), label, GlanceModifier.size(iconSize), colorFilter = ColorFilter.tint(tint))
             }
         }
     }

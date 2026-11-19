@@ -4,11 +4,14 @@ package com.lochanpthakke.empee3.widget
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.RadialGradient
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
 import android.widget.RemoteViews
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +20,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -59,14 +63,23 @@ import com.erhu.erhu.R
 import com.erhu.erhu.core.common.locale.AppLocaleManager
 import com.erhu.erhu.core.common.locale.LocaleFormatters
 import com.erhu.erhu.core.designsystem.artwork.ArtworkLoader
+import com.erhu.erhu.core.designsystem.theme.BuiltInThemes
+import com.erhu.erhu.core.designsystem.theme.GlassTokens
 import com.erhu.erhu.core.model.PlaybackStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private const val ALBUM_ART_SIZE_PX = 400
+private const val WIDGET_BACKGROUND_MAX_PX = 512f
+private const val WIDGET_CORNER_RADIUS_DP = 24f
+private const val COVER_SIDE_DP = 64f
+private const val COVER_RADIUS_DP = 8f
+
+private val widgetGlass = GlassTokens.derivedFrom(BuiltInThemes.DEFAULT_DARK.colors, isDark = true)
 
 class GlassMusicWidget : GlanceAppWidget() {
     override val sizeMode = androidx.glance.appwidget.SizeMode.Exact
@@ -143,9 +156,8 @@ class GlassMusicWidget : GlanceAppWidget() {
                 if (song != null) {
                     val rawBitmap = ArtworkLoader.load(context, song.uri, song.artworkUri, ALBUM_ART_SIZE_PX)
                     val density = context.resources.displayMetrics.density
-                    val radiusPx = 14f * density
-                    // Glance composes on the main thread: round the corners on a worker.
-                    value = rawBitmap?.let { withContext(Dispatchers.Default) { it.toRoundedCorners(radiusPx) } }
+                    val sidePx = (COVER_SIDE_DP * density).roundToInt().coerceAtLeast(1)
+                    value = rawBitmap?.let { withContext(Dispatchers.Default) { it.toRoundedSquare(sidePx, COVER_RADIUS_DP * density) } }
                 } else {
                     value = null
                 }
@@ -177,23 +189,26 @@ class GlassMusicWidget : GlanceAppWidget() {
         positionMs: Long,
         durationMs: Long,
     ) {
-        val compact = LocalSize.current.height < 180.dp
+        val widgetSize = LocalSize.current
+        val compact = widgetSize.height < 180.dp
+        val background = remember(widgetSize) { renderGlassBackground(widgetSize) }
         val white = ColorProvider(day = Color.White, night = Color.White)
         val muted = ColorProvider(day = Color.White.copy(alpha = 0.7f), night = Color.White.copy(alpha = 0.7f))
-        val artSide = if (compact) 48.dp else 64.dp
+        val artSide = if (compact) 48.dp else COVER_SIDE_DP.dp
         Box(
             GlanceModifier
                 .fillMaxWidth()
                 .fillMaxHeight()
                 .background(
-                    ImageProvider(R.drawable.glass_widget_background),
+                    ImageProvider(background),
+                    contentScale = ContentScale.FillBounds,
                 ).appWidgetBackground()
                 .clickable(actionStartActivity<MainActivity>()),
         ) {
             Column(GlanceModifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 12.dp, vertical = 8.dp)) {
                 val localizedContext = AppLocaleManager.localizedContext(LocalContext.current)
                 val locale = AppLocaleManager.activeLocale(localizedContext)
-                Text(localizedContext.getString(R.string.app_name), style = TextStyle(color = muted, fontSize = 12.sp))
+                Text(localizedContext.getString(R.string.app_name), style = TextStyle(color = muted, fontSize = 13.sp))
                 Spacer(GlanceModifier.defaultWeight())
                 Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(GlanceModifier.size(artSide), contentAlignment = Alignment.Center) {
@@ -219,12 +234,17 @@ class GlassMusicWidget : GlanceAppWidget() {
                         )
                     }
                     if (hasSong) {
-                        WidgetControl(
-                            if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border,
-                            localizedContext.getString(R.string.widget_cd_favorite),
-                            actionRunCallback<GlassToggleFavoriteAction>(),
-                            white,
-                        )
+                        Box(
+                            GlanceModifier.size(48.dp).clickable(actionRunCallback<GlassToggleFavoriteAction>()),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            Image(
+                                ImageProvider(if (isFavorite) R.drawable.ic_widget_favorite else R.drawable.ic_widget_favorite_border),
+                                localizedContext.getString(R.string.widget_cd_favorite),
+                                GlanceModifier.size(26.dp),
+                                colorFilter = ColorFilter.tint(white),
+                            )
+                        }
                     }
                 }
                 Spacer(GlanceModifier.defaultWeight())
@@ -307,17 +327,79 @@ class GlassMusicWidget : GlanceAppWidget() {
         locale: Locale,
     ): String = LocaleFormatters.formatDurationClock(ms, locale)
 
-    private fun Bitmap.toRoundedCorners(radiusPx: Float): Bitmap {
-        val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    private fun Bitmap.toRoundedSquare(
+        sidePx: Int,
+        radiusPx: Float,
+    ): Bitmap {
+        val output = Bitmap.createBitmap(sidePx, sidePx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        val rect = Rect(0, 0, width, height)
-        val rectF = RectF(rect)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        val cropSide = minOf(width, height)
+        val left = (width - cropSide) / 2
+        val top = (height - cropSide) / 2
+        val source = Rect(left, top, left + cropSide, top + cropSide)
+        val destination = RectF(0f, 0f, sidePx.toFloat(), sidePx.toFloat())
 
-        canvas.drawARGB(0, 0, 0, 0)
-        canvas.drawRoundRect(rectF, radiusPx, radiusPx, paint)
+        canvas.drawRoundRect(destination, radiusPx, radiusPx, paint)
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
-        canvas.drawBitmap(this, rect, rect, paint)
+        canvas.drawBitmap(this, source, destination, paint)
         return output
+    }
+
+    /** Rasterize the app's glass surface colors for the launcher, which owns the wallpaper backdrop. */
+    private fun renderGlassBackground(size: DpSize): Bitmap {
+        val scale = minOf(1f, WIDGET_BACKGROUND_MAX_PX / maxOf(size.width.value, size.height.value))
+        val width = (size.width.value * scale).roundToInt().coerceAtLeast(1)
+        val height = (size.height.value * scale).roundToInt().coerceAtLeast(1)
+        val right = width.toFloat()
+        val bottom = height.toFloat()
+        val radius = WIDGET_CORNER_RADIUS_DP * scale
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val bounds = RectF(0f, 0f, right, bottom)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        val base = widgetGlass.panelFillColor(strong = true)
+        val fill = base.copy(alpha = base.alpha * 0.3f)
+        val sheen = fill.copy(alpha = fill.alpha + 0.06f)
+        paint.shader = LinearGradient(0f, 0f, 0f, bottom, sheen.toArgb(), fill.toArgb(), Shader.TileMode.CLAMP)
+        canvas.drawRoundRect(bounds, radius, radius, paint)
+
+        val light = Color(widgetGlass.specular)
+        val clearLight = light.copy(alpha = 0f).toArgb()
+        paint.shader = LinearGradient(0f, 0f, 0f, bottom * 0.3f, light.toArgb(), clearLight, Shader.TileMode.CLAMP)
+        canvas.drawRoundRect(bounds, radius, radius, paint)
+        paint.shader =
+            RadialGradient(
+                0f,
+                0f,
+                maxOf(right, bottom) * 0.9f,
+                light.copy(alpha = light.alpha * 0.6f).toArgb(),
+                clearLight,
+                Shader.TileMode.CLAMP,
+            )
+        canvas.drawRoundRect(bounds, radius, radius, paint)
+
+        val shade = Color(widgetGlass.edgeShade)
+        paint.shader = LinearGradient(0f, bottom * 0.55f, 0f, bottom, shade.copy(alpha = 0f).toArgb(), shade.toArgb(), Shader.TileMode.CLAMP)
+        canvas.drawRoundRect(bounds, radius, radius, paint)
+
+        val rim = Color(widgetGlass.borderHighlight)
+        val rimWidth = widgetGlass.borderWidthDp * scale
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = rimWidth
+        paint.shader =
+            LinearGradient(
+                0f,
+                0f,
+                right,
+                bottom,
+                intArrayOf(rim.toArgb(), rim.copy(alpha = rim.alpha * 0.08f).toArgb(), rim.copy(alpha = rim.alpha * 0.35f).toArgb()),
+                floatArrayOf(0f, 0.5f, 1f),
+                Shader.TileMode.CLAMP,
+            )
+        bounds.inset(rimWidth / 2f, rimWidth / 2f)
+        canvas.drawRoundRect(bounds, radius - rimWidth / 2f, radius - rimWidth / 2f, paint)
+        return bitmap
     }
 }
