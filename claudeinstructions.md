@@ -1,17 +1,31 @@
 # erhu — Claude working instructions, progress and pending work
 
-_Last updated: 2026-11-20. Current public release: **erhu 1.0.21 (22)**, tag `erhu-v1.0.21-beta.41`, commit `6b8c8d74`, published from `master` by the release workflow. The sections below "Current state and standard processes" are the authority; the older log further down is history._
+_Last updated: 2026-11-21. Current public release: **erhu 1.0.21 (22)**, tag `erhu-v1.0.21-beta.41`, commit `6b8c8d74`, published from `master` by the release workflow. The sections below "Current state and standard processes" are the authority; the older log further down is history._
 
 ## Current state and standard processes (read this first)
 
 ### Repository, branches and worktrees
 - GitHub: `lochanpthakke/erhu` (public). `master` = released code. `kshitij` = Kshitij's branch, `lochan` = Lochan's branch.
-- Kshitij's working checkout: worktree `D:\Personal Projects\empee3-kshitij` on local branch `merge-lochan`. The old main checkout `D:\Personal Projects\empee3` is not touched (never stage its `work/` folder).
+- Kshitij's working checkout: worktree `D:\Personal Projects\empee3-kshitij` on local branch `merge-lochan`. The old main checkout `D:\Personal Projects\empee3` is not touched (never stage its `work/` folder). See "Files on this PC" below.
 - Push with the full URL, fast-forward only, never force without explicit approval:
   `git push https://github.com/lochanpthakke/erhu.git HEAD:refs/heads/<branch>`. Merge from `lochan` only when asked (it has been a fast-forward when `lochan` already contains our tip).
 - Commits: author/committer `Kshitij Kekunnaya <170665127+Kshitij1425@users.noreply.github.com>` via `git -c user.name=... -c user.email=...`. **Never add a Claude Co-Authored-By trailer** (owner rule). Commit or push only when asked.
 - The `gh` CLI is not installed. Read GitHub state through the public REST API with `curl` (runs, jobs, releases), e.g. `https://api.github.com/repos/lochanpthakke/erhu/actions/runs/<id>/jobs`.
 - Shared git stash: when setting work aside use `git stash push -u -m "<unique-tag>" -- <paths>`, record the SHA, `git stash apply <sha>`, then drop by tag. Never bare `git stash`/`pop`.
+
+### Files on this PC (cleaned 2026-11-21 — only these are relevant)
+- `D:\Personal Projects\empee3` — main checkout (branch `kshitij-local-release`, has its own uncommitted work). It holds the git data the worktree below depends on: never delete it, never stage its `work/` folder. Its `local.properties` is the one copied into the worktree for Gradle.
+- `D:\Personal Projects\empee3-kshitij` — the working copy (worktree, branch `merge-lochan`). All current work happens here. `git worktree list` should show only these two checkouts.
+- `D:\Personal Projects\releases\1.0.21-local\` — only the final owner build `erhu-1.0.21-release-arm64-v8a-owner-drive.apk` + `.sha256`. Older local release folders were deleted; published releases live on GitHub.
+- `D:\android-toolchain\`:
+  - `jdk21\`, `sdk\` (adb in `sdk\platform-tools`) — build tools.
+  - `android-home\` — **holds `debug.keystore`**, the debug signing key that local release builds use and that the Google Drive OAuth client is registered for; also the adb key. Never delete.
+  - `models\embedding_gemma.task` (+ `vybe_songs.tsv`) — the VYBE model, needed for the VYBE phone validation.
+  - `dbbackup\backup_20261116_pre_install\` — the one kept backup of the owner's library database.
+  - `perfetto-venv\` and helper scripts (`rec.sh`, `ui.sh`, `trace.py`, `frames.py`, `vframes.py`, `env.cmd`, …).
+- Deleted on 2026-11-21 (do not look for them): all old `build-*` folders, A/B and benchmark APKs, experiments, recordings, screenshots and logs in `android-toolchain`, the `ab-baseline` and `empee3-localization` checkouts, `Erhu-iOS`, the standalone `VYBE` prototype, loose old APKs and older DB backups.
+- Session scratch files (screen recordings, clip sources, eval scripts) live in Claude's temporary scratchpad and are not kept; save anything worth keeping inside the repo or the folders above.
+- Unrelated projects in `D:\Personal Projects` (`SecureMailScope`, `cross-domain-person-reid`, `report`) are not part of erhu: leave them alone.
 
 ### Building on this PC (memory-limited)
 - JDK: `JAVA_HOME=D:/android-toolchain/jdk21`. Copy `D:/Personal Projects/empee3/local.properties` into the worktree before Gradle and delete it afterwards.
@@ -77,8 +91,9 @@ _Last updated: 2026-11-20. Current public release: **erhu 1.0.21 (22)**, tag `er
 - Drive sync reads every file's tags and embedded cover first (3 files in parallel, `DriveMetadataReader`), then does the rate-limited genre/lyrics lookups. Cover cells waiting on a Drive track wake when a cover is cached (`ArtworkLoader.notifyRemoteCoversChanged`). Artist photos are looked up again whenever the artist list changes. Files without embedded art still show a placeholder (no online cover lookup for Drive yet).
 
 ### Work in progress / on hold
-- **VYBE (on hold, uncommitted in the worktree, not released):** INT8 vector index (75% smaller, ~8× faster ranking on JVM, legacy float32 files converted in place), artist-spread in mood results, `VybeDeviceBenchmarkTest`. Model compression was evaluated and rejected (vocabulary pruning lost 10–39% top-10 overlap; xz gains <0.3%). Needs a phone validation run (`VybeDeviceBenchmarkTest`, model pushed to the test app's files dir) before release. Keep these paths out of commits until validated: `core/vybe/**`, `core/vybe-mediapipe/**`.
+- **VYBE (on hold, uncommitted in the worktree, not released):** INT8 vector index (75% smaller, ~8× faster ranking on JVM, legacy float32 files converted in place), artist-spread in mood results, `VybeDeviceBenchmarkTest`. Model compression was evaluated and rejected (vocabulary pruning lost 10–39% top-10 overlap; xz gains <0.3%). Needs a phone validation run before release: build `:core:vybe-mediapipe:assembleDebugAndroidTest`, install the test APK, push `D:\android-toolchain\models\embedding_gemma.task` to `/sdcard/Android/data/com.erhu.erhu.core.vybe.mediapipe.test/files/`, run `am instrument -w -e class com.erhu.erhu.core.vybe.mediapipe.VybeDeviceBenchmarkTest com.erhu.erhu.core.vybe.mediapipe.test/androidx.test.runner.AndroidJUnitRunner` and read `logcat -s VybeBench`; then uninstall the test app. Keep these paths out of commits until validated: `core/vybe/**`, `core/vybe-mediapipe/**`.
 - **Announcement popup change** in `AnnouncementHost.kt` (uncommitted): ships with the next release.
+- Announcement notice files `backend/announcements/notice-1.0.21.json` and `notice-1.0.21-off.json` are kept locally (untracked); the resent live notice id is `4018f54a-53d4-4fad-983b-6211f3a46f93`.
 - Known pre-existing local test failures were fixed in 1.0.21; if new strings are added, translate them for all locales or CI fails.
 
 ### Communication preferences
