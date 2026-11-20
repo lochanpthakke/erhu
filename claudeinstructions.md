@@ -1,6 +1,96 @@
 # erhu — Claude working instructions, progress and pending work
 
-_Last updated: 2026-11-09. Current installed build is erhu 1.0.15 (16), source `781e3046b328fd5e3d8d34b4dc04882c94c8d163`, built and verified by Actions run 42506407910 and installed in place on S23 RZCXA1H43GW. Includes audio utilities, background metadata repair, collapsing radio headers and settings layout corrections. Older build/install/publication notes below are historical where superseded._
+_Last updated: 2026-11-20. Current public release: **erhu 1.0.21 (22)**, tag `erhu-v1.0.21-beta.41`, commit `6b8c8d74`, published from `master` by the release workflow. The sections below "Current state and standard processes" are the authority; the older log further down is history._
+
+## Current state and standard processes (read this first)
+
+### Repository, branches and worktrees
+- GitHub: `lochanpthakke/erhu` (public). `master` = released code. `kshitij` = Kshitij's branch, `lochan` = Lochan's branch.
+- Kshitij's working checkout: worktree `D:\Personal Projects\empee3-kshitij` on local branch `merge-lochan`. The old main checkout `D:\Personal Projects\empee3` is not touched (never stage its `work/` folder).
+- Push with the full URL, fast-forward only, never force without explicit approval:
+  `git push https://github.com/lochanpthakke/erhu.git HEAD:refs/heads/<branch>`. Merge from `lochan` only when asked (it has been a fast-forward when `lochan` already contains our tip).
+- Commits: author/committer `Kshitij Kekunnaya <170665127+Kshitij1425@users.noreply.github.com>` via `git -c user.name=... -c user.email=...`. **Never add a Claude Co-Authored-By trailer** (owner rule). Commit or push only when asked.
+- The `gh` CLI is not installed. Read GitHub state through the public REST API with `curl` (runs, jobs, releases), e.g. `https://api.github.com/repos/lochanpthakke/erhu/actions/runs/<id>/jobs`.
+- Shared git stash: when setting work aside use `git stash push -u -m "<unique-tag>" -- <paths>`, record the SHA, `git stash apply <sha>`, then drop by tag. Never bare `git stash`/`pop`.
+
+### Building on this PC (memory-limited)
+- JDK: `JAVA_HOME=D:/android-toolchain/jdk21`. Copy `D:/Personal Projects/empee3/local.properties` into the worktree before Gradle and delete it afterwards.
+- Release APK: `./gradlew -q -Pkotlin.compiler.execution.strategy=in-process -PtargetAbi=arm64-v8a :app:assembleRelease`. Run long builds in the background. There is no `keystore.properties` locally, so local release builds are signed with the **debug key** (SHA-1 94:3C:84:94…8D:9B). That keeps Google Drive sign-in working on the owner's phone and installs over the owner's app with data kept.
+- **Google Drive build switch:** add `-Perhu.googleDrive=true` for the owner's own builds (Drive enabled). Without it (CI / public builds) `BuildConfig.GOOGLE_DRIVE_ENABLED=false`: Remote Libraries shows Google Drive greyed out with "Currently Unavailable" and the connect button disabled; Navidrome/Subsonic is unaffected. Code: `RemoteLibraryFeatures.googleDriveAvailable` (set in `ErhuApplication`), `RemoteLibrariesScreen`, guard in `RemoteLibrariesViewModel.connectDrive`. Drive OAuth works only for a signing certificate registered as an OAuth client; no OAuth ID lives in the code.
+- Bench build (separate package `com.lochanpthakke.empee3.bench`, installs beside the real app): `:app:assembleBenchmark`. Clear its data with `pm clear` only with the owner's OK (it is how to replay onboarding).
+- Local builds have **empty Firebase config** (`FIREBASE_APP_ID=""`), so announcements/push are off in them. Only CI builds get Firebase (from Actions variables).
+- Copy APKs worth keeping to `D:/Personal Projects/releases/<version>-local/` with a `.sha256`. Currently it holds only the final owner build `erhu-1.0.21-release-arm64-v8a-owner-drive.apk`. Never publish local APKs anywhere.
+- Without an APK request, verify with targeted unit tests and `:app:compileDebugKotlin`.
+
+### Installing on the owner's phone (Galaxy S23, adb serial RZCXA1H43GW)
+- `D:/android-toolchain/sdk/platform-tools/adb.exe install -r <apk>` only when asked. If `adb devices` is empty, ask the owner to reconnect. If the screen shows the always-on display, ask the owner to unlock (never try to unlock).
+- Never clear the real app's data, never uninstall it. A CI-signed (release-key) APK cannot install over the owner's debug-key build without uninstalling, so the owner's phone keeps local debug-key builds.
+- The owner wants **only the final release** on the phone: uninstall bench/test packages when done (`adb uninstall com.lochanpthakke.empee3.bench`).
+- When testing a build the owner does not want to keep, reinstall the owner's Drive-enabled build afterwards.
+- In Git Bash prefix adb commands that use device paths with `MSYS_NO_PATHCONV=1` (otherwise `/sdcard/...` is rewritten).
+
+### Driving the real app safely (lessons learned)
+- Do not swipe or tap on song rows or search results: tapping/swiping a song **replaces the whole queue**. Use tab taps, scrolls on empty areas and the mini-player controls only.
+- The bottom nav bar hides while scrolling down; scroll up a little before tapping a tab, or the tap lands on the mini-player and opens Now Playing.
+- System BACK from the root leaves the app (to whatever is behind); use the in-app back arrow.
+- Queue "Undo" snackbars vanish in ~4 s; restore a queue by re-adding with Play next and dragging rows by their handle (`input motionevent DOWN/MOVE/UP`).
+- If the queue is lost, rebuild it from Library > Songs (More) sorted Title A–Z by tapping the song that was current; then pause.
+- Check `dumpsys media_session` (state, position, active item id) before and after, and leave playback paused at the original song/position.
+- If the screen changes on its own, the owner is using the phone: stop touching it.
+
+### Release process (GitHub)
+1. Bump `versionCode`/`versionName` in `app/build.gradle.kts` when starting a new version (1.0.21 = code 22; next is 1.0.22 = 23).
+2. Write `release_notes.md` (published as the release body): user-facing sections, no personal info, no unverifiable claims.
+3. Keep the CI checks green locally where practical, or rely on GitHub CI: `ktlintCheck detekt`, unit tests of app, core:common, core:database, core:datastore, core:designsystem, core:network, core:playback, core:sound, core:vybe, feature:library, feature:settings, feature:transfer, plus `:app:lintVitalRelease`, then the signed release build and `scripts/ci/verify_release.py`.
+4. Commit, fast-forward push to `master` (and `kshitij`). Pushes to `master`/`kshitij` build and verify but **never publish**.
+5. When the `master` run is green, push the tag `erhu-v<versionName>-beta.<N>` (N increments; 1.0.21 used 41). The tag run repeats all checks and `scripts/ci/publish_release.py` creates the release (draft → assets → published, pre-release for beta), attaching `erhu-<version>-arm64-v8a.apk`, `.sha256`, `verification.json` and copying the VYBE model pack from the previous release.
+6. Watch runs via the REST API (no `gh`). A failed run publishes nothing.
+- All releases share package `com.lochanpthakke.empee3` and release certificate SHA-256 `5bb0fc45…9ce5`.
+- CI failure causes fixed for 1.0.21 and worth checking again: ktlint (run `./gradlew ktlintFormat`, then fix max-line-length/backing-property/filename rules by hand); detekt (fix new findings in code you touch; older findings were recorded in `config/detekt/baseline.xml` with a dated comment); `LocalizationResourceParityTest` needs every `core/common` string and plural in all 19 locales (`values-ar de es fr in it ja ko nl pl pt-rBR ro ru sv th tr uk vi zh-rCN`, with CLDR plural quantities); `IdentityRenameCompatibilityTest` must register all migrations up to the current schema and compare with the current schema JSON.
+
+### In-app update checker (Settings > Diagnostics & About > App Update Checker)
+- Reads GitHub releases (betas included), compares `verification.json` versionCode with the installed one, picks the APK for the device ABI.
+- Checks only when "Check for updates" is tapped or every 30 days in the background.
+- "Up to date" means the installed versionCode is already ≥ the release's: usually a pre-release test build with the same versionCode. Avoid giving testers builds with the release's versionCode (use the bench package or a lower code).
+- Only an arm64 APK is published, so 32-bit-only phones get "no compatible signed APK". GitHub's anonymous rate limit (~60/hour per network) can block checks for an hour.
+- 1.0.2 only queried `/releases/latest`, which never includes pre-releases; 1.0.5+ use the full list.
+
+### Announcements (Firebase, free Spark plan)
+- Project `erhu-app-25b513`; content is static JSON on Firebase Hosting (`https://erhu-app-25b513.web.app/api/feed` and `/api/announcements/<id>`); pushes are FCM data messages to topic `erhu-announcements`. Details: `docs/updates-and-announcements.md`.
+- **Always show the owner the exact text before sending, and send only after an explicit OK.**
+- Notice JSON (see `backend/announcements/notice-1.0.21.json`): `title` (≤120), `body` (≤4000), `type` (`general|feature|important_update|maintenance`), `actionLabel` + `actionUrl` (https, both or neither), optional `maxVersionCode`/`minVersionCode` to target versions (1.0.21 notice used `maxVersionCode: 21`, i.e. 1.0.20 and older), `expiresAt`, `audience` (`test` needs `testToken`; `all` is a broadcast).
+- Publish from a trusted workstation: `npm ci --prefix backend/announcements/functions`, then run `node functions/spark.mjs put erhu-app-25b513 <notice.json> --all` from `backend/announcements` with:
+  - `ERHU_ANNOUNCEMENTS_STATE` = the private publisher state file kept **outside the repo** in the owner's home folder (`.erhu/erhu-announcements.json`). Keep it; it is needed to edit or switch off notices.
+  - `GOOGLE_OAUTH_ACCESS_TOKEN` = a short-lived token minted in memory from the existing Firebase CLI login (cloud-platform scope) via `firebase-tools`' `lib/auth.getAccessToken`; never write it to disk or logs. (`npx firebase-tools deploy` uses the same login for Hosting.)
+  - The publisher deploys Hosting first and only then sends the push; failed deploy sends nothing.
+- Switch a notice off: `put` the same `id` with `"active": false`. To make it appear again for people who already saw it, switch the old one off and publish the same text under a **new id**.
+- App behaviour: opening the app refreshes the feed. Up to 1.0.21 a notice pops up automatically **once** (marked read when shown), then lives in Diagnostics & About > Announcements. From the next release (`AnnouncementHost` change, uncommitted as of 2026-11-20) it pops up on every app open until the user closes it or taps its action.
+- Current live notice: "erhu 1.0.21 is here" (resent id `4018f54a-…`, original `46cb7047-…` switched off), targets ≤1.0.20, expires 2026-12-04.
+
+### Onboarding preview clips
+- Assets: `app/src/main/assets/onboarding/{now_playing,home,lyrics,queue}.mp4` with posters `app/src/main/res/drawable-nodpi/onboarding_*.png` (first frame); static previews `onb_*.webp` (e.g. `onb_radio.webp`, 720×1227 crop of the current screen, no status bar). Displayed at aspect 1080:2424.
+- Record on the owner's real app: `adb shell screenrecord --bit-rate 20000000 --time-limit N /sdcard/x.mp4` while driving gestures with `input swipe/tap/motionevent`; warm up artwork first (swipe through once).
+- Encode (ffmpeg from the `imageio-ffmpeg` Python package): trim ~1 s, remove the whole status bar (`delogo=x=1:y=1:w=1078:h=100`; for screens where content scrolls under it overlay a clean static strip instead; for the queue sheet keep inside its corners `x=48:y=10:w=1000:h=84`), `crop=1042:2340:19:0`, `scale=720:1616`, `fps=60`, libx264 high, crf 22, `-g 60`, `+faststart`, no audio, `setpts=PTS-STARTPTS`. Poster = first frame scaled to 1080×2424 with the same cleanup.
+- The original clips were 12–16 fps, which was the "lag".
+
+### Google Drive library performance (1.0.21)
+- Drive sync reads every file's tags and embedded cover first (3 files in parallel, `DriveMetadataReader`), then does the rate-limited genre/lyrics lookups. Cover cells waiting on a Drive track wake when a cover is cached (`ArtworkLoader.notifyRemoteCoversChanged`). Artist photos are looked up again whenever the artist list changes. Files without embedded art still show a placeholder (no online cover lookup for Drive yet).
+
+### Work in progress / on hold
+- **VYBE (on hold, uncommitted in the worktree, not released):** INT8 vector index (75% smaller, ~8× faster ranking on JVM, legacy float32 files converted in place), artist-spread in mood results, `VybeDeviceBenchmarkTest`. Model compression was evaluated and rejected (vocabulary pruning lost 10–39% top-10 overlap; xz gains <0.3%). Needs a phone validation run (`VybeDeviceBenchmarkTest`, model pushed to the test app's files dir) before release. Keep these paths out of commits until validated: `core/vybe/**`, `core/vybe-mediapipe/**`.
+- **Announcement popup change** in `AnnouncementHost.kt` (uncommitted): ships with the next release.
+- Known pre-existing local test failures were fixed in 1.0.21; if new strings are added, translate them for all locales or CI fails.
+
+### Communication preferences
+- Keep answers concise and token-efficient; inspect only relevant files.
+- Ask before anything outward-facing (pushes, releases, announcements, uninstalls) unless the owner already asked for it in that message; show announcement text before sending.
+- Verify on the phone when the owner allows it; otherwise say clearly what was not verified.
+
+---
+
+## Older history (kept for reference)
+
+_Previous note, last updated: 2026-11-09. Current installed build is erhu 1.0.15 (16), source `781e3046b328fd5e3d8d34b4dc04882c94c8d163`, built and verified by Actions run 42506407910 and installed in place on S23 RZCXA1H43GW. Includes audio utilities, background metadata repair, collapsing radio headers and settings layout corrections. Older build/install/publication notes below are historical where superseded._
 
 Read this first in a new session. It records how this project is worked on, what is done, and what
 is still open. Verify anything specific (file names, functions) against the code before relying on it.
