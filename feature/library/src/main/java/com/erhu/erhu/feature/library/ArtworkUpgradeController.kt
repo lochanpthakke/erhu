@@ -186,7 +186,9 @@ internal class ArtworkUpgradeController(
         }
 
     private sealed interface ScanOutcome {
-        data class Match(val result: ArtworkUpgradeResult) : ScanOutcome
+        data class Match(
+            val result: ArtworkUpgradeResult,
+        ) : ScanOutcome
 
         data object MissingOriginal : ScanOutcome
 
@@ -198,7 +200,10 @@ internal class ArtworkUpgradeController(
     }
 
     private sealed interface Original {
-        data class Image(val bytes: ByteArray, val facts: UpgradeImageFacts) : Original
+        data class Image(
+            val bytes: ByteArray,
+            val facts: UpgradeImageFacts,
+        ) : Original
 
         data object Missing : Original
 
@@ -278,13 +283,20 @@ internal class ArtworkUpgradeController(
         )
     }
 
-    private suspend fun failedSearch(target: ArtworkUpgradeTarget, stage: String): CandidateSearch {
+    private suspend fun failedSearch(
+        target: ArtworkUpgradeTarget,
+        stage: String,
+    ): CandidateSearch {
         currentCoroutineContext().ensureActive()
         reportFailure(target, stage)
         return CandidateSearch(emptyList(), blocked = true)
     }
 
-    private suspend fun matchingBytes(original: UpgradeImageFacts, url: String, preserveTransparency: Boolean): ByteArray? {
+    private suspend fun matchingBytes(
+        original: UpgradeImageFacts,
+        url: String,
+        preserveTransparency: Boolean,
+    ): ByteArray? {
         val downloaded = checkNotNull(metadata.downloadArtwork(url).getOrNull())
         val facts = checkNotNull(ArtworkUpgradeImages.inspect(downloaded))
         if (!matches(original, facts)) return null
@@ -303,7 +315,11 @@ internal class ArtworkUpgradeController(
     /** Prefer a decodable embedded cover to the MediaStore artwork stream. */
     private suspend fun readOriginal(target: ArtworkUpgradeTarget): Original {
         var unreadable = false
-        suspend fun inspect(stage: String, read: suspend () -> ByteArray?): Original.Image? =
+
+        suspend fun inspect(
+            stage: String,
+            read: suspend () -> ByteArray?,
+        ): Original.Image? =
             try {
                 val bytes = read()
                 if (bytes == null) {
@@ -464,8 +480,17 @@ internal class ArtworkUpgradeController(
         }
     }
 
-    private fun reportFailure(target: ArtworkUpgradeTarget, stage: String, error: Exception? = null) {
-        val type = error?.javaClass?.simpleName?.let { " ($it)" }.orEmpty()
+    private fun reportFailure(
+        target: ArtworkUpgradeTarget,
+        stage: String,
+        error: Exception? = null,
+    ) {
+        val type =
+            error
+                ?.javaClass
+                ?.simpleName
+                ?.let { " ($it)" }
+                .orEmpty()
         Log.w(TAG, "${target.id}: $stage$type")
     }
 

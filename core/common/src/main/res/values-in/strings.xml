@@ -2006,4 +2006,61 @@
     <string name="car_error_no_results">Tidak ada musik yang cocok di pustaka Anda.</string>
     <string name="car_error_request">Permintaan musik ini tidak didukung.</string>
     <string name="car_open_phone">Buka erhu di ponsel</string>
+    <string name="nav_remote_libraries">Pustaka Jarak Jauh</string>
+    <string name="capsule_minutes_listened">Menit didengarkan</string>
+    <string name="share_stats_no_activity">Tidak ada aktivitas mendengarkan</string>
+    <string name="share_stats_no_activity_desc">Tidak ada pemutaran pada periode ini</string>
+    <string name="custom_artwork_title">Artwork Kustom</string>
+    <string name="custom_artwork_applied">Artwork kustom diperbarui</string>
+    <string name="custom_artwork_removed">Artwork kustom dihapus</string>
+    <string name="custom_artwork_apply">Terapkan</string>
+    <string name="share_card_title">Bagikan Musik</string>
+    <string name="share_card_save">Simpan Gambar</string>
+    <string name="share_card_share">Bagikan Kartu</string>
+    <string name="share_card_saved">Gambar disimpan ke perangkat</string>
+    <string name="share_card_save_failed">Gagal menyimpan gambar</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Persegi · 1:1</string>
+    <string name="share_card_aspect_feed">Potret · 4:5</string>
+    <string name="share_card_style_centered">Di tengah</string>
+    <string name="share_card_style_poster">Poster</string>
+    <string name="share_card_style_minimal">Minimal</string>
+    <string name="share_card_brightness">Redupkan latar</string>
+    <string name="playing_from_playlist">Diputar dari playlist</string>
+    <string name="custom_artwork_choose">Pilih gambar</string>
+    <string name="custom_artwork_error">Gagal menetapkan artwork kustom</string>
+    <string name="custom_artwork_remove">Hapus artwork kustom</string>
+    <string name="share_stats_title">Rekap Mendengarkan</string>
+    <string name="stats_period_label">Periode Waktu</string>
+    <string name="stats_period_7_days">7 hari terakhir</string>
+    <string name="stats_period_30_days">30 hari terakhir</string>
+    <string name="stats_period_this_month">Bulan ini</string>
+    <string name="stats_period_this_year">Tahun ini</string>
+    <string name="stats_type_label">Jenis Kartu</string>
+    <string name="stats_type_top_songs">Lagu Teratas</string>
+    <string name="stats_type_top_artists">Artis Teratas</string>
+    <string name="stats_type_top_albums">Album Teratas</string>
+    <string name="stats_type_overview">Ringkasan</string>
+    <string name="share_card_ratio">Rasio Aspek</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Persegi (1:1)</string>
+    <string name="share_card_ratio_portrait">Potret (4:5)</string>
+    <string name="share_card_darkness">Kegelapan Latar</string>
+    <string name="share_card_save_error">Gagal menyimpan gambar</string>
+    <string name="cd_close">Tutup</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="other">%1$s item tidak memiliki artwork.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="other">Tidak ada versi resolusi lebih tinggi untuk %1$s item.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="other">Pemeriksaan artwork untuk %1$s item tidak dapat diselesaikan.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="other">Artwork yang ada untuk %1$s item tidak dapat dibaca.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="other">lagu</item>
+    </plurals>
 </resources>

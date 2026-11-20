@@ -33,6 +33,10 @@ android {
             buildConfigField("String", field, groovy.json.JsonOutput.toJson(value))
         }
 
+        // Google Drive needs an OAuth client registered for the signing certificate, which only the
+        // owner's own builds have. Public builds (no -Perhu.googleDrive=true) show it as unavailable.
+        buildConfigField("boolean", "GOOGLE_DRIVE_ENABLED", (providers.gradleProperty("erhu.googleDrive").orNull == "true").toString())
+
         // Optional device-specific sideload; omitted = the existing universal APK.
         // Keep every library for the selected ABI, including VYBE's two MediaPipe runtimes.
         providers.gradleProperty("targetAbi").orNull?.let { abi ->
@@ -50,8 +54,28 @@ android {
     androidResources {
         localeFilters +=
             listOf(
-                "en", "ar", "de", "es", "fr", "in", "id", "it", "ja", "ko", "nl", "pl",
-                "pt", "pt-rBR", "ro", "ru", "sv", "th", "tr", "uk", "vi", "zh-rCN",
+                "en",
+                "ar",
+                "de",
+                "es",
+                "fr",
+                "in",
+                "id",
+                "it",
+                "ja",
+                "ko",
+                "nl",
+                "pl",
+                "pt",
+                "pt-rBR",
+                "ro",
+                "ru",
+                "sv",
+                "th",
+                "tr",
+                "uk",
+                "vi",
+                "zh-rCN",
             )
     }
 

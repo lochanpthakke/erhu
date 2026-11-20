@@ -15,7 +15,6 @@ import java.io.File
 import java.io.FileOutputStream
 
 object ShareCardExporter {
-
     suspend fun saveToCache(
         context: Context,
         bitmap: Bitmap,
@@ -47,9 +46,10 @@ object ShareCardExporter {
                 putExtra(Intent.EXTRA_STREAM, contentUri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-        val chooser = Intent.createChooser(shareIntent, title).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        val chooser =
+            Intent.createChooser(shareIntent, title).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         context.startActivity(chooser)
     }
 

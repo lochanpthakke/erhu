@@ -158,50 +158,50 @@ private fun LazyListScope.capsuleSections(
     onOpenArtist: (Artist) -> Unit,
 ) {
     val shown = capsule
-        when {
-            shown == null -> Unit
-            shown.isEmpty -> item(key = "empty") { EmptyMonth(shown.month) }
-            else -> {
-                item(key = "listening_summary") {
-                    ListeningSummary(capsule = shown)
+    when {
+        shown == null -> Unit
+        shown.isEmpty -> item(key = "empty") { EmptyMonth(shown.month) }
+        else -> {
+            item(key = "listening_summary") {
+                ListeningSummary(capsule = shown)
+            }
+            if (shown.topArtists.isNotEmpty()) {
+                item(key = "artists_list") {
+                    TopArtistsSection(artists = shown.topArtists.take(TOP), onOpenArtist = onOpenArtist)
                 }
-                if (shown.topArtists.isNotEmpty()) {
-                    item(key = "artists_list") {
-                        TopArtistsSection(artists = shown.topArtists.take(TOP), onOpenArtist = onOpenArtist)
-                    }
-                }
-                if (shown.topSongs.isNotEmpty()) {
-                    item(key = "songs_carousel") {
-                        Shelf(title = stringResource(CommonR.string.capsule_top_songs)) {
-                            itemsIndexed(shown.topSongs.take(TOP), key = { _, item -> item.song.id }) { index, ranked ->
-                                RankedShelfTile(
-                                    rank = index + 1,
-                                    title = ranked.song.title,
-                                    subtitle = ranked.song.artist,
-                                    plays = ranked.plays,
-                                    onClick = { onPlayTopSong(index) },
-                                ) { SongArtwork(song = ranked.song, modifier = Modifier.fillMaxSize()) }
-                            }
+            }
+            if (shown.topSongs.isNotEmpty()) {
+                item(key = "songs_carousel") {
+                    Shelf(title = stringResource(CommonR.string.capsule_top_songs)) {
+                        itemsIndexed(shown.topSongs.take(TOP), key = { _, item -> item.song.id }) { index, ranked ->
+                            RankedShelfTile(
+                                rank = index + 1,
+                                title = ranked.song.title,
+                                subtitle = ranked.song.artist,
+                                plays = ranked.plays,
+                                onClick = { onPlayTopSong(index) },
+                            ) { SongArtwork(song = ranked.song, modifier = Modifier.fillMaxSize()) }
                         }
                     }
                 }
-                if (shown.topAlbums.isNotEmpty()) {
-                    item(key = "albums_carousel") {
-                        Shelf(title = stringResource(CommonR.string.capsule_top_albums)) {
-                            itemsIndexed(shown.topAlbums.take(TOP), key = { _, item -> item.album.id }) { index, ranked ->
-                                RankedShelfTile(
-                                    rank = index + 1,
-                                    title = ranked.album.title,
-                                    subtitle = ranked.album.artist,
-                                    plays = ranked.plays,
-                                    onClick = { onOpenAlbum(ranked.album) },
-                                ) { AlbumArtwork(artworkUri = ranked.album.artworkUri, modifier = Modifier.fillMaxSize()) }
-                            }
+            }
+            if (shown.topAlbums.isNotEmpty()) {
+                item(key = "albums_carousel") {
+                    Shelf(title = stringResource(CommonR.string.capsule_top_albums)) {
+                        itemsIndexed(shown.topAlbums.take(TOP), key = { _, item -> item.album.id }) { index, ranked ->
+                            RankedShelfTile(
+                                rank = index + 1,
+                                title = ranked.album.title,
+                                subtitle = ranked.album.artist,
+                                plays = ranked.plays,
+                                onClick = { onOpenAlbum(ranked.album) },
+                            ) { AlbumArtwork(artworkUri = ranked.album.artworkUri, modifier = Modifier.fillMaxSize()) }
                         }
                     }
                 }
             }
         }
+    }
 }
 
 /**
@@ -215,9 +215,10 @@ private fun MonthHeader(
 ) {
     val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = Spacing.screenGutter, end = Spacing.sm),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = Spacing.screenGutter, end = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -257,9 +258,10 @@ private fun ListeningSummary(capsule: SoundCapsule) {
     val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val minutes = (capsule.listenedMs / MS_PER_MINUTE).coerceAtLeast(0L)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.screenGutter),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.screenGutter),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),
     ) {
         SummaryFigure(
@@ -274,7 +276,11 @@ private fun ListeningSummary(capsule: SoundCapsule) {
         )
         SummaryFigure(
             value = LocaleFormatters.formatInteger(capsule.uniqueTracks, locale),
-            label = pluralStringResource(CommonR.plurals.capsule_tracks_unit, capsule.uniqueTracks).replaceFirstChar { it.uppercase(locale) },
+            label =
+                pluralStringResource(
+                    CommonR.plurals.capsule_tracks_unit,
+                    capsule.uniqueTracks,
+                ).replaceFirstChar { it.uppercase(locale) },
             modifier = Modifier.weight(1f),
         )
     }
@@ -331,10 +337,11 @@ private fun TopArtistsSection(
         Spacer(modifier = Modifier.height(Spacing.xs))
         artists.forEachIndexed { index, ranked ->
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenArtist(ranked.artist) }
-                    .padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpenArtist(ranked.artist) }
+                        .padding(horizontal = Spacing.screenGutter, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -408,23 +415,26 @@ private fun RankedShelfTile(
     val locale = AppLocaleManager.activeLocale(LocalContext.current)
     val interaction = remember { MutableInteractionSource() }
     Column(
-        modifier = Modifier
-            .width(ArtworkSize.shelf)
-            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick),
+        modifier =
+            Modifier
+                .width(ArtworkSize.shelf)
+                .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick),
     ) {
         Box(
-            modifier = Modifier
-                .size(ArtworkSize.shelf)
-                .clip(Radius.mediumShape),
+            modifier =
+                Modifier
+                    .size(ArtworkSize.shelf)
+                    .clip(Radius.mediumShape),
         ) {
             artwork()
             Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(Spacing.sm)
-                    .size(RANK_BADGE)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = RANK_BADGE_ALPHA)),
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .padding(Spacing.sm)
+                        .size(RANK_BADGE)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = RANK_BADGE_ALPHA)),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -464,9 +474,10 @@ private fun RankedShelfTile(
 private fun EmptyMonth(month: YearMonth) {
     val locale = AppLocaleManager.activeLocale(LocalContext.current)
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(

@@ -16,7 +16,11 @@ import com.erhu.erhu.core.model.Song
 import kotlin.math.max
 import kotlin.math.min
 
-enum class CardAspectRatio(val width: Int, val height: Int, val ratio: Float) {
+enum class CardAspectRatio(
+    val width: Int,
+    val height: Int,
+    val ratio: Float,
+) {
     STORY(1080, 1920, 9f / 16f),
     SQUARE(1080, 1080, 1f),
     FEED(1080, 1350, 4f / 5f),
@@ -28,7 +32,10 @@ enum class SongCardStyle {
     MINIMAL,
 }
 
-enum class BlurIntensity(val iterations: Int, val downsample: Int) {
+enum class BlurIntensity(
+    val iterations: Int,
+    val downsample: Int,
+) {
     SUBTLE(2, 6),
     MEDIUM(4, 8),
     DEEP(7, 10),
@@ -55,7 +62,6 @@ data class StatsShareConfig(
 )
 
 object ShareCardRenderer {
-
     fun renderSongCard(
         context: Context,
         song: Song,
@@ -101,26 +107,37 @@ object ShareCardRenderer {
         var dark = darkness.coerceIn(0.1f, 0.9f)
         if (artwork != null) {
             val blurred = fastBlur(artwork, blur.iterations, blur.downsample)
-            canvas.drawBitmap(blurred, centreCrop(blurred, width.toFloat() / height), Rect(0, 0, width, height), Paint(Paint.FILTER_BITMAP_FLAG))
+            canvas.drawBitmap(
+                blurred,
+                centreCrop(blurred, width.toFloat() / height),
+                Rect(0, 0, width, height),
+                Paint(Paint.FILTER_BITMAP_FLAG),
+            )
             if (keepTextReadable) dark = max(dark, readableDarkness(blurred))
         } else {
             // Dark gradient backdrop
-            val bgPaint = Paint().apply {
-                shader = LinearGradient(0f, 0f, 0f, height.toFloat(), Color.rgb(24, 26, 32), Color.rgb(8, 9, 12), Shader.TileMode.CLAMP)
-            }
+            val bgPaint =
+                Paint().apply {
+                    shader = LinearGradient(0f, 0f, 0f, height.toFloat(), Color.rgb(24, 26, 32), Color.rgb(8, 9, 12), Shader.TileMode.CLAMP)
+                }
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
         }
 
         // Overlay darkening and subtle vignette
-        val overlayPaint = Paint().apply {
-            val darkAlpha = (dark * 255).toInt()
-            shader = LinearGradient(
-                0f, 0f, 0f, height.toFloat(),
-                Color.argb(darkAlpha, 0, 0, 0),
-                Color.argb(min(255, darkAlpha + 60), 0, 0, 0),
-                Shader.TileMode.CLAMP,
-            )
-        }
+        val overlayPaint =
+            Paint().apply {
+                val darkAlpha = (dark * 255).toInt()
+                shader =
+                    LinearGradient(
+                        0f,
+                        0f,
+                        0f,
+                        height.toFloat(),
+                        Color.argb(darkAlpha, 0, 0, 0),
+                        Color.argb(min(255, darkAlpha + 60), 0, 0, 0),
+                        Shader.TileMode.CLAMP,
+                    )
+            }
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), overlayPaint)
     }
 
@@ -132,9 +149,11 @@ object ShareCardRenderer {
         val pixels = IntArray(image.width * image.height)
         image.getPixels(pixels, 0, image.width, 0, 0, image.width, image.height)
         if (pixels.isEmpty()) return 0f
+
         fun linear(c: Int): Double = (c / 255.0).let { if (it <= 0.03928) it / 12.92 else Math.pow((it + 0.055) / 1.055, 2.4) }
         val luminance =
-            pixels.sumOf { 0.2126 * linear(Color.red(it)) + 0.7152 * linear(Color.green(it)) + 0.0722 * linear(Color.blue(it)) } / pixels.size
+            pixels.sumOf { 0.2126 * linear(Color.red(it)) + 0.7152 * linear(Color.green(it)) + 0.0722 * linear(Color.blue(it)) } /
+                pixels.size
         // White on L: (1.05) / (L' + 0.05) >= 4.5  ->  L' <= 0.183, and L' = L * (1 - d).
         val target = 1.05 / READABLE_CONTRAST - 0.05
         return if (luminance <= target) 0f else (1.0 - target / luminance).toFloat().coerceIn(0f, 0.9f)
@@ -158,7 +177,6 @@ object ShareCardRenderer {
 
     private const val READABLE_CONTRAST = 4.5
 
-
     private fun drawCenteredStyle(
         canvas: Canvas,
         song: Song,
@@ -173,10 +191,11 @@ object ShareCardRenderer {
         val artRect = RectF(left, top, left + side, top + side)
 
         // Drop shadow for artwork
-        val shadowPaint = Paint().apply {
-            color = Color.argb(120, 0, 0, 0)
-            setShadowLayer(40f, 0f, 25f, Color.argb(140, 0, 0, 0))
-        }
+        val shadowPaint =
+            Paint().apply {
+                color = Color.argb(120, 0, 0, 0)
+                setShadowLayer(40f, 0f, 25f, Color.argb(140, 0, 0, 0))
+            }
         canvas.drawRoundRect(artRect, 44f, 44f, shadowPaint)
 
         // Draw artwork with rounded corners
@@ -188,12 +207,13 @@ object ShareCardRenderer {
 
         // Text below artwork
         var textY = top + side + 70f
-        val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 54f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
+        val textPaint =
+            TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 54f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
 
         // Title
         val title = ellipsize(song.title, textPaint, width * 0.85f)
@@ -242,12 +262,13 @@ object ShareCardRenderer {
         }
 
         var textY = top + side + 80f
-        val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 62f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.LEFT
-        }
+        val textPaint =
+            TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 62f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.LEFT
+            }
 
         val title = ellipsize(song.title, textPaint, side)
         canvas.drawText(title, margin, textY, textPaint)
@@ -286,9 +307,10 @@ object ShareCardRenderer {
         val artRect = RectF(centerX - side / 2, centerY - side / 2, centerX + side / 2, centerY + side / 2)
 
         // Vinyl circle style
-        val clipPath = Path().apply {
-            addCircle(centerX, centerY, side / 2, Path.Direction.CW)
-        }
+        val clipPath =
+            Path().apply {
+                addCircle(centerX, centerY, side / 2, Path.Direction.CW)
+            }
         canvas.save()
         canvas.clipPath(clipPath)
         if (artwork != null) {
@@ -300,18 +322,20 @@ object ShareCardRenderer {
         canvas.restore()
 
         // Center vinyl hole
-        val centerHolePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(240, 25, 25, 25)
-        }
+        val centerHolePaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(240, 25, 25, 25)
+            }
         canvas.drawCircle(centerX, centerY, side * 0.12f, centerHolePaint)
 
         var textY = centerY + side / 2 + 80f
-        val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 50f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
+        val textPaint =
+            TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 50f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
         canvas.drawText(ellipsize(song.title, textPaint, width * 0.85f), centerX, textY, textPaint)
 
         textY += 60f
@@ -323,26 +347,37 @@ object ShareCardRenderer {
         canvas.drawText(ellipsize(song.artist, textPaint, width * 0.85f), centerX, textY, textPaint)
     }
 
-    internal fun drawMonogramAvatar(canvas: Canvas, name: String, dst: RectF) {
-        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(160, 65, 75, 90)
-        }
+    internal fun drawMonogramAvatar(
+        canvas: Canvas,
+        name: String,
+        dst: RectF,
+    ) {
+        val bgPaint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(160, 65, 75, 90)
+            }
         canvas.drawCircle(dst.centerX(), dst.centerY(), dst.width() / 2f, bgPaint)
         val initial = name.trim().firstOrNull()?.uppercase() ?: "?"
-        val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = dst.width() * 0.45f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
+        val textPaint =
+            TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = dst.width() * 0.45f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
         val textY = dst.centerY() - ((textPaint.descent() + textPaint.ascent()) / 2f)
         canvas.drawText(initial, dst.centerX(), textY, textPaint)
     }
 
-    internal fun drawCircularBitmap(canvas: Canvas, bitmap: Bitmap, dst: RectF) {
-        val path = Path().apply {
-            addCircle(dst.centerX(), dst.centerY(), dst.width() / 2f, Path.Direction.CW)
-        }
+    internal fun drawCircularBitmap(
+        canvas: Canvas,
+        bitmap: Bitmap,
+        dst: RectF,
+    ) {
+        val path =
+            Path().apply {
+                addCircle(dst.centerX(), dst.centerY(), dst.width() / 2f, Path.Direction.CW)
+            }
         canvas.save()
         canvas.clipPath(path)
         canvas.drawBitmap(bitmap, centreCrop(bitmap, dst.width() / dst.height()), dst, Paint(Paint.FILTER_BITMAP_FLAG))
@@ -350,35 +385,56 @@ object ShareCardRenderer {
     }
 
     /** "E R H U" centred at [baseline] (by default 60 px above the bottom edge). */
-    internal fun drawBranding(canvas: Canvas, width: Int, height: Int, baseline: Float = height - 60f) {
-        val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(160, 255, 255, 255)
-            textSize = 22f
-            letterSpacing = 0.28f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            textAlign = Paint.Align.CENTER
-        }
+    internal fun drawBranding(
+        canvas: Canvas,
+        width: Int,
+        height: Int,
+        baseline: Float = height - 60f,
+    ) {
+        val textPaint =
+            TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.argb(160, 255, 255, 255)
+                textSize = 22f
+                letterSpacing = 0.28f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                textAlign = Paint.Align.CENTER
+            }
         canvas.drawText("E R H U", width / 2f, baseline, textPaint)
     }
 
-    internal fun drawRoundedBitmap(canvas: Canvas, bitmap: Bitmap, dst: RectF, radius: Float) {
-        val path = Path().apply {
-            addRoundRect(dst, radius, radius, Path.Direction.CW)
-        }
+    internal fun drawRoundedBitmap(
+        canvas: Canvas,
+        bitmap: Bitmap,
+        dst: RectF,
+        radius: Float,
+    ) {
+        val path =
+            Path().apply {
+                addRoundRect(dst, radius, radius, Path.Direction.CW)
+            }
         canvas.save()
         canvas.clipPath(path)
         canvas.drawBitmap(bitmap, centreCrop(bitmap, dst.width() / dst.height()), dst, Paint(Paint.FILTER_BITMAP_FLAG))
         canvas.restore()
     }
 
-    internal fun drawPlaceholderArtwork(canvas: Canvas, dst: RectF, radius: Float) {
-        val bgPaint = Paint().apply {
-            color = Color.argb(180, 45, 55, 72)
-        }
+    internal fun drawPlaceholderArtwork(
+        canvas: Canvas,
+        dst: RectF,
+        radius: Float,
+    ) {
+        val bgPaint =
+            Paint().apply {
+                color = Color.argb(180, 45, 55, 72)
+            }
         canvas.drawRoundRect(dst, radius, radius, bgPaint)
     }
 
-    internal fun ellipsize(text: String, paint: TextPaint, maxWidth: Float): String {
+    internal fun ellipsize(
+        text: String,
+        paint: TextPaint,
+        maxWidth: Float,
+    ): String {
         if (paint.measureText(text) <= maxWidth) return text
         var end = text.length
         while (end > 0 && paint.measureText(text.substring(0, end) + "…") > maxWidth) {
@@ -387,8 +443,11 @@ object ShareCardRenderer {
         return if (end > 0) text.substring(0, end) + "…" else text
     }
 
-
-    private fun fastBlur(sentBitmap: Bitmap, iterations: Int, scaleDown: Int): Bitmap {
+    private fun fastBlur(
+        sentBitmap: Bitmap,
+        iterations: Int,
+        scaleDown: Int,
+    ): Bitmap {
         val width = max(1, sentBitmap.width / scaleDown)
         val height = max(1, sentBitmap.height / scaleDown)
         val small = Bitmap.createScaledBitmap(sentBitmap, width, height, true)
@@ -407,7 +466,12 @@ object ShareCardRenderer {
         return blurred
     }
 
-    private fun boxBlur(pix: IntArray, w: Int, h: Int, r: Int) {
+    private fun boxBlur(
+        pix: IntArray,
+        w: Int,
+        h: Int,
+        r: Int,
+    ) {
         val wm = w - 1
         val hm = h - 1
         val wh = w * h

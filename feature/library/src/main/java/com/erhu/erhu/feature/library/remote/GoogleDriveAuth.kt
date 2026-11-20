@@ -104,9 +104,17 @@ class GoogleDriveAuth
                     val cause = e.cause
                     if (cause is ApiException) {
                         val statusName = CommonStatusCodes.getStatusCodeString(cause.statusCode)
-                        Log.e(TAG, "authorize() failed with ApiException: statusCode=${cause.statusCode} ($statusName), message=${cause.message}", cause)
+                        Log.e(
+                            TAG,
+                            "authorize() failed with ApiException: statusCode=${cause.statusCode} ($statusName), message=${cause.message}",
+                            cause,
+                        )
                     } else {
-                        Log.e(TAG, "authorize() failed with ExecutionException cause: ${cause?.javaClass?.simpleName}: ${cause?.message}", cause)
+                        Log.e(
+                            TAG,
+                            "authorize() failed with ExecutionException cause: ${cause?.javaClass?.simpleName}: ${cause?.message}",
+                            cause,
+                        )
                     }
                     throw IOException(describe(cause), cause)
                 } catch (e: TimeoutException) {
@@ -139,7 +147,10 @@ class GoogleDriveAuth
          * Distinguishes user cancellation from denied permissions, configuration errors,
          * or secondary resolution requirements (e.g. consent prompt following account picker).
          */
-        fun fromConsent(resultCode: Int, data: Intent?): DriveConsentOutcome {
+        fun fromConsent(
+            resultCode: Int,
+            data: Intent?,
+        ): DriveConsentOutcome {
             Log.d(TAG, "fromConsent: resultCode=$resultCode, hasData=${data != null}")
             if (resultCode == Activity.RESULT_CANCELED && (data == null || data.extras?.isEmpty != false)) {
                 Log.i(TAG, "User canceled authorization flow (RESULT_CANCELED with empty data)")
@@ -224,7 +235,9 @@ class GoogleDriveAuth
                         DriveConsentOutcome.Failed("Google sign-in failed: $statusName ($statusCode)$detail", e)
                     }
                 }
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception,
+            ) {
                 Log.e(TAG, "Unexpected exception parsing consent result: ${e.javaClass.simpleName}: ${e.message}", e)
                 return DriveConsentOutcome.Failed(e.message ?: "Google sign-in failed", e)
             }
@@ -281,22 +294,27 @@ class GoogleDriveAuth
             try {
                 val signatures =
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                        context.packageManager.getPackageInfo(
-                            context.packageName,
-                            android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES,
-                        ).signingInfo?.apkContentsSigners
+                        context.packageManager
+                            .getPackageInfo(
+                                context.packageName,
+                                android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES,
+                            ).signingInfo
+                            ?.apkContentsSigners
                     } else {
                         @Suppress("DEPRECATION")
-                        context.packageManager.getPackageInfo(
-                            context.packageName,
-                            android.content.pm.PackageManager.GET_SIGNATURES,
-                        ).signatures
+                        context.packageManager
+                            .getPackageInfo(
+                                context.packageName,
+                                android.content.pm.PackageManager.GET_SIGNATURES,
+                            ).signatures
                     }
                 val cert = signatures?.firstOrNull()?.toByteArray() ?: return "unknown"
                 val md = java.security.MessageDigest.getInstance("SHA-1")
                 val digest = md.digest(cert)
                 digest.joinToString(":") { "%02X".format(it) }
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            } catch (
+                @Suppress("TooGenericExceptionCaught") e: Exception,
+            ) {
                 "unknown"
             }
 

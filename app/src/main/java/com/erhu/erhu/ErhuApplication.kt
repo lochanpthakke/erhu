@@ -34,6 +34,7 @@ class ErhuApplication :
 
     override fun onCreate() {
         super.onCreate()
+        com.erhu.erhu.feature.library.remote.RemoteLibraryFeatures.googleDriveAvailable = BuildConfig.GOOGLE_DRIVE_ENABLED
         AppLocaleManager.restoreLegacyLocaleOnStartup(this)
         if (BuildConfig.DEBUG) {
             Timber.plant(Timber.DebugTree())

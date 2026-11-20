@@ -58,8 +58,8 @@ class RadioCoversViewModel
         private val plans: RadioStationPlans,
         private val library: LibraryRepository,
     ) : ViewModel() {
-        private val _portraits = MutableStateFlow<Map<Long, List<RadioPortrait>>>(emptyMap())
-        internal val portraits: StateFlow<Map<Long, List<RadioPortrait>>> = _portraits.asStateFlow()
+        private val portraitState = MutableStateFlow<Map<Long, List<RadioPortrait>>>(emptyMap())
+        internal val portraits: StateFlow<Map<Long, List<RadioPortrait>>> = portraitState.asStateFlow()
         private val requested = HashSet<Long>()
 
         fun load(albumId: Long) {
@@ -79,7 +79,7 @@ class RadioCoversViewModel
                             ),
                         )
                     }.getOrNull()
-                if (loaded.isNullOrEmpty()) requested.remove(albumId) else _portraits.update { it + (albumId to loaded) }
+                if (loaded.isNullOrEmpty()) requested.remove(albumId) else portraitState.update { it + (albumId to loaded) }
             }
         }
     }

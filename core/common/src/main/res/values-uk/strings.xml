@@ -2144,4 +2144,76 @@
     <string name="car_error_no_results">У медіатеці не знайдено відповідної музики.</string>
     <string name="car_error_request">Цей музичний запит не підтримується.</string>
     <string name="car_open_phone">Відкрити erhu на телефоні</string>
+    <string name="nav_remote_libraries">Віддалені бібліотеки</string>
+    <string name="capsule_minutes_listened">Хвилин прослухано</string>
+    <string name="share_stats_no_activity">Немає активності прослуховування</string>
+    <string name="share_stats_no_activity_desc">За цей період немає прослуховувань</string>
+    <string name="custom_artwork_title">Власна обкладинка</string>
+    <string name="custom_artwork_applied">Власну обкладинку оновлено</string>
+    <string name="custom_artwork_removed">Власну обкладинку видалено</string>
+    <string name="custom_artwork_apply">Застосувати</string>
+    <string name="share_card_title">Поділитися музикою</string>
+    <string name="share_card_save">Зберегти зображення</string>
+    <string name="share_card_share">Поділитися карткою</string>
+    <string name="share_card_saved">Зображення збережено на пристрої</string>
+    <string name="share_card_save_failed">Не вдалося зберегти зображення</string>
+    <string name="share_card_aspect_story">Історія · 9:16</string>
+    <string name="share_card_aspect_square">Квадрат · 1:1</string>
+    <string name="share_card_aspect_feed">Портрет · 4:5</string>
+    <string name="share_card_style_centered">По центру</string>
+    <string name="share_card_style_poster">Постер</string>
+    <string name="share_card_style_minimal">Мінімалізм</string>
+    <string name="share_card_brightness">Затемнення фону</string>
+    <string name="playing_from_playlist">Відтворення з плейлиста</string>
+    <string name="custom_artwork_choose">Вибрати зображення</string>
+    <string name="custom_artwork_error">Не вдалося встановити власну обкладинку</string>
+    <string name="custom_artwork_remove">Видалити власну обкладинку</string>
+    <string name="share_stats_title">Підсумки прослуховування</string>
+    <string name="stats_period_label">Період</string>
+    <string name="stats_period_7_days">Останні 7 днів</string>
+    <string name="stats_period_30_days">Останні 30 днів</string>
+    <string name="stats_period_this_month">Цей місяць</string>
+    <string name="stats_period_this_year">Цей рік</string>
+    <string name="stats_type_label">Тип картки</string>
+    <string name="stats_type_top_songs">Найкращі треки</string>
+    <string name="stats_type_top_artists">Найкращі виконавці</string>
+    <string name="stats_type_top_albums">Найкращі альбоми</string>
+    <string name="stats_type_overview">Огляд</string>
+    <string name="share_card_ratio">Співвідношення сторін</string>
+    <string name="share_card_ratio_story">Історія (9:16)</string>
+    <string name="share_card_ratio_square">Квадрат (1:1)</string>
+    <string name="share_card_ratio_portrait">Портрет (4:5)</string>
+    <string name="share_card_darkness">Затемнення фону</string>
+    <string name="share_card_save_error">Не вдалося зберегти зображення</string>
+    <string name="cd_close">Закрити</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s елемент не має обкладинки.</item>
+        <item quantity="few">%1$s елементи не мають обкладинки.</item>
+        <item quantity="many">%1$s елементів не мають обкладинки.</item>
+        <item quantity="other">%1$s елемента не мають обкладинки.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Немає версії з вищою роздільністю для %1$s елемента.</item>
+        <item quantity="few">Немає версій з вищою роздільністю для %1$s елементів.</item>
+        <item quantity="many">Немає версій з вищою роздільністю для %1$s елементів.</item>
+        <item quantity="other">Немає версій з вищою роздільністю для %1$s елемента.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Не вдалося перевірити обкладинку для %1$s елемента.</item>
+        <item quantity="few">Не вдалося перевірити обкладинки для %1$s елементів.</item>
+        <item quantity="many">Не вдалося перевірити обкладинки для %1$s елементів.</item>
+        <item quantity="other">Не вдалося перевірити обкладинки для %1$s елемента.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Не вдалося прочитати обкладинку %1$s елемента.</item>
+        <item quantity="few">Не вдалося прочитати обкладинки %1$s елементів.</item>
+        <item quantity="many">Не вдалося прочитати обкладинки %1$s елементів.</item>
+        <item quantity="other">Не вдалося прочитати обкладинки %1$s елемента.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">трек</item>
+        <item quantity="few">треки</item>
+        <item quantity="many">треків</item>
+        <item quantity="other">трека</item>
+    </plurals>
 </resources>

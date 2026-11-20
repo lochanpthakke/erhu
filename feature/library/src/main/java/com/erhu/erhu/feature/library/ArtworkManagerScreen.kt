@@ -400,9 +400,10 @@ fun ArtworkManagerScreen(
                                                         diagnostics?.candidates?.any { it.url == candidateUrl && it.recommended } == true
                                                 ),
                                         onClick = { viewModel.selectEnlargedArtwork(candidateUrl) },
-                                        onUnavailable = currentProcessingArtist?.let {
-                                            { unavailablePreviews = unavailablePreviews + candidateUrl }
-                                        },
+                                        onUnavailable =
+                                            currentProcessingArtist?.let {
+                                                { unavailablePreviews = unavailablePreviews + candidateUrl }
+                                            },
                                     )
                                 }
                             }
@@ -507,7 +508,9 @@ fun ArtworkManagerScreen(
                                                     },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color =
-                                                    if (outcome.status == ProviderStatus.SUCCESS || outcome.status == ProviderStatus.CANDIDATES_FOUND) {
+                                                    if (outcome.status == ProviderStatus.SUCCESS ||
+                                                        outcome.status == ProviderStatus.CANDIDATES_FOUND
+                                                    ) {
                                                         MaterialTheme.colorScheme.primary
                                                     } else {
                                                         MaterialTheme.colorScheme.onSurfaceVariant
@@ -763,9 +766,15 @@ private fun ArtworkPreviewImage(
 ) {
     var url by remember(previewUrl, originalFallback) { mutableStateOf(previewUrl) }
     val context = LocalContext.current
-    val request = remember(context, url) {
-        ImageRequest.Builder(context).data(url).setHeader("User-Agent", USER_AGENT).crossfade(true).build()
-    }
+    val request =
+        remember(context, url) {
+            ImageRequest
+                .Builder(context)
+                .data(url)
+                .setHeader("User-Agent", USER_AGENT)
+                .crossfade(true)
+                .build()
+        }
     AsyncImage(
         model = request,
         contentDescription = contentDescription,

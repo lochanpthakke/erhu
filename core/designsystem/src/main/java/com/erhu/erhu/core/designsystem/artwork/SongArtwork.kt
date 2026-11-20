@@ -48,7 +48,8 @@ fun SongArtwork(
         if (isAnimated && !customArtworkPath.isNullOrBlank()) {
             AsyncImage(
                 model =
-                    ImageRequest.Builder(context)
+                    ImageRequest
+                        .Builder(context)
                         .data(File(customArtworkPath))
                         .crossfade(true)
                         .decoderFactory(
@@ -57,8 +58,7 @@ fun SongArtwork(
                             } else {
                                 GifDecoder.Factory()
                             },
-                        )
-                        .build(),
+                        ).build(),
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),

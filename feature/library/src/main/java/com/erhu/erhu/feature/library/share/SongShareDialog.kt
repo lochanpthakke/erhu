@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,22 +25,18 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,7 +52,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.erhu.erhu.core.common.R as CommonR
 import com.erhu.erhu.core.common.artwork.ArtworkLoader
 import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
@@ -65,6 +59,7 @@ import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.erhu.erhu.core.common.R as CommonR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,9 +81,10 @@ fun SongShareDialog(
 
     // Load artwork bitmap for rendering
     val artworkBitmap by produceState<Bitmap?>(initialValue = null, song.id, customArtworkPath) {
-        value = withContext(Dispatchers.IO) {
-            ArtworkLoader.load(context, song.uri, song.artworkUri, 1024, customArtworkPath)
-        }
+        value =
+            withContext(Dispatchers.IO) {
+                ArtworkLoader.load(context, song.uri, song.artworkUri, 1024, customArtworkPath)
+            }
     }
 
     // Generate preview
@@ -100,15 +96,17 @@ fun SongShareDialog(
         blur,
         darkness,
     ) {
-        val config = SongShareConfig(
-            aspectRatio = aspectRatio,
-            style = style,
-            blur = blur,
-            darkness = darkness,
-        )
-        value = withContext(Dispatchers.Default) {
-            ShareCardRenderer.renderSongCard(context, song, artworkBitmap, config)
-        }
+        val config =
+            SongShareConfig(
+                aspectRatio = aspectRatio,
+                style = style,
+                blur = blur,
+                darkness = darkness,
+            )
+        value =
+            withContext(Dispatchers.Default) {
+                ShareCardRenderer.renderSongCard(context, song, artworkBitmap, config)
+            }
     }
 
     ModalBottomSheet(
@@ -118,10 +116,11 @@ fun SongShareDialog(
         dragHandle = null,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Spacing.screenGutter, vertical = Spacing.md)
-                .verticalScroll(rememberScrollState()),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.screenGutter, vertical = Spacing.md)
+                    .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Header
@@ -144,11 +143,12 @@ fun SongShareDialog(
 
             // Card Preview
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 280.dp, max = 380.dp)
-                    .clip(Radius.largeShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 280.dp, max = 380.dp)
+                        .clip(Radius.largeShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center,
             ) {
                 val preview = previewBitmap
@@ -156,11 +156,12 @@ fun SongShareDialog(
                     Image(
                         bitmap = preview.asImageBitmap(),
                         contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                            .aspectRatio(aspectRatio.ratio, matchHeightConstraintsFirst = true)
-                            .clip(RoundedCornerShape(16.dp)),
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                                .aspectRatio(aspectRatio.ratio, matchHeightConstraintsFirst = true)
+                                .clip(RoundedCornerShape(16.dp)),
                     )
                 } else {
                     CircularProgressIndicator(modifier = Modifier.size(36.dp))
@@ -267,11 +268,12 @@ fun SongShareDialog(
                             isExporting = true
                             val success = ShareCardExporter.saveToGallery(context, current, song.title)
                             isExporting = false
-                            val msg = if (success) {
-                                context.getString(CommonR.string.share_card_saved)
-                            } else {
-                                context.getString(CommonR.string.share_card_save_failed)
-                            }
+                            val msg =
+                                if (success) {
+                                    context.getString(CommonR.string.share_card_saved)
+                                } else {
+                                    context.getString(CommonR.string.share_card_save_failed)
+                                }
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         }
                     },

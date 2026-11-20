@@ -44,36 +44,46 @@ class ArtistPortraitSearch
         private val appleGate: AppleRequestGate,
     ) {
         private val web =
-            Retrofit.Builder()
+            Retrofit
+                .Builder()
                 .baseUrl("https://genius.com/")
                 .client(client)
                 .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                 .build()
                 .create(ArtistPortraitApi::class.java)
 
-        suspend fun search(name: String): ArtistArtworkSearchResponse = coroutineScope {
-            val artist = PortraitArtist(name)
-            val providers =
-                listOf(
-                    "iTunes / Apple Music" to suspend { searchApple(artist).map { PortraitImage(it) } },
-                    "Genius" to suspend { searchGenius(artist).map { PortraitImage(it) } },
-                    "DuckDuckGo Image Search" to suspend { searchDuck(artist) },
-                    "Deezer" to suspend { deezer.searchArtistPortraits(artist.catalogueQuery).map { PortraitImage(it) } },
+        suspend fun search(name: String): ArtistArtworkSearchResponse =
+            coroutineScope {
+                val artist = PortraitArtist(name)
+                val providers =
+                    listOf(
+                        "iTunes / Apple Music" to suspend { searchApple(artist).map { PortraitImage(it) } },
+                        "Genius" to suspend { searchGenius(artist).map { PortraitImage(it) } },
+                        "DuckDuckGo Image Search" to suspend { searchDuck(artist) },
+                        "Deezer" to suspend { deezer.searchArtistPortraits(artist.catalogueQuery).map { PortraitImage(it) } },
+                    )
+                val results =
+                    providers
+                        .map { (provider, lookup) ->
+                            async {
+                                if (artist.isSearchable) {
+                                    lookupPortraits(
+                                        provider,
+                                        lookup,
+                                    )
+                                } else {
+                                    PortraitResult(ProviderOutcome(provider), emptyList())
+                                }
+                            }
+                        }.awaitAll()
+                val images = results.flatMap { it.images }.distinctBy { it.url }
+                ArtistArtworkSearchResponse(
+                    candidates = images.map { it.url },
+                    providerCandidates = results.associate { it.outcome.providerName to it.images.map { image -> image.url } },
+                    providerOutcomes = results.map { it.outcome },
+                    previewUrls = images.filter { it.previewUrl != it.url }.associate { it.url to it.previewUrl },
                 )
-            val results =
-                providers.map { (provider, lookup) ->
-                    async {
-                        if (artist.isSearchable) lookupPortraits(provider, lookup) else PortraitResult(ProviderOutcome(provider), emptyList())
-                    }
-                }.awaitAll()
-            val images = results.flatMap { it.images }.distinctBy { it.url }
-            ArtistArtworkSearchResponse(
-                candidates = images.map { it.url },
-                providerCandidates = results.associate { it.outcome.providerName to it.images.map { image -> image.url } },
-                providerOutcomes = results.map { it.outcome },
-                previewUrls = images.filter { it.previewUrl != it.url }.associate { it.url to it.previewUrl },
-            )
-        }
+            }
 
         private suspend fun searchGenius(artist: PortraitArtist): List<String> =
             try {
@@ -118,7 +128,12 @@ class ArtistPortraitSearch
     }
 
 internal fun AppleArtistSearchResponse.portraits(artist: PortraitArtist): List<String> {
-    val resources = results?.artists?.data.orEmpty().filter { it.type == "artists" }
+    val resources =
+        results
+            ?.artists
+            ?.data
+            .orEmpty()
+            .filter { it.type == "artists" }
     val match =
         if (artist.isRapperDrake) {
             resources.firstOrNull { it.id == "271256" && it.attributes?.name.equals("Drake", ignoreCase = true) }
@@ -135,20 +150,25 @@ internal fun AppleArtistSearchResponse.portraits(artist: PortraitArtist): List<S
     return listOfNotNull(url.artistImageUrl())
 }
 
-private data class PortraitResult(val outcome: ProviderOutcome, val images: List<PortraitImage>)
+private data class PortraitResult(
+    val outcome: ProviderOutcome,
+    val images: List<PortraitImage>,
+)
 
 private suspend fun lookupPortraits(
     name: String,
     lookup: suspend () -> List<PortraitImage>,
 ): PortraitResult =
     try {
-        val images = withTimeoutOrNull(PORTRAIT_TIMEOUT_MS) {
-            lookup().mapNotNull { image ->
-                image.url.artistImageUrl()?.let { original ->
-                    PortraitImage(original, image.previewUrl.artistImageUrl() ?: original)
-                }
-            }.distinctBy { it.url }
-        }
+        val images =
+            withTimeoutOrNull(PORTRAIT_TIMEOUT_MS) {
+                lookup()
+                    .mapNotNull { image ->
+                        image.url.artistImageUrl()?.let { original ->
+                            PortraitImage(original, image.previewUrl.artistImageUrl() ?: original)
+                        }
+                    }.distinctBy { it.url }
+            }
         when {
             images == null -> PortraitResult(ProviderOutcome(name, status = ProviderStatus.TIMED_OUT), emptyList())
             images.isEmpty() -> PortraitResult(ProviderOutcome(name), emptyList())

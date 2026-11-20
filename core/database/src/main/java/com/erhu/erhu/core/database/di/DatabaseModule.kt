@@ -13,12 +13,12 @@ import com.erhu.erhu.core.database.MIGRATION_16_17
 import com.erhu.erhu.core.database.MIGRATION_17_18
 import com.erhu.erhu.core.database.MIGRATION_18_19
 import com.erhu.erhu.core.database.MIGRATION_19_20
-import com.erhu.erhu.core.database.RemoteTrackIdSeed
 import com.erhu.erhu.core.database.MIGRATION_5_6
 import com.erhu.erhu.core.database.MIGRATION_6_7
 import com.erhu.erhu.core.database.MIGRATION_7_8
 import com.erhu.erhu.core.database.MIGRATION_8_9
 import com.erhu.erhu.core.database.MIGRATION_9_10
+import com.erhu.erhu.core.database.RemoteTrackIdSeed
 import com.erhu.erhu.core.database.dao.AlbumDao
 import com.erhu.erhu.core.database.dao.AnimatedArtworkDao
 import com.erhu.erhu.core.database.dao.ArtistDao
@@ -35,12 +35,12 @@ import com.erhu.erhu.core.database.dao.SongDao
 import com.erhu.erhu.core.database.dao.TrackBookmarkDao
 import com.erhu.erhu.core.database.dao.WaveformCacheDao
 import com.erhu.erhu.core.database.repository.CustomSongArtworkStore
-import java.io.File
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.io.File
 import javax.inject.Singleton
 
 @Module

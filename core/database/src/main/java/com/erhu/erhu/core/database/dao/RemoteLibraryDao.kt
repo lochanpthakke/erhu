@@ -2,10 +2,10 @@ package com.erhu.erhu.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import androidx.room.OnConflictStrategy
 import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
 import com.erhu.erhu.core.database.entity.RemoteSourceEntity
 import com.erhu.erhu.core.database.entity.RemoteTrackEntity
@@ -173,7 +173,13 @@ interface RemoteLibraryDao {
                 // A listing without a duration only knows the file name (Drive): keep tags already read from the file.
                 val merged =
                     if (fresh.durationMs == 0L && known.durationMs > 0L) {
-                        fresh.copy(id = known.id, title = known.title, artist = known.artist, album = known.album, durationMs = known.durationMs)
+                        fresh.copy(
+                            id = known.id,
+                            title = known.title,
+                            artist = known.artist,
+                            album = known.album,
+                            durationMs = known.durationMs,
+                        )
                     } else {
                         fresh.copy(id = known.id)
                     }

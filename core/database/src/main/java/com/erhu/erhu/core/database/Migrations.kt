@@ -32,43 +32,44 @@ internal fun SupportSQLiteDatabase.hasColumn(
 /**
  * v16 -> v17: custom song artwork overrides and listening events for recap statistics.
  */
-val MIGRATION_16_17 = object : Migration(16, 17) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL(
-            """
-            CREATE TABLE IF NOT EXISTS `custom_song_artwork` (
-                `song_id` INTEGER NOT NULL,
-                `file_path` TEXT NOT NULL,
-                `mime_type` TEXT NOT NULL,
-                `is_animated` INTEGER NOT NULL,
-                `updated_at_epoch_ms` INTEGER NOT NULL,
-                PRIMARY KEY(`song_id`)
+val MIGRATION_16_17 =
+    object : Migration(16, 17) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `custom_song_artwork` (
+                    `song_id` INTEGER NOT NULL,
+                    `file_path` TEXT NOT NULL,
+                    `mime_type` TEXT NOT NULL,
+                    `is_animated` INTEGER NOT NULL,
+                    `updated_at_epoch_ms` INTEGER NOT NULL,
+                    PRIMARY KEY(`song_id`)
+                )
+                """.trimIndent(),
             )
-            """.trimIndent(),
-        )
-        db.execSQL(
-            """
-            CREATE TABLE IF NOT EXISTS `listening_events` (
-                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                `song_id` INTEGER NOT NULL,
-                `timestamp` INTEGER NOT NULL,
-                `duration_ms` INTEGER NOT NULL,
-                `is_counted_play` INTEGER NOT NULL
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `listening_events` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `song_id` INTEGER NOT NULL,
+                    `timestamp` INTEGER NOT NULL,
+                    `duration_ms` INTEGER NOT NULL,
+                    `is_counted_play` INTEGER NOT NULL
+                )
+                """.trimIndent(),
             )
-            """.trimIndent(),
-        )
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_listening_events_timestamp` ON `listening_events` (`timestamp`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_listening_events_song_id` ON `listening_events` (`song_id`)")
-        db.execSQL(
-            """
-            INSERT INTO `listening_events` (`song_id`, `timestamp`, `duration_ms`, `is_counted_play`)
-            SELECT `song_id`, `last_played_at`, `listened_ms`, 1
-            FROM `listening_stats`
-            WHERE `last_played_at` > 0
-            """.trimIndent(),
-        )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_listening_events_timestamp` ON `listening_events` (`timestamp`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_listening_events_song_id` ON `listening_events` (`song_id`)")
+            db.execSQL(
+                """
+                INSERT INTO `listening_events` (`song_id`, `timestamp`, `duration_ms`, `is_counted_play`)
+                SELECT `song_id`, `last_played_at`, `listened_ms`, 1
+                FROM `listening_stats`
+                WHERE `last_played_at` > 0
+                """.trimIndent(),
+            )
+        }
     }
-}
 
 /**
  * v14 â†’ v15: separate playlist display order from each entry's permanent position identity.

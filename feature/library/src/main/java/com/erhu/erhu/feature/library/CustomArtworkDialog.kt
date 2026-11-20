@@ -49,7 +49,6 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
-import com.erhu.erhu.core.common.R as CommonR
 import com.erhu.erhu.core.database.repository.CustomSongArtworkRepository
 import com.erhu.erhu.core.designsystem.artwork.SongArtwork
 import com.erhu.erhu.core.designsystem.foundation.Radius
@@ -58,6 +57,7 @@ import com.erhu.erhu.core.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.erhu.erhu.core.common.R as CommonR
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,7 +124,8 @@ fun CustomArtworkDialog(
                 if (selectedUri != null) {
                     val imageLoader =
                         remember(context) {
-                            coil.ImageLoader.Builder(context)
+                            coil.ImageLoader
+                                .Builder(context)
                                 .components {
                                     if (android.os.Build.VERSION.SDK_INT >= 28) {
                                         add(ImageDecoderDecoder.Factory())
@@ -135,7 +136,8 @@ fun CustomArtworkDialog(
                         }
                     AsyncImage(
                         model =
-                            ImageRequest.Builder(context)
+                            ImageRequest
+                                .Builder(context)
                                 .data(selectedUri)
                                 .crossfade(true)
                                 .build(),
@@ -199,24 +201,27 @@ fun CustomArtworkDialog(
                             isSaving = true
                             scope.launch {
                                 try {
-                                    val stream = withContext(Dispatchers.IO) {
-                                        context.contentResolver.openInputStream(uri)
-                                    }
+                                    val stream =
+                                        withContext(Dispatchers.IO) {
+                                            context.contentResolver.openInputStream(uri)
+                                        }
                                     if (stream != null) {
                                         customArtworkRepository.setCustomArtwork(song.id, stream)
-                                        Toast.makeText(
-                                            context,
-                                            context.getString(CommonR.string.custom_artwork_applied),
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
+                                        Toast
+                                            .makeText(
+                                                context,
+                                                context.getString(CommonR.string.custom_artwork_applied),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
                                         onDismiss()
                                     }
                                 } catch (e: Exception) {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(CommonR.string.custom_artwork_error),
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            context.getString(CommonR.string.custom_artwork_error),
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
                                 } finally {
                                     isSaving = false
                                 }
@@ -239,11 +244,12 @@ fun CustomArtworkDialog(
                         scope.launch {
                             try {
                                 customArtworkRepository.removeCustomArtwork(song.id)
-                                Toast.makeText(
-                                    context,
-                                    context.getString(CommonR.string.custom_artwork_removed),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(CommonR.string.custom_artwork_removed),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                                 onDismiss()
                             } finally {
                                 isSaving = false

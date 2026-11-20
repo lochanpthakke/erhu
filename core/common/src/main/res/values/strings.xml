@@ -940,8 +940,6 @@
         <item quantity="one">track</item>
         <item quantity="other">tracks</item>
     </plurals>
-    <string name="capsule_view_all">View all</string>
-    <string name="capsule_show_less">Show less</string>
     <string name="capsule_day_streak_unit">day streak</string>
     <string name="share_stats_no_activity">No listening activity</string>
     <string name="share_stats_no_activity_desc">No plays recorded for this period</string>
@@ -958,10 +956,6 @@
     <string name="player_menu_group_track">Track</string>
     <string name="player_menu_music_info">Music information</string>
     <string name="player_menu_audio_details">Audio details</string>
-    <string name="player_menu_share_card">Share song card</string>
-    <string name="player_menu_set_custom_artwork">Set custom artwork</string>
-    <string name="player_menu_remove_custom_artwork">Remove custom artwork</string>
-    <string name="player_playing_from_playlist">Playing from playlist</string>
     <string name="player_menu_group_library">Library</string>
     <string name="player_menu_bookmark_moment">Bookmark this moment</string>
     <string name="player_menu_bookmarks_ab_loop">Bookmarks &amp; A–B loop</string>
@@ -1065,15 +1059,10 @@
     <string name="visualizer_cd_waveform">Waveform of the music playing</string>
 
     <!-- Custom Artwork & Share Cards -->
-    <string name="song_menu_set_custom_artwork">Set custom artwork</string>
-    <string name="song_menu_remove_custom_artwork">Remove custom artwork</string>
     <string name="custom_artwork_title">Custom Artwork</string>
     <string name="custom_artwork_applied">Custom artwork updated</string>
     <string name="custom_artwork_removed">Custom artwork removed</string>
     <string name="custom_artwork_apply">Apply</string>
-    <string name="custom_artwork_cancel">Cancel</string>
-    <string name="custom_artwork_preview">Artwork preview</string>
-    <string name="custom_artwork_format_unsupported">Unsupported artwork format</string>
     <string name="share_card_title">Share Music</string>
     <string name="share_card_save">Save Image</string>
     <string name="share_card_share">Share Card</string>
@@ -1085,19 +1074,7 @@
     <string name="share_card_style_centered">Centered</string>
     <string name="share_card_style_poster">Poster</string>
     <string name="share_card_style_minimal">Minimal</string>
-    <string name="share_card_blur">Background blur</string>
     <string name="share_card_brightness">Background dim</string>
-    <string name="capsule_share_recap">Share listening recap</string>
-    <string name="stats_share_title">Listening Recap</string>
-    <string name="stats_share_top_songs">Top Songs</string>
-    <string name="stats_share_top_artists">Top Artists</string>
-    <string name="stats_share_top_albums">Top Albums</string>
-    <string name="stats_share_activity">Listening Overview</string>
-    <string name="stats_period_7days">Last 7 days</string>
-    <string name="stats_period_30days">Last 30 days</string>
-    <string name="stats_period_month">This month</string>
-    <string name="stats_period_year">This year</string>
-    <string name="stats_no_data">No listening activity recorded for this period.</string>
     <string name="playing_from_playlist">Playing from playlist</string>
     <string name="custom_artwork_choose">Choose image</string>
     <string name="custom_artwork_error">Failed to set custom artwork</string>

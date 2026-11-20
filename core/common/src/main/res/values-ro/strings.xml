@@ -2099,4 +2099,71 @@
     <string name="car_error_no_results">Nu s-a găsit muzică potrivită în bibliotecă.</string>
     <string name="car_error_request">Această solicitare muzicală nu este acceptată.</string>
     <string name="car_open_phone">Deschide erhu pe telefon</string>
+    <string name="nav_remote_libraries">Biblioteci la distanță</string>
+    <string name="capsule_minutes_listened">Minute ascultate</string>
+    <string name="share_stats_no_activity">Nicio activitate de ascultare</string>
+    <string name="share_stats_no_activity_desc">Nicio redare înregistrată în această perioadă</string>
+    <string name="custom_artwork_title">Copertă personalizată</string>
+    <string name="custom_artwork_applied">Coperta personalizată a fost actualizată</string>
+    <string name="custom_artwork_removed">Coperta personalizată a fost eliminată</string>
+    <string name="custom_artwork_apply">Aplică</string>
+    <string name="share_card_title">Distribuie muzică</string>
+    <string name="share_card_save">Salvează imaginea</string>
+    <string name="share_card_share">Distribuie cardul</string>
+    <string name="share_card_saved">Imagine salvată pe dispozitiv</string>
+    <string name="share_card_save_failed">Imaginea nu a putut fi salvată</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Pătrat · 1:1</string>
+    <string name="share_card_aspect_feed">Portret · 4:5</string>
+    <string name="share_card_style_centered">Centrat</string>
+    <string name="share_card_style_poster">Poster</string>
+    <string name="share_card_style_minimal">Minimalist</string>
+    <string name="share_card_brightness">Întunecă fundalul</string>
+    <string name="playing_from_playlist">Redare din playlist</string>
+    <string name="custom_artwork_choose">Alege imaginea</string>
+    <string name="custom_artwork_error">Coperta personalizată nu a putut fi setată</string>
+    <string name="custom_artwork_remove">Elimină coperta personalizată</string>
+    <string name="share_stats_title">Rezumatul ascultărilor</string>
+    <string name="stats_period_label">Perioadă</string>
+    <string name="stats_period_7_days">Ultimele 7 zile</string>
+    <string name="stats_period_30_days">Ultimele 30 de zile</string>
+    <string name="stats_period_this_month">Luna aceasta</string>
+    <string name="stats_period_this_year">Anul acesta</string>
+    <string name="stats_type_label">Tip card</string>
+    <string name="stats_type_top_songs">Melodii de top</string>
+    <string name="stats_type_top_artists">Artiști de top</string>
+    <string name="stats_type_top_albums">Albume de top</string>
+    <string name="stats_type_overview">Prezentare generală</string>
+    <string name="share_card_ratio">Raport de aspect</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Pătrat (1:1)</string>
+    <string name="share_card_ratio_portrait">Portret (4:5)</string>
+    <string name="share_card_darkness">Întunecarea fundalului</string>
+    <string name="share_card_save_error">Imaginea nu a putut fi salvată</string>
+    <string name="cd_close">Închide</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s element nu are copertă.</item>
+        <item quantity="few">%1$s elemente nu au copertă.</item>
+        <item quantity="other">%1$s de elemente nu au copertă.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Nicio versiune la rezoluție mai mare pentru %1$s element.</item>
+        <item quantity="few">Nicio versiune la rezoluție mai mare pentru %1$s elemente.</item>
+        <item quantity="other">Nicio versiune la rezoluție mai mare pentru %1$s de elemente.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Verificarea copertei nu a putut fi finalizată pentru %1$s element.</item>
+        <item quantity="few">Verificarea copertei nu a putut fi finalizată pentru %1$s elemente.</item>
+        <item quantity="other">Verificarea copertei nu a putut fi finalizată pentru %1$s de elemente.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Coperta existentă a %1$s element nu a putut fi citită.</item>
+        <item quantity="few">Copertele existente a %1$s elemente nu au putut fi citite.</item>
+        <item quantity="other">Copertele existente a %1$s de elemente nu au putut fi citite.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">piesă</item>
+        <item quantity="few">piese</item>
+        <item quantity="other">de piese</item>
+    </plurals>
 </resources>

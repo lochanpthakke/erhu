@@ -29,8 +29,7 @@ class SubsonicConnections
         private val cache = ConcurrentHashMap<Long, SubsonicConnection>()
 
         @Throws(IOException::class)
-        fun connection(sourceId: Long): SubsonicConnection =
-            cache[sourceId] ?: open(sourceId).also { cache[sourceId] = it }
+        fun connection(sourceId: Long): SubsonicConnection = cache[sourceId] ?: open(sourceId).also { cache[sourceId] = it }
 
         /** After a source is removed or its details change. */
         fun forget(sourceId: Long) {

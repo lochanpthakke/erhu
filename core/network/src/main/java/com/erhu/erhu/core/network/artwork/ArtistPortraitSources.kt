@@ -22,7 +22,9 @@ internal interface ArtistPortraitApi {
 
     @Headers("User-Agent: Mozilla/5.0")
     @GET("https://duckduckgo.com/?ia=images&iax=images")
-    suspend fun duckSearchPage(@Query("q") query: String): ResponseBody
+    suspend fun duckSearchPage(
+        @Query("q") query: String,
+    ): ResponseBody
 
     @Headers("User-Agent: Mozilla/5.0", "Referer: https://duckduckgo.com/")
     @GET("https://duckduckgo.com/i.js?o=json")
@@ -84,15 +86,28 @@ private val NON_PORTRAIT =
     )
 private const val MAX_DUCK_PORTRAITS = 30
 private val DIFFERENT_DRAKE =
-    Regex("""\b(drake bell|nick drake|drake white|drake milligan|drake english|drake electric|drake electronic|drake chisholm|william d drake|drakeo|drake from the band)\b""")
+    Regex(
+        """\b(drake bell|nick drake|drake white|drake milligan|drake english|drake electric|drake electronic|drake chisholm|william d drake|drakeo|drake from the band)\b""",
+    )
 private val DRAKE_PHOTO_CONTEXT = Regex("""\b(aubrey|rapper|rap|hip hop|ovo|photo|photograph|portrait|headshot|red carpet)\b""")
 
 internal fun normalizedArtistName(value: String): String = value.lowercase().replace(NON_WORD, " ").trim()
 
-internal fun String.artistImageUrl(): String? = trim().toHttpUrlOrNull()?.takeIf { it.isHttps && it.username.isEmpty() && it.password.isEmpty() }
-    ?.newBuilder()?.fragment(null)?.build()?.toString()
+internal fun String.artistImageUrl(): String? =
+    trim()
+        .toHttpUrlOrNull()
+        ?.takeIf {
+            it.isHttps &&
+                it.username.isEmpty() &&
+                it.password.isEmpty()
+        }?.newBuilder()
+        ?.fragment(null)
+        ?.build()
+        ?.toString()
 
-internal class PortraitArtist(name: String) {
+internal class PortraitArtist(
+    name: String,
+) {
     val name = name.trim()
     val normalized = normalizedArtistName(name)
     val isRapperDrake = normalized in setOf("drake", "aubrey drake graham", "aubrey graham")
@@ -113,14 +128,17 @@ internal fun GeniusArtistSearch.portraits(artist: PortraitArtist): List<String> 
         } ?: return emptyList()
     return listOfNotNull(match.image, match.banner)
         .filterNot { url ->
-            url.contains("default_avatar", ignoreCase = true) || url.contains("default_cover", ignoreCase = true) ||
+            url.contains("default_avatar", ignoreCase = true) ||
+                url.contains("default_cover", ignoreCase = true) ||
                 url.contains("assets.genius.com/images/default", ignoreCase = true)
-        }
-        .mapNotNull { it.artistImageUrl() }
+        }.mapNotNull { it.artistImageUrl() }
         .distinct()
 }
 
-internal data class PortraitImage(val url: String, val previewUrl: String = url)
+internal data class PortraitImage(
+    val url: String,
+    val previewUrl: String = url,
+)
 
 internal fun DuckImages.portraits(artist: PortraitArtist): List<PortraitImage> =
     requireNotNull(results) { "DuckDuckGo returned no image results field" }
@@ -131,7 +149,8 @@ internal fun DuckImages.portraits(artist: PortraitArtist): List<PortraitImage> =
             val matches =
                 if (artist.isRapperDrake) {
                     val plainNameTitle = normalizedArtistName(result.title) == "drake"
-                    " drake " in identity && (plainNameTitle || DRAKE_PHOTO_CONTEXT.containsMatchIn(text)) &&
+                    " drake " in identity &&
+                        (plainNameTitle || DRAKE_PHOTO_CONTEXT.containsMatchIn(text)) &&
                         !DIFFERENT_DRAKE.containsMatchIn(text)
                 } else {
                     " ${artist.normalized} " in identity

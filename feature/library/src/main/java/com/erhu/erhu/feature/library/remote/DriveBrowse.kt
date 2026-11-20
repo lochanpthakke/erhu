@@ -242,7 +242,16 @@ class DriveBrowseViewModel
             val searching = query.isNotEmpty()
             if (!searching && _state.value.crumbs.isEmpty()) {
                 // The top level is a fixed menu; nothing to fetch.
-                _state.update { it.copy(loading = false, error = null, folders = emptyList(), tracks = emptyList(), canLoadMore = false, searching = false) }
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        error = null,
+                        folders = emptyList(),
+                        tracks = emptyList(),
+                        canLoadMore = false,
+                        searching = false,
+                    )
+                }
                 return
             }
             loadJob =
@@ -418,7 +427,9 @@ fun DriveBrowseScreen(
                 data = result.data,
                 launchConsent = { pendingIntent ->
                     consentLauncher?.launch(
-                        androidx.activity.result.IntentSenderRequest.Builder(pendingIntent.intentSender).build(),
+                        androidx.activity.result.IntentSenderRequest
+                            .Builder(pendingIntent.intentSender)
+                            .build(),
                     )
                 },
             )
@@ -479,7 +490,13 @@ fun DriveBrowseScreen(
             }
             if (shownFolder != null) {
                 item(key = "library") {
-                    Column(Modifier.padding(horizontal = Spacing.screenGutter).padding(bottom = Spacing.sm).fillMaxWidth().groupSurface()) {
+                    Column(
+                        Modifier
+                            .padding(horizontal = Spacing.screenGutter)
+                            .padding(bottom = Spacing.sm)
+                            .fillMaxWidth()
+                            .groupSurface(),
+                    ) {
                         if (synced == null) {
                             GroupRow(
                                 "Add to Library",
@@ -580,7 +597,12 @@ fun DriveBrowseScreen(
                             Icon(
                                 imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = if (song.isFavorite) "Remove from favourites" else "Add to favourites",
-                                tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint =
+                                    if (song.isFavorite) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
                             )
                         }
                     },

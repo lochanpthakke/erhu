@@ -47,7 +47,10 @@ interface ThemeRepository {
 
     val navigationSetup: StateFlow<NavigationSetup?>
 
-    suspend fun saveNavigationQuickAccess(sections: List<String>, completeIntroduction: Boolean): AppResult<Unit>
+    suspend fun saveNavigationQuickAccess(
+        sections: List<String>,
+        completeIntroduction: Boolean,
+    ): AppResult<Unit>
 
     suspend fun completeOnboarding(): AppResult<Unit>
 

@@ -2,17 +2,11 @@
 
 package com.erhu.erhu.feature.settings.sound
 
-import com.erhu.erhu.core.sound.model.EqMode
-import com.erhu.erhu.core.sound.dsp.BandFilter
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.material3.Switch
-import androidx.compose.material3.FilterChip
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.RestartAlt
@@ -36,11 +31,13 @@ import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -55,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.erhu.erhu.core.common.locale.AppLocaleManager
@@ -65,9 +63,11 @@ import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.theme.ErhuGlass
 import com.erhu.erhu.core.designsystem.theme.popupGlass
+import com.erhu.erhu.core.sound.dsp.BandFilter
 import com.erhu.erhu.core.sound.dsp.CustomEqAudioProcessor
 import com.erhu.erhu.core.sound.dsp.FilterType
 import com.erhu.erhu.core.sound.model.BandConfig
+import com.erhu.erhu.core.sound.model.EqMode
 import com.erhu.erhu.core.sound.model.EqPreset
 import com.erhu.erhu.core.sound.model.SoundSettings
 import com.erhu.erhu.feature.settings.component.SettingsGroup
@@ -337,7 +337,11 @@ private fun SelectedBandPanel(
 
         // Frequency: a log slider, and the value itself opens precise entry.
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(CommonR.string.eq_center_frequency_label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(CommonR.string.eq_center_frequency_label),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.weight(1f),
+            )
             TextButton(onClick = { editingFrequency = true }, enabled = editable) { Text(formatPreciseFrequency(band.frequencyHz)) }
         }
         Slider(
@@ -382,7 +386,12 @@ private fun SelectedBandPanel(
                 enabled = editable,
             )
             Text(
-                text = if (band.filterType.isPass) "Higher Q adds a resonant peak at the cutoff" else "Lower Q = wider band, higher Q = narrower band",
+                text =
+                    if (band.filterType.isPass) {
+                        "Higher Q adds a resonant peak at the cutoff"
+                    } else {
+                        "Lower Q = wider band, higher Q = narrower band"
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -247,7 +247,9 @@ fun NowPlayingScreen(
 
     val menuActions =
         NowPlayingMenuActions(
-            hasLocalFile = !com.erhu.erhu.core.model.RemoteRef.isStreamUri(song?.uri),
+            hasLocalFile =
+                !com.erhu.erhu.core.model.RemoteRef
+                    .isStreamUri(song?.uri),
             onMusicInfo = { song?.let(onShowMusicInfo) },
             onAudioDetails = { showAudioDetails = true },
             onAddBookmark = {
@@ -342,9 +344,10 @@ fun NowPlayingScreen(
                     navigation = TopBarNavigation.Detail(onBackClick),
                     title = {
                         val playlistId =
-                            playbackState.currentCollection?.takeIf {
-                                it.kind == com.erhu.erhu.core.model.CollectionKind.PLAYLIST
-                            }?.id
+                            playbackState.currentCollection
+                                ?.takeIf {
+                                    it.kind == com.erhu.erhu.core.model.CollectionKind.PLAYLIST
+                                }?.id
                         if (playlistId != null && !originatingPlaylistName.isNullOrBlank() && onOpenPlaylist != null) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,

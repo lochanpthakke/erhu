@@ -134,7 +134,15 @@ class DriveClient(
                 pageToken?.let { addQueryParameter("pageToken", it) }
             }
         return DrivePage(
-            page.drives.filter { it.id.isNotEmpty() }.map { DriveItem(it.id, it.name, isFolder = true, mimeType = FOLDER, driveId = it.id) },
+            page.drives.filter { it.id.isNotEmpty() }.map {
+                DriveItem(
+                    it.id,
+                    it.name,
+                    isFolder = true,
+                    mimeType = FOLDER,
+                    driveId = it.id,
+                )
+            },
             page.nextPageToken?.takeIf { it.isNotEmpty() },
         )
     }
@@ -184,8 +192,18 @@ class DriveClient(
         path: String,
         build: HttpUrl.Builder.() -> Unit,
     ): T {
-        val url = baseUrl.newBuilder().addPathSegments(path).apply(build).build()
-        val request = Request.Builder().url(url).header("Authorization", "Bearer $token").build()
+        val url =
+            baseUrl
+                .newBuilder()
+                .addPathSegments(path)
+                .apply(build)
+                .build()
+        val request =
+            Request
+                .Builder()
+                .url(url)
+                .header("Authorization", "Bearer $token")
+                .build()
         val text =
             calls.newCall(request).await { response ->
                 val body = response.body?.string().orEmpty()
@@ -195,7 +213,10 @@ class DriveClient(
                     // 403 is also Google's answer for rate limits; only a permission problem needs a new sign-in.
                     response.code == HTTP_FORBIDDEN && PERMISSION_MARKERS.any { body.contains(it, ignoreCase = true) } ->
                         throw RemoteAccessException(Reason.AUTH_REQUIRED, "erhu no longer has permission to read this Google Drive")
-                    response.code == HTTP_NOT_FOUND -> throw RemoteAccessException(Reason.NOT_FOUND, "This folder or file is no longer in Google Drive")
+                    response.code == HTTP_NOT_FOUND -> throw RemoteAccessException(
+                        Reason.NOT_FOUND,
+                        "This folder or file is no longer in Google Drive",
+                    )
                     else -> throw IOException("Google Drive answered with an error (${response.code})")
                 }
             }

@@ -2052,4 +2052,66 @@
     <string name="car_error_no_results">Nenhuma música correspondente foi encontrada na biblioteca.</string>
     <string name="car_error_request">Esta solicitação de música não é compatível.</string>
     <string name="car_open_phone">Abrir erhu no celular</string>
+    <string name="nav_remote_libraries">Bibliotecas remotas</string>
+    <string name="capsule_minutes_listened">Minutos ouvidos</string>
+    <string name="share_stats_no_activity">Nenhuma atividade de escuta</string>
+    <string name="share_stats_no_activity_desc">Nenhuma reprodução registrada neste período</string>
+    <string name="custom_artwork_title">Capa personalizada</string>
+    <string name="custom_artwork_applied">Capa personalizada atualizada</string>
+    <string name="custom_artwork_removed">Capa personalizada removida</string>
+    <string name="custom_artwork_apply">Aplicar</string>
+    <string name="share_card_title">Compartilhar música</string>
+    <string name="share_card_save">Salvar imagem</string>
+    <string name="share_card_share">Compartilhar cartão</string>
+    <string name="share_card_saved">Imagem salva no dispositivo</string>
+    <string name="share_card_save_failed">Não foi possível salvar a imagem</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Quadrado · 1:1</string>
+    <string name="share_card_aspect_feed">Retrato · 4:5</string>
+    <string name="share_card_style_centered">Centralizado</string>
+    <string name="share_card_style_poster">Pôster</string>
+    <string name="share_card_style_minimal">Minimalista</string>
+    <string name="share_card_brightness">Escurecer fundo</string>
+    <string name="playing_from_playlist">Tocando da playlist</string>
+    <string name="custom_artwork_choose">Escolher imagem</string>
+    <string name="custom_artwork_error">Não foi possível definir a capa personalizada</string>
+    <string name="custom_artwork_remove">Remover capa personalizada</string>
+    <string name="share_stats_title">Resumo de escuta</string>
+    <string name="stats_period_label">Período</string>
+    <string name="stats_period_7_days">Últimos 7 dias</string>
+    <string name="stats_period_30_days">Últimos 30 dias</string>
+    <string name="stats_period_this_month">Este mês</string>
+    <string name="stats_period_this_year">Este ano</string>
+    <string name="stats_type_label">Tipo de cartão</string>
+    <string name="stats_type_top_songs">Músicas mais ouvidas</string>
+    <string name="stats_type_top_artists">Artistas mais ouvidos</string>
+    <string name="stats_type_top_albums">Álbuns mais ouvidos</string>
+    <string name="stats_type_overview">Visão geral</string>
+    <string name="share_card_ratio">Proporção</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Quadrado (1:1)</string>
+    <string name="share_card_ratio_portrait">Retrato (4:5)</string>
+    <string name="share_card_darkness">Escurecimento do fundo</string>
+    <string name="share_card_save_error">Não foi possível salvar a imagem</string>
+    <string name="cd_close">Fechar</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s item não tem capa.</item>
+        <item quantity="other">%1$s itens não têm capa.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Nenhuma versão em maior resolução para %1$s item.</item>
+        <item quantity="other">Nenhuma versão em maior resolução para %1$s itens.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Não foi possível concluir a verificação de capa de %1$s item.</item>
+        <item quantity="other">Não foi possível concluir a verificação de capa de %1$s itens.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Não foi possível ler a capa existente de %1$s item.</item>
+        <item quantity="other">Não foi possível ler a capa existente de %1$s itens.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">faixa</item>
+        <item quantity="other">faixas</item>
+    </plurals>
 </resources>

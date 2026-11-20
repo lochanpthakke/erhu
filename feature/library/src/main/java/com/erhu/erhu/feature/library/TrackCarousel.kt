@@ -220,7 +220,11 @@ internal class TrackCarouselState(
         settle =
             scope.launch {
                 offset.snapTo(start)
-                offset.animateTo(absolute, spring(dampingRatio = 1f, stiffness = TRACK_SETTLE_STIFFNESS), initialVelocity = settlingVelocity(start, absolute, velocity, page)) {
+                offset.animateTo(
+                    absolute,
+                    spring(dampingRatio = 1f, stiffness = TRACK_SETTLE_STIFFNESS),
+                    initialVelocity = settlingVelocity(start, absolute, velocity, page),
+                ) {
                     position = value + base
                 }
                 if (!dragging) Interactions.put(Interactions.TRACK, null)

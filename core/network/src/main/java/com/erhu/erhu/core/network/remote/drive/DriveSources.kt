@@ -2,6 +2,7 @@ package com.erhu.erhu.core.network.remote.drive
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
+import com.erhu.erhu.core.common.artwork.ArtworkLoader
 import com.erhu.erhu.core.model.RemoteArtworkSource
 import com.erhu.erhu.core.model.RemoteProvider
 import com.erhu.erhu.core.model.RemoteRef
@@ -11,6 +12,7 @@ import com.erhu.erhu.core.network.remote.subsonic.md5Hex
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.Semaphore
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,8 +43,9 @@ class DriveTags(
 /**
  * Reads a Drive file's own tags and embedded cover by asking the platform's metadata reader to
  * open the authorized stream. It fetches only the parts of the file it needs (byte ranges), never
- * the whole file, and never writes to Drive. One file at a time, so a long folder cannot flood the
- * connection. The cover is kept in the app's cache folder (an empty file means "has no cover").
+ * the whole file, and never writes to Drive. A few files at a time ([PARALLEL_READS]), so a long
+ * folder neither floods the connection nor makes a cover shown on screen wait behind the whole
+ * folder. The cover is kept in the app's cache folder (an empty file means "has no cover").
  */
 @Singleton
 class DriveMetadataReader
@@ -54,10 +57,23 @@ class DriveMetadataReader
     ) {
         private val covers = File(context.cacheDir, "remote-art")
 
+        private val reads = Semaphore(PARALLEL_READS)
+
         /** Blocking. Null when the file could not be read (offline, unsupported, sign-in needed). */
-        @Synchronized
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
         fun read(
+            sourceId: Long,
+            fileId: String,
+        ): DriveTags? {
+            reads.acquireUninterruptibly()
+            return try {
+                readFile(sourceId, fileId)
+            } finally {
+                reads.release()
+            }
+        }
+
+        @Suppress("TooGenericExceptionCaught", "SwallowedException")
+        private fun readFile(
             sourceId: Long,
             fileId: String,
         ): DriveTags? {
@@ -80,7 +96,10 @@ class DriveMetadataReader
                             )?.let(::yearOf) ?: 0,
                     )
                 covers.mkdirs()
-                coverFile(sourceId, fileId).writeBytes(retriever.embeddedPicture ?: ByteArray(0))
+                val picture = retriever.embeddedPicture
+                coverFile(sourceId, fileId).writeBytes(picture ?: ByteArray(0))
+                // Covers already on screen as placeholders try again now, not on the next scroll.
+                if (picture != null && picture.isNotEmpty()) ArtworkLoader.notifyRemoteCoversChanged()
                 tags
             } catch (e: Exception) {
                 null
@@ -107,6 +126,11 @@ class DriveMetadataReader
             sourceId: Long,
             fileId: String,
         ) = File(covers, "drive-$sourceId-${md5Hex(fileId)}")
+
+        private companion object {
+            /** Each read is a few small range requests, so it waits on latency, not bandwidth. */
+            const val PARALLEL_READS = 3
+        }
     }
 
 @Singleton
@@ -135,7 +159,12 @@ class DriveArtworkSource
 
 /** A plausible year from a YEAR or DATE tag ("2018", "2018-05-04", "20180504T..."); null otherwise. */
 @Suppress("MagicNumber")
-internal fun yearOf(text: String): Int? = Regex("""(19|20)\d{2}""").find(text)?.value?.toIntOrNull()?.takeIf { it in 1900..2099 }
+internal fun yearOf(text: String): Int? =
+    Regex("""(19|20)\d{2}""")
+        .find(text)
+        ?.value
+        ?.toIntOrNull()
+        ?.takeIf { it in 1900..2099 }
 
 /**
  * A genre tag as text. Old ID3 files store a number ("(17)" or "17"): those, and empty or

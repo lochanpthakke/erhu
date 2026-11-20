@@ -312,5 +312,239 @@
     <ID>WildcardImport:TransitionPointPrecisionTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:UpdateLiveIntegrationTest.kt$import org.junit.Assert.*</ID>
     <ID>WildcardImport:VybeAdvancedQueryTest.kt$import org.junit.Assert.*</ID>
+    <!-- Findings in code merged after 1.0.15 (1.0.16-1.0.21), recorded for the 1.0.21 release. -->
+    <ID>ComplexCondition:CustomSongArtworkStore.kt$CustomSongArtworkStore$bytes.size &gt;= 8 &amp;&amp; bytes[0] == 0x89.toByte() &amp;&amp; bytes[1] == 0x50.toByte() &amp;&amp; bytes[2] == 0x4E.toByte() &amp;&amp; bytes[3] == 0x47.toByte()</ID>
+    <ID>ComplexCondition:DriveBrowse.kt$!atTop &amp;&amp; !state.loading &amp;&amp; state.error == null &amp;&amp; state.folders.isEmpty() &amp;&amp; state.tracks.isEmpty()</ID>
+    <ID>ComplexCondition:OnboardingPreviews.kt$active &amp;&amp; motionEnabled &amp;&amp; !dragging &amp;&amp; settled</ID>
+    <ID>ComplexCondition:RemoteBrowseScreen.kt$!state.loading &amp;&amp; state.error == null &amp;&amp; state.isEmpty &amp;&amp; (kind != RemotePageKind.HOME || searching)</ID>
+    <ID>ComplexCondition:RemoteLibraryViewModels.kt$RemoteBrowseViewModel$kind != RemotePageKind.ALBUMS || !shown.canLoadMore || shown.loading || loadJob?.isActive == true</ID>
+    <ID>CyclomaticComplexMethod:ArtworkLoader.kt$ArtworkLoader$@Suppress("ReturnCount") suspend fun load( context: Context, songUri: String, albumArtUri: String?, sizePx: Int, customArtworkPath: String? = null, ): Bitmap?</ID>
+    <ID>CyclomaticComplexMethod:ArtworkUpgradeController.kt$ArtworkUpgradeController$fun search(kind: ArtworkUpgradeKind)</ID>
+    <ID>CyclomaticComplexMethod:DriveLibrarySync.kt$DriveLibrarySync$private suspend fun listServer(folder: RemoteLibraryFolderEntity): List&lt;Pair&lt;RemoteTrack, String&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:DriveLibrarySync.kt$DriveLibrarySync$private suspend fun lookUpDetails( song: Song, fileGenre: String?, fileYear: Int, )</ID>
+    <ID>CyclomaticComplexMethod:GlassArtworkBackdrop.kt$@Composable fun GlassArtworkBackdrop( song: Song?, modifier: Modifier = Modifier, upcoming: List&lt;Song?&gt; = emptyList(), )</ID>
+    <ID>CyclomaticComplexMethod:GoogleDriveAuth.kt$GoogleDriveAuth$fun fromConsent( resultCode: Int, data: Intent?, ): DriveConsentOutcome</ID>
+    <ID>CyclomaticComplexMethod:LibraryFastScroll.kt$@Composable internal fun LibraryFastScroll( labels: List&lt;String&gt;, topInset: Dp, bottomInset: Dp, onJump: (Int) -&gt; Unit, modifier: Modifier = Modifier, itemCount: Int = labels.size, enabled: Boolean = true, showHandle: Boolean = false, content: @Composable () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:LibraryFastScroll.kt$private fun Modifier.rightEdgeDrag( topInset: () -&gt; Dp, bottomInset: () -&gt; Dp, onDrag: (y: Float, top: Float, bottom: Float) -&gt; Unit, reset: () -&gt; Unit, key: Pair&lt;List&lt;AlphabetStop&gt;, Int&gt;, ): Modifier</ID>
+    <ID>CyclomaticComplexMethod:LibraryHome.kt$@Composable @Suppress("LongParameterList") internal fun HomeFeed( songs: LazyPagingItems&lt;Song&gt;, songTitles: List&lt;String&gt;, smartMixes: SmartMixes?, featuredAlbums: List&lt;Album&gt;, radioAlbums: List&lt;Album&gt; = emptyList(), artistArtwork: Map&lt;Long, String&gt;, recentAlbums: List&lt;Album&gt;, recentPlaylists: List&lt;Playlist&gt;, currentSongId: Long?, isScanning: Boolean, onSongClick: (Song) -&gt; Unit, onAlbumClick: (Album) -&gt; Unit, onOpenRadio: (Long) -&gt; Unit, onPlaylistClick: (Playlist) -&gt; Unit, onSmartPlaylistClick: (mixKey: String) -&gt; Unit, onSmartPlaylistPlay: (mixKey: String) -&gt; Unit, actions: SongActions, topInset: Dp, bottomInset: Dp, emptyMessage: String = stringResource(CommonR.string.library_empty_songs_device), )</ID>
+    <ID>CyclomaticComplexMethod:MediaStoreScanner.kt$MediaStoreScanner$@Suppress("DEPRECATION", "TooGenericExceptionCaught", "NestedBlockDepth") fun triggerMediaScannerForStorage(sinceMs: Long = 0L): Int</ID>
+    <ID>CyclomaticComplexMethod:MiniPlayer.kt$@Composable @Suppress("LongMethod") fun MiniPlayer( playbackRepository: PlaybackRepository, onMiniPlayerClick: () -&gt; Unit, modifier: Modifier = Modifier, compact: () -&gt; Float = { 0f }, customArtworkPath: String? = null, isCustomAnimated: Boolean = false, )</ID>
+    <ID>CyclomaticComplexMethod:NowPlayingParts.kt$@Composable @Suppress("LongMethod", "LongParameterList") internal fun CarouselCard( track: Song, isCurrent: Boolean, distance: () -&gt; Float, transition: PlayerTransitionState?, isFavorite: Boolean, onToggleFavorite: () -&gt; Unit, onSelect: () -&gt; Unit, /** Plays the current card's animated cover (when the album has one). */ isPlaying: Boolean = false, libraryRepository: LibraryRepository? = null, animatedArtworkRepository: AnimatedArtworkRepository? = null, /** Now Playing's one cover video, handed from card to card (see CoverVideoHost). */ coverVideo: CoverVideoHost? = null, /** False while the neighbours are stacked behind the current card: a tap there must not reach them. */ selectable: Boolean = true, onOpenArtist: ((Long) -&gt; Unit)? = null, onOpenAlbum: ((Long) -&gt; Unit)? = null, customArtworkPath: String? = null, isCustomAnimated: Boolean = false, )</ID>
+    <ID>CyclomaticComplexMethod:OnboardingPreviews.kt$@Composable internal fun RecordingCarousel( slides: List&lt;PreviewRecording&gt;, active: Boolean, motionEnabled: Boolean, modifier: Modifier = Modifier, )</ID>
+    <ID>CyclomaticComplexMethod:SoundSettingsMapper.kt$fun PersistedSoundSettings.toSoundSettings(): SoundSettings</ID>
+    <ID>CyclomaticComplexMethod:StatsCardRenderer.kt$StatsCardRenderer.Card$fun overview( stats: PeriodStats, ratio: CardAspectRatio, )</ID>
+    <ID>CyclomaticComplexMethod:StatsShareDialog.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun StatsShareDialog( statsRepository: ListeningStatsRepository, onDismiss: () -&gt; Unit, )</ID>
+    <ID>EmptyFunctionBlock:ListeningStatsRepository.kt$NoOpListeningEventDao${}</ID>
+    <ID>LongMethod:AlbumArtworkFinder.kt$AlbumArtworkFinder$suspend fun searchArchive()</ID>
+    <ID>LongMethod:AnimatedAlbumCoverPlayer.kt$@Composable private fun LoopingCoverVideo( host: CoverVideoHost, filePath: String, isPlaying: Boolean, )</ID>
+    <ID>LongMethod:CustomArtworkDialog.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun CustomArtworkDialog( song: Song, customArtworkRepository: CustomSongArtworkRepository, currentCustomArtworkPath: String?, onDismiss: () -&gt; Unit, )</ID>
+    <ID>LongMethod:DriveLibrarySync.kt$DriveLibrarySync$private suspend fun lookUpDetails( song: Song, fileGenre: String?, fileYear: Int, )</ID>
+    <ID>LongMethod:GlassArtworkBackdrop.kt$@Composable fun GlassArtworkBackdrop( song: Song?, modifier: Modifier = Modifier, upcoming: List&lt;Song?&gt; = emptyList(), )</ID>
+    <ID>LongMethod:GoogleDriveAuth.kt$GoogleDriveAuth$fun fromConsent( resultCode: Int, data: Intent?, ): DriveConsentOutcome</ID>
+    <ID>LongMethod:LibraryFastScroll.kt$@Composable internal fun LibraryFastScroll( labels: List&lt;String&gt;, topInset: Dp, bottomInset: Dp, onJump: (Int) -&gt; Unit, modifier: Modifier = Modifier, itemCount: Int = labels.size, enabled: Boolean = true, showHandle: Boolean = false, content: @Composable () -&gt; Unit, )</ID>
+    <ID>LongMethod:LibraryHome.kt$@Composable @Suppress("LongParameterList") internal fun HomeFeed( songs: LazyPagingItems&lt;Song&gt;, songTitles: List&lt;String&gt;, smartMixes: SmartMixes?, featuredAlbums: List&lt;Album&gt;, radioAlbums: List&lt;Album&gt; = emptyList(), artistArtwork: Map&lt;Long, String&gt;, recentAlbums: List&lt;Album&gt;, recentPlaylists: List&lt;Playlist&gt;, currentSongId: Long?, isScanning: Boolean, onSongClick: (Song) -&gt; Unit, onAlbumClick: (Album) -&gt; Unit, onOpenRadio: (Long) -&gt; Unit, onPlaylistClick: (Playlist) -&gt; Unit, onSmartPlaylistClick: (mixKey: String) -&gt; Unit, onSmartPlaylistPlay: (mixKey: String) -&gt; Unit, actions: SongActions, topInset: Dp, bottomInset: Dp, emptyMessage: String = stringResource(CommonR.string.library_empty_songs_device), )</ID>
+    <ID>LongMethod:LibraryOverview.kt$@Composable @Suppress("LongParameterList") internal fun LibraryOverview( playlists: List&lt;Playlist&gt;, favoriteSongs: LazyPagingItems&lt;Song&gt;, songs: LazyPagingItems&lt;Song&gt;, artists: LazyPagingItems&lt;Artist&gt;, artistArtwork: Map&lt;Long, String&gt;, isScanning: Boolean, actions: LibraryOverviewActions, topInset: Dp, bottomInset: Dp, )</ID>
+    <ID>LongMethod:ListeningStatsRepository.kt$ListeningStatsRepository$fun observePeriodStats( period: StatsPeriod, limit: Int = TOP_LIMIT, ): Flow&lt;PeriodStats&gt;</ID>
+    <ID>LongMethod:NowPlayingParts.kt$@Composable private fun CardMetadata( track: Song, showAlbum: Boolean, favorite: (@Composable () -&gt; Unit)?, modifier: Modifier = Modifier, artists: List&lt;Artist&gt; = emptyList(), albumId: Long? = null, onOpenArtist: ((Long) -&gt; Unit)? = null, onOpenAlbum: ((Long) -&gt; Unit)? = null, )</ID>
+    <ID>LongMethod:OnboardingPreviews.kt$@Composable internal fun RecordingCarousel( slides: List&lt;PreviewRecording&gt;, active: Boolean, motionEnabled: Boolean, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:RemoteLibrariesScreen.kt$@Composable fun RemoteLibrariesScreen( onOpenDrawer: () -&gt; Unit, onOpenSource: (RemoteSource) -&gt; Unit, modifier: Modifier = Modifier, viewModel: RemoteLibrariesViewModel = hiltViewModel(), )</ID>
+    <ID>LongMethod:RemoteLibrariesScreen.kt$@Composable private fun AddServerForm( state: AddServerState, onConnect: (address: String, username: String, password: String, allowInsecure: Boolean, useApiKey: Boolean) -&gt; Unit, )</ID>
+    <ID>LongMethod:SettingsScreen.kt$@Composable private fun NavigationSettingsSubPage( viewModel: ThemeViewModel, title: String, onBack: () -&gt; Unit, )</ID>
+    <ID>LongMethod:SongShareDialog.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SongShareDialog( song: Song, onDismiss: () -&gt; Unit, customArtworkPath: String? = null, )</ID>
+    <ID>LongMethod:StatsCardRenderer.kt$StatsCardRenderer.Card$fun overview( stats: PeriodStats, ratio: CardAspectRatio, )</ID>
+    <ID>LongMethod:StatsShareDialog.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun StatsShareDialog( statsRepository: ListeningStatsRepository, onDismiss: () -&gt; Unit, )</ID>
+    <ID>LongMethod:UtilityGuide.kt$internal fun UtilityTool.toolGuide(): UtilityGuide</ID>
+    <ID>LongMethod:VinylMusicWidget.kt$VinylMusicWidget$@Composable private fun WidgetContent( title: String, artist: String, artwork: Bitmap?, colors: ArtworkColors?, isPlaying: Boolean, hasSong: Boolean, )</ID>
+    <ID>LoopWithTooManyJumpStatements:ArtworkUpgradeController.kt$ArtworkUpgradeController$for</ID>
+    <ID>LoopWithTooManyJumpStatements:Eq8CurveCanvas.kt$while</ID>
+    <ID>LoopWithTooManyJumpStatements:GlassArtworkBackdrop.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:LibraryFastScroll.kt$while</ID>
+    <ID>MagicNumber:ArtworkLoader.kt$ArtworkLoader$10_000L</ID>
+    <ID>MagicNumber:ArtworkLoader.kt$ArtworkLoader$1_500L</ID>
+    <ID>MagicNumber:ArtworkLoader.kt$ArtworkLoader$4_000L</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$12</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$16</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$20</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$21</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$3</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$4</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$6</ID>
+    <ID>MagicNumber:CustomSongArtworkStore.kt$CustomSongArtworkStore$8</ID>
+    <ID>MagicNumber:DriveBrowse.kt$3</ID>
+    <ID>MagicNumber:DriveLibrarySync.kt$DriveLibrarySync$1000</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$0.5098f</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$0.5412f</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$0.6013f</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$0.9000f</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$1.3066f</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$2.5629f</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$24</ID>
+    <ID>MagicNumber:EqDesign.kt$BandFilter.Companion$48</ID>
+    <ID>MagicNumber:ListeningStatsRepository.kt$ListeningStatsRepository$1000</ID>
+    <ID>MagicNumber:ListeningStatsRepository.kt$ListeningStatsRepository$24</ID>
+    <ID>MagicNumber:ListeningStatsRepository.kt$ListeningStatsRepository$30L</ID>
+    <ID>MagicNumber:ListeningStatsRepository.kt$ListeningStatsRepository$60</ID>
+    <ID>MagicNumber:ListeningStatsRepository.kt$ListeningStatsRepository$7L</ID>
+    <ID>MagicNumber:LyricsParser.kt$LyricsParser$0.75f</ID>
+    <ID>MagicNumber:Migrations.kt$&lt;no name provided&gt;$16</ID>
+    <ID>MagicNumber:Migrations.kt$&lt;no name provided&gt;$17</ID>
+    <ID>MagicNumber:ShareCardExporter.kt$ShareCardExporter$100</ID>
+    <ID>MagicNumber:ShareCardExporter.kt$ShareCardExporter$3600_000L</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$BlurIntensity.DEEP$10</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$BlurIntensity.DEEP$7</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$BlurIntensity.MEDIUM$4</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$BlurIntensity.MEDIUM$8</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$BlurIntensity.SUBTLE$6</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.FEED$1080</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.FEED$1350</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.FEED$4f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.FEED$5f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.SQUARE$1080</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.STORY$1080</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.STORY$16f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.STORY$1920</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$CardAspectRatio.STORY$9f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.03928</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.05</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.055</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.0722</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.12f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.18f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.1f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.2126</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.28f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.36f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.38f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.42f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.45f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.65f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.7152</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.72f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.85f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0.9f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0x0000ff</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0x00ff00</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$0xff0000</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$1.05</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$1.055</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$12</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$12.92</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$120</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$140</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$16</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$160</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$170</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$180</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$2.4</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$22f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$230</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$24</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$240</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$25</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$255</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$255.0</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$25f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$26</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$30f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$32</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$32f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$36f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$38f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$40f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$42f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$44f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$45</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$50f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$54f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$55</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$55f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$60</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$60f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$62f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$65</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$65f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$70f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$72</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$75</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$75f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$8</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$80f</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$9</ID>
+    <ID>MagicNumber:ShareCardRenderer.kt$ShareCardRenderer$90</ID>
+    <ID>MagicNumber:SoundSettingsMapper.kt$12</ID>
+    <ID>MagicNumber:SoundSettingsMapper.kt$24</ID>
+    <ID>MagicNumber:SoundSettingsMapper.kt$48</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$0.12f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$0.35f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$0.52f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$0.5f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$0.6f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$0.8f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$210</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$255</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$28f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$30f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$40</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$40f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$56f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$64f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$70f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Card$88f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Frame.Companion$150f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Frame.Companion$168f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Frame.Companion$76f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Frame.Companion$80f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Frame.Companion$92f</ID>
+    <ID>MagicNumber:StatsCardRenderer.kt$StatsCardRenderer.Frame.Companion$96f</ID>
+    <ID>MagicNumber:VinylMusicWidget.kt$VinylMusicWidget$0.009f</ID>
+    <ID>MagicNumber:VinylMusicWidget.kt$VinylMusicWidget$0.2007f</ID>
+    <ID>MagicNumber:VinylMusicWidget.kt$VinylMusicWidget$0.3926f</ID>
+    <ID>MagicNumber:VinylMusicWidget.kt$VinylMusicWidget$0.4030f</ID>
+    <ID>MagicNumber:VinylMusicWidget.kt$VinylMusicWidget$0.5030f</ID>
+    <ID>MaxLineLength:ArtistPortraitSources.kt$"""\b(drake bell|nick drake|drake white|drake milligan|drake english|drake electric|drake electronic|drake chisholm|william d drake|drakeo|drake from the band)\b"""</ID>
+    <ID>MaxLineLength:GoogleDriveAuth.kt$GoogleDriveAuth$"Google sign-in failed (code $statusCode). Ensure the Google Drive API is enabled, OAuth consent screen is configured for 'drive.readonly', and your account is added as a test user in Google Cloud Console."</ID>
+    <ID>MaxLineLength:PlaylistArtworkAndHistoryTest.kt$PlaylistArtworkAndHistoryTest$val writer = LibraryWriter(db, db.songDao(), db.albumDao(), db.artistDao(), db.libraryModelDao(), androidx.test.core.app.ApplicationProvider.getApplicationContext())</ID>
+    <ID>MaxLineLength:RescanPersistenceTest.kt$RescanPersistenceTest$private val writer = LibraryWriter(db, db.songDao(), db.albumDao(), db.artistDao(), db.libraryModelDao(), androidx.test.core.app.ApplicationProvider.getApplicationContext())</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$Canvas(b).drawRect(0f, 0f, width.toFloat(), height.toFloat(), Paint().apply { shader = LinearGradient(0f, 0f, width.toFloat(), height.toFloat(), c, d, Shader.TileMode.CLAMP) })</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$save(StatsCardRenderer.render(PeriodStats(StatsPeriod.LAST_7_DAYS), StatsCardType.OVERVIEW, emptyMap(), StatsShareConfig(ratio), labels), "empty_${ratio.name.lowercase()}")</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$save(StatsCardRenderer.render(stats(2), StatsCardType.OVERVIEW, artwork(2), StatsShareConfig(ratio), labels), "overview_two_${ratio.name.lowercase()}")</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$save(StatsCardRenderer.render(stats(2), StatsCardType.TOP_ARTISTS, artwork(2), StatsShareConfig(CardAspectRatio.STORY), labels), "top_artists_two_story")</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$topAlbums = (0 until count).map { RankedAlbum(Album(it.toLong(), if (it == 1) "My Beautiful Dark Twisted Fantasy (Deluxe Edition)" else "Album $it", "Kanye West", 1, 10, 2020), 9 - it) }</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$topSongs = (0 until count).map { RankedSong(Song(it.toLong(), titles[it], if (it == 2) "Kanye West, Jay-Z, Pusha T, Cyhi The Prynce, Swizz Beatz &amp; RZA" else "SZA", "SOS", 1000, "content://s/$it"), 12 - it * 2) }</ID>
+    <ID>MaxLineLength:StatsCardRendererTest.kt$StatsCardRendererTest$val card = StatsCardRenderer.render(stats, StatsCardType.TOP_SONGS, mapOf(StatsCardRenderer.songKey(0) to white), StatsShareConfig(CardAspectRatio.SQUARE, darkness = 0.15f), labels)</ID>
+    <ID>MaxLineLength:SubsonicClientTest.kt$SubsonicClientTest$ok(""""searchResult3":{"artist":[{"id":"a1","name":"Abba"}],"album":[{"id":"al","name":"Gold","artist":"Abba","year":1992}],"song":[{"id":"s","title":"SOS"}]}""")</ID>
+    <ID>MaxLineLength:SubsonicClientTest.kt$SubsonicClientTest$server.enqueue(ok(""""artists":{"index":[{"name":"A","artist":[{"id":"a1","name":"Abba","albumCount":3}]},{"name":"B","artist":[{"id":"b1","name":"Blur"}]}]}"""))</ID>
+    <ID>NestedBlockDepth:DriveLibrarySync.kt$DriveLibrarySync$private suspend fun list(folder: RemoteLibraryFolderEntity): List&lt;Pair&lt;DriveItem, String&gt;&gt;</ID>
+    <ID>NestedBlockDepth:DriveLibrarySync.kt$DriveLibrarySync$private suspend fun listServer(folder: RemoteLibraryFolderEntity): List&lt;Pair&lt;RemoteTrack, String&gt;&gt;</ID>
+    <ID>NestedBlockDepth:DriveLibrarySync.kt$DriveLibrarySync$private suspend fun lookUpDetails( song: Song, fileGenre: String?, fileYear: Int, )</ID>
+    <ID>ReturnCount:ArtistPortraitSearch.kt$internal fun AppleArtistSearchResponse.portraits(artist: PortraitArtist): List&lt;String&gt;</ID>
+    <ID>ReturnCount:ArtworkUpgradeController.kt$ArtworkUpgradeController$private suspend fun candidates( target: ArtworkUpgradeTarget, original: UpgradeImageFacts, ): CandidateSearch</ID>
+    <ID>ReturnCount:CustomSongArtworkStore.kt$CustomSongArtworkStore$private fun detectFormat(bytes: ByteArray): Triple&lt;String, String, Boolean&gt;</ID>
+    <ID>ReturnCount:EqDesign.kt$BandFilter$fun configure( spec: BandSpec, sampleRate: Int, )</ID>
+    <ID>ReturnCount:GoogleDriveAuth.kt$GoogleDriveAuth$fun fromConsent( resultCode: Int, data: Intent?, ): DriveConsentOutcome</ID>
+    <ID>ReturnCount:LyricsParser.kt$LyricsParser$fun parse(text: String?): Lyrics?</ID>
+    <ID>ReturnCount:SubsonicModels.kt$fun parseServerUrl(input: String): HttpUrl?</ID>
+    <ID>SwallowedException:ArtistPortraitSearch.kt$limited: RateLimitException</ID>
+    <ID>SwallowedException:ArtworkLoader.kt$ArtworkLoader$e: Exception</ID>
+    <ID>SwallowedException:CustomArtworkDialog.kt$e: Exception</ID>
+    <ID>SwallowedException:DriveClientTest.kt$DriveClientTest$e: IOException</ID>
+    <ID>SwallowedException:GoogleDriveAuth.kt$GoogleDriveAuth$@Suppress("TooGenericExceptionCaught") e: Exception</ID>
+    <ID>SwallowedException:GoogleDriveAuth.kt$GoogleDriveAuth$e: ExecutionException</ID>
+    <ID>SwallowedException:ShareCardExporter.kt$ShareCardExporter$e: Exception</ID>
+    <ID>ThrowsCount:ArtistPortraitSearch.kt$ArtistPortraitSearch$private suspend fun searchDuckQuery(query: String): DuckImages</ID>
+    <ID>ThrowsCount:DriveClient.kt$DriveClient$private suspend inline fun &lt;reified T&gt; get( token: String, path: String, build: HttpUrl.Builder.() -&gt; Unit, ): T</ID>
+    <ID>ThrowsCount:GoogleDriveAuth.kt$GoogleDriveAuth$@Throws(IOException::class) fun authorize(account: String?): DriveAuthorization</ID>
+    <ID>ThrowsCount:RemoteCredentialStore.kt$RemoteCredentialStore$@Synchronized @Throws(IOException::class) fun save( sourceId: Long, secret: String, )</ID>
+    <ID>ThrowsCount:SubsonicClient.kt$SubsonicClient$private suspend fun call( connection: SubsonicConnection, endpoint: String, vararg params: Pair&lt;String, String&gt;, ): ResponseDto</ID>
+    <ID>TooGenericExceptionCaught:ArtworkLoader.kt$ArtworkLoader$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CustomArtworkDialog.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ShareCardExporter.kt$ShareCardExporter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:StatsShareDialog.kt$error: Exception</ID>
+    <ID>TooManyFunctions:LiveCoverControl.kt$com.erhu.erhu.feature.library.components.LiveCoverControl.kt</ID>
+    <ID>TooManyFunctions:RemoteLibraryDao.kt$RemoteLibraryDao</ID>
+    <ID>TooManyFunctions:StatsCardRenderer.kt$StatsCardRenderer$Card</ID>
+    <ID>UnusedParameter:ShareCardRenderer.kt$ShareCardRenderer$context: Context</ID>
+    <ID>UnusedParameter:ShareCardRenderer.kt$ShareCardRenderer$showAlbum: Boolean</ID>
+    <ID>UnusedPrivateMember:GoogleDriveAuth.kt$GoogleDriveAuth$private fun getCertificateSha1(context: Context): String</ID>
   </CurrentIssues>
 </SmellBaseline>

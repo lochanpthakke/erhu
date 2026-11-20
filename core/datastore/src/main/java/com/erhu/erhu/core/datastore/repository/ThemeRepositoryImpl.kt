@@ -90,8 +90,7 @@ class ThemeRepositoryImpl
                         vybeEnabled = it.vybeEnabledOrDefault(),
                         defaultStartSection = it.defaultStartSection,
                     )
-                }
-                .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
+                }.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, null)
 
         override suspend fun saveNavigationQuickAccess(
             sections: List<String>,
@@ -99,7 +98,8 @@ class ThemeRepositoryImpl
         ): AppResult<Unit> =
             appResultOf {
                 dataStore.updateData { current ->
-                    current.toBuilder()
+                    current
+                        .toBuilder()
                         .clearNavigationQuickAccess()
                         .addAllNavigationQuickAccess(sections)
                         .setOnboardingCompleted(current.onboardingCompleted || completeIntroduction)

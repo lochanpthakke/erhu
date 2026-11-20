@@ -2098,4 +2098,71 @@
     <string name="car_error_no_results">Aucune musique correspondante n’a été trouvée dans votre bibliothèque.</string>
     <string name="car_error_request">Cette demande de musique n’est pas prise en charge.</string>
     <string name="car_open_phone">Ouvrir erhu sur le téléphone</string>
+    <string name="nav_remote_libraries">Bibliothèques distantes</string>
+    <string name="capsule_minutes_listened">Minutes écoutées</string>
+    <string name="share_stats_no_activity">Aucune activité d’écoute</string>
+    <string name="share_stats_no_activity_desc">Aucune lecture enregistrée sur cette période</string>
+    <string name="custom_artwork_title">Pochette personnalisée</string>
+    <string name="custom_artwork_applied">Pochette personnalisée mise à jour</string>
+    <string name="custom_artwork_removed">Pochette personnalisée supprimée</string>
+    <string name="custom_artwork_apply">Appliquer</string>
+    <string name="share_card_title">Partager de la musique</string>
+    <string name="share_card_save">Enregistrer l’image</string>
+    <string name="share_card_share">Partager la carte</string>
+    <string name="share_card_saved">Image enregistrée sur l’appareil</string>
+    <string name="share_card_save_failed">Impossible d’enregistrer l’image</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Carré · 1:1</string>
+    <string name="share_card_aspect_feed">Portrait · 4:5</string>
+    <string name="share_card_style_centered">Centré</string>
+    <string name="share_card_style_poster">Affiche</string>
+    <string name="share_card_style_minimal">Minimal</string>
+    <string name="share_card_brightness">Assombrir l’arrière-plan</string>
+    <string name="playing_from_playlist">Lecture depuis la playlist</string>
+    <string name="custom_artwork_choose">Choisir une image</string>
+    <string name="custom_artwork_error">Impossible de définir la pochette personnalisée</string>
+    <string name="custom_artwork_remove">Supprimer la pochette personnalisée</string>
+    <string name="share_stats_title">Bilan d’écoute</string>
+    <string name="stats_period_label">Période</string>
+    <string name="stats_period_7_days">7 derniers jours</string>
+    <string name="stats_period_30_days">30 derniers jours</string>
+    <string name="stats_period_this_month">Ce mois-ci</string>
+    <string name="stats_period_this_year">Cette année</string>
+    <string name="stats_type_label">Type de carte</string>
+    <string name="stats_type_top_songs">Titres les plus écoutés</string>
+    <string name="stats_type_top_artists">Artistes les plus écoutés</string>
+    <string name="stats_type_top_albums">Albums les plus écoutés</string>
+    <string name="stats_type_overview">Aperçu</string>
+    <string name="share_card_ratio">Format</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Carré (1:1)</string>
+    <string name="share_card_ratio_portrait">Portrait (4:5)</string>
+    <string name="share_card_darkness">Assombrissement de l’arrière-plan</string>
+    <string name="share_card_save_error">Impossible d’enregistrer l’image</string>
+    <string name="cd_close">Fermer</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s élément n’a pas de pochette.</item>
+        <item quantity="many">%1$s d’éléments n’ont pas de pochette.</item>
+        <item quantity="other">%1$s éléments n’ont pas de pochette.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Aucune version en plus haute résolution pour %1$s élément.</item>
+        <item quantity="many">Aucune version en plus haute résolution pour %1$s d’éléments.</item>
+        <item quantity="other">Aucune version en plus haute résolution pour %1$s éléments.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Impossible de vérifier la pochette de %1$s élément.</item>
+        <item quantity="many">Impossible de vérifier la pochette de %1$s d’éléments.</item>
+        <item quantity="other">Impossible de vérifier la pochette de %1$s éléments.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Impossible de lire la pochette existante de %1$s élément.</item>
+        <item quantity="many">Impossible de lire la pochette existante de %1$s d’éléments.</item>
+        <item quantity="other">Impossible de lire la pochette existante de %1$s éléments.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">titre</item>
+        <item quantity="many">de titres</item>
+        <item quantity="other">titres</item>
+    </plurals>
 </resources>

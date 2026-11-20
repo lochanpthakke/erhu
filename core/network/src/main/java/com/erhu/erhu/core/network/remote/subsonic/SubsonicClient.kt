@@ -3,6 +3,7 @@ package com.erhu.erhu.core.network.remote.subsonic
 import com.erhu.erhu.core.model.RemoteAccessException
 import com.erhu.erhu.core.model.RemoteAccessException.Reason
 import com.erhu.erhu.core.model.RemoteTrack
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -15,7 +16,6 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.security.SecureRandom
 import kotlin.coroutines.resume
-import kotlinx.coroutines.CancellableContinuation
 
 /**
  * The Subsonic REST API as OpenSubsonic servers (Navidrome among them) implement it. Only standard
@@ -159,13 +159,14 @@ class SubsonicClient(
         vararg params: Pair<String, String>,
     ): ResponseDto {
         val request = Request.Builder().url(url(connection, endpoint, params.toList())).build()
-        val text = calls.newCall(request).await { response ->
-            if (response.code == HTTP_UNAUTHORIZED || response.code == HTTP_FORBIDDEN) {
-                throw RemoteAccessException(Reason.AUTH_REQUIRED, "The server refused the sign-in")
+        val text =
+            calls.newCall(request).await { response ->
+                if (response.code == HTTP_UNAUTHORIZED || response.code == HTTP_FORBIDDEN) {
+                    throw RemoteAccessException(Reason.AUTH_REQUIRED, "The server refused the sign-in")
+                }
+                if (!response.isSuccessful) throw IOException("The server answered with an error (${response.code})")
+                response.body?.string().orEmpty()
             }
-            if (!response.isSuccessful) throw IOException("The server answered with an error (${response.code})")
-            response.body?.string().orEmpty()
-        }
         val body =
             try {
                 json.decodeFromString(EnvelopeDto.serializer(), text).response
@@ -195,8 +196,7 @@ class SubsonicClient(
                     addQueryParameter("t", md5Hex(connection.password + salt))
                     addQueryParameter("s", salt)
                 }
-            }
-            .addQueryParameter("v", API_VERSION)
+            }.addQueryParameter("v", API_VERSION)
             .addQueryParameter("c", CLIENT_NAME)
             .addQueryParameter("f", "json")
             .apply { params.forEach { (name, value) -> addQueryParameter(name, value) } }

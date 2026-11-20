@@ -153,33 +153,35 @@ class LibraryRepositoryImpl
 
         @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
         override fun getArtistsForSong(songId: Long): Flow<List<Artist>> =
-            artistDao.observeArtistsForSong(songId).flatMapLatest { entities ->
-                if (entities.isNotEmpty()) {
-                    flowOf(entities.map { it.toDomainModel() })
-                } else {
-                    songDao.observeSongById(songId).map { songEntity ->
-                        if (songEntity == null) {
-                            emptyList()
-                        } else {
-                            val primary = artistDao.getArtistById(songEntity.artistId)?.toDomainModel()
-                            if (primary != null) {
-                                listOf(primary)
-                            } else if (songEntity.artist.isNotBlank()) {
-                                listOf(
-                                    Artist(
-                                        id = songEntity.artistId,
-                                        name = songEntity.artist,
-                                        songCount = 1,
-                                        albumCount = 1,
-                                    ),
-                                )
-                            } else {
+            artistDao
+                .observeArtistsForSong(songId)
+                .flatMapLatest { entities ->
+                    if (entities.isNotEmpty()) {
+                        flowOf(entities.map { it.toDomainModel() })
+                    } else {
+                        songDao.observeSongById(songId).map { songEntity ->
+                            if (songEntity == null) {
                                 emptyList()
+                            } else {
+                                val primary = artistDao.getArtistById(songEntity.artistId)?.toDomainModel()
+                                if (primary != null) {
+                                    listOf(primary)
+                                } else if (songEntity.artist.isNotBlank()) {
+                                    listOf(
+                                        Artist(
+                                            id = songEntity.artistId,
+                                            name = songEntity.artist,
+                                            songCount = 1,
+                                            albumCount = 1,
+                                        ),
+                                    )
+                                } else {
+                                    emptyList()
+                                }
                             }
                         }
                     }
-                }
-            }.distinctUntilChanged()
+                }.distinctUntilChanged()
 
         override fun searchSongs(query: String): Flow<List<Song>> =
             songDao.getAllSongs().map { list ->
@@ -212,7 +214,11 @@ class LibraryRepositoryImpl
                 if (song != null) {
                     songDao.setFavorite(songId, !song.isFavorite)
                     // A Google Drive / Subsonic track in the Library: its remote record says the same.
-                    if (com.erhu.erhu.core.model.RemoteIds.isRemote(songId)) songDao.setRemoteFavorite(songId, !song.isFavorite)
+                    if (com.erhu.erhu.core.model.RemoteIds
+                            .isRemote(songId)
+                    ) {
+                        songDao.setRemoteFavorite(songId, !song.isFavorite)
+                    }
                 }
             }
 

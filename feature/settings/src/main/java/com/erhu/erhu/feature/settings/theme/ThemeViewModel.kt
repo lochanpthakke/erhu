@@ -44,8 +44,10 @@ class ThemeViewModel
 
         val navigationSetup = themeRepository.navigationSetup
 
-        suspend fun saveNavigationQuickAccess(sections: List<String>, completeIntroduction: Boolean) =
-            themeRepository.saveNavigationQuickAccess(sections, completeIntroduction)
+        suspend fun saveNavigationQuickAccess(
+            sections: List<String>,
+            completeIntroduction: Boolean,
+        ) = themeRepository.saveNavigationQuickAccess(sections, completeIntroduction)
 
         suspend fun completeOnboarding(): AppResult<Unit> = themeRepository.completeOnboarding()
 

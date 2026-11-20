@@ -89,14 +89,20 @@ class AlbumArtworkFinder(
                 // Provider lookups can complete on different IO threads.
                 val resultLock = Any()
 
-                fun record(outcome: ProviderOutcome, found: List<AlbumArtworkCandidate> = emptyList()) {
+                fun record(
+                    outcome: ProviderOutcome,
+                    found: List<AlbumArtworkCandidate> = emptyList(),
+                ) {
                     synchronized(resultLock) {
                         candidates.addAll(found)
                         outcomes.add(outcome)
                     }
                 }
 
-                suspend fun validate(items: List<AlbumArtworkCandidate>, deadline: Long = budgetMs) {
+                suspend fun validate(
+                    items: List<AlbumArtworkCandidate>,
+                    deadline: Long = budgetMs,
+                ) {
                     for (candidate in items.distinctBy { it.imageUrl }.sortedByDescending { it.score }.take(10)) {
                         if (candidate.imageUrl in attemptedImages) continue
                         if (elapsed() >= deadline) {
@@ -157,7 +163,10 @@ class AlbumArtworkFinder(
                     }
                     try {
                         val found = withTimeout(minOf(maxMs, remaining)) { block() }.mapNotNull { AlbumArtworkRanking.rank(query, it) }
-                        record(ProviderOutcome(name, found.size, if (found.isEmpty()) ProviderStatus.NO_RESULTS else ProviderStatus.SUCCESS), found)
+                        record(
+                            ProviderOutcome(name, found.size, if (found.isEmpty()) ProviderStatus.NO_RESULTS else ProviderStatus.SUCCESS),
+                            found,
+                        )
                     } catch (e: TimeoutCancellationException) {
                         currentCoroutineContext().ensureActive()
                         outcomes +=
@@ -182,6 +191,7 @@ class AlbumArtworkFinder(
                         )
                     }
                 }
+
                 suspend fun searchArchive() {
                     val releases = mutableListOf<JsonObject>()
                     stage("MusicBrainz release identification", 7500) {
@@ -218,7 +228,8 @@ class AlbumArtworkFinder(
                             }
                             else -> {
                                 val artistKnown =
-                                    AlbumArtworkRanking.normalized(query.artist) !in setOf("", "unknown artist", "various artists", "unknown")
+                                    AlbumArtworkRanking.normalized(query.artist) !in
+                                        setOf("", "unknown artist", "various artists", "unknown")
                                 val search =
                                     "release:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"" +
                                         if (artistKnown) " AND artist:\"${escape(query.artist)}\"" else ""
@@ -265,7 +276,8 @@ class AlbumArtworkFinder(
                         synchronized(resultLock) {
                             val index = outcomes.indexOfFirst { it.providerName == "MusicBrainz release identification" }
                             if (index >= 0 && outcomes[index].status == ProviderStatus.NO_RESULTS) {
-                                outcomes[index] = ProviderOutcome("MusicBrainz release identification", identified.size, ProviderStatus.SUCCESS)
+                                outcomes[index] =
+                                    ProviderOutcome("MusicBrainz release identification", identified.size, ProviderStatus.SUCCESS)
                             }
                         }
                     }
@@ -332,7 +344,9 @@ class AlbumArtworkFinder(
                                 "search/album",
                                 mapOf(
                                     "q" to
-                                        "artist:\"${escape(query.artist)}\" album:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"",
+                                        "artist:\"${escape(
+                                            query.artist,
+                                        )}\" album:\"${escape(AlbumArtworkRanking.searchTitle(query.album))}\"",
                                     "limit" to "12",
                                 ),
                             )
@@ -399,7 +413,15 @@ class AlbumArtworkFinder(
                             val wait = lastAudioDbAt + 2100 - System.currentTimeMillis()
                             if (wait > 0) kotlinx.coroutines.delay(wait)
                             lastAudioDbAt = System.currentTimeMillis()
-                            val response = get(endpoints.audioDb, "$audioDbKey/searchalbum.php", mapOf("s" to query.artist, "a" to query.album))
+                            val response =
+                                get(
+                                    endpoints.audioDb,
+                                    "$audioDbKey/searchalbum.php",
+                                    mapOf(
+                                        "s" to query.artist,
+                                        "a" to query.album,
+                                    ),
+                                )
                             response?.objects("album").orEmpty().mapNotNull { item ->
                                 val url = item.text("strAlbumThumb")
                                 if (url.isBlank()) return@mapNotNull null
@@ -428,12 +450,13 @@ class AlbumArtworkFinder(
 
                 if (query.forUpgrade) {
                     coroutineScope {
-                        val lookups = listOf(
-                            async { searchArchive() },
-                            async { searchDeezer() },
-                            async { searchApple() },
-                            async { searchAudioDb() },
-                        )
+                        val lookups =
+                            listOf(
+                                async { searchArchive() },
+                                async { searchDeezer() },
+                                async { searchApple() },
+                                async { searchAudioDb() },
+                            )
                         lookups.forEach { it.await() }
                     }
                 } else {

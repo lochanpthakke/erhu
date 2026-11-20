@@ -180,7 +180,14 @@ data class EqPreset(
         val PARAMETRIC_PRESETS =
             listOf(
                 PARAMETRIC_FLAT,
-                parametric("preset_p_warm_bass", "Warm Bass", highPass(25f, 24), lowShelf(110f, 5f), peak(300f, -1.5f, 1.2f), peak(3500f, 0f)),
+                parametric(
+                    "preset_p_warm_bass",
+                    "Warm Bass",
+                    highPass(25f, 24),
+                    lowShelf(110f, 5f),
+                    peak(300f, -1.5f, 1.2f),
+                    peak(3500f, 0f),
+                ),
                 parametric(
                     "preset_p_vocal_presence",
                     "Vocal Presence",
@@ -189,9 +196,30 @@ data class EqPreset(
                     peak(3000f, 3f, 1.2f),
                     highShelf(10000f, 1.5f),
                 ),
-                parametric("preset_p_air", "Air & Sparkle", peak(250f, -1f, 0.9f), peak(1000f, 0f), peak(5000f, 1f, 1.5f), highShelf(11000f, 4f)),
-                parametric("preset_p_loudness", "Loudness", lowShelf(90f, 5f), peak(1000f, -2f, 0.8f), peak(3000f, 0f), highShelf(9000f, 4f)),
-                parametric("preset_p_de_harsh", "De-harsh", peak(200f, 0f), peak(1000f, 0f), peak(3500f, -3f, 2.0f), peak(7500f, -2.5f, 3.0f)),
+                parametric(
+                    "preset_p_air",
+                    "Air & Sparkle",
+                    peak(250f, -1f, 0.9f),
+                    peak(1000f, 0f),
+                    peak(5000f, 1f, 1.5f),
+                    highShelf(11000f, 4f),
+                ),
+                parametric(
+                    "preset_p_loudness",
+                    "Loudness",
+                    lowShelf(90f, 5f),
+                    peak(1000f, -2f, 0.8f),
+                    peak(3000f, 0f),
+                    highShelf(9000f, 4f),
+                ),
+                parametric(
+                    "preset_p_de_harsh",
+                    "De-harsh",
+                    peak(200f, 0f),
+                    peak(1000f, 0f),
+                    peak(3500f, -3f, 2.0f),
+                    peak(7500f, -2.5f, 3.0f),
+                ),
                 parametric(
                     "preset_p_rumble_cut",
                     "Rumble & Hiss Cut",

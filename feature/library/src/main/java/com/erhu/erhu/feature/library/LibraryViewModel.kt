@@ -10,8 +10,8 @@ import com.erhu.erhu.core.common.locale.localizedMessage
 import com.erhu.erhu.core.common.result.AppError
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.common.result.getOrDefault
-import com.erhu.erhu.core.database.library.ArtistArtworkCache
 import com.erhu.erhu.core.database.entity.CustomSongArtworkEntity
+import com.erhu.erhu.core.database.library.ArtistArtworkCache
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.ArtistArtworkRepository
 import com.erhu.erhu.core.database.repository.CustomSongArtworkRepository
@@ -27,7 +27,6 @@ import com.erhu.erhu.core.model.MetadataCandidate
 import com.erhu.erhu.core.model.MetadataField
 import com.erhu.erhu.core.model.PersistedRepairBatch
 import com.erhu.erhu.core.model.PersistedRepairItem
-import com.erhu.erhu.core.model.ProviderStatus
 import com.erhu.erhu.core.model.RemoteRef
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.core.network.lyrics.CachedLyrics
@@ -212,11 +211,12 @@ class LibraryViewModel
         private val driveLibrarySync: com.erhu.erhu.feature.library.remote.DriveLibrarySync,
     ) : ViewModel() {
         val allCustomArtwork: StateFlow<Map<Long, CustomSongArtworkEntity>> =
-            customSongArtworkRepository.observeAllCustomArtwork()
+            customSongArtworkRepository
+                .observeAllCustomArtwork()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
 
-        fun observePlaylistName(playlistId: Long): Flow<String?> =
-            playlistRepository.observePlaylist(playlistId).map { it?.name }
+        fun observePlaylistName(playlistId: Long): Flow<String?> = playlistRepository.observePlaylist(playlistId).map { it?.name }
+
         internal val artworkUpgrades =
             ArtworkUpgradeController(
                 appContext,
@@ -491,11 +491,11 @@ class LibraryViewModel
                     when {
                         id == null -> flowOf(false)
                         // A remote track's favourite is mirrored in its own table, not in the device library.
-                        com.erhu.erhu.core.model.RemoteIds.isRemote(id) -> remoteFavorites.observe(id)
+                        com.erhu.erhu.core.model.RemoteIds
+                            .isRemote(id) -> remoteFavorites.observe(id)
                         else -> libraryRepository.observeIsFavorite(id)
                     }
-                }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+                }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
         private val onlineLyricsView = MutableStateFlow<OnlineLyricsView?>(null)
         private val manualLyricsSearch = MutableStateFlow<ManualLyricsSearch>(ManualLyricsSearch.Idle)
@@ -792,8 +792,20 @@ class LibraryViewModel
                 .observeCustomArtworkKeys()
                 .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptySet())
 
+        /**
+         * Looks up photos for the artists that need one, now and whenever new artists appear: a
+         * Google Drive folder's tracks only get their artist names while its tag pass runs, long
+         * after launch. Each artist is still looked up at most once per process.
+         */
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
         private fun resolveArtistArtwork() {
-            viewModelScope.launch(Dispatchers.IO) { artistArtworkUpdater.updateDueArtists(System.currentTimeMillis()) }
+            viewModelScope.launch(Dispatchers.IO) {
+                artistCatalog
+                    .map { artists -> artists.mapTo(HashSet()) { it.artistKey } }
+                    .distinctUntilChanged()
+                    .debounce(ARTIST_ARTWORK_SETTLE_MS)
+                    .collect { artistArtworkUpdater.updateDueArtists(System.currentTimeMillis()) }
+            }
         }
 
         /** Saves [imageBytes] (an encoded, cropped image) as [artist]'s own picture. */
@@ -955,7 +967,10 @@ class LibraryViewModel
         }
 
         fun artworkPreviewUrl(url: String): String =
-            _artworkSearchDiagnostics.value?.candidates?.firstOrNull { it.url == url }?.previewUrl
+            _artworkSearchDiagnostics.value
+                ?.candidates
+                ?.firstOrNull { it.url == url }
+                ?.previewUrl
                 ?: metadataRepository.artworkPreviewUrl(url)
 
         fun selectEnlargedArtwork(url: String?) {
@@ -2251,6 +2266,9 @@ class LibraryViewModel
             private const val SEARCH_DEBOUNCE_MS = 250L
             private const val SEARCH_SECTION_LIMIT = 12
             private const val STOP_TIMEOUT_MS = 5_000L
+
+            /** New artists from a sync arrive in bursts: look them up once the list settles. */
+            private const val ARTIST_ARTWORK_SETTLE_MS = 4_000L
             private const val RECENT_ALBUMS_LIMIT = 12
         }
     }

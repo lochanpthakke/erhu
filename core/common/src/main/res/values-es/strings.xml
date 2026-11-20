@@ -2052,4 +2052,66 @@
     <string name="car_error_no_results">No se encontró música coincidente en tu biblioteca.</string>
     <string name="car_error_request">Esta solicitud de música no es compatible.</string>
     <string name="car_open_phone">Abrir erhu en el teléfono</string>
+    <string name="nav_remote_libraries">Bibliotecas remotas</string>
+    <string name="capsule_minutes_listened">Minutos escuchados</string>
+    <string name="share_stats_no_activity">Sin actividad de escucha</string>
+    <string name="share_stats_no_activity_desc">No hay reproducciones en este periodo</string>
+    <string name="custom_artwork_title">Portada personalizada</string>
+    <string name="custom_artwork_applied">Portada personalizada actualizada</string>
+    <string name="custom_artwork_removed">Portada personalizada eliminada</string>
+    <string name="custom_artwork_apply">Aplicar</string>
+    <string name="share_card_title">Compartir música</string>
+    <string name="share_card_save">Guardar imagen</string>
+    <string name="share_card_share">Compartir tarjeta</string>
+    <string name="share_card_saved">Imagen guardada en el dispositivo</string>
+    <string name="share_card_save_failed">No se pudo guardar la imagen</string>
+    <string name="share_card_aspect_story">Historia · 9:16</string>
+    <string name="share_card_aspect_square">Cuadrado · 1:1</string>
+    <string name="share_card_aspect_feed">Vertical · 4:5</string>
+    <string name="share_card_style_centered">Centrado</string>
+    <string name="share_card_style_poster">Póster</string>
+    <string name="share_card_style_minimal">Minimalista</string>
+    <string name="share_card_brightness">Atenuar fondo</string>
+    <string name="playing_from_playlist">Reproduciendo desde la lista</string>
+    <string name="custom_artwork_choose">Elegir imagen</string>
+    <string name="custom_artwork_error">No se pudo establecer la portada personalizada</string>
+    <string name="custom_artwork_remove">Quitar portada personalizada</string>
+    <string name="share_stats_title">Resumen de escucha</string>
+    <string name="stats_period_label">Periodo</string>
+    <string name="stats_period_7_days">Últimos 7 días</string>
+    <string name="stats_period_30_days">Últimos 30 días</string>
+    <string name="stats_period_this_month">Este mes</string>
+    <string name="stats_period_this_year">Este año</string>
+    <string name="stats_type_label">Tipo de tarjeta</string>
+    <string name="stats_type_top_songs">Canciones más escuchadas</string>
+    <string name="stats_type_top_artists">Artistas más escuchados</string>
+    <string name="stats_type_top_albums">Álbumes más escuchados</string>
+    <string name="stats_type_overview">Resumen</string>
+    <string name="share_card_ratio">Relación de aspecto</string>
+    <string name="share_card_ratio_story">Historia (9:16)</string>
+    <string name="share_card_ratio_square">Cuadrado (1:1)</string>
+    <string name="share_card_ratio_portrait">Vertical (4:5)</string>
+    <string name="share_card_darkness">Oscuridad del fondo</string>
+    <string name="share_card_save_error">No se pudo guardar la imagen</string>
+    <string name="cd_close">Cerrar</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s elemento no tiene portada.</item>
+        <item quantity="other">%1$s elementos no tienen portada.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">No hay una versión de mayor resolución para %1$s elemento.</item>
+        <item quantity="other">No hay versiones de mayor resolución para %1$s elementos.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">No se pudo completar la comprobación de portada de %1$s elemento.</item>
+        <item quantity="other">No se pudo completar la comprobación de portada de %1$s elementos.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">No se pudo leer la portada existente de %1$s elemento.</item>
+        <item quantity="other">No se pudo leer la portada existente de %1$s elementos.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">canción</item>
+        <item quantity="other">canciones</item>
+    </plurals>
 </resources>

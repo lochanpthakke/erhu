@@ -2052,4 +2052,66 @@
     <string name="car_error_no_results">Nessuna musica corrispondente trovata nella libreria.</string>
     <string name="car_error_request">Questa richiesta musicale non è supportata.</string>
     <string name="car_open_phone">Apri erhu sul telefono</string>
+    <string name="nav_remote_libraries">Librerie remote</string>
+    <string name="capsule_minutes_listened">Minuti ascoltati</string>
+    <string name="share_stats_no_activity">Nessuna attività di ascolto</string>
+    <string name="share_stats_no_activity_desc">Nessuna riproduzione registrata in questo periodo</string>
+    <string name="custom_artwork_title">Copertina personalizzata</string>
+    <string name="custom_artwork_applied">Copertina personalizzata aggiornata</string>
+    <string name="custom_artwork_removed">Copertina personalizzata rimossa</string>
+    <string name="custom_artwork_apply">Applica</string>
+    <string name="share_card_title">Condividi musica</string>
+    <string name="share_card_save">Salva immagine</string>
+    <string name="share_card_share">Condividi scheda</string>
+    <string name="share_card_saved">Immagine salvata sul dispositivo</string>
+    <string name="share_card_save_failed">Impossibile salvare l’immagine</string>
+    <string name="share_card_aspect_story">Storia · 9:16</string>
+    <string name="share_card_aspect_square">Quadrato · 1:1</string>
+    <string name="share_card_aspect_feed">Verticale · 4:5</string>
+    <string name="share_card_style_centered">Centrato</string>
+    <string name="share_card_style_poster">Poster</string>
+    <string name="share_card_style_minimal">Minimale</string>
+    <string name="share_card_brightness">Scurisci sfondo</string>
+    <string name="playing_from_playlist">In riproduzione dalla playlist</string>
+    <string name="custom_artwork_choose">Scegli immagine</string>
+    <string name="custom_artwork_error">Impossibile impostare la copertina personalizzata</string>
+    <string name="custom_artwork_remove">Rimuovi copertina personalizzata</string>
+    <string name="share_stats_title">Riepilogo ascolti</string>
+    <string name="stats_period_label">Periodo</string>
+    <string name="stats_period_7_days">Ultimi 7 giorni</string>
+    <string name="stats_period_30_days">Ultimi 30 giorni</string>
+    <string name="stats_period_this_month">Questo mese</string>
+    <string name="stats_period_this_year">Quest’anno</string>
+    <string name="stats_type_label">Tipo di scheda</string>
+    <string name="stats_type_top_songs">Brani più ascoltati</string>
+    <string name="stats_type_top_artists">Artisti più ascoltati</string>
+    <string name="stats_type_top_albums">Album più ascoltati</string>
+    <string name="stats_type_overview">Panoramica</string>
+    <string name="share_card_ratio">Proporzioni</string>
+    <string name="share_card_ratio_story">Storia (9:16)</string>
+    <string name="share_card_ratio_square">Quadrato (1:1)</string>
+    <string name="share_card_ratio_portrait">Verticale (4:5)</string>
+    <string name="share_card_darkness">Oscuramento sfondo</string>
+    <string name="share_card_save_error">Impossibile salvare l’immagine</string>
+    <string name="cd_close">Chiudi</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s elemento non ha una copertina.</item>
+        <item quantity="other">%1$s elementi non hanno una copertina.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Nessuna versione a risoluzione più alta per %1$s elemento.</item>
+        <item quantity="other">Nessuna versione a risoluzione più alta per %1$s elementi.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Impossibile completare il controllo della copertina per %1$s elemento.</item>
+        <item quantity="other">Impossibile completare il controllo della copertina per %1$s elementi.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Impossibile leggere la copertina esistente di %1$s elemento.</item>
+        <item quantity="other">Impossibile leggere la copertina esistente di %1$s elementi.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">brano</item>
+        <item quantity="other">brani</item>
+    </plurals>
 </resources>

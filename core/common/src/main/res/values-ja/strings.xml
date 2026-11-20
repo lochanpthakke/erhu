@@ -2006,4 +2006,61 @@
     <string name="car_error_no_results">ライブラリに一致する音楽が見つかりませんでした。</string>
     <string name="car_error_request">この音楽リクエストには対応していません。</string>
     <string name="car_open_phone">スマートフォンで erhu を開く</string>
+    <string name="nav_remote_libraries">リモートライブラリ</string>
+    <string name="capsule_minutes_listened">再生時間（分）</string>
+    <string name="share_stats_no_activity">再生アクティビティはありません</string>
+    <string name="share_stats_no_activity_desc">この期間の再生記録はありません</string>
+    <string name="custom_artwork_title">カスタムアートワーク</string>
+    <string name="custom_artwork_applied">カスタムアートワークを更新しました</string>
+    <string name="custom_artwork_removed">カスタムアートワークを削除しました</string>
+    <string name="custom_artwork_apply">適用</string>
+    <string name="share_card_title">音楽を共有</string>
+    <string name="share_card_save">画像を保存</string>
+    <string name="share_card_share">カードを共有</string>
+    <string name="share_card_saved">画像をデバイスに保存しました</string>
+    <string name="share_card_save_failed">画像を保存できませんでした</string>
+    <string name="share_card_aspect_story">ストーリー · 9:16</string>
+    <string name="share_card_aspect_square">正方形 · 1:1</string>
+    <string name="share_card_aspect_feed">縦長 · 4:5</string>
+    <string name="share_card_style_centered">中央</string>
+    <string name="share_card_style_poster">ポスター</string>
+    <string name="share_card_style_minimal">ミニマル</string>
+    <string name="share_card_brightness">背景を暗くする</string>
+    <string name="playing_from_playlist">プレイリストから再生中</string>
+    <string name="custom_artwork_choose">画像を選択</string>
+    <string name="custom_artwork_error">カスタムアートワークを設定できませんでした</string>
+    <string name="custom_artwork_remove">カスタムアートワークを削除</string>
+    <string name="share_stats_title">リスニングまとめ</string>
+    <string name="stats_period_label">期間</string>
+    <string name="stats_period_7_days">過去7日間</string>
+    <string name="stats_period_30_days">過去30日間</string>
+    <string name="stats_period_this_month">今月</string>
+    <string name="stats_period_this_year">今年</string>
+    <string name="stats_type_label">カードの種類</string>
+    <string name="stats_type_top_songs">トップ曲</string>
+    <string name="stats_type_top_artists">トップアーティスト</string>
+    <string name="stats_type_top_albums">トップアルバム</string>
+    <string name="stats_type_overview">概要</string>
+    <string name="share_card_ratio">アスペクト比</string>
+    <string name="share_card_ratio_story">ストーリー (9:16)</string>
+    <string name="share_card_ratio_square">正方形 (1:1)</string>
+    <string name="share_card_ratio_portrait">縦長 (4:5)</string>
+    <string name="share_card_darkness">背景の暗さ</string>
+    <string name="share_card_save_error">画像を保存できませんでした</string>
+    <string name="cd_close">閉じる</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="other">%1$s 件にアートワークがありません。</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="other">%1$s 件の高解像度版は見つかりませんでした。</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="other">%1$s 件のアートワークを確認できませんでした。</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="other">%1$s 件の既存のアートワークを読み込めませんでした。</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="other">曲</item>
+    </plurals>
 </resources>

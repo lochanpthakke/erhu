@@ -161,12 +161,13 @@ internal fun ArtworkUpgradeScreen(
                             )
                         }
                     }
-                    val checkSummary = listOf(
-                        CommonR.plurals.artwork_upgrade_missing_originals to state.missingOriginals,
-                        CommonR.plurals.artwork_upgrade_unreadable_originals to state.unreadableOriginals,
-                        CommonR.plurals.artwork_upgrade_no_match to state.noMatch,
-                        CommonR.plurals.artwork_upgrade_request_failures to state.requestFailures,
-                    )
+                    val checkSummary =
+                        listOf(
+                            CommonR.plurals.artwork_upgrade_missing_originals to state.missingOriginals,
+                            CommonR.plurals.artwork_upgrade_unreadable_originals to state.unreadableOriginals,
+                            CommonR.plurals.artwork_upgrade_no_match to state.noMatch,
+                            CommonR.plurals.artwork_upgrade_request_failures to state.requestFailures,
+                        )
                     for ((description, count) in checkSummary) {
                         if (count > 0) {
                             Text(

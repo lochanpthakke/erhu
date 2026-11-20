@@ -2049,4 +2049,61 @@
     <string name="car_error_no_results">Arşivinizde eşleşen müzik bulunamadı.</string>
     <string name="car_error_request">Bu müzik isteği desteklenmiyor.</string>
     <string name="car_open_phone">Telefonda erhu uygulamasını aç</string>
+    <string name="nav_remote_libraries">Uzak Kitaplıklar</string>
+    <string name="capsule_minutes_listened">Dinlenen dakika</string>
+    <string name="share_stats_no_activity">Dinleme etkinliği yok</string>
+    <string name="share_stats_no_activity_desc">Bu dönemde kayıtlı çalma yok</string>
+    <string name="custom_artwork_title">Özel Kapak</string>
+    <string name="custom_artwork_applied">Özel kapak güncellendi</string>
+    <string name="custom_artwork_removed">Özel kapak kaldırıldı</string>
+    <string name="custom_artwork_apply">Uygula</string>
+    <string name="share_card_title">Müzik Paylaş</string>
+    <string name="share_card_save">Görseli Kaydet</string>
+    <string name="share_card_share">Kartı Paylaş</string>
+    <string name="share_card_saved">Görsel cihaza kaydedildi</string>
+    <string name="share_card_save_failed">Görsel kaydedilemedi</string>
+    <string name="share_card_aspect_story">Hikaye · 9:16</string>
+    <string name="share_card_aspect_square">Kare · 1:1</string>
+    <string name="share_card_aspect_feed">Dikey · 4:5</string>
+    <string name="share_card_style_centered">Ortalanmış</string>
+    <string name="share_card_style_poster">Poster</string>
+    <string name="share_card_style_minimal">Minimal</string>
+    <string name="share_card_brightness">Arka planı karart</string>
+    <string name="playing_from_playlist">Çalma listesinden çalınıyor</string>
+    <string name="custom_artwork_choose">Görsel seç</string>
+    <string name="custom_artwork_error">Özel kapak ayarlanamadı</string>
+    <string name="custom_artwork_remove">Özel kapağı kaldır</string>
+    <string name="share_stats_title">Dinleme Özeti</string>
+    <string name="stats_period_label">Zaman Aralığı</string>
+    <string name="stats_period_7_days">Son 7 gün</string>
+    <string name="stats_period_30_days">Son 30 gün</string>
+    <string name="stats_period_this_month">Bu ay</string>
+    <string name="stats_period_this_year">Bu yıl</string>
+    <string name="stats_type_label">Kart Türü</string>
+    <string name="stats_type_top_songs">En Çok Dinlenen Şarkılar</string>
+    <string name="stats_type_top_artists">En Çok Dinlenen Sanatçılar</string>
+    <string name="stats_type_top_albums">En Çok Dinlenen Albümler</string>
+    <string name="stats_type_overview">Genel Bakış</string>
+    <string name="share_card_ratio">En Boy Oranı</string>
+    <string name="share_card_ratio_story">Hikaye (9:16)</string>
+    <string name="share_card_ratio_square">Kare (1:1)</string>
+    <string name="share_card_ratio_portrait">Dikey (4:5)</string>
+    <string name="share_card_darkness">Arka Plan Koyuluğu</string>
+    <string name="share_card_save_error">Görsel kaydedilemedi</string>
+    <string name="cd_close">Kapat</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="other">%1$s öğenin kapağı yok.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="other">%1$s öğe için daha yüksek çözünürlüklü sürüm yok.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="other">%1$s öğe için kapak kontrolü tamamlanamadı.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="other">%1$s öğenin mevcut kapağı okunamadı.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="other">parça</item>
+    </plurals>
 </resources>

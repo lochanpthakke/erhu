@@ -53,7 +53,7 @@ class IdentityRenameCompatibilityTest {
             names.associateWith { table -> legacy.rawQuery("SELECT * FROM `$table`", null).use(::rows) }
         }
         val renamed = Room.databaseBuilder(context, ErhuDatabase::class.java, fileName)
-            .addMigrations(MIGRATION_14_15, MIGRATION_15_16)
+            .addMigrations(MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
             .allowMainThreadQueries()
             .build()
         try {
@@ -67,7 +67,7 @@ class IdentityRenameCompatibilityTest {
             assertEquals(before, after)
             db.query("SELECT identity_hash FROM room_master_table WHERE id = 42").use {
                 it.moveToFirst()
-                val current = context.assets.open("com.erhu.erhu.core.database.ErhuDatabase/16.json").bufferedReader().use { reader ->
+                val current = context.assets.open("com.erhu.erhu.core.database.ErhuDatabase/20.json").bufferedReader().use { reader ->
                     JSONObject(reader.readText()).getJSONObject("database")
                 }
                 assertEquals(current.getString("identityHash"), it.getString(0))

@@ -29,9 +29,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
-import kotlin.math.abs
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 
 @Singleton
 class MediaStoreScanner
@@ -47,6 +47,7 @@ class MediaStoreScanner
         private val songDao: com.erhu.erhu.core.database.dao.SongDao,
     ) {
         private val scanPrefs by lazy { context.getSharedPreferences(SCAN_PREFS, Context.MODE_PRIVATE) }
+
         @Suppress(
             "DEPRECATION",
             "LongMethod",
@@ -193,7 +194,8 @@ class MediaStoreScanner
                                 val stamp = stamps[id]
                                 val modifiedSec = c.getLong(dateModifiedColumn)
                                 val unchanged =
-                                    stamp != null && stamp.filePath == filePath &&
+                                    stamp != null &&
+                                        stamp.filePath == filePath &&
                                         (stamp.dateModified == modifiedSec || stamp.dateModified == modifiedSec * 1000L)
                                 year = if (unchanged) stamp!!.year else jaudioTaggerEnricher.extractYearFromId3Header(filePath)
                             }
@@ -448,7 +450,9 @@ class MediaStoreScanner
  * remote file, and it counts as enriched, so on-device tag reading never tries to open it.
  */
 internal fun com.erhu.erhu.core.database.entity.RemoteTrackEntity.toLibrarySong(): SongEntity? {
-    val provider = com.erhu.erhu.core.model.RemoteProvider.fromKey(provider) ?: return null
+    val provider =
+        com.erhu.erhu.core.model.RemoteProvider
+            .fromKey(provider) ?: return null
     return SongEntity(
         id = id,
         title = title.ifBlank { "Unknown Title" },
@@ -457,12 +461,19 @@ internal fun com.erhu.erhu.core.database.entity.RemoteTrackEntity.toLibrarySong(
         artistId = 0L,
         albumId = 0L,
         durationMs = durationMs,
-        uri = com.erhu.erhu.core.model.RemoteRef(provider, sourceId, remoteId).streamUri(),
+        uri =
+            com.erhu.erhu.core.model
+                .RemoteRef(provider, sourceId, remoteId)
+                .streamUri(),
         filePath = "",
         trackNumber = trackNumber,
         year = year,
         dateModified = 0L,
-        artworkUri = artworkKey?.let { com.erhu.erhu.core.model.RemoteRef.artworkUri(provider, sourceId, it) },
+        artworkUri =
+            artworkKey?.let {
+                com.erhu.erhu.core.model.RemoteRef
+                    .artworkUri(provider, sourceId, it)
+            },
         isEnriched = true,
         discNumber = discNumber.coerceAtLeast(1),
         isFavorite = isFavorite,
@@ -492,8 +503,7 @@ internal fun duplicateFreeIds(
             } else {
                 listOf(song.title, song.artist, song.album).joinToString("|") { text -> duplicateKey(text) }
             }
-        }
-        .values
+        }.values
         .forEach { group ->
             val chosen = mutableListOf<SongEntity>()
             group.sortedBy { if (it.id in known) 0 else 1 }.forEach { song ->

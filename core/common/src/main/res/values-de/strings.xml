@@ -2052,4 +2052,66 @@
     <string name="car_error_no_results">In deiner Mediathek wurde keine passende Musik gefunden.</string>
     <string name="car_error_request">Diese Musikanfrage wird nicht unterstützt.</string>
     <string name="car_open_phone">erhu auf dem Smartphone öffnen</string>
+    <string name="nav_remote_libraries">Remote-Bibliotheken</string>
+    <string name="capsule_minutes_listened">Gehörte Minuten</string>
+    <string name="share_stats_no_activity">Keine Höraktivität</string>
+    <string name="share_stats_no_activity_desc">Für diesen Zeitraum wurden keine Wiedergaben erfasst</string>
+    <string name="custom_artwork_title">Eigenes Artwork</string>
+    <string name="custom_artwork_applied">Eigenes Artwork aktualisiert</string>
+    <string name="custom_artwork_removed">Eigenes Artwork entfernt</string>
+    <string name="custom_artwork_apply">Anwenden</string>
+    <string name="share_card_title">Musik teilen</string>
+    <string name="share_card_save">Bild speichern</string>
+    <string name="share_card_share">Karte teilen</string>
+    <string name="share_card_saved">Bild auf dem Gerät gespeichert</string>
+    <string name="share_card_save_failed">Bild konnte nicht gespeichert werden</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Quadrat · 1:1</string>
+    <string name="share_card_aspect_feed">Hochformat · 4:5</string>
+    <string name="share_card_style_centered">Zentriert</string>
+    <string name="share_card_style_poster">Poster</string>
+    <string name="share_card_style_minimal">Minimal</string>
+    <string name="share_card_brightness">Hintergrund abdunkeln</string>
+    <string name="playing_from_playlist">Wiedergabe aus Playlist</string>
+    <string name="custom_artwork_choose">Bild auswählen</string>
+    <string name="custom_artwork_error">Eigenes Artwork konnte nicht festgelegt werden</string>
+    <string name="custom_artwork_remove">Eigenes Artwork entfernen</string>
+    <string name="share_stats_title">Hör-Rückblick</string>
+    <string name="stats_period_label">Zeitraum</string>
+    <string name="stats_period_7_days">Letzte 7 Tage</string>
+    <string name="stats_period_30_days">Letzte 30 Tage</string>
+    <string name="stats_period_this_month">Dieser Monat</string>
+    <string name="stats_period_this_year">Dieses Jahr</string>
+    <string name="stats_type_label">Kartentyp</string>
+    <string name="stats_type_top_songs">Top-Songs</string>
+    <string name="stats_type_top_artists">Top-Künstler</string>
+    <string name="stats_type_top_albums">Top-Alben</string>
+    <string name="stats_type_overview">Übersicht</string>
+    <string name="share_card_ratio">Seitenverhältnis</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Quadrat (1:1)</string>
+    <string name="share_card_ratio_portrait">Hochformat (4:5)</string>
+    <string name="share_card_darkness">Hintergrund-Abdunklung</string>
+    <string name="share_card_save_error">Bild konnte nicht gespeichert werden</string>
+    <string name="cd_close">Schließen</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s Element hat kein vorhandenes Artwork.</item>
+        <item quantity="other">%1$s Elemente haben kein vorhandenes Artwork.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Keine höher aufgelöste Version für %1$s Element gefunden.</item>
+        <item quantity="other">Keine höher aufgelösten Versionen für %1$s Elemente gefunden.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Artwork-Prüfung für %1$s Element konnte nicht abgeschlossen werden.</item>
+        <item quantity="other">Artwork-Prüfung für %1$s Elemente konnte nicht abgeschlossen werden.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Vorhandenes Artwork von %1$s Element konnte nicht gelesen werden.</item>
+        <item quantity="other">Vorhandenes Artwork von %1$s Elementen konnte nicht gelesen werden.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">Titel</item>
+        <item quantity="other">Titel</item>
+    </plurals>
 </resources>

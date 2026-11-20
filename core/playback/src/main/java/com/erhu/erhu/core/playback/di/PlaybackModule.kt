@@ -83,7 +83,11 @@ object PlayerProviderModule {
                     val streams =
                         (0 until player.mediaItemCount).any { index ->
                             com.erhu.erhu.core.model.RemoteRef.isStreamUri(
-                                player.getMediaItemAt(index).localConfiguration?.uri?.toString(),
+                                player
+                                    .getMediaItemAt(index)
+                                    .localConfiguration
+                                    ?.uri
+                                    ?.toString(),
                             )
                         }
                     player.setWakeMode(if (streams) C.WAKE_MODE_NETWORK else C.WAKE_MODE_LOCAL)

@@ -5,10 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.buildAnnotatedString
-import com.erhu.erhu.core.model.Artist
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -55,22 +51,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import com.erhu.erhu.core.common.R
 import com.erhu.erhu.core.database.repository.AnimatedArtworkRepository
 import com.erhu.erhu.core.database.repository.LibraryRepository
@@ -82,6 +80,7 @@ import com.erhu.erhu.core.designsystem.foundation.ComponentSize
 import com.erhu.erhu.core.designsystem.foundation.IconSize
 import com.erhu.erhu.core.designsystem.foundation.Radius
 import com.erhu.erhu.core.designsystem.foundation.Spacing
+import com.erhu.erhu.core.model.Artist
 import com.erhu.erhu.core.model.PlaybackState
 import com.erhu.erhu.core.model.RepeatMode
 import com.erhu.erhu.core.model.Song
@@ -209,8 +208,7 @@ internal fun CarouselCard(
                                     } else {
                                         1f
                                     }
-                            }
-                            .carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
+                            }.carouselCardSurface(colors, CARD_SHAPE, infoTop = CARD_PADDING + artSide)
                             .clip(CARD_SHAPE)
                             .padding(CARD_PADDING),
                 ) {

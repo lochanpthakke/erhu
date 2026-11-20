@@ -173,12 +173,16 @@ class SoundRepositoryImpl
         override fun setBandGain(
             bandIndex: Int,
             gainDb: Float,
-        ) = updateBand(bandIndex) { it.copy(gainDb = gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB)) }
+        ) = updateBand(
+            bandIndex,
+        ) { it.copy(gainDb = gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB)) }
 
         override fun setBandFrequency(
             bandIndex: Int,
             freqHz: Float,
-        ) = updateBand(bandIndex) { it.copy(frequencyHz = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ)) }
+        ) = updateBand(
+            bandIndex,
+        ) { it.copy(frequencyHz = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ)) }
 
         override fun setBandQ(
             bandIndex: Int,
@@ -236,7 +240,15 @@ class SoundRepositoryImpl
         ) = updateBand(bandIndex) { band ->
             band.copy(
                 frequencyHz = freqHz.coerceIn(CustomEqAudioProcessor.MIN_FREQ_HZ, CustomEqAudioProcessor.MAX_FREQ_HZ),
-                gainDb = if (band.filterType.hasGain) gainDb.coerceIn(CustomEqAudioProcessor.MIN_GAIN_DB, CustomEqAudioProcessor.MAX_GAIN_DB) else band.gainDb,
+                gainDb =
+                    if (band.filterType.hasGain) {
+                        gainDb.coerceIn(
+                            CustomEqAudioProcessor.MIN_GAIN_DB,
+                            CustomEqAudioProcessor.MAX_GAIN_DB,
+                        )
+                    } else {
+                        band.gainDb
+                    },
             )
         }
 
@@ -268,7 +280,13 @@ class SoundRepositoryImpl
                 val id = "custom_${UUID.randomUUID()}"
                 val newPreset =
                     if (current.mode == EqMode.GRAPHIC) {
-                        EqPreset(id = id, name = name.trim(), bandGains = current.graphicGains.toFloatArray(), isCustom = true, mode = EqMode.GRAPHIC)
+                        EqPreset(
+                            id = id,
+                            name = name.trim(),
+                            bandGains = current.graphicGains.toFloatArray(),
+                            isCustom = true,
+                            mode = EqMode.GRAPHIC,
+                        )
                     } else {
                         EqPreset(
                             id = id,
@@ -298,7 +316,11 @@ class SoundRepositoryImpl
         ): AppResult<Unit> =
             appResultOf {
                 if (name.isBlank()) throw IllegalArgumentException("Preset name cannot be blank")
-                if (_soundSettings.value.customPresets.none { it.id == presetId }) throw IllegalArgumentException("Preset not found: $presetId")
+                if (_soundSettings.value.customPresets.none { it.id == presetId }) {
+                    throw IllegalArgumentException(
+                        "Preset not found: $presetId",
+                    )
+                }
                 _soundSettings.update { settings ->
                     settings.copy(customPresets = settings.customPresets.map { if (it.id == presetId) it.copy(name = name.trim()) else it })
                 }

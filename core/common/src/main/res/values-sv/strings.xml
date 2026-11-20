@@ -2053,4 +2053,66 @@
     <string name="car_error_no_results">Ingen matchande musik hittades i biblioteket.</string>
     <string name="car_error_request">Den här musikförfrågan stöds inte.</string>
     <string name="car_open_phone">Öppna erhu på telefonen</string>
+    <string name="nav_remote_libraries">Fjärrbibliotek</string>
+    <string name="capsule_minutes_listened">Lyssnade minuter</string>
+    <string name="share_stats_no_activity">Ingen lyssningsaktivitet</string>
+    <string name="share_stats_no_activity_desc">Inga uppspelningar registrerade under perioden</string>
+    <string name="custom_artwork_title">Eget omslag</string>
+    <string name="custom_artwork_applied">Eget omslag uppdaterat</string>
+    <string name="custom_artwork_removed">Eget omslag borttaget</string>
+    <string name="custom_artwork_apply">Använd</string>
+    <string name="share_card_title">Dela musik</string>
+    <string name="share_card_save">Spara bild</string>
+    <string name="share_card_share">Dela kort</string>
+    <string name="share_card_saved">Bilden sparades på enheten</string>
+    <string name="share_card_save_failed">Det gick inte att spara bilden</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Kvadrat · 1:1</string>
+    <string name="share_card_aspect_feed">Stående · 4:5</string>
+    <string name="share_card_style_centered">Centrerad</string>
+    <string name="share_card_style_poster">Affisch</string>
+    <string name="share_card_style_minimal">Minimal</string>
+    <string name="share_card_brightness">Dämpa bakgrund</string>
+    <string name="playing_from_playlist">Spelas från spellista</string>
+    <string name="custom_artwork_choose">Välj bild</string>
+    <string name="custom_artwork_error">Det gick inte att ange eget omslag</string>
+    <string name="custom_artwork_remove">Ta bort eget omslag</string>
+    <string name="share_stats_title">Lyssningssammanfattning</string>
+    <string name="stats_period_label">Tidsperiod</string>
+    <string name="stats_period_7_days">Senaste 7 dagarna</string>
+    <string name="stats_period_30_days">Senaste 30 dagarna</string>
+    <string name="stats_period_this_month">Den här månaden</string>
+    <string name="stats_period_this_year">I år</string>
+    <string name="stats_type_label">Korttyp</string>
+    <string name="stats_type_top_songs">Topplåtar</string>
+    <string name="stats_type_top_artists">Toppartister</string>
+    <string name="stats_type_top_albums">Toppalbum</string>
+    <string name="stats_type_overview">Översikt</string>
+    <string name="share_card_ratio">Bildförhållande</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Kvadrat (1:1)</string>
+    <string name="share_card_ratio_portrait">Stående (4:5)</string>
+    <string name="share_card_darkness">Bakgrundens mörkhet</string>
+    <string name="share_card_save_error">Det gick inte att spara bilden</string>
+    <string name="cd_close">Stäng</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s objekt saknar omslag.</item>
+        <item quantity="other">%1$s objekt saknar omslag.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Ingen version med högre upplösning för %1$s objekt.</item>
+        <item quantity="other">Inga versioner med högre upplösning för %1$s objekt.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Omslagskontrollen för %1$s objekt kunde inte slutföras.</item>
+        <item quantity="other">Omslagskontrollen för %1$s objekt kunde inte slutföras.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Det befintliga omslaget för %1$s objekt kunde inte läsas.</item>
+        <item quantity="other">De befintliga omslagen för %1$s objekt kunde inte läsas.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">låt</item>
+        <item quantity="other">låtar</item>
+    </plurals>
 </resources>

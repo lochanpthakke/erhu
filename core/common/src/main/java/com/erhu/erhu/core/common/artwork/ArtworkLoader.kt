@@ -11,6 +11,9 @@ import android.util.Size
 import com.erhu.erhu.core.common.perf.Interactions
 import com.erhu.erhu.core.common.perf.traced
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 
 /**
@@ -85,7 +88,10 @@ object ArtworkLoader {
             latestDisplayBySong.put(cacheKeySource, it)
             return it
         }
-        val bitmap = load(context, songUri, albumArtUri, sizePx, customArtworkPath) ?: return null
+        val bitmap =
+            load(context, songUri, albumArtUri, sizePx, customArtworkPath)
+                ?: awaitRemoteCover(context, songUri, albumArtUri, sizePx, customArtworkPath)
+                ?: return null
         val shown =
             withContext(Dispatchers.Default) {
                 traced("Artwork upload") { bitmap.copy(Bitmap.Config.HARDWARE, false) ?: bitmap }
@@ -283,7 +289,11 @@ object ArtworkLoader {
                             }
                         connection.getInputStream().use { it.readBytes() }
                     }
-                    null, "file" -> java.io.File(parsedUri.path ?: uri).takeIf { it.isFile }?.readBytes()
+                    null, "file" ->
+                        java.io
+                            .File(parsedUri.path ?: uri)
+                            .takeIf { it.isFile }
+                            ?.readBytes()
                     else -> context.contentResolver.openInputStream(parsedUri)?.use { it.readBytes() }
                 }
             val decoded = bytes?.let { decodeSampled(it, sizePx) }
@@ -298,13 +308,17 @@ object ArtworkLoader {
         }
 
     private fun isImageUri(uri: String): Boolean =
-        uri.startsWith("http://") || uri.startsWith("https://") || uri.startsWith("/") || uri.startsWith("file://") ||
+        uri.startsWith("http://") ||
+            uri.startsWith("https://") ||
+            uri.startsWith("/") ||
+            uri.startsWith("file://") ||
             uri.startsWith("content://media/external/audio/albumart")
 
     /**
      * A failed cover that may load later is retried a few times, waiting longer each time: a blank
      * cover right after launch fills in by itself instead of waiting for the next app start.
      */
+    @Suppress("ReturnCount")
     suspend fun loadWithRetry(
         context: Context,
         songUri: String,
@@ -312,13 +326,61 @@ object ArtworkLoader {
         sizePx: Int,
         customArtworkPath: String? = null,
     ): Bitmap? {
+        val key = missKey(songUri, albumArtUri, sizePx, customArtworkPath)
         RETRY_DELAYS_MS.forEach { wait ->
             load(context, songUri, albumArtUri, sizePx, customArtworkPath)?.let { return it }
-            val key = "${customArtworkPath ?: albumArtUri?.takeIf { it.startsWith(REMOTE_ARTWORK_PREFIX) } ?: songUri}@$sizePx"
             if (missCache.get(key) != null) return null
             kotlinx.coroutines.delay(wait)
         }
         return load(context, songUri, albumArtUri, sizePx, customArtworkPath)
+            ?: awaitRemoteCover(context, songUri, albumArtUri, sizePx, customArtworkPath)
+    }
+
+    private fun missKey(
+        songUri: String,
+        albumArtUri: String?,
+        sizePx: Int,
+        customArtworkPath: String?,
+    ) = "${customArtworkPath ?: albumArtUri?.takeIf { it.startsWith(REMOTE_ARTWORK_PREFIX) } ?: songUri}@$sizePx"
+
+    /**
+     * A remote cover not read yet (a Drive folder's tag pass is still going): waits for new covers
+     * instead of staying blank until the row is scrolled away and back. Null at once for anything
+     * else (local, or known to have no cover); otherwise ends with the caller's coroutine.
+     */
+    @Suppress("ReturnCount")
+    private suspend fun awaitRemoteCover(
+        context: Context,
+        songUri: String,
+        albumArtUri: String?,
+        sizePx: Int,
+        customArtworkPath: String?,
+    ): Bitmap? {
+        val key = missKey(songUri, albumArtUri, sizePx, customArtworkPath)
+        if (missCache.get(key) != null || !isRemote(songUri, albumArtUri)) return null
+        var seen = remoteCoversVersion.value
+        while (true) {
+            remoteCoversVersion.first { it != seen }
+            // Covers arrive in bursts: one retry per short window, not one per new cover.
+            kotlinx.coroutines.delay(REMOTE_COVER_WAKE_MS)
+            seen = remoteCoversVersion.value
+            load(context, songUri, albumArtUri, sizePx, customArtworkPath)?.let { return it }
+            if (missCache.get(key) != null) return null
+        }
+    }
+
+    private fun isRemote(
+        songUri: String,
+        albumArtUri: String?,
+    ) = songUri.startsWith(REMOTE_STREAM_PREFIX) ||
+        songUri.startsWith(REMOTE_ARTWORK_PREFIX) ||
+        albumArtUri?.startsWith(REMOTE_ARTWORK_PREFIX) == true
+
+    private val remoteCoversVersion = MutableStateFlow(0)
+
+    /** A remote library cached new covers: placeholders still waiting on one try again. */
+    fun notifyRemoteCoversChanged() {
+        remoteCoversVersion.update { it + 1 }
     }
 
     /** At most a few covers decode at once, so the first screen after launch is not starved by dozens. */
@@ -328,6 +390,7 @@ object ArtworkLoader {
     private const val NETWORK_TIMEOUT_MS = 10_000
     private const val DECODE_PARALLELISM = 6
     private val RETRY_DELAYS_MS = listOf(1_500L, 4_000L, 10_000L)
+    private const val REMOTE_COVER_WAKE_MS = 750L
 
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     private fun loadEmbeddedPicture(

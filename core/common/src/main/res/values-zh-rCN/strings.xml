@@ -2006,4 +2006,61 @@
     <string name="car_error_no_results">音乐库中未找到匹配的音乐。</string>
     <string name="car_error_request">不支持此音乐请求。</string>
     <string name="car_open_phone">在手机上打开 erhu</string>
+    <string name="nav_remote_libraries">远程音乐库</string>
+    <string name="capsule_minutes_listened">收听分钟数</string>
+    <string name="share_stats_no_activity">没有收听活动</string>
+    <string name="share_stats_no_activity_desc">此期间没有播放记录</string>
+    <string name="custom_artwork_title">自定义封面</string>
+    <string name="custom_artwork_applied">已更新自定义封面</string>
+    <string name="custom_artwork_removed">已移除自定义封面</string>
+    <string name="custom_artwork_apply">应用</string>
+    <string name="share_card_title">分享音乐</string>
+    <string name="share_card_save">保存图片</string>
+    <string name="share_card_share">分享卡片</string>
+    <string name="share_card_saved">图片已保存到设备</string>
+    <string name="share_card_save_failed">无法保存图片</string>
+    <string name="share_card_aspect_story">快拍 · 9:16</string>
+    <string name="share_card_aspect_square">方形 · 1:1</string>
+    <string name="share_card_aspect_feed">竖版 · 4:5</string>
+    <string name="share_card_style_centered">居中</string>
+    <string name="share_card_style_poster">海报</string>
+    <string name="share_card_style_minimal">极简</string>
+    <string name="share_card_brightness">背景变暗</string>
+    <string name="playing_from_playlist">正在从播放列表播放</string>
+    <string name="custom_artwork_choose">选择图片</string>
+    <string name="custom_artwork_error">无法设置自定义封面</string>
+    <string name="custom_artwork_remove">移除自定义封面</string>
+    <string name="share_stats_title">收听回顾</string>
+    <string name="stats_period_label">时间段</string>
+    <string name="stats_period_7_days">最近 7 天</string>
+    <string name="stats_period_30_days">最近 30 天</string>
+    <string name="stats_period_this_month">本月</string>
+    <string name="stats_period_this_year">今年</string>
+    <string name="stats_type_label">卡片类型</string>
+    <string name="stats_type_top_songs">热门歌曲</string>
+    <string name="stats_type_top_artists">热门艺人</string>
+    <string name="stats_type_top_albums">热门专辑</string>
+    <string name="stats_type_overview">概览</string>
+    <string name="share_card_ratio">宽高比</string>
+    <string name="share_card_ratio_story">快拍 (9:16)</string>
+    <string name="share_card_ratio_square">方形 (1:1)</string>
+    <string name="share_card_ratio_portrait">竖版 (4:5)</string>
+    <string name="share_card_darkness">背景暗度</string>
+    <string name="share_card_save_error">无法保存图片</string>
+    <string name="cd_close">关闭</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="other">%1$s 个项目没有封面。</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="other">%1$s 个项目没有更高分辨率的版本。</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="other">无法完成 %1$s 个项目的封面检查。</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="other">无法读取 %1$s 个项目的现有封面。</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="other">首</item>
+    </plurals>
 </resources>

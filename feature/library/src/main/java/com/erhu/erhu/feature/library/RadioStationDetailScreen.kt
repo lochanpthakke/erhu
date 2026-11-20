@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import com.erhu.erhu.core.designsystem.foundation.ArtworkSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -43,6 +42,7 @@ import com.erhu.erhu.core.designsystem.component.ReportTitleScroll
 import com.erhu.erhu.core.designsystem.component.TopBarNavigation
 import com.erhu.erhu.core.designsystem.component.forScrollingContent
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
+import com.erhu.erhu.core.designsystem.foundation.ArtworkSize
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.Song

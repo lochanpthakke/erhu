@@ -117,7 +117,7 @@ class RemoteLibrariesViewModel
 
         /** Starts Google's sign-in; [launchConsent] shows Google's screen when the user has to choose or agree. */
         fun connectDrive(launchConsent: (android.app.PendingIntent) -> Unit) {
-            if (_driveState.value.connecting) return
+            if (_driveState.value.connecting || !RemoteLibraryFeatures.googleDriveAvailable) return
             _driveState.value = AddServerState(connecting = true)
             viewModelScope.launch {
                 try {
@@ -173,7 +173,11 @@ class RemoteLibrariesViewModel
         /** Asks Drive whose account the token belongs to, then stores the account (never the token). */
         private suspend fun finishDrive(token: String) {
             val account = drive.about(token)
-            val known = sources.value.firstOrNull { it.provider == RemoteProvider.GOOGLE_DRIVE && it.account.equals(account.email, ignoreCase = true) }
+            val known =
+                sources.value.firstOrNull {
+                    it.provider == RemoteProvider.GOOGLE_DRIVE &&
+                        it.account.equals(account.email, ignoreCase = true)
+                }
             if (known != null) {
                 driveAuth.remember(known.id, token)
                 _driveState.value = AddServerState(error = "${account.email} is already connected.")
@@ -181,7 +185,12 @@ class RemoteLibrariesViewModel
             }
             val id =
                 repository.addSource(
-                    RemoteSource(id = 0, provider = RemoteProvider.GOOGLE_DRIVE, name = account.email.ifBlank { "Google Drive" }, account = account.email),
+                    RemoteSource(
+                        id = 0,
+                        provider = RemoteProvider.GOOGLE_DRIVE,
+                        name = account.email.ifBlank { "Google Drive" },
+                        account = account.email,
+                    ),
                 )
             driveAuth.remember(id, token)
             _driveState.value = AddServerState()
@@ -422,7 +431,13 @@ class RemoteBrowseViewModel
                     try {
                         val connection = withContext(dispatchers.io) { connections.connection(sourceId) }
                         val page = subsonic.albums(connection, shown.albums.size, ALBUM_PAGE)
-                        _state.update { it.copy(albums = (it.albums + page).distinctBy(SubsonicAlbum::id), canLoadMore = page.size == ALBUM_PAGE) }
+                        _state.update {
+                            it.copy(
+                                albums = (it.albums + page).distinctBy(SubsonicAlbum::id),
+                                canLoadMore =
+                                    page.size == ALBUM_PAGE,
+                            )
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (
@@ -443,7 +458,20 @@ class RemoteBrowseViewModel
             viewModelScope.launch {
                 try {
                     favorites.set(song, favorite)
-                    _state.update { page -> page.copy(tracks = page.tracks.map { if (it.id == song.id) it.copy(isFavorite = favorite) else it }) }
+                    _state.update { page ->
+                        page.copy(
+                            tracks =
+                                page.tracks.map {
+                                    if (it.id ==
+                                        song.id
+                                    ) {
+                                        it.copy(isFavorite = favorite)
+                                    } else {
+                                        it
+                                    }
+                                },
+                        )
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (

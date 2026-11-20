@@ -2144,4 +2144,76 @@
     <string name="car_error_no_results">В медиатеке не найдено подходящей музыки.</string>
     <string name="car_error_request">Этот музыкальный запрос не поддерживается.</string>
     <string name="car_open_phone">Открыть erhu на телефоне</string>
+    <string name="nav_remote_libraries">Удалённые библиотеки</string>
+    <string name="capsule_minutes_listened">Минут прослушано</string>
+    <string name="share_stats_no_activity">Нет активности прослушивания</string>
+    <string name="share_stats_no_activity_desc">За этот период нет прослушиваний</string>
+    <string name="custom_artwork_title">Своя обложка</string>
+    <string name="custom_artwork_applied">Своя обложка обновлена</string>
+    <string name="custom_artwork_removed">Своя обложка удалена</string>
+    <string name="custom_artwork_apply">Применить</string>
+    <string name="share_card_title">Поделиться музыкой</string>
+    <string name="share_card_save">Сохранить изображение</string>
+    <string name="share_card_share">Поделиться карточкой</string>
+    <string name="share_card_saved">Изображение сохранено на устройстве</string>
+    <string name="share_card_save_failed">Не удалось сохранить изображение</string>
+    <string name="share_card_aspect_story">История · 9:16</string>
+    <string name="share_card_aspect_square">Квадрат · 1:1</string>
+    <string name="share_card_aspect_feed">Портрет · 4:5</string>
+    <string name="share_card_style_centered">По центру</string>
+    <string name="share_card_style_poster">Постер</string>
+    <string name="share_card_style_minimal">Минимализм</string>
+    <string name="share_card_brightness">Затемнение фона</string>
+    <string name="playing_from_playlist">Воспроизведение из плейлиста</string>
+    <string name="custom_artwork_choose">Выбрать изображение</string>
+    <string name="custom_artwork_error">Не удалось установить свою обложку</string>
+    <string name="custom_artwork_remove">Удалить свою обложку</string>
+    <string name="share_stats_title">Итоги прослушивания</string>
+    <string name="stats_period_label">Период</string>
+    <string name="stats_period_7_days">Последние 7 дней</string>
+    <string name="stats_period_30_days">Последние 30 дней</string>
+    <string name="stats_period_this_month">Этот месяц</string>
+    <string name="stats_period_this_year">Этот год</string>
+    <string name="stats_type_label">Тип карточки</string>
+    <string name="stats_type_top_songs">Лучшие треки</string>
+    <string name="stats_type_top_artists">Лучшие исполнители</string>
+    <string name="stats_type_top_albums">Лучшие альбомы</string>
+    <string name="stats_type_overview">Обзор</string>
+    <string name="share_card_ratio">Соотношение сторон</string>
+    <string name="share_card_ratio_story">История (9:16)</string>
+    <string name="share_card_ratio_square">Квадрат (1:1)</string>
+    <string name="share_card_ratio_portrait">Портрет (4:5)</string>
+    <string name="share_card_darkness">Затемнение фона</string>
+    <string name="share_card_save_error">Не удалось сохранить изображение</string>
+    <string name="cd_close">Закрыть</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">У %1$s элемента нет обложки.</item>
+        <item quantity="few">У %1$s элементов нет обложки.</item>
+        <item quantity="many">У %1$s элементов нет обложки.</item>
+        <item quantity="other">У %1$s элемента нет обложки.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Нет версии в более высоком разрешении для %1$s элемента.</item>
+        <item quantity="few">Нет версий в более высоком разрешении для %1$s элементов.</item>
+        <item quantity="many">Нет версий в более высоком разрешении для %1$s элементов.</item>
+        <item quantity="other">Нет версий в более высоком разрешении для %1$s элемента.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Не удалось проверить обложку для %1$s элемента.</item>
+        <item quantity="few">Не удалось проверить обложки для %1$s элементов.</item>
+        <item quantity="many">Не удалось проверить обложки для %1$s элементов.</item>
+        <item quantity="other">Не удалось проверить обложки для %1$s элемента.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Не удалось прочитать обложку %1$s элемента.</item>
+        <item quantity="few">Не удалось прочитать обложки %1$s элементов.</item>
+        <item quantity="many">Не удалось прочитать обложки %1$s элементов.</item>
+        <item quantity="other">Не удалось прочитать обложки %1$s элемента.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">трек</item>
+        <item quantity="few">трека</item>
+        <item quantity="many">треков</item>
+        <item quantity="other">трека</item>
+    </plurals>
 </resources>

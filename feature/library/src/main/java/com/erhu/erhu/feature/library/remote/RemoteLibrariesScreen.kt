@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -47,7 +49,6 @@ import com.erhu.erhu.core.designsystem.component.groupSurface
 import com.erhu.erhu.core.designsystem.component.rememberCollapsingTitleState
 import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
-import androidx.compose.material.icons.filled.Cloud
 import com.erhu.erhu.core.model.RemoteProvider
 import com.erhu.erhu.core.model.RemoteSource
 
@@ -66,14 +67,17 @@ fun RemoteLibrariesScreen(
     var driveConsentLauncher: androidx.activity.result.ActivityResultLauncher<androidx.activity.result.IntentSenderRequest>? = null
     val driveConsent =
         androidx.activity.compose.rememberLauncherForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult(),
+            androidx.activity.result.contract.ActivityResultContracts
+                .StartIntentSenderForResult(),
         ) { result ->
             viewModel.onDriveConsent(
                 resultCode = result.resultCode,
                 data = result.data,
                 launchConsent = { pendingIntent ->
                     driveConsentLauncher?.launch(
-                        androidx.activity.result.IntentSenderRequest.Builder(pendingIntent.intentSender).build(),
+                        androidx.activity.result.IntentSenderRequest
+                            .Builder(pendingIntent.intentSender)
+                            .build(),
                     )
                 },
             )
@@ -123,12 +127,25 @@ fun RemoteLibrariesScreen(
                 }
             }
             item(key = "drive") {
+                val driveAvailable = RemoteLibraryFeatures.googleDriveAvailable
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SectionHeading("Google Drive")
                     Column(
-                        modifier = Modifier.fillMaxWidth().groupSurface().padding(Spacing.lg),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .groupSurface()
+                                .alpha(if (driveAvailable) 1f else UNAVAILABLE_ALPHA)
+                                .padding(Spacing.lg),
                         verticalArrangement = Arrangement.spacedBy(Spacing.md),
                     ) {
+                        if (!driveAvailable) {
+                            Text(
+                                text = "Currently Unavailable",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                         Text(
                             text =
                                 "Browse the folders of a Google account and play its audio files. erhu asks for read-only access: " +
@@ -141,10 +158,14 @@ fun RemoteLibrariesScreen(
                         ActionButton(
                             text = "Connect a Google account",
                             primary = true,
-                            enabled = !driveState.connecting,
+                            enabled = driveAvailable && !driveState.connecting,
                             onClick = {
                                 viewModel.connectDrive {
-                                    driveConsent.launch(androidx.activity.result.IntentSenderRequest.Builder(it.intentSender).build())
+                                    driveConsent.launch(
+                                        androidx.activity.result.IntentSenderRequest
+                                            .Builder(it.intentSender)
+                                            .build(),
+                                    )
                                 }
                             },
                         )
@@ -179,6 +200,9 @@ fun RemoteLibrariesScreen(
         )
     }
 }
+
+/** The Google Drive section, greyed out in builds that cannot sign in to Google. */
+private const val UNAVAILABLE_ALPHA = 0.38f
 
 private fun RemoteSource.summary(): String {
     if (provider == RemoteProvider.GOOGLE_DRIVE) return "Google Drive • Read-only"
@@ -230,15 +254,17 @@ private fun AddServerForm(
                 onCheckedChange = { useApiKey = it },
                 enabled = !state.connecting,
             )
-            if (!useApiKey) OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("User name") },
-                singleLine = true,
-                enabled = !state.connecting,
-                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (!useApiKey) {
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("User name") },
+                    singleLine = true,
+                    enabled = !state.connecting,
+                    keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },

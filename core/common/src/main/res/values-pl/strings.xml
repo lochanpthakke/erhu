@@ -2144,4 +2144,76 @@
     <string name="car_error_no_results">Nie znaleziono pasującej muzyki w bibliotece.</string>
     <string name="car_error_request">To żądanie muzyki nie jest obsługiwane.</string>
     <string name="car_open_phone">Otwórz erhu na telefonie</string>
+    <string name="nav_remote_libraries">Biblioteki zdalne</string>
+    <string name="capsule_minutes_listened">Minuty słuchania</string>
+    <string name="share_stats_no_activity">Brak aktywności słuchania</string>
+    <string name="share_stats_no_activity_desc">Brak odtworzeń w tym okresie</string>
+    <string name="custom_artwork_title">Własna okładka</string>
+    <string name="custom_artwork_applied">Zaktualizowano własną okładkę</string>
+    <string name="custom_artwork_removed">Usunięto własną okładkę</string>
+    <string name="custom_artwork_apply">Zastosuj</string>
+    <string name="share_card_title">Udostępnij muzykę</string>
+    <string name="share_card_save">Zapisz obraz</string>
+    <string name="share_card_share">Udostępnij kartę</string>
+    <string name="share_card_saved">Obraz zapisano na urządzeniu</string>
+    <string name="share_card_save_failed">Nie udało się zapisać obrazu</string>
+    <string name="share_card_aspect_story">Relacja · 9:16</string>
+    <string name="share_card_aspect_square">Kwadrat · 1:1</string>
+    <string name="share_card_aspect_feed">Pionowy · 4:5</string>
+    <string name="share_card_style_centered">Wyśrodkowany</string>
+    <string name="share_card_style_poster">Plakat</string>
+    <string name="share_card_style_minimal">Minimalistyczny</string>
+    <string name="share_card_brightness">Przyciemnienie tła</string>
+    <string name="playing_from_playlist">Odtwarzanie z playlisty</string>
+    <string name="custom_artwork_choose">Wybierz obraz</string>
+    <string name="custom_artwork_error">Nie udało się ustawić własnej okładki</string>
+    <string name="custom_artwork_remove">Usuń własną okładkę</string>
+    <string name="share_stats_title">Podsumowanie słuchania</string>
+    <string name="stats_period_label">Okres</string>
+    <string name="stats_period_7_days">Ostatnie 7 dni</string>
+    <string name="stats_period_30_days">Ostatnie 30 dni</string>
+    <string name="stats_period_this_month">Ten miesiąc</string>
+    <string name="stats_period_this_year">Ten rok</string>
+    <string name="stats_type_label">Typ karty</string>
+    <string name="stats_type_top_songs">Najczęściej słuchane utwory</string>
+    <string name="stats_type_top_artists">Najczęściej słuchani wykonawcy</string>
+    <string name="stats_type_top_albums">Najczęściej słuchane albumy</string>
+    <string name="stats_type_overview">Przegląd</string>
+    <string name="share_card_ratio">Proporcje</string>
+    <string name="share_card_ratio_story">Relacja (9:16)</string>
+    <string name="share_card_ratio_square">Kwadrat (1:1)</string>
+    <string name="share_card_ratio_portrait">Pionowy (4:5)</string>
+    <string name="share_card_darkness">Ciemność tła</string>
+    <string name="share_card_save_error">Nie udało się zapisać obrazu</string>
+    <string name="cd_close">Zamknij</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s element nie ma okładki.</item>
+        <item quantity="few">%1$s elementy nie mają okładki.</item>
+        <item quantity="many">%1$s elementów nie ma okładki.</item>
+        <item quantity="other">%1$s elementu nie ma okładki.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Brak wersji w wyższej rozdzielczości dla %1$s elementu.</item>
+        <item quantity="few">Brak wersji w wyższej rozdzielczości dla %1$s elementów.</item>
+        <item quantity="many">Brak wersji w wyższej rozdzielczości dla %1$s elementów.</item>
+        <item quantity="other">Brak wersji w wyższej rozdzielczości dla %1$s elementu.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Nie udało się sprawdzić okładki dla %1$s elementu.</item>
+        <item quantity="few">Nie udało się sprawdzić okładek dla %1$s elementów.</item>
+        <item quantity="many">Nie udało się sprawdzić okładek dla %1$s elementów.</item>
+        <item quantity="other">Nie udało się sprawdzić okładek dla %1$s elementu.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Nie udało się odczytać okładki %1$s elementu.</item>
+        <item quantity="few">Nie udało się odczytać okładek %1$s elementów.</item>
+        <item quantity="many">Nie udało się odczytać okładek %1$s elementów.</item>
+        <item quantity="other">Nie udało się odczytać okładek %1$s elementu.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">utwór</item>
+        <item quantity="few">utwory</item>
+        <item quantity="many">utworów</item>
+        <item quantity="other">utworu</item>
+    </plurals>
 </resources>

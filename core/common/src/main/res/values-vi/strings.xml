@@ -2006,4 +2006,61 @@
     <string name="car_error_no_results">Không tìm thấy nhạc phù hợp trong thư viện.</string>
     <string name="car_error_request">Yêu cầu nhạc này không được hỗ trợ.</string>
     <string name="car_open_phone">Mở erhu trên điện thoại</string>
+    <string name="nav_remote_libraries">Thư viện từ xa</string>
+    <string name="capsule_minutes_listened">Số phút đã nghe</string>
+    <string name="share_stats_no_activity">Không có hoạt động nghe</string>
+    <string name="share_stats_no_activity_desc">Không có lượt phát nào trong khoảng thời gian này</string>
+    <string name="custom_artwork_title">Ảnh bìa tùy chỉnh</string>
+    <string name="custom_artwork_applied">Đã cập nhật ảnh bìa tùy chỉnh</string>
+    <string name="custom_artwork_removed">Đã xóa ảnh bìa tùy chỉnh</string>
+    <string name="custom_artwork_apply">Áp dụng</string>
+    <string name="share_card_title">Chia sẻ nhạc</string>
+    <string name="share_card_save">Lưu ảnh</string>
+    <string name="share_card_share">Chia sẻ thẻ</string>
+    <string name="share_card_saved">Đã lưu ảnh vào thiết bị</string>
+    <string name="share_card_save_failed">Không lưu được ảnh</string>
+    <string name="share_card_aspect_story">Tin · 9:16</string>
+    <string name="share_card_aspect_square">Vuông · 1:1</string>
+    <string name="share_card_aspect_feed">Dọc · 4:5</string>
+    <string name="share_card_style_centered">Căn giữa</string>
+    <string name="share_card_style_poster">Áp phích</string>
+    <string name="share_card_style_minimal">Tối giản</string>
+    <string name="share_card_brightness">Làm tối nền</string>
+    <string name="playing_from_playlist">Đang phát từ danh sách phát</string>
+    <string name="custom_artwork_choose">Chọn ảnh</string>
+    <string name="custom_artwork_error">Không đặt được ảnh bìa tùy chỉnh</string>
+    <string name="custom_artwork_remove">Xóa ảnh bìa tùy chỉnh</string>
+    <string name="share_stats_title">Tổng kết nghe nhạc</string>
+    <string name="stats_period_label">Khoảng thời gian</string>
+    <string name="stats_period_7_days">7 ngày qua</string>
+    <string name="stats_period_30_days">30 ngày qua</string>
+    <string name="stats_period_this_month">Tháng này</string>
+    <string name="stats_period_this_year">Năm nay</string>
+    <string name="stats_type_label">Loại thẻ</string>
+    <string name="stats_type_top_songs">Bài hát hàng đầu</string>
+    <string name="stats_type_top_artists">Nghệ sĩ hàng đầu</string>
+    <string name="stats_type_top_albums">Album hàng đầu</string>
+    <string name="stats_type_overview">Tổng quan</string>
+    <string name="share_card_ratio">Tỷ lệ khung hình</string>
+    <string name="share_card_ratio_story">Tin (9:16)</string>
+    <string name="share_card_ratio_square">Vuông (1:1)</string>
+    <string name="share_card_ratio_portrait">Dọc (4:5)</string>
+    <string name="share_card_darkness">Độ tối nền</string>
+    <string name="share_card_save_error">Không lưu được ảnh</string>
+    <string name="cd_close">Đóng</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="other">%1$s mục chưa có ảnh bìa.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="other">Không có bản độ phân giải cao hơn cho %1$s mục.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="other">Không thể hoàn tất kiểm tra ảnh bìa cho %1$s mục.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="other">Không đọc được ảnh bìa hiện có của %1$s mục.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="other">bài</item>
+    </plurals>
 </resources>

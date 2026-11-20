@@ -99,7 +99,11 @@ data class RemoteRef(
                 val parsed = URI(uri)
                 val provider = RemoteProvider.fromKey(parsed.host) ?: return null
                 // Raw path: the id is percent-encoded and may itself contain an encoded slash.
-                val parts = parsed.rawPath.orEmpty().trim('/').split('/')
+                val parts =
+                    parsed.rawPath
+                        .orEmpty()
+                        .trim('/')
+                        .split('/')
                 if (parts.size != 2) return null
                 val sourceId = parts[0].toLongOrNull() ?: return null
                 val id = URLDecoder.decode(parts[1], "UTF-8").takeIf { it.isNotEmpty() } ?: return null

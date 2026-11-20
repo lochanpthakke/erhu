@@ -95,50 +95,63 @@ fun StatsShareDialog(
 
     // Load artworks for top tracks, albums, and artists
     val artworkMap by produceState<Map<String, Bitmap>>(initialValue = emptyMap(), periodStats) {
-        value = withContext(Dispatchers.IO) {
-            val map = mutableMapOf<String, Bitmap>()
-            val imageLoader = coil.Coil.imageLoader(context)
+        value =
+            withContext(Dispatchers.IO) {
+                val map = mutableMapOf<String, Bitmap>()
+                val imageLoader = coil.Coil.imageLoader(context)
 
-            suspend fun fetchBitmap(key: String, uriString: String?) {
-                if (uriString.isNullOrBlank()) return
-                try {
-                    val req = coil.request.ImageRequest.Builder(context)
-                        .data(uriString)
-                        .size(ARTWORK_PX)
-                        .allowHardware(false)
-                        .build()
-                    val res = imageLoader.execute(req)
-                    val bm = (res.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                    if (bm != null) map[key] = bm
-                } catch (_: Exception) {}
-            }
-
-            // Load top songs artwork
-            periodStats.topSongs.take(5).forEach { ranked ->
-                val bm = ArtworkLoader.load(context, ranked.song.uri, ranked.song.artworkUri, ARTWORK_PX)
-                if (bm != null) {
-                    map[StatsCardRenderer.songKey(ranked.song.id)] = bm
-                } else {
-                    fetchBitmap(StatsCardRenderer.songKey(ranked.song.id), ranked.song.artworkUri ?: ranked.song.uri)
+                suspend fun fetchBitmap(
+                    key: String,
+                    uriString: String?,
+                ) {
+                    if (uriString.isNullOrBlank()) return
+                    try {
+                        val req =
+                            coil.request.ImageRequest
+                                .Builder(context)
+                                .data(uriString)
+                                .size(ARTWORK_PX)
+                                .allowHardware(false)
+                                .build()
+                        val res = imageLoader.execute(req)
+                        val bm = (res.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        if (bm != null) map[key] = bm
+                    } catch (_: Exception) {
+                    }
                 }
-            }
 
-            // Top albums: erhu's own cover loader first (what the album grids use, so the card matches the
-            // app), Coil only as a fallback. Coil alone opened MediaStore album art directly, which works only
-            // while the system has the cover cached: covers showed in the morning and were blank later.
-            periodStats.topAlbums.take(5).forEach { ranked ->
-                val uri = ranked.album.artworkUri ?: return@forEach
-                val bm = ArtworkLoader.load(context, uri, uri, ARTWORK_PX)
-                if (bm != null) map[StatsCardRenderer.albumKey(ranked.album.id)] = bm else fetchBitmap(StatsCardRenderer.albumKey(ranked.album.id), uri)
-            }
+                // Load top songs artwork
+                periodStats.topSongs.take(5).forEach { ranked ->
+                    val bm = ArtworkLoader.load(context, ranked.song.uri, ranked.song.artworkUri, ARTWORK_PX)
+                    if (bm != null) {
+                        map[StatsCardRenderer.songKey(ranked.song.id)] = bm
+                    } else {
+                        fetchBitmap(StatsCardRenderer.songKey(ranked.song.id), ranked.song.artworkUri ?: ranked.song.uri)
+                    }
+                }
 
-            // Load top artists artwork
-            periodStats.topArtists.take(5).forEach { ranked ->
-                fetchBitmap(StatsCardRenderer.artistKey(ranked.artist.id), ranked.artist.artworkUri)
-            }
+                // Top albums: erhu's own cover loader first (what the album grids use, so the card matches the
+                // app), Coil only as a fallback. Coil alone opened MediaStore album art directly, which works only
+                // while the system has the cover cached: covers showed in the morning and were blank later.
+                periodStats.topAlbums.take(5).forEach { ranked ->
+                    val uri = ranked.album.artworkUri ?: return@forEach
+                    val bm = ArtworkLoader.load(context, uri, uri, ARTWORK_PX)
+                    if (bm !=
+                        null
+                    ) {
+                        map[StatsCardRenderer.albumKey(ranked.album.id)] = bm
+                    } else {
+                        fetchBitmap(StatsCardRenderer.albumKey(ranked.album.id), uri)
+                    }
+                }
 
-            map
-        }
+                // Load top artists artwork
+                periodStats.topArtists.take(5).forEach { ranked ->
+                    fetchBitmap(StatsCardRenderer.artistKey(ranked.artist.id), ranked.artist.artworkUri)
+                }
+
+                map
+            }
     }
 
     val periodLabel = periodLabel(selectedPeriod)
@@ -156,7 +169,13 @@ fun StatsShareDialog(
             noActivityDescription = stringResource(CommonR.string.share_stats_no_activity_desc),
             playsUnit = { resources.getQuantityString(CommonR.plurals.capsule_plays_unit, it) },
             tracksUnit = { resources.getQuantityString(CommonR.plurals.capsule_tracks_unit, it) },
-            playsCount = { resources.getQuantityString(CommonR.plurals.capsule_plays_count, it, LocaleFormatters.formatInteger(it, locale)) },
+            playsCount = {
+                resources.getQuantityString(
+                    CommonR.plurals.capsule_plays_count,
+                    it,
+                    LocaleFormatters.formatInteger(it, locale),
+                )
+            },
             number = { LocaleFormatters.formatInteger(it.toInt(), locale) },
         )
 
@@ -170,9 +189,16 @@ fun StatsShareDialog(
         artworkMap,
         periodLabel,
     ) {
-        value = withContext(Dispatchers.Default) {
-            StatsCardRenderer.render(periodStats, selectedType, artworkMap, StatsShareConfig(aspectRatio = aspectRatio, darkness = darkness), labels)
-        }
+        value =
+            withContext(Dispatchers.Default) {
+                StatsCardRenderer.render(
+                    periodStats,
+                    selectedType,
+                    artworkMap,
+                    StatsShareConfig(aspectRatio = aspectRatio, darkness = darkness),
+                    labels,
+                )
+            }
     }
 
     ModalBottomSheet(
@@ -182,9 +208,10 @@ fun StatsShareDialog(
         containerColor = MaterialTheme.colorScheme.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(
@@ -248,20 +275,22 @@ fun StatsShareDialog(
                     value = darkness,
                     onValueChange = { darkness = it },
                     valueRange = 0.15f..0.85f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                    ),
+                    colors =
+                        SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                        ),
                 )
             }
 
             Spacer(modifier = Modifier.height(Spacing.lg))
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = Spacing.screenGutter)
-                    .padding(bottom = Spacing.xl),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.screenGutter)
+                        .padding(bottom = Spacing.xl),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 val fileName = "erhu_recap_${selectedType.name.lowercase()}_${selectedPeriod.name.lowercase()}"
@@ -272,11 +301,14 @@ fun StatsShareDialog(
                         scope.launch {
                             try {
                                 val saved = ShareCardExporter.saveToGallery(context, bitmap, fileName)
-                                Toast.makeText(
-                                    context,
-                                    context.getString(if (saved) CommonR.string.share_card_saved else CommonR.string.share_card_save_failed),
-                                    Toast.LENGTH_SHORT,
-                                ).show()
+                                Toast
+                                    .makeText(
+                                        context,
+                                        context.getString(
+                                            if (saved) CommonR.string.share_card_saved else CommonR.string.share_card_save_failed,
+                                        ),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             } finally {
                                 isExporting = false
                             }
@@ -372,11 +404,12 @@ private fun CardPreview(
     BoxWithConstraints(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         val width = minOf(maxWidth * PREVIEW_MAX_WIDTH, screenHeight * PREVIEW_MAX_HEIGHT * aspectRatio.ratio)
         Box(
-            modifier = Modifier
-                .width(width)
-                .aspectRatio(aspectRatio.ratio)
-                .clip(Radius.largeShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+            modifier =
+                Modifier
+                    .width(width)
+                    .aspectRatio(aspectRatio.ratio)
+                    .clip(Radius.largeShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
@@ -414,10 +447,11 @@ private fun <T> ChoiceGroup(
         Box(modifier = Modifier.padding(horizontal = Spacing.screenGutter)) { GroupTitle(title) }
         Spacer(modifier = Modifier.height(Spacing.sm))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.screenGutter),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.screenGutter),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         ) {
             options.forEach { option ->

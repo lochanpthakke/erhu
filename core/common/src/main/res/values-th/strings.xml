@@ -2006,4 +2006,61 @@
     <string name="car_error_no_results">ไม่พบเพลงที่ตรงกันในคลังเพลงของคุณ</string>
     <string name="car_error_request">ไม่รองรับคำขอเพลงนี้</string>
     <string name="car_open_phone">เปิด erhu บนโทรศัพท์</string>
+    <string name="nav_remote_libraries">คลังเพลงระยะไกล</string>
+    <string name="capsule_minutes_listened">นาทีที่ฟัง</string>
+    <string name="share_stats_no_activity">ไม่มีการฟังเพลง</string>
+    <string name="share_stats_no_activity_desc">ไม่มีการเล่นในช่วงเวลานี้</string>
+    <string name="custom_artwork_title">ปกแบบกำหนดเอง</string>
+    <string name="custom_artwork_applied">อัปเดตปกแบบกำหนดเองแล้ว</string>
+    <string name="custom_artwork_removed">ลบปกแบบกำหนดเองแล้ว</string>
+    <string name="custom_artwork_apply">ใช้</string>
+    <string name="share_card_title">แชร์เพลง</string>
+    <string name="share_card_save">บันทึกรูปภาพ</string>
+    <string name="share_card_share">แชร์การ์ด</string>
+    <string name="share_card_saved">บันทึกรูปภาพลงในอุปกรณ์แล้ว</string>
+    <string name="share_card_save_failed">บันทึกรูปภาพไม่สำเร็จ</string>
+    <string name="share_card_aspect_story">สตอรี่ · 9:16</string>
+    <string name="share_card_aspect_square">สี่เหลี่ยมจัตุรัส · 1:1</string>
+    <string name="share_card_aspect_feed">แนวตั้ง · 4:5</string>
+    <string name="share_card_style_centered">กึ่งกลาง</string>
+    <string name="share_card_style_poster">โปสเตอร์</string>
+    <string name="share_card_style_minimal">มินิมอล</string>
+    <string name="share_card_brightness">หรี่พื้นหลัง</string>
+    <string name="playing_from_playlist">กำลังเล่นจากเพลย์ลิสต์</string>
+    <string name="custom_artwork_choose">เลือกรูปภาพ</string>
+    <string name="custom_artwork_error">ตั้งค่าปกแบบกำหนดเองไม่สำเร็จ</string>
+    <string name="custom_artwork_remove">ลบปกแบบกำหนดเอง</string>
+    <string name="share_stats_title">สรุปการฟัง</string>
+    <string name="stats_period_label">ช่วงเวลา</string>
+    <string name="stats_period_7_days">7 วันที่ผ่านมา</string>
+    <string name="stats_period_30_days">30 วันที่ผ่านมา</string>
+    <string name="stats_period_this_month">เดือนนี้</string>
+    <string name="stats_period_this_year">ปีนี้</string>
+    <string name="stats_type_label">ประเภทการ์ด</string>
+    <string name="stats_type_top_songs">เพลงยอดนิยม</string>
+    <string name="stats_type_top_artists">ศิลปินยอดนิยม</string>
+    <string name="stats_type_top_albums">อัลบั้มยอดนิยม</string>
+    <string name="stats_type_overview">ภาพรวม</string>
+    <string name="share_card_ratio">อัตราส่วนภาพ</string>
+    <string name="share_card_ratio_story">สตอรี่ (9:16)</string>
+    <string name="share_card_ratio_square">สี่เหลี่ยมจัตุรัส (1:1)</string>
+    <string name="share_card_ratio_portrait">แนวตั้ง (4:5)</string>
+    <string name="share_card_darkness">ความมืดของพื้นหลัง</string>
+    <string name="share_card_save_error">บันทึกรูปภาพไม่สำเร็จ</string>
+    <string name="cd_close">ปิด</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="other">%1$s รายการไม่มีปก</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="other">ไม่พบเวอร์ชันความละเอียดสูงกว่าสำหรับ %1$s รายการ</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="other">ตรวจสอบปกของ %1$s รายการไม่สำเร็จ</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="other">อ่านปกเดิมของ %1$s รายการไม่ได้</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="other">เพลง</item>
+    </plurals>
 </resources>

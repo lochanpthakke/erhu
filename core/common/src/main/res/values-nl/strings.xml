@@ -2052,4 +2052,66 @@
     <string name="car_error_no_results">Er is geen overeenkomende muziek gevonden in je bibliotheek.</string>
     <string name="car_error_request">Dit muziekverzoek wordt niet ondersteund.</string>
     <string name="car_open_phone">erhu openen op telefoon</string>
+    <string name="nav_remote_libraries">Externe bibliotheken</string>
+    <string name="capsule_minutes_listened">Geluisterde minuten</string>
+    <string name="share_stats_no_activity">Geen luisteractiviteit</string>
+    <string name="share_stats_no_activity_desc">Geen afspeelgegevens voor deze periode</string>
+    <string name="custom_artwork_title">Eigen artwork</string>
+    <string name="custom_artwork_applied">Eigen artwork bijgewerkt</string>
+    <string name="custom_artwork_removed">Eigen artwork verwijderd</string>
+    <string name="custom_artwork_apply">Toepassen</string>
+    <string name="share_card_title">Muziek delen</string>
+    <string name="share_card_save">Afbeelding opslaan</string>
+    <string name="share_card_share">Kaart delen</string>
+    <string name="share_card_saved">Afbeelding opgeslagen op apparaat</string>
+    <string name="share_card_save_failed">Afbeelding opslaan mislukt</string>
+    <string name="share_card_aspect_story">Story · 9:16</string>
+    <string name="share_card_aspect_square">Vierkant · 1:1</string>
+    <string name="share_card_aspect_feed">Staand · 4:5</string>
+    <string name="share_card_style_centered">Gecentreerd</string>
+    <string name="share_card_style_poster">Poster</string>
+    <string name="share_card_style_minimal">Minimaal</string>
+    <string name="share_card_brightness">Achtergrond dimmen</string>
+    <string name="playing_from_playlist">Speelt af vanuit afspeellijst</string>
+    <string name="custom_artwork_choose">Afbeelding kiezen</string>
+    <string name="custom_artwork_error">Eigen artwork instellen mislukt</string>
+    <string name="custom_artwork_remove">Eigen artwork verwijderen</string>
+    <string name="share_stats_title">Luisteroverzicht</string>
+    <string name="stats_period_label">Periode</string>
+    <string name="stats_period_7_days">Afgelopen 7 dagen</string>
+    <string name="stats_period_30_days">Afgelopen 30 dagen</string>
+    <string name="stats_period_this_month">Deze maand</string>
+    <string name="stats_period_this_year">Dit jaar</string>
+    <string name="stats_type_label">Kaarttype</string>
+    <string name="stats_type_top_songs">Topnummers</string>
+    <string name="stats_type_top_artists">Topartiesten</string>
+    <string name="stats_type_top_albums">Topalbums</string>
+    <string name="stats_type_overview">Overzicht</string>
+    <string name="share_card_ratio">Beeldverhouding</string>
+    <string name="share_card_ratio_story">Story (9:16)</string>
+    <string name="share_card_ratio_square">Vierkant (1:1)</string>
+    <string name="share_card_ratio_portrait">Staand (4:5)</string>
+    <string name="share_card_darkness">Achtergronddonkerte</string>
+    <string name="share_card_save_error">Afbeelding opslaan mislukt</string>
+    <string name="cd_close">Sluiten</string>
+    <plurals name="artwork_upgrade_missing_originals">
+        <item quantity="one">%1$s item heeft geen artwork.</item>
+        <item quantity="other">%1$s items hebben geen artwork.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_no_match">
+        <item quantity="one">Geen versie met hogere resolutie voor %1$s item.</item>
+        <item quantity="other">Geen versies met hogere resolutie voor %1$s items.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_request_failures">
+        <item quantity="one">Artworkcontrole voor %1$s item kon niet worden voltooid.</item>
+        <item quantity="other">Artworkcontrole voor %1$s items kon niet worden voltooid.</item>
+    </plurals>
+    <plurals name="artwork_upgrade_unreadable_originals">
+        <item quantity="one">Bestaand artwork van %1$s item kon niet worden gelezen.</item>
+        <item quantity="other">Bestaand artwork van %1$s items kon niet worden gelezen.</item>
+    </plurals>
+    <plurals name="capsule_tracks_unit">
+        <item quantity="one">nummer</item>
+        <item quantity="other">nummers</item>
+    </plurals>
 </resources>

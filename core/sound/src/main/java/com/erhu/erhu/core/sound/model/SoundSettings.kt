@@ -14,7 +14,8 @@ data class BandConfig(
     val slope: Int = 12,
 ) {
     fun toSpec(): com.erhu.erhu.core.sound.dsp.BandSpec =
-        com.erhu.erhu.core.sound.dsp.BandSpec(filterType, frequencyHz, gainDb, q, slope, enabled)
+        com.erhu.erhu.core.sound.dsp
+            .BandSpec(filterType, frequencyHz, gainDb, q, slope, enabled)
 }
 
 /** Graphic: 8 fixed bands, gain only, the classic presets. Parametric: 4-8 freely shaped bands. */

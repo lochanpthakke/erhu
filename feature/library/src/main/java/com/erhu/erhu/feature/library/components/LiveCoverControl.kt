@@ -236,9 +236,10 @@ private fun LiveCoverSearchingIcon() {
             DownloadArrowBarIcon,
             contentDescription = stringResource(R.string.live_cover_searching),
             tint = color,
-            modifier = Modifier.drawWithContent {
-                clipRect(bottom = size.height * fill) { this@drawWithContent.drawContent() }
-            },
+            modifier =
+                Modifier.drawWithContent {
+                    clipRect(bottom = size.height * fill) { this@drawWithContent.drawContent() }
+                },
         )
     }
 }

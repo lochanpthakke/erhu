@@ -107,7 +107,12 @@ fun Eq8CurveCanvas(
                         val touchRadius = 48.dp.toPx()
                         val slop = viewConfiguration.touchSlop
                         val nodes = currentBands
-                        val distance = { b: Int -> hypot(down.position.x - freqToX(nodes[b].frequencyHz, w), down.position.y - nodeY(nodes[b], h)) }
+                        val distance = { b: Int ->
+                            hypot(
+                                down.position.x - freqToX(nodes[b].frequencyHz, w),
+                                down.position.y - nodeY(nodes[b], h),
+                            )
+                        }
                         // A touch on a point grabs it; anywhere else on the curve, dragging pulls the band nearest in frequency.
                         val near = nodes.indices.minByOrNull(distance)?.takeIf { distance(it) <= touchRadius }
                         val target = near ?: nodes.indices.minByOrNull { abs(freqToX(nodes[it].frequencyHz, w) - down.position.x) }
@@ -126,7 +131,12 @@ fun Eq8CurveCanvas(
                                 break
                             }
                             // A grabbed point follows at once; pulling the curve elsewhere starts past the touch slop, so a tap never nudges a band.
-                            if (!moved && (near != null || (change.position - down.position).getDistance() > slop)) moved = change.position != down.position
+                            if (!moved &&
+                                (near != null || (change.position - down.position).getDistance() > slop)
+                            ) {
+                                moved =
+                                    change.position != down.position
+                            }
                             event.changes.forEach { it.consume() }
                             val index = draggedIndex
                             if (index in nodes.indices && moved) {
@@ -192,7 +202,12 @@ fun Eq8CurveCanvas(
                 if (b == selectedBandIndex) {
                     drawCircle(color = selectionHaloColor.copy(alpha = alpha), radius = 16.dp.toPx(), center = center)
                     drawCircle(color = color, radius = 10.dp.toPx(), center = center)
-                    drawText(textMeasurer, label, labelAt, TextStyle(color = onPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold))
+                    drawText(
+                        textMeasurer,
+                        label,
+                        labelAt,
+                        TextStyle(color = onPrimaryColor, fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                    )
                 } else {
                     drawCircle(color = color, radius = 9.dp.toPx(), center = center, style = Stroke(width = 2.dp.toPx()))
                     drawText(textMeasurer, label, labelAt, TextStyle(color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold))

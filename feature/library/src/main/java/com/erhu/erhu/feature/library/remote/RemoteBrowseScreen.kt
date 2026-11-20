@@ -16,20 +16,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.LibraryAddCheck
-import androidx.compose.material.icons.filled.LibraryAdd
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LibraryAdd
+import androidx.compose.material.icons.filled.LibraryAddCheck
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -78,7 +78,6 @@ import com.erhu.erhu.core.designsystem.foundation.Spacing
 import com.erhu.erhu.core.designsystem.foundation.TextStyles
 import com.erhu.erhu.core.model.RemoteProvider
 import com.erhu.erhu.core.model.RemoteRef
-import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.SongRow
 
 /**
@@ -193,7 +192,11 @@ fun RemoteBrowseScreen(
                 items(state.albums, key = { "album-${it.id}" }) { album ->
                     BrowseRow(
                         title = album.name,
-                        subtitle = listOfNotNull(album.artist.takeIf { it.isNotBlank() }, album.year.takeIf { it > 0 }?.toString()).joinToString(" • "),
+                        subtitle =
+                            listOfNotNull(
+                                album.artist.takeIf { it.isNotBlank() },
+                                album.year.takeIf { it > 0 }?.toString(),
+                            ).joinToString(" • "),
                         artworkUri = art(album.artworkKey),
                         placeholder = Icons.Default.Album,
                         shape = Radius.smallShape,
@@ -233,7 +236,12 @@ fun RemoteBrowseScreen(
                                 Icon(
                                     imageVector = if (song.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = if (song.isFavorite) "Remove from favourites" else "Add to favourites",
-                                    tint = if (song.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint =
+                                        if (song.isFavorite) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                 )
                             }
                         },
@@ -318,7 +326,13 @@ internal fun BrowseRow(
         RemoteCover(artworkUri, placeholder, Modifier.size(ArtworkSize.list).clip(shape))
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
-            Text(title, style = TextStyles.itemTitle, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                title,
+                style = TextStyles.itemTitle,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (subtitle.isNotBlank()) {
                 Text(
                     subtitle,
@@ -373,7 +387,13 @@ private fun LibraryRows(
     onSync: (com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) -> Unit,
     onRemove: (com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity) -> Unit,
 ) {
-    Column(Modifier.padding(horizontal = Spacing.screenGutter).padding(bottom = Spacing.md).fillMaxWidth().groupSurface()) {
+    Column(
+        Modifier
+            .padding(horizontal = Spacing.screenGutter)
+            .padding(bottom = Spacing.md)
+            .fillMaxWidth()
+            .groupSurface(),
+    ) {
         val entry = row.entry
         when {
             entry != null -> {
@@ -386,7 +406,12 @@ private fun LibraryRows(
                     enabled = !status.running,
                 )
                 GroupDivider()
-                GroupRow("Remove from Library", { onRemove(folder) }, summary = "The server is not changed", icon = Icons.Default.RemoveCircleOutline)
+                GroupRow(
+                    "Remove from Library",
+                    { onRemove(folder) },
+                    summary = "The server is not changed",
+                    icon = Icons.Default.RemoveCircleOutline,
+                )
             }
             row.coveredByServer ->
                 GroupRow(

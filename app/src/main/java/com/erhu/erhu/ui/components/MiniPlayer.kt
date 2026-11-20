@@ -103,8 +103,7 @@ fun MiniPlayer(
                             transition.miniBounds = bounds
                         }
                     }
-                }
-                .graphicsLayer {
+                }.graphicsLayer {
                     val p = transition?.fraction ?: 0f
                     alpha = (1f - p / MINI_FADE_SPAN).coerceIn(0f, 1f)
                 }.then(if (transition != null) Modifier.playerDrag(transition, expandsUpward = true) else Modifier)

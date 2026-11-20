@@ -53,7 +53,15 @@ object StatsCardRenderer {
             stats.topSongs.firstOrNull()?.let { artwork[songKey(it.song.id)] }
                 ?: stats.topAlbums.firstOrNull()?.let { artwork[albumKey(it.album.id)] }
                 ?: stats.topArtists.firstOrNull()?.let { artwork[artistKey(it.artist.id)] }
-        ShareCardRenderer.drawBackground(canvas, background, ratio.width, ratio.height, BlurIntensity.DEEP, config.darkness, keepTextReadable = true)
+        ShareCardRenderer.drawBackground(
+            canvas,
+            background,
+            ratio.width,
+            ratio.height,
+            BlurIntensity.DEEP,
+            config.darkness,
+            keepTextReadable = true,
+        )
 
         val frame = Frame.of(ratio)
         val card = Card(canvas, frame, artwork, labels)
@@ -212,7 +220,13 @@ object StatsCardRenderer {
             canvas.drawCircle(cx, cy - 70f, 64f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.argb(40, 255, 255, 255) })
             centredText("♪", cx, cy - 70f, paint(56f, bold, alpha = 200, align = Paint.Align.CENTER))
             text(labels.noActivity, cx, cy + 28f, paint(40f, bold, align = Paint.Align.CENTER), frame.contentWidth)
-            text(labels.noActivityDescription, cx, cy + 88f, paint(30f, regular, alpha = 170, align = Paint.Align.CENTER), frame.contentWidth)
+            text(
+                labels.noActivityDescription,
+                cx,
+                cy + 88f,
+                paint(30f, regular, alpha = 170, align = Paint.Align.CENTER),
+                frame.contentWidth,
+            )
         }
 
         // ---- Single rankings: Top Songs / Top Artists / Top Albums ----
@@ -225,15 +239,29 @@ object StatsCardRenderer {
             val rows: List<Row> =
                 when (type) {
                     StatsCardType.TOP_SONGS ->
-                        stats.topSongs.take(TOP).map { Row(it.song.title, it.song.artist, it.plays, artwork[songKey(it.song.id)], round = false) }
+                        stats.topSongs
+                            .take(
+                                TOP,
+                            ).map { Row(it.song.title, it.song.artist, it.plays, artwork[songKey(it.song.id)], round = false) }
                     StatsCardType.TOP_ALBUMS ->
-                        stats.topAlbums.take(TOP).map { Row(it.album.title, it.album.artist, it.plays, artwork[albumKey(it.album.id)], round = false) }
+                        stats.topAlbums
+                            .take(
+                                TOP,
+                            ).map { Row(it.album.title, it.album.artist, it.plays, artwork[albumKey(it.album.id)], round = false) }
                     else ->
-                        stats.topArtists.take(TOP).map { Row(it.artist.name, null, it.plays, artwork[artistKey(it.artist.id)], round = true) }
+                        stats.topArtists
+                            .take(
+                                TOP,
+                            ).map { Row(it.artist.name, null, it.plays, artwork[artistKey(it.artist.id)], round = true) }
                 }
+
             // Rows share the height evenly (five slots, so fewer results keep the same size), and
             // the header follows the row size so the two keep their proportion on every card.
-            fun rowHeightFor(k: Float) = min((frame.bottom - frame.top - headerHeight(k) - SECTION_GAP * k) / TOP, frame.contentWidth * MAX_ROW_FRACTION)
+            fun rowHeightFor(k: Float) =
+                min(
+                    (frame.bottom - frame.top - headerHeight(k) - SECTION_GAP * k) / TOP,
+                    frame.contentWidth * MAX_ROW_FRACTION,
+                )
             val k = (rowHeightFor(1f) / HEADER_ROW_REFERENCE).coerceIn(MIN_SCALE, MAX_SCALE)
             val head = headerHeight(k) + SECTION_GAP * k
             val rowHeight = rowHeightFor(k)
@@ -359,6 +387,7 @@ object StatsCardRenderer {
             // Heights grow linearly with the scale (album artwork excepted): solve for the scale
             // that fills the space, within readable bounds.
             val available = frame.bottom - frame.top
+
             fun total(k: Float) = sections(k).sum() + gapBase * k * (sections(k).size - 1)
             val fixed = total(0f)
             val k = ((available - fixed) / (total(1f) - fixed)).coerceIn(MIN_SCALE, MAX_SCALE)
@@ -391,7 +420,15 @@ object StatsCardRenderer {
                 if (songs.isNotEmpty()) {
                     var rowTop = y + heading(labels.topSongs, frame.left, y, k, columnWidth)
                     songs.forEachIndexed { i, s ->
-                        rankedRow(i + 1, Row(s.song.title, s.song.artist, s.plays, artwork[songKey(s.song.id)], false), frame.left, rowTop, columnWidth, rowHeight, true)
+                        rankedRow(
+                            i + 1,
+                            Row(s.song.title, s.song.artist, s.plays, artwork[songKey(s.song.id)], false),
+                            frame.left,
+                            rowTop,
+                            columnWidth,
+                            rowHeight,
+                            true,
+                        )
                         rowTop += rowHeight
                     }
                 }
@@ -399,7 +436,15 @@ object StatsCardRenderer {
                     val x = frame.left + columnWidth + COLUMN_GAP
                     var rowTop = y + heading(labels.topAlbums, x, y, k, columnWidth)
                     albums.forEachIndexed { i, a ->
-                        rankedRow(i + 1, Row(a.album.title, a.album.artist, a.plays, artwork[albumKey(a.album.id)], false), x, rowTop, columnWidth, rowHeight, true)
+                        rankedRow(
+                            i + 1,
+                            Row(a.album.title, a.album.artist, a.plays, artwork[albumKey(a.album.id)], false),
+                            x,
+                            rowTop,
+                            columnWidth,
+                            rowHeight,
+                            true,
+                        )
                         rowTop += rowHeight
                     }
                 }
@@ -408,14 +453,34 @@ object StatsCardRenderer {
                     var rowTop = y + heading(labels.topSongs, frame.left, y, k, frame.contentWidth)
                     val rowHeight = STORY_ROW * k
                     songs.forEachIndexed { i, s ->
-                        rankedRow(i + 1, Row(s.song.title, s.song.artist, s.plays, artwork[songKey(s.song.id)], false), frame.left, rowTop, frame.contentWidth, rowHeight, true)
+                        rankedRow(
+                            i + 1,
+                            Row(s.song.title, s.song.artist, s.plays, artwork[songKey(s.song.id)], false),
+                            frame.left,
+                            rowTop,
+                            frame.contentWidth,
+                            rowHeight,
+                            true,
+                        )
                         rowTop += rowHeight
                     }
                     y = rowTop + gap
                 }
                 if (albums.isNotEmpty()) {
                     val tilesTop = y + heading(labels.topAlbums, frame.left, y, k, frame.contentWidth)
-                    albums.forEachIndexed { i, a -> albumTile(i + 1, a.album.title, a.album.artist, a.plays, artwork[albumKey(a.album.id)], frame.left + i * (tile + TILE_GAP), tilesTop, tile, k) }
+                    albums.forEachIndexed { i, a ->
+                        albumTile(
+                            i + 1,
+                            a.album.title,
+                            a.album.artist,
+                            a.plays,
+                            artwork[albumKey(a.album.id)],
+                            frame.left + i * (tile + TILE_GAP),
+                            tilesTop,
+                            tile,
+                            k,
+                        )
+                    }
                 }
             }
         }
@@ -429,7 +494,14 @@ object StatsCardRenderer {
             width: Float,
             stats: PeriodStats,
         ): Float {
-            val lines = totalsItems(stats).maxOf { (_, label) -> wrap(label.uppercase(), totalsLabelPaint(k), width / TOTALS - TOTAL_COLUMN_GAP).size }
+            val lines =
+                totalsItems(stats).maxOf { (_, label) ->
+                    wrap(
+                        label.uppercase(),
+                        totalsLabelPaint(k),
+                        width / TOTALS - TOTAL_COLUMN_GAP,
+                    ).size
+                }
             return lineHeight(totalsNumberPaint(k)) + TOTAL_GAP * k + lineHeight(totalsLabelPaint(k)) * lines
         }
 

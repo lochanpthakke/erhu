@@ -204,29 +204,31 @@ class ListeningStatsRepository
 
             // The monthly aggregates only stand in for "this month", whose range they cover exactly:
             // a rolling 7 or 30 days without listening events has no plays, not the month's.
-            val rankings = combine(eventRankings, fallbackRankings) { eventData, fallbackData ->
-                if (eventData.first.isNotEmpty() || eventData.second.isNotEmpty() || eventData.third.isNotEmpty()) {
-                    eventData
-                } else if (period == StatsPeriod.THIS_MONTH) {
-                    fallbackData
-                } else {
-                    eventData
+            val rankings =
+                combine(eventRankings, fallbackRankings) { eventData, fallbackData ->
+                    if (eventData.first.isNotEmpty() || eventData.second.isNotEmpty() || eventData.third.isNotEmpty()) {
+                        eventData
+                    } else if (period == StatsPeriod.THIS_MONTH) {
+                        fallbackData
+                    } else {
+                        eventData
+                    }
                 }
-            }
 
-            val totalsFlow = combine(eventDao.observePeriodTotals(startTime, endTime), dao.observeTotals(currentMonthKey)) { eventTotals, monthTotals ->
-                if (eventTotals.plays > 0) {
-                    eventTotals
-                } else if (period == StatsPeriod.THIS_MONTH) {
-                    com.erhu.erhu.core.database.dao.PeriodTotals(
-                        plays = monthTotals.plays,
-                        listenedMs = monthTotals.listenedMs,
-                        uniqueTracks = monthTotals.uniqueTracks,
-                    )
-                } else {
-                    eventTotals
+            val totalsFlow =
+                combine(eventDao.observePeriodTotals(startTime, endTime), dao.observeTotals(currentMonthKey)) { eventTotals, monthTotals ->
+                    if (eventTotals.plays > 0) {
+                        eventTotals
+                    } else if (period == StatsPeriod.THIS_MONTH) {
+                        com.erhu.erhu.core.database.dao.PeriodTotals(
+                            plays = monthTotals.plays,
+                            listenedMs = monthTotals.listenedMs,
+                            uniqueTracks = monthTotals.uniqueTracks,
+                        )
+                    } else {
+                        eventTotals
+                    }
                 }
-            }
 
             return combine(rankings, totalsFlow) { (songs, albums, artists), totals ->
                 PeriodStats(
@@ -283,14 +285,34 @@ private fun parseDay(key: String): LocalDate? = runCatching { LocalDate.parse(ke
 
 private object NoOpListeningEventDao : ListeningEventDao {
     override suspend fun insert(event: ListeningEventEntity): Long = 0L
+
     override suspend fun getCount(): Int = 0
+
     override suspend fun backfillFromListeningStats() {}
-    override fun observeTopSongsBetween(startTime: Long, endTime: Long, limit: Int) =
-        kotlinx.coroutines.flow.flowOf(emptyList<com.erhu.erhu.core.database.dao.SongPlays>())
-    override fun observeTopAlbumsBetween(startTime: Long, endTime: Long, limit: Int) =
-        kotlinx.coroutines.flow.flowOf(emptyList<com.erhu.erhu.core.database.dao.AlbumPlays>())
-    override fun observeTopArtistsBetween(startTime: Long, endTime: Long, limit: Int) =
-        kotlinx.coroutines.flow.flowOf(emptyList<com.erhu.erhu.core.database.dao.ArtistPlays>())
-    override fun observePeriodTotals(startTime: Long, endTime: Long) =
-        kotlinx.coroutines.flow.flowOf(com.erhu.erhu.core.database.dao.PeriodTotals(0, 0L, 0))
+
+    override fun observeTopSongsBetween(
+        startTime: Long,
+        endTime: Long,
+        limit: Int,
+    ) = kotlinx.coroutines.flow.flowOf(emptyList<com.erhu.erhu.core.database.dao.SongPlays>())
+
+    override fun observeTopAlbumsBetween(
+        startTime: Long,
+        endTime: Long,
+        limit: Int,
+    ) = kotlinx.coroutines.flow.flowOf(emptyList<com.erhu.erhu.core.database.dao.AlbumPlays>())
+
+    override fun observeTopArtistsBetween(
+        startTime: Long,
+        endTime: Long,
+        limit: Int,
+    ) = kotlinx.coroutines.flow.flowOf(emptyList<com.erhu.erhu.core.database.dao.ArtistPlays>())
+
+    override fun observePeriodTotals(
+        startTime: Long,
+        endTime: Long,
+    ) = kotlinx.coroutines.flow.flowOf(
+        com.erhu.erhu.core.database.dao
+            .PeriodTotals(0, 0L, 0),
+    )
 }

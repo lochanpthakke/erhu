@@ -28,14 +28,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.DrawerDefaults
@@ -111,6 +111,7 @@ import com.erhu.erhu.core.designsystem.theme.glassPanel
 import com.erhu.erhu.core.designsystem.theme.rememberGlassBackdrop
 import com.erhu.erhu.core.model.Album
 import com.erhu.erhu.core.model.Artist
+import com.erhu.erhu.core.model.CollectionKind
 import com.erhu.erhu.core.model.Song
 import com.erhu.erhu.feature.library.AddToPlaylistDialog
 import com.erhu.erhu.feature.library.AlbumDetailScreen
@@ -118,6 +119,7 @@ import com.erhu.erhu.feature.library.AnimatedArtworkScreen
 import com.erhu.erhu.feature.library.ArtistDetailScreen
 import com.erhu.erhu.feature.library.ArtworkManagerScreen
 import com.erhu.erhu.feature.library.AudioDetailsViewModel
+import com.erhu.erhu.feature.library.CustomArtworkDialog
 import com.erhu.erhu.feature.library.FeaturedAlbumsViewModel
 import com.erhu.erhu.feature.library.LibraryBottomChrome
 import com.erhu.erhu.feature.library.LibraryScreen
@@ -125,8 +127,6 @@ import com.erhu.erhu.feature.library.LibrarySection
 import com.erhu.erhu.feature.library.LibraryViewModel
 import com.erhu.erhu.feature.library.LocalLibraryScrollToTopRequests
 import com.erhu.erhu.feature.library.LocalPlayerTransition
-import com.erhu.erhu.core.model.CollectionKind
-import com.erhu.erhu.feature.library.CustomArtworkDialog
 import com.erhu.erhu.feature.library.LocalVybeEnabled
 import com.erhu.erhu.feature.library.MetadataEditorScreen
 import com.erhu.erhu.feature.library.NowPlayingScreen
@@ -149,7 +149,6 @@ import com.erhu.erhu.feature.library.rememberPlayerTransitionState
 import com.erhu.erhu.feature.library.share.SongShareDialog
 import com.erhu.erhu.feature.library.share.StatsShareDialog
 import com.erhu.erhu.feature.library.visibleWithVybe
-import kotlinx.coroutines.flow.flowOf
 import com.erhu.erhu.feature.settings.SettingsCategoryScreen
 import com.erhu.erhu.feature.settings.SettingsScreen
 import com.erhu.erhu.feature.settings.diagnostics.DiagnosticsViewModel
@@ -852,10 +851,16 @@ fun MainScaffold(
                                                         onOpenDrawer = openDrawer,
                                                         onOpenSource = {
                                                             if (it.provider == com.erhu.erhu.core.model.RemoteProvider.GOOGLE_DRIVE) {
-                                                                navController.navigate(com.erhu.erhu.navigation.DriveBrowse(it.id))
+                                                                navController.navigate(
+                                                                    com.erhu.erhu.navigation
+                                                                        .DriveBrowse(it.id),
+                                                                )
                                                             } else {
                                                                 navController.navigate(
-                                                                    com.erhu.erhu.navigation.RemoteBrowse(sourceId = it.id, title = it.name),
+                                                                    com.erhu.erhu.navigation.RemoteBrowse(
+                                                                        sourceId = it.id,
+                                                                        title = it.name,
+                                                                    ),
                                                                 )
                                                             }
                                                         },
@@ -876,13 +881,20 @@ fun MainScaffold(
                                                 ProvideMotionScope(this) {
                                                     com.erhu.erhu.feature.library.remote.RemoteBrowseScreen(
                                                         sourceId = route.sourceId,
-                                                        kind = com.erhu.erhu.feature.library.remote.RemotePageKind.of(route.kind),
+                                                        kind =
+                                                            com.erhu.erhu.feature.library.remote.RemotePageKind
+                                                                .of(route.kind),
                                                         itemId = route.itemId,
                                                         title = route.title,
                                                         onBack = { navController.popBackStack() },
                                                         onOpen = { kind, itemId, title ->
                                                             navController.navigate(
-                                                                com.erhu.erhu.navigation.RemoteBrowse(route.sourceId, kind.name, itemId, title),
+                                                                com.erhu.erhu.navigation.RemoteBrowse(
+                                                                    route.sourceId,
+                                                                    kind.name,
+                                                                    itemId,
+                                                                    title,
+                                                                ),
                                                             )
                                                         },
                                                     )
@@ -948,7 +960,14 @@ fun MainScaffold(
                                     val lyrics = libraryViewModel.currentSongLyrics.collectAsState()
                                     val activeCustomArtwork = currentSongId?.let { customArtworkMap[it] }
                                     val currentCollection = playerState.currentCollection
-                                    val currentPlaylistId = if (currentCollection?.kind == CollectionKind.PLAYLIST) currentCollection.id else null
+                                    val currentPlaylistId =
+                                        if (currentCollection?.kind ==
+                                            CollectionKind.PLAYLIST
+                                        ) {
+                                            currentCollection.id
+                                        } else {
+                                            null
+                                        }
                                     val originatingPlaylistName by produceState<String?>(initialValue = null, currentPlaylistId) {
                                         if (currentPlaylistId != null) {
                                             libraryViewModel.observePlaylistName(currentPlaylistId).collect { value = it }

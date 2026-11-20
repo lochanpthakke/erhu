@@ -66,8 +66,7 @@ class CustomSongArtworkRepositoryImpl
         override fun observeCustomArtwork(songId: Long): Flow<CustomSongArtworkEntity?> =
             dao.observeCustomArtwork(songId).distinctUntilChanged()
 
-        override suspend fun getCustomArtwork(songId: Long): CustomSongArtworkEntity? =
-            dao.getCustomArtwork(songId)
+        override suspend fun getCustomArtwork(songId: Long): CustomSongArtworkEntity? = dao.getCustomArtwork(songId)
 
         override fun observeAllCustomArtwork(): Flow<Map<Long, CustomSongArtworkEntity>> =
             dao.observeAllCustomArtwork().map { list -> list.associateBy { it.songId } }.distinctUntilChanged()

@@ -118,7 +118,13 @@ class RemoteLibraryRepository
             name: String,
         ): RemoteLibraryFolderEntity {
             dao.insertLibraryFolder(
-                RemoteLibraryFolderEntity(sourceId = sourceId, folderId = folderId, driveId = driveId, name = name, addedAt = timeSource.now()),
+                RemoteLibraryFolderEntity(
+                    sourceId = sourceId,
+                    folderId = folderId,
+                    driveId = driveId,
+                    name = name,
+                    addedAt = timeSource.now(),
+                ),
             )
             return checkNotNull(dao.findLibraryFolder(sourceId, folderId))
         }
@@ -144,7 +150,15 @@ class RemoteLibraryRepository
             genre: String?,
             year: Int,
             lyrics: String?,
-        ) = dao.setDetails(songId, genre?.takeIf { it.isNotBlank() }, year, lyrics?.takeIf { it.isNotBlank() }, com.erhu.erhu.core.database.entity.RemoteDetails.VERSION)
+        ) = dao.setDetails(
+            songId,
+            genre?.takeIf {
+                it.isNotBlank()
+            },
+            year,
+            lyrics?.takeIf { it.isNotBlank() },
+            com.erhu.erhu.core.database.entity.RemoteDetails.VERSION,
+        )
 
         fun observeIsFavorite(songId: Long): Flow<Boolean> = dao.observeFavorite(songId).map { it == true }
 
