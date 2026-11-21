@@ -7,6 +7,10 @@ Pure Kotlin, no Android or network dependencies:
   short excerpt of lyrics already stored in the library (LRC timing removed). Nothing is fetched.
 - `cosineSimilarity`, `VybeRanker` — brute-force ranking, best first, ties by song id.
 - `VybeSearch` — query + songs → ranked matches through a `TextEmbedder`.
+- `VybeIndexFile` — the on-disk vector cache. Format 2 stores each 768-dim vector as int8 with one
+  float scale (788 bytes per song instead of float32's 3,088). On the real EmbeddingGemma vectors of
+  a 153-song library this kept 98.7% of top-10 results, and the only order changes were between
+  songs within 0.002 of each other. A format-1 file is converted in place, without re-embedding.
 
 Unit tests (`src/test`) use a deterministic fake embedder, so ranking is verified without a model.
 

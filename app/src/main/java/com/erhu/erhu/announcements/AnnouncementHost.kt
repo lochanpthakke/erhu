@@ -114,10 +114,9 @@ fun AnnouncementHost(
             ) {
                 active.firstOrNull { it.id == requested }
             } else if (!automaticShown) {
-                active.firstOrNull {
-                    it.id !in memory.read &&
-                        it.id !in memory.dismissed
-                }
+                // Pops up each time the app is opened until the user closes it or follows its action;
+                // seeing it once (perhaps behind the player, or leaving straight away) is not enough.
+                active.firstOrNull { it.id !in memory.dismissed }
             } else {
                 null
             }
@@ -131,7 +130,7 @@ fun AnnouncementHost(
         if (next != null) {
             automaticShown = true
             selectedId = next.id
-            controller.read(next.id)
+            if (requested != null) controller.read(next.id)
             viewModel.notifications.cancel(next.id)
         }
     }

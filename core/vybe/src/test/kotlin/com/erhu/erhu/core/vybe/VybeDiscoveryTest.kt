@@ -110,4 +110,30 @@ class VybeDiscoveryTest {
         assertFalse(VybeText.describe(songs[0]).contains("Nightmare"))
         assertEquals("Artist: Unknown Band", VybeText.describe(songs[3]))
     }
+
+    private data class Item(val artist: String, val score: Float, val named: Boolean = false)
+
+    private fun spread(items: List<Item>, limit: Int = 10) =
+        VybeDiscovery.spreadArtists(items, limit, { it.artist }, { it.score }) { it.named }
+
+    @Test
+    fun nearEqualSongsOfOneArtist_makeRoomForOtherArtists_withoutDroppingAny() {
+        val items = List(5) { Item("a", 0.50f) } + listOf(Item("b", 0.49f), Item("c", 0.485f))
+        val spread = spread(items)
+        assertEquals(listOf("a", "a", "b", "c", "a", "a", "a"), spread.map { it.artist })
+        assertEquals(items.toSet(), spread.toSet())
+    }
+
+    @Test
+    fun clearlyBetterSongsOfOneArtist_keepTheirPlace() {
+        val items = List(4) { Item("a", 0.60f) } + Item("b", 0.50f)
+        assertEquals(listOf("a", "a", "a", "a", "b"), spread(items).map { it.artist })
+    }
+
+    @Test
+    fun songsOfANamedArtist_areNeverMovedDown() {
+        val items = List(4) { Item("a", 0.50f, named = true) } + Item("b", 0.50f)
+        assertEquals(listOf("a", "a", "a", "a", "b"), spread(items).map { it.artist })
+        assertEquals(3, spread(items, limit = 3).size)
+    }
 }

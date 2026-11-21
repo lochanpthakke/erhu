@@ -240,7 +240,7 @@ class VybeDiscovery(
         val allowed = songs.map { it.songId }.toSet()
         val all = vectors.rank(songs.size.coerceAtLeast(1)) { id, v -> if (id in allowed) cosineSimilarity(queryVector, v) else null }
         val weak = isWeak(all.map { it.score })
-        val ranked =
+        val sorted =
             all
                 .map { match -> match to (boosts[match.songId]?.sumOf { it.second.toDouble() }?.toFloat() ?: 0f) }
                 // Songs by an artist the query names come first, whatever their description scores.
@@ -252,7 +252,12 @@ class VybeDiscovery(
                         }
                     }.thenByDescending { it.first.score + it.second }
                         .thenBy { it.first.songId },
-                ).take(limit)
+                )
+        val leadArtists = songs.associate { it.songId to (artistNames(it.artist).firstOrNull()?.lowercase() ?: "") }
+        val ranked =
+            spreadArtists(sorted, limit, artistOf = { leadArtists[it.first.songId].orEmpty() }, scoreOf = { it.first.score + it.second }) {
+                boosts[it.first.songId].orEmpty().any { boost -> boost.second == ARTIST_BOOST }
+            }
         return VybeAnswer.Described(
             query = query,
             hits =
@@ -295,6 +300,48 @@ class VybeDiscovery(
         private val WORD = Regex("""[\p{L}\p{N}&$]+(?:-[\p{L}\p{N}]+)*""")
         private const val MIN_NAME_CHARS = 3
         private val NOT_ARTISTS = setOf("unknown", "<unknown>", "unknown artist", "various artists")
+
+        /** Songs of one lead artist allowed in a row of the results before a near-equal other artist goes first. */
+        const val ARTIST_SPREAD_CAP = 2
+
+        /**
+         * How much lower another artist's song may score and still go before a capped artist's next
+         * song. Songs with the same metadata get the same vector, so one artist's identical scores
+         * filled whole result pages; on the real library (153 songs, 13 mood queries, 2026-11-18) a
+         * 0.02 margin doubled the artists in the top 10 (2.0 -> 4.3) at a mean score cost of 0.004.
+         */
+        const val ARTIST_SPREAD_MARGIN = 0.02f
+
+        /**
+         * The first [limit] of [sorted] (best first), letting at most [ARTIST_SPREAD_CAP] songs of a
+         * lead artist through while another artist's song is within [ARTIST_SPREAD_MARGIN]. Nothing is
+         * dropped, only moved later; [exempt] songs (an artist the query names) keep their place.
+         */
+        internal fun <T> spreadArtists(
+            sorted: List<T>,
+            limit: Int,
+            artistOf: (T) -> String,
+            scoreOf: (T) -> Float,
+            exempt: (T) -> Boolean,
+        ): List<T> {
+            val remaining = sorted.toMutableList()
+            val result = ArrayList<T>(minOf(limit, sorted.size))
+            val counts = HashMap<String, Int>()
+
+            fun capped(item: T): Boolean {
+                val artist = artistOf(item)
+                return artist.isNotEmpty() && !exempt(item) && (counts[artist] ?: 0) >= ARTIST_SPREAD_CAP
+            }
+            while (remaining.isNotEmpty() && result.size < limit) {
+                val first = remaining.first()
+                val floor = scoreOf(first) - ARTIST_SPREAD_MARGIN
+                val pick = if (capped(first)) remaining.firstOrNull { !capped(it) && scoreOf(it) >= floor } ?: first else first
+                remaining.remove(pick)
+                result += pick
+                artistOf(pick).takeIf { it.isNotEmpty() }?.let { counts[it] = (counts[it] ?: 0) + 1 }
+            }
+            return result
+        }
 
         @Suppress("ReturnCount")
         internal fun isWeak(scores: List<Float>): Boolean {

@@ -29,7 +29,7 @@ class VybeIndexTest {
         index.append(listOf(song(1, 10, 1f, 0f, 0f), song(2, 20, 0f, 1f, 0f)))
         index.append(listOf(song(1, 11, 0f, 0f, 1f)))
         assertEquals(mapOf(1L to 11L, 2L to 20L), index.entries())
-        assertArrayEquals(floatArrayOf(0f, 0f, 1f), index.vectorOf(1), 0f)
+        assertArrayEquals(floatArrayOf(0f, 0f, 1f), index.vectorOf(1), INT8_TOLERANCE)
         assertEquals(3, index.recordCount())
     }
 
@@ -56,7 +56,7 @@ class VybeIndexTest {
         index.compact(mapOf(1L to 11L))
         assertEquals(1, index.recordCount())
         assertEquals(mapOf(1L to 11L), index.entries())
-        assertArrayEquals(floatArrayOf(0f, 0f, 1f), index.vectorOf(1), 0f)
+        assertArrayEquals(floatArrayOf(0f, 0f, 1f), index.vectorOf(1), INT8_TOLERANCE)
     }
 
     @Test
@@ -83,5 +83,78 @@ class VybeIndexTest {
     fun textHash_followsTheText() {
         assertEquals(textHash("Genres: trap"), textHash("Genres: trap"))
         assertTrue(textHash("Genres: trap") != textHash("Genres: trap metal"))
+    }
+
+    @Test
+    fun vectorsAreStoredAsInt8_aQuarterOfFloat32() {
+        val dimension = 768
+        val index = index(dimension = dimension)
+        index.append(List(10) { song(it.toLong(), it.toLong(), *unitVector(dimension, it)) })
+        val header = 8 + 4 + 4 + 2 + "gemma".length
+        assertEquals((header + 10 * (16 + 4 + dimension)).toLong(), tmp.root.resolve("vybe.idx").length())
+    }
+
+    @Test
+    fun int8Vectors_keepCosineScoresWithinTwoThousandths() {
+        val dimension = 768
+        val songs = List(200) { song(it.toLong(), it.toLong(), *unitVector(dimension, it)) }
+        val index = index(dimension = dimension)
+        index.append(songs)
+        val query = unitVector(dimension, 1_000)
+        val live = songs.associate { it.songId to it.textHash }
+        val stored = index.vectorsOf(live, live.keys)
+        songs.forEach { song ->
+            val exact = cosineSimilarity(query, song.vector)!!
+            val quantized = cosineSimilarity(query, stored.getValue(song.songId))!!
+            assertEquals(exact, quantized, 2e-3f)
+        }
+    }
+
+    @Test
+    fun aFloat32FileOfTheSameModel_isConvertedInPlace_withoutReEmbedding() {
+        val file = tmp.root.resolve("vybe.idx")
+        java.io.DataOutputStream(file.outputStream()).use { out ->
+            out.writeBytes("VYBEIDX1")
+            out.writeInt(1)
+            out.writeInt(3)
+            out.writeUTF("gemma")
+            listOf(1L to floatArrayOf(1f, 0f, 0f), 2L to floatArrayOf(0f, 0.6f, 0.8f)).forEach { (id, vector) ->
+                out.writeLong(id)
+                out.writeLong(id * 10)
+                vector.forEach(out::writeFloat)
+            }
+        }
+        val legacyLength = file.length()
+        assertEquals(3, VybeIndexFile.storedDimension(file, "gemma"))
+        val index = index()
+        assertEquals(mapOf(1L to 10L, 2L to 20L), index.entries())
+        assertArrayEquals(floatArrayOf(0f, 0.6f, 0.8f), index.vectorOf(2), INT8_TOLERANCE)
+        assertTrue(file.length() < legacyLength)
+        assertEquals(2, index.recordCount())
+        // Appending after the conversion keeps the converted records.
+        index.append(listOf(song(3, 30, 0f, 0f, 1f)))
+        assertEquals(setOf(1L, 2L, 3L), index.entries().keys)
+    }
+
+    @Test
+    fun aZeroVector_staysZero() {
+        val index = index()
+        index.append(listOf(song(1, 10, 0f, 0f, 0f)))
+        assertArrayEquals(floatArrayOf(0f, 0f, 0f), index.vectorOf(1), 0f)
+    }
+
+    /** A deterministic pseudo-random unit vector, like a real (L2-normalised) embedding. */
+    private fun unitVector(
+        dimension: Int,
+        seed: Int,
+    ): FloatArray {
+        val random = java.util.Random(seed.toLong())
+        val v = FloatArray(dimension) { random.nextGaussian().toFloat() }
+        val norm = kotlin.math.sqrt(v.sumOf { it.toDouble() * it }).toFloat()
+        return FloatArray(dimension) { v[it] / norm }
+    }
+
+    private companion object {
+        const val INT8_TOLERANCE = 0.01f
     }
 }
