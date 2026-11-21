@@ -3,6 +3,7 @@ package com.erhu.erhu.feature.library.remote
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.erhu.erhu.core.common.dispatcher.DispatcherProvider
+import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
 import com.erhu.erhu.core.database.repository.RemoteLibraryRepository
 import com.erhu.erhu.core.model.RemoteAccessException
 import com.erhu.erhu.core.model.RemoteProvider
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -108,6 +110,7 @@ class RemoteLibrariesViewModel
         private val driveAuth: GoogleDriveAuth,
         private val drive: com.erhu.erhu.core.network.remote.drive.DriveClient,
         private val driveTags: com.erhu.erhu.core.network.remote.drive.DriveMetadataReader,
+        private val librarySync: DriveLibrarySync,
         private val dispatchers: DispatcherProvider,
     ) : ViewModel() {
         private val _driveState = MutableStateFlow(AddServerState())
@@ -199,6 +202,15 @@ class RemoteLibrariesViewModel
         val sources: StateFlow<List<RemoteSource>> =
             repository.observeSources().stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
+        val syncedFolders: StateFlow<Map<Long, List<Pair<RemoteLibraryFolderEntity, FolderSyncStatus>>>> =
+            combine(librarySync.folders, librarySync.status) { folders, status ->
+                folders
+                    .map { folder -> folder to (status[folder.id] ?: FolderSyncStatus()) }
+                    .groupBy { (folder, _) -> folder.sourceId }
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyMap())
+
+        fun syncSource(sourceId: Long) = librarySync.syncSource(sourceId)
+
         private val _addServer = MutableStateFlow(AddServerState())
         val addServer: StateFlow<AddServerState> = _addServer.asStateFlow()
 
@@ -254,6 +266,7 @@ class RemoteLibrariesViewModel
         fun remove(source: RemoteSource) {
             viewModelScope.launch {
                 repository.removeSource(source.id)
+                librarySync.onSourceRemoved()
                 connections.forget(source.id)
                 driveAuth.invalidate(source.id)
                 driveTags.forget(source.id)

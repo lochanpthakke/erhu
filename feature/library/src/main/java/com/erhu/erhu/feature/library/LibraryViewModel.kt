@@ -781,8 +781,8 @@ class LibraryViewModel
         init {
             triggerScan()
             resolveArtistArtwork()
-            // Google Drive folders added to the Library pick up files added or removed in Drive.
-            driveLibrarySync.syncAllOnce()
+            // Remote folders stay cached until manually refreshed; clear any legacy periodic job.
+            driveLibrarySync.cancelBackgroundSync()
             restoreRecentSearches()
         }
 

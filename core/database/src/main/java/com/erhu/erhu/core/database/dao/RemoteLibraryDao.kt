@@ -1,5 +1,6 @@
 package com.erhu.erhu.core.database.dao
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -10,7 +11,18 @@ import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
 import com.erhu.erhu.core.database.entity.RemoteSourceEntity
 import com.erhu.erhu.core.database.entity.RemoteTrackEntity
 import com.erhu.erhu.core.model.RemoteIds
+import com.erhu.erhu.core.model.RemoteProvider
 import kotlinx.coroutines.flow.Flow
+
+data class LibraryFolderTrackRef(
+    val id: Long,
+    @ColumnInfo(name = "parent_folder") val parentFolder: String?,
+)
+
+data class RememberResult(
+    val tracks: List<RemoteTrackEntity>,
+    val changed: Boolean,
+)
 
 @Dao
 interface RemoteLibraryDao {
@@ -55,13 +67,26 @@ interface RemoteLibraryDao {
     )
 
     /** Tags read from the file itself; they outlive later listings that only know the file name. */
-    @Query("UPDATE remote_tracks SET title = :title, artist = :artist, album = :album, duration_ms = :durationMs WHERE id = :id")
+    @Query(
+        """
+        UPDATE remote_tracks
+        SET title = :title,
+            artist = :artist,
+            album = :album,
+            duration_ms = :durationMs,
+            genre = COALESCE(:genre, genre),
+            year = CASE WHEN :year > 0 THEN :year ELSE year END
+        WHERE id = :id
+        """,
+    )
     suspend fun setTags(
         id: Long,
         title: String,
         artist: String,
         album: String,
         durationMs: Long,
+        genre: String? = null,
+        year: Int = 0,
     )
 
     @Query("UPDATE remote_tracks SET genre = :genre, year = :year, lyrics = :lyrics, details_version = :version WHERE id = :id")
@@ -137,8 +162,8 @@ interface RemoteLibraryDao {
         parent: String,
     )
 
-    @Query("SELECT id FROM remote_tracks WHERE library_folder_id = :folderId")
-    suspend fun getLibraryFolderTrackIds(folderId: Long): List<Long>
+    @Query("SELECT id, parent_folder FROM remote_tracks WHERE library_folder_id = :folderId")
+    suspend fun getLibraryFolderTracks(folderId: Long): List<LibraryFolderTrackRef>
 
     @Query("UPDATE remote_tracks SET library_folder_id = NULL WHERE id IN (:ids)")
     suspend fun removeFromLibrary(ids: List<Long>)
@@ -149,57 +174,75 @@ interface RemoteLibraryDao {
 
     /**
      * Makes [tracks] (track id to the folder directly holding it) the whole content of [folderId]:
-     * tracks no longer found there leave the Library.
+     * tracks no longer found there leave the Library. Returns whether membership or folders changed.
      */
     @Transaction
     suspend fun replaceLibraryFolderTracks(
         folderId: Long,
         tracks: Map<Long, String>,
-    ) {
-        val gone = getLibraryFolderTrackIds(folderId).filterNot { it in tracks }
+    ): Boolean {
+        val existing = getLibraryFolderTracks(folderId).associate { it.id to it.parentFolder }
+        val gone = existing.keys.filterNot { it in tracks }
         gone.chunked(LIBRARY_CHUNK).forEach { removeFromLibrary(it) }
-        tracks.forEach { (id, parent) -> putInLibraryFolder(id, folderId, parent) }
+        val toUpdate = tracks.filter { (id, parent) -> existing[id] != parent }
+        toUpdate.forEach { (id, parent) -> putInLibraryFolder(id, folderId, parent) }
+        return gone.isNotEmpty() || toUpdate.isNotEmpty()
     }
 
     /**
-     * Stores what the provider says about each track and returns the rows in the same order. A
-     * track seen before keeps its local id; a new one gets the next id in the remote range.
+     * Stores what the provider says about each track and returns the rows in the same order plus
+     * whether anything in `remote_tracks` changed. A track seen before keeps its local id and
+     * original [RemoteTrackEntity.updatedAt]; a new one gets the next id in the remote range.
      */
     @Transaction
-    suspend fun remember(tracks: List<RemoteTrackEntity>): List<RemoteTrackEntity> =
-        tracks.map { fresh ->
-            val known = findTrack(fresh.sourceId, fresh.remoteId)
-            if (known != null) {
-                // A listing without a duration only knows the file name (Drive): keep tags already read from the file.
-                val merged =
-                    if (fresh.durationMs == 0L && known.durationMs > 0L) {
-                        fresh.copy(
-                            id = known.id,
-                            title = known.title,
-                            artist = known.artist,
-                            album = known.album,
-                            durationMs = known.durationMs,
+    suspend fun rememberWithChanges(tracks: List<RemoteTrackEntity>): RememberResult {
+        var changed = false
+        val resolved =
+            tracks.map { fresh ->
+                val known = findTrack(fresh.sourceId, fresh.remoteId)
+                if (known != null) {
+                    // A listing without a duration only knows the file name (Drive): keep tags already read from the file.
+                    val merged =
+                        if (fresh.durationMs == 0L && known.durationMs > 0L) {
+                            fresh.copy(
+                                id = known.id,
+                                title = known.title,
+                                artist = known.artist,
+                                album = known.album,
+                                durationMs = known.durationMs,
+                            )
+                        } else {
+                            fresh.copy(id = known.id)
+                        }
+                    val updated =
+                        merged.copy(
+                            updatedAt = known.updatedAt,
+                            isFavorite = if (known.provider == RemoteProvider.GOOGLE_DRIVE.key) known.isFavorite else fresh.isFavorite,
+                            libraryFolderId = known.libraryFolderId,
+                            parentFolder = known.parentFolder,
+                            // The server's current genre/year when it reports one, else what a details pass found.
+                            genre = fresh.genre ?: known.genre,
+                            year = fresh.year.takeIf { it > 0 } ?: known.year,
+                            lyrics = known.lyrics,
+                            detailsVersion = known.detailsVersion,
                         )
-                    } else {
-                        fresh.copy(id = known.id)
+                    if (updated != known) {
+                        changed = true
+                        updateTrack(updated)
                     }
-                merged
-                    .copy(
-                        libraryFolderId = known.libraryFolderId,
-                        parentFolder = known.parentFolder,
-                        // The server's current genre/year when it reports one, else what a details pass found.
-                        genre = fresh.genre ?: known.genre,
-                        year = fresh.year.takeIf { it > 0 } ?: known.year,
-                        lyrics = known.lyrics,
-                        detailsVersion = known.detailsVersion,
-                    ).also { updateTrack(it) }
-            } else {
-                val id = insertTrack(fresh.copy(id = 0L))
-                // The id sequence is seeded when the table is created; anything lower could collide with a device file.
-                check(RemoteIds.isRemote(id)) { "remote_tracks id sequence was not seeded" }
-                fresh.copy(id = id)
+                    updated
+                } else {
+                    val id = insertTrack(fresh.copy(id = 0L))
+                    // The id sequence is seeded when the table is created; anything lower could collide with a device file.
+                    check(RemoteIds.isRemote(id)) { "remote_tracks id sequence was not seeded" }
+                    changed = true
+                    fresh.copy(id = id)
+                }
             }
-        }
+        return RememberResult(tracks = resolved, changed = changed)
+    }
+
+    suspend fun remember(tracks: List<RemoteTrackEntity>): List<RemoteTrackEntity> = rememberWithChanges(tracks).tracks
 }
 
 /** Stay well below SQLite's 999 bound-variable limit. */

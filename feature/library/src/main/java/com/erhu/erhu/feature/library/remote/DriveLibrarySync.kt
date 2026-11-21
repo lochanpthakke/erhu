@@ -9,19 +9,19 @@ import androidx.core.app.NotificationCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.erhu.erhu.core.common.dispatcher.DispatcherProvider
 import com.erhu.erhu.core.common.result.AppResult
 import com.erhu.erhu.core.database.entity.RemoteDetails
 import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
+import com.erhu.erhu.core.database.entity.RemoteTrackEntity
 import com.erhu.erhu.core.database.repository.LibraryRepository
 import com.erhu.erhu.core.database.repository.RemoteLibraryRepository
 import com.erhu.erhu.core.datastore.repository.ThemeRepository
@@ -35,6 +35,7 @@ import com.erhu.erhu.core.network.remote.drive.DriveItem
 import com.erhu.erhu.core.network.remote.drive.DriveMetadataReader
 import com.erhu.erhu.core.network.remote.drive.DriveOrder
 import com.erhu.erhu.core.network.remote.drive.DrivePage
+import com.erhu.erhu.core.network.remote.drive.DriveTags
 import com.erhu.erhu.core.network.repository.GenreLookup
 import com.erhu.erhu.core.network.repository.MetadataRepository
 import com.erhu.erhu.feature.library.effectiveThreshold
@@ -43,6 +44,7 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -56,7 +58,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -99,7 +100,7 @@ class DriveLibrarySync
 
         val folders = repository.observeLibraryFolders()
 
-        private var syncedThisRun = false
+        private var periodicCancelled = false
 
         fun add(
             sourceId: Long,
@@ -110,8 +111,7 @@ class DriveLibrarySync
             scope.launch {
                 val folder = repository.addLibraryFolder(sourceId, folderId, driveId, name)
                 set(folder.id) { FolderSyncStatus(running = true) }
-                scheduleBackgroundSync()
-                runInBackground()
+                runInBackground(folderId = folder.id)
             }
         }
 
@@ -121,9 +121,7 @@ class DriveLibrarySync
                     repository.removeLibraryFolder(folder.id)
                     _status.update { it - folder.id }
                 }
-                if (repository.getLibraryFolders().isEmpty()) {
-                    WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
-                } else {
+                if (repository.getLibraryFolders().isNotEmpty()) {
                     // Tracks the removed entry shared with another (an artist inside the whole server) come back.
                     runInBackground()
                 }
@@ -132,59 +130,88 @@ class DriveLibrarySync
         }
 
         fun syncNow(folder: RemoteLibraryFolderEntity) {
+            if (_status.value[folder.id]?.running == true) return
             set(folder.id) { FolderSyncStatus(running = true) }
-            runInBackground()
+            runInBackground(folderId = folder.id)
         }
 
-        /** Once per app run (the Library opening): picks up files added to or removed from Drive since. */
-        fun syncAllOnce() {
-            if (syncedThisRun) return
-            syncedThisRun = true
+        /** Manually refreshes every Library folder belonging to [sourceId]. */
+        fun syncSource(sourceId: Long) {
             scope.launch {
-                if (repository.getLibraryFolders().isEmpty()) return@launch
-                scheduleBackgroundSync()
-                runInBackground()
+                val targets = repository.getLibraryFolders().filter { it.sourceId == sourceId }
+                if (targets.isEmpty()) return@launch
+                var anyStarted = false
+                targets.forEach { folder ->
+                    if (_status.value[folder.id]?.running != true) {
+                        set(folder.id) { FolderSyncStatus(running = true) }
+                        anyStarted = true
+                    }
+                }
+                if (anyStarted) runInBackground(sourceId = sourceId)
             }
+        }
+
+        /** Drops tracks of a disconnected remote source from the local library index. */
+        fun onSourceRemoved() {
+            scope.launch {
+                library.requestRescanAfterChange()
+            }
+        }
+
+        /** Cancels any legacy 6-hour periodic remote sync job left behind by older builds. */
+        fun cancelBackgroundSync() {
+            if (periodicCancelled) return
+            periodicCancelled = true
+            WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
         }
 
         /** Every folder in the Library, one after another; returns when all are done (the background worker). */
         suspend fun syncAll() = repository.getLibraryFolders().forEach { sync(it) }
+
+        /** One folder in the Library (for manual refresh or initial add). */
+        suspend fun syncFolder(folderId: Long) {
+            repository.getLibraryFolders().firstOrNull { it.id == folderId }?.let { sync(it) }
+        }
+
+        /** Every Library folder belonging to [sourceId]. */
+        suspend fun syncSourceFolders(sourceId: Long) {
+            repository.getLibraryFolders().filter { it.sourceId == sourceId }.forEach { sync(it) }
+        }
 
         /**
          * Runs a sync now as WorkManager work with its own notification, so listing and reading 200+
          * songs carries on when erhu is minimised or another app is open. A request made while one
          * runs is queued after it (a folder just added is synced too).
          */
-        private fun runInBackground() {
-            val request =
+        private fun runInBackground(
+            folderId: Long? = null,
+            sourceId: Long? = null,
+        ) {
+            val builder =
                 OneTimeWorkRequestBuilder<DriveLibrarySyncWorker>()
                     .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-                    .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(NOW_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
-        }
-
-        /**
-         * Syncs the Library's Drive folders in the background every few hours while there is a
-         * connection and the battery is not low. Kept (not restarted) when already scheduled.
-         */
-        private fun scheduleBackgroundSync() {
-            val request =
-                PeriodicWorkRequestBuilder<DriveLibrarySyncWorker>(BACKGROUND_INTERVAL_HOURS, TimeUnit.HOURS)
-                    .setConstraints(
-                        Constraints
-                            .Builder()
-                            .setRequiredNetworkType(NetworkType.CONNECTED)
-                            .setRequiresBatteryNotLow(true)
-                            .build(),
-                    ).build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request)
+            if (folderId != null || sourceId != null) {
+                val data =
+                    Data
+                        .Builder()
+                        .apply {
+                            if (folderId != null) putLong(KEY_FOLDER_ID, folderId)
+                            if (sourceId != null) putLong(KEY_SOURCE_ID, sourceId)
+                        }.build()
+                builder.setInputData(data)
+            }
+            WorkManager.getInstance(context).enqueueUniqueWork(NOW_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, builder.build())
         }
 
         @Suppress("TooGenericExceptionCaught")
         private suspend fun sync(folder: RemoteLibraryFolderEntity) =
             lock.withLock {
-                val source = repository.getSource(folder.sourceId) ?: return@withLock
+                val source = repository.getSource(folder.sourceId)
+                if (source == null) {
+                    set(folder.id) { it.copy(running = false) }
+                    return@withLock
+                }
                 set(folder.id) { FolderSyncStatus(running = true) }
                 try {
                     val found =
@@ -196,13 +223,22 @@ class DriveLibrarySync
                             list(folder).map { (item, parent) -> item.toTrack() to parent }
                         }
                     set(folder.id) { it.copy(found = found.size) }
-                    val songs = repository.toSongs(source, found.map { it.first })
-                    repository.setLibraryFolderTracks(folder.id, songs.zip(found).associate { (song, item) -> song.id to item.second })
-                    // Shown at once by file name; the tag pass below fills in titles, artists, albums and covers.
-                    library.requestRescanAfterChange()
-                    readTags(folder, songs, readsFiles = source.provider == RemoteProvider.GOOGLE_DRIVE)
+                    val synced = repository.syncSongs(source, found.map { it.first })
+                    val membershipChanged =
+                        repository.setLibraryFolderTracks(
+                            folder.id,
+                            synced.songs.zip(found).associate { (song, item) -> song.id to item.second },
+                        )
+                    val listingChanged = synced.changed || membershipChanged
+                    readTags(
+                        folder = folder,
+                        songs = synced.songs,
+                        readsFiles = source.provider == RemoteProvider.GOOGLE_DRIVE,
+                        listingChanged = listingChanged,
+                    )
                     set(folder.id) { it.copy(running = false) }
                 } catch (e: CancellationException) {
+                    set(folder.id) { it.copy(running = false) }
                     throw e
                 } catch (e: Exception) {
                     set(folder.id) { it.copy(running = false, message = e.remoteMessage()) }
@@ -288,150 +324,235 @@ class DriveLibrarySync
             }
         }
 
+        private class PendingRemoteRead(
+            val song: Song,
+            val fileId: String,
+            val needsFile: Boolean,
+            val needsDetails: Boolean,
+        )
+
         /**
-         * Two passes, so covers and names show within minutes rather than after every online lookup:
+         * Two passes, so covers and names show together without flooding the local scanner:
          * 1. the file's own tags (title, artist, album, length, genre, year, cover) from the start of
          *    each file, unless already read; a few files at a time (see [DriveMetadataReader]);
          * 2. then, once per track, in order: a genre the file lacks from a confident Fix Tags match
          *    (MusicBrainz, Deezer, iTunes; at least the Fix Tags confidence setting), and plain lyrics
-         *    from LRCLIB. These are rate-limited (about one request a second), which is why they no
-         *    longer sit between one file's cover and the next.
-         * A track whose lookup failed (offline) is tried again next sync; one that simply has no genre
-         * or lyrics online is not asked again. The Library refreshes as tracks are done.
+         *    from LRCLIB. These are rate-limited (about one request a second).
+         * A track whose lookup failed (offline) is tried again next manual sync without re-reading its
+         * audio file; one that simply has no genre or lyrics online is not asked again.
          */
-        @Suppress("CyclomaticComplexMethod", "NestedBlockDepth")
         private suspend fun readTags(
             folder: RemoteLibraryFolderEntity,
             songs: List<Song>,
             readsFiles: Boolean,
+            listingChanged: Boolean,
         ) {
             val stored = repository.getTracks(songs.map { it.id })
-
-            class Pending(
-                val song: Song,
-                val fileId: String,
-                val needsFile: Boolean,
-                val needsDetails: Boolean,
-            )
-            val pending =
-                songs.mapNotNull { listed ->
-                    val fileId = listed.remote?.remoteId ?: return@mapNotNull null
-                    val row = stored[listed.id]
-                    // A Subsonic server already reports tags and serves covers: only Drive files are read.
-                    val needsDetails = (row?.detailsVersion ?: 0) < RemoteDetails.VERSION
-                    val needsFile =
-                        readsFiles && listed.durationMs == 0L || tags.cachedCover(folder.sourceId, fileId) == null || needsDetails
-                    Pending(listed, fileId, needsFile, needsDetails).takeIf { needsFile || needsDetails }
-                }
-            if (pending.isEmpty()) return
-            val fileGenres = HashMap<Long, String?>()
-            val years = HashMap<Long, Int>()
-            val tagged = HashMap<Long, Song>()
+            val pending = collectPendingReads(folder, songs, stored, readsFiles)
+            set(folder.id) { it.copy(tagged = songs.size - pending.size) }
+            if (pending.isEmpty()) {
+                if (listingChanged) library.requestRescanAfterChange()
+                return
+            }
+            val fileGenres = HashMap<Long, String?>(pending.size)
+            val years = HashMap<Long, Int>(pending.size)
+            val tagged = HashMap<Long, Song>(pending.size)
             pending.forEach { item ->
                 fileGenres[item.song.id] = stored[item.song.id]?.genre
                 years[item.song.id] = stored[item.song.id]?.year ?: 0
             }
-            var sinceRescan = 0
-
-            suspend fun done() {
-                set(folder.id) { it.copy(tagged = it.tagged + 1) }
-                if (++sinceRescan >= RESCAN_EVERY) {
-                    sinceRescan = 0
+            var pass1NeedsRescan = listingChanged
+            var pass2NeedsRescan = false
+            try {
+                runFileTagPass(folder, pending, fileGenres, years, tagged) { pass1NeedsRescan = true }
+                if (pass1NeedsRescan) {
                     library.requestRescanAfterChange()
+                    pass1NeedsRescan = false
+                }
+                runOnlineDetailsPass(folder, pending, tagged, fileGenres, years) { pass2NeedsRescan = true }
+                if (pass2NeedsRescan) {
+                    library.requestRescanAfterChange()
+                    pass2NeedsRescan = false
+                }
+            } finally {
+                if (pass1NeedsRescan || pass2NeedsRescan) {
+                    withContext(NonCancellable) { library.requestRescanAfterChange() }
                 }
             }
+        }
+
+        private fun collectPendingReads(
+            folder: RemoteLibraryFolderEntity,
+            songs: List<Song>,
+            stored: Map<Long, RemoteTrackEntity>,
+            readsFiles: Boolean,
+        ): List<PendingRemoteRead> =
+            songs.mapNotNull { listed ->
+                val fileId = listed.remote?.remoteId ?: return@mapNotNull null
+                val row = stored[listed.id]
+                val hasCover = readsFiles && tags.hasCachedCover(folder.sourceId, fileId)
+                val (needsFile, needsDetails) =
+                    planPendingRemoteRead(
+                        readsFiles = readsFiles,
+                        durationMs = listed.durationMs,
+                        hasCachedCover = hasCover,
+                        detailsVersion = row?.detailsVersion ?: 0,
+                    )
+                PendingRemoteRead(listed, fileId, needsFile, needsDetails).takeIf { needsFile || needsDetails }
+            }
+
+        private suspend fun runFileTagPass(
+            folder: RemoteLibraryFolderEntity,
+            pending: List<PendingRemoteRead>,
+            fileGenres: MutableMap<Long, String?>,
+            years: MutableMap<Long, Int>,
+            tagged: MutableMap<Long, Song>,
+            onChanged: () -> Unit,
+        ) {
             // Pass 1: files. Chunks keep the order of results (and of the stored tags) stable.
-            pending.filter { it.needsFile }.chunked(PARALLEL_FILE_READS).forEach { chunk ->
+            for (chunk in pending.filter { it.needsFile }.chunked(PARALLEL_FILE_READS)) {
                 val reads = coroutineScope { chunk.map { item -> async { item to tags.read(folder.sourceId, item.fileId) } }.awaitAll() }
-                reads.forEach { (item, read) ->
-                    if (read != null) {
-                        tagged[item.song.id] = repository.applyTags(item.song, read.title, read.artist, read.album, read.durationMs)
-                        read.genre?.let { fileGenres[item.song.id] = it }
-                        if (read.year > 0) years[item.song.id] = read.year
-                    }
-                    if (!item.needsDetails) done()
+                for ((item, read) in reads) {
+                    applyFileRead(folder, item, read, fileGenres, years, tagged, onChanged)
                 }
             }
-            if (sinceRescan > 0) {
-                sinceRescan = 0
-                library.requestRescanAfterChange()
+        }
+
+        private suspend fun applyFileRead(
+            folder: RemoteLibraryFolderEntity,
+            item: PendingRemoteRead,
+            read: DriveTags?,
+            fileGenres: MutableMap<Long, String?>,
+            years: MutableMap<Long, Int>,
+            tagged: MutableMap<Long, Song>,
+            onChanged: () -> Unit,
+        ) {
+            if (read != null) {
+                tagged[item.song.id] =
+                    repository.applyTags(
+                        song = item.song,
+                        title = read.title,
+                        artist = read.artist,
+                        album = read.album,
+                        durationMs = read.durationMs,
+                        genre = read.genre,
+                        year = read.year,
+                    )
+                read.genre?.let { fileGenres[item.song.id] = it }
+                if (read.year > 0) years[item.song.id] = read.year
+                onChanged()
             }
+            if (!item.needsDetails) set(folder.id) { it.copy(tagged = it.tagged + 1) }
+        }
+
+        private suspend fun runOnlineDetailsPass(
+            folder: RemoteLibraryFolderEntity,
+            pending: List<PendingRemoteRead>,
+            tagged: Map<Long, Song>,
+            fileGenres: Map<Long, String?>,
+            years: Map<Long, Int>,
+            onChanged: () -> Unit,
+        ) {
             // Pass 2: online details, rate-limited.
             pending.filter { it.needsDetails }.forEach { item ->
-                lookUpDetails(tagged[item.song.id] ?: item.song, fileGenres[item.song.id], years[item.song.id] ?: 0)
-                done()
+                val changed = lookUpDetails(tagged[item.song.id] ?: item.song, fileGenres[item.song.id], years[item.song.id] ?: 0)
+                if (changed) onChanged()
+                set(folder.id) { it.copy(tagged = it.tagged + 1) }
             }
-            if (sinceRescan > 0) library.requestRescanAfterChange()
         }
+
+        private data class MetadataLookup(
+            val genre: String?,
+            val year: Int,
+            val answered: Boolean,
+        )
+
+        private data class LyricsLookup(
+            val lyrics: String?,
+            val answered: Boolean,
+        )
 
         /** Step 2 of [readTags]. Stored only when every lookup answered, so a network failure is retried. */
         private suspend fun lookUpDetails(
             song: Song,
             fileGenre: String?,
             fileYear: Int,
-        ) {
-            if (song.title.isBlank()) return
+        ): Boolean {
+            if (song.title.isBlank()) {
+                repository.applyDetails(song.id, fileGenre, fileYear, null)
+                return false
+            }
             val artist = song.artist.takeUnless { it.isBlank() || it.equals("Unknown Artist", true) }
+            val metadataResult = lookUpGenreAndYear(song, artist, fileGenre, fileYear)
+            val lyricsResult = fetchPlainLyrics(song, artist)
+            val saved = metadataResult.answered && lyricsResult.answered
+            if (saved) {
+                repository.applyDetails(song.id, metadataResult.genre, metadataResult.year, lyricsResult.lyrics)
+            }
+            return saved &&
+                (
+                    (metadataResult.genre != null && metadataResult.genre != fileGenre) ||
+                        (metadataResult.year > 0 && metadataResult.year != fileYear) ||
+                        !lyricsResult.lyrics.isNullOrBlank()
+                )
+        }
+
+        private suspend fun lookUpGenreAndYear(
+            song: Song,
+            artist: String?,
+            fileGenre: String?,
+            fileYear: Int,
+        ): MetadataLookup {
+            if (fileGenre != null && fileYear > 0) return MetadataLookup(fileGenre, fileYear, answered = true)
             var answered = true
             var genre = fileGenre
             var year = fileYear
-            if (genre == null || year == 0) {
-                val accept = effectiveThreshold(theme.metadataConfidenceThreshold.value)
-                when (
-                    val found =
-                        metadata.searchAndScoreTrack(
-                            song.title,
-                            artist,
-                            song.album.takeIf { it.isNotBlank() },
-                            song.durationMs.takeIf {
-                                it >
-                                    0
-                            },
-                        )
-                ) {
-                    is AppResult.Success -> {
-                        val match = found.data.maxByOrNull { it.confidenceScore }?.takeIf { it.confidenceScore >= accept }
-                        if (match != null) {
-                            if (year == 0) year = match.year.takeIf { it in YEARS } ?: 0
-                            if (genre == null) {
-                                when (val lookup = metadata.lookupGenre(match, found.data)) {
-                                    is GenreLookup.Found -> genre = lookup.genre
-                                    is GenreLookup.NotFound -> Unit
-                                    is GenreLookup.Failed -> answered = false
-                                }
-                            }
-                        }
-                    }
-                    is AppResult.Error -> answered = false
-                }
-                // The metadata services ask clients for about one request a second.
-                delay(ONLINE_GAP_MS)
+            val accept = effectiveThreshold(theme.metadataConfidenceThreshold.value)
+            val found =
+                metadata.searchAndScoreTrack(
+                    song.title,
+                    artist,
+                    song.album.takeIf { it.isNotBlank() },
+                    song.durationMs.takeIf { it > 0 },
+                )
+            val candidates = (found as? AppResult.Success)?.data
+            val match = candidates?.maxByOrNull { it.confidenceScore }?.takeIf { it.confidenceScore >= accept }
+            if (found is AppResult.Error) answered = false
+            if (match != null && year == 0) year = match.year.takeIf { it in YEARS } ?: 0
+            if (candidates != null && match != null && genre == null) {
+                val lookup = metadata.lookupGenre(match, candidates)
+                if (lookup is GenreLookup.Found) genre = lookup.genre
+                if (lookup is GenreLookup.Failed) answered = false
             }
-            val lyrics =
-                if (artist == null) {
-                    null
-                } else {
-                    when (
-                        val found =
-                            metadata.fetchLyrics(
-                                song.title,
-                                artist,
-                                song.album.takeIf { it.isNotBlank() },
-                                (
-                                    song.durationMs /
-                                        1000
-                                ).toInt().takeIf { it > 0 },
-                            )
-                    ) {
-                        is AppResult.Success ->
-                            found.data?.let {
-                                it.plainLyrics?.takeIf(String::isNotBlank)
-                                    ?: it.syncedLyrics?.let(::withoutTimestamps)
-                            }
-                        is AppResult.Error -> null.also { answered = false }
-                    }
+            // The metadata services ask clients for about one request a second.
+            delay(ONLINE_GAP_MS)
+            return MetadataLookup(genre, year, answered)
+        }
+
+        private suspend fun fetchPlainLyrics(
+            song: Song,
+            artist: String?,
+        ): LyricsLookup {
+            if (artist == null) return LyricsLookup(lyrics = null, answered = true)
+            return when (
+                val found =
+                    metadata.fetchLyrics(
+                        song.title,
+                        artist,
+                        song.album.takeIf { it.isNotBlank() },
+                        (song.durationMs / MS_PER_SECOND).toInt().takeIf { it > 0 },
+                    )
+            ) {
+                is AppResult.Success -> {
+                    val text =
+                        found.data?.let {
+                            it.plainLyrics?.takeIf(String::isNotBlank)
+                                ?: it.syncedLyrics?.let(::withoutTimestamps)
+                        }
+                    LyricsLookup(lyrics = text, answered = true)
                 }
-            if (answered) repository.applyDetails(song.id, genre, year, lyrics)
+                is AppResult.Error -> LyricsLookup(lyrics = null, answered = false)
+            }
         }
 
         private fun set(
@@ -442,10 +563,10 @@ class DriveLibrarySync
         internal companion object {
             const val WORK_NAME = "drive-library-sync"
             const val NOW_WORK_NAME = "drive-library-sync-now"
-            const val BACKGROUND_INTERVAL_HOURS = 6L
+            const val KEY_FOLDER_ID = "folder_id"
+            const val KEY_SOURCE_ID = "source_id"
             const val MAX_DEPTH = 8
             const val MAX_FILES = 5_000
-            const val RESCAN_EVERY = 40
 
             /** Files whose tags and cover are read at once (the reader itself allows this many). */
             const val PARALLEL_FILE_READS = 3
@@ -458,11 +579,27 @@ class DriveLibrarySync
             const val ALBUM_PREFIX = "album:"
             const val PLAYLIST_PREFIX = "playlist:"
             const val ONLINE_GAP_MS = 1_100L
+            const val MS_PER_SECOND = 1_000L
             val YEARS = 1900..2099
         }
     }
 
-/** The periodic background sync of the Library's Google Drive folders (see [DriveLibrarySync]). */
+/**
+ * Decides which remote sync passes a track needs. Online details never re-trigger an audio file read,
+ * and Subsonic tracks (`readsFiles = false`) never run file reads.
+ */
+internal fun planPendingRemoteRead(
+    readsFiles: Boolean,
+    durationMs: Long,
+    hasCachedCover: Boolean,
+    detailsVersion: Int,
+): Pair<Boolean, Boolean> {
+    val needsDetails = detailsVersion < RemoteDetails.VERSION
+    val needsFile = readsFiles && (durationMs == 0L || !hasCachedCover)
+    return needsFile to needsDetails
+}
+
+/** Manual background sync of the Library's remote folders (see [DriveLibrarySync]). */
 @HiltWorker
 class DriveLibrarySyncWorker
     @AssistedInject
@@ -475,7 +612,7 @@ class DriveLibrarySyncWorker
         override suspend fun doWork(): Result =
             coroutineScope {
                 // Foreground with a progress notification, so the system keeps it running while erhu is in
-                // the background. A periodic run the system will not promote simply runs without it.
+                // the background.
                 runCatching { setForeground(getForegroundInfo()) }
                 val progress =
                     launch {
@@ -487,7 +624,13 @@ class DriveLibrarySyncWorker
                         }
                     }
                 try {
-                    sync.syncAll()
+                    val folderId = inputData.getLong(DriveLibrarySync.KEY_FOLDER_ID, -1L)
+                    val sourceId = inputData.getLong(DriveLibrarySync.KEY_SOURCE_ID, -1L)
+                    when {
+                        folderId > 0L -> sync.syncFolder(folderId)
+                        sourceId > 0L -> sync.syncSourceFolders(sourceId)
+                        else -> sync.syncAll()
+                    }
                 } finally {
                     progress.cancel()
                 }

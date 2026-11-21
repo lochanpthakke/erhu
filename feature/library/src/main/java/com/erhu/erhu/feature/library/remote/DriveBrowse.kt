@@ -329,7 +329,16 @@ class DriveBrowseViewModel
                     _state.value.tracks.filter { it.durationMs == 0L }.take(TAG_PASS_LIMIT).forEach { song ->
                         val fileId = song.remote?.remoteId ?: return@forEach
                         val read = withContext(dispatchers.io) { tags.read(sourceId, fileId) } ?: return@forEach
-                        val updated = repository.applyTags(song, read.title, read.artist, read.album, read.durationMs)
+                        val updated =
+                            repository.applyTags(
+                                song = song,
+                                title = read.title,
+                                artist = read.artist,
+                                album = read.album,
+                                durationMs = read.durationMs,
+                                genre = read.genre,
+                                year = read.year,
+                            )
                         _state.update { page -> page.copy(tracks = page.tracks.map { if (it.id == updated.id) updated else it }) }
                     }
                 }
@@ -641,5 +650,5 @@ internal fun librarySummary(status: FolderSyncStatus): String =
         status.running && status.found == 0 -> "Looking for music in Drive..."
         status.running -> "Syncing: ${status.found} songs found, ${status.tagged} read"
         status.message != null -> "Last sync failed: ${status.message}. Tap to try again"
-        else -> "Tap to sync now. Syncing carries on with erhu minimised, and repeats every few hours"
+        else -> "Tap to refresh now. Synced music stays cached until you refresh again"
     }

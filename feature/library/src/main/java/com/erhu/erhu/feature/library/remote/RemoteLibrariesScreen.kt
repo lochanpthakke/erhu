@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.erhu.erhu.core.database.entity.RemoteLibraryFolderEntity
 import com.erhu.erhu.core.designsystem.component.ActionButton
 import com.erhu.erhu.core.designsystem.component.AppScaffold
 import com.erhu.erhu.core.designsystem.component.GlassAlertDialog
@@ -61,6 +63,7 @@ fun RemoteLibrariesScreen(
     viewModel: RemoteLibrariesViewModel = hiltViewModel(),
 ) {
     val sources by viewModel.sources.collectAsStateWithLifecycle()
+    val syncedFolders by viewModel.syncedFolders.collectAsStateWithLifecycle()
     val addServer by viewModel.addServer.collectAsStateWithLifecycle()
     var removing by remember { mutableStateOf<RemoteSource?>(null) }
     val driveState by viewModel.driveState.collectAsStateWithLifecycle()
@@ -113,6 +116,7 @@ fun RemoteLibrariesScreen(
             if (sources.isNotEmpty()) {
                 item(key = "connected-heading") { SectionHeading("Connected") }
                 items(sources, key = { it.id }) { source ->
+                    val sourceFolders = syncedFolders[source.id].orEmpty()
                     Column(Modifier.fillMaxWidth().groupSurface()) {
                         GroupRow(
                             title = source.name,
@@ -121,6 +125,16 @@ fun RemoteLibrariesScreen(
                             trailing = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             onClick = { onOpenSource(source) },
                         )
+                        if (sourceFolders.isNotEmpty()) {
+                            GroupDivider()
+                            GroupRow(
+                                title = "Refresh synced music",
+                                summary = sourceSyncSummary(sourceFolders),
+                                icon = Icons.Default.Refresh,
+                                enabled = sourceFolders.none { it.second.running },
+                                onClick = { viewModel.syncSource(source.id) },
+                            )
+                        }
                         GroupDivider()
                         GroupRow(title = "Disconnect", icon = Icons.Default.LinkOff, onClick = { removing = source })
                     }
@@ -203,6 +217,21 @@ fun RemoteLibrariesScreen(
 
 /** The Google Drive section, greyed out in builds that cannot sign in to Google. */
 private const val UNAVAILABLE_ALPHA = 0.38f
+
+private fun sourceSyncSummary(folders: List<Pair<RemoteLibraryFolderEntity, FolderSyncStatus>>): String {
+    val running = folders.map { it.second }.filter { it.running }
+    val failure = folders.firstNotNullOfOrNull { it.second.message }
+    val countLabel = if (folders.size == 1) "1 synced folder" else "${folders.size} synced folders"
+    return when {
+        running.isNotEmpty() -> {
+            val found = running.sumOf { it.found }
+            val tagged = running.sumOf { it.tagged }
+            if (found == 0) "Looking for music..." else "Syncing: $found songs found, $tagged read"
+        }
+        failure != null -> "Last sync failed: $failure. Tap to try again"
+        else -> "$countLabel • Tap to refresh now"
+    }
+}
 
 private fun RemoteSource.summary(): String {
     if (provider == RemoteProvider.GOOGLE_DRIVE) return "Google Drive • Read-only"

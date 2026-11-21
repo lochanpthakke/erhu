@@ -45,93 +45,133 @@ class DriveTags(
  * open the authorized stream. It fetches only the parts of the file it needs (byte ranges), never
  * the whole file, and never writes to Drive. A few files at a time ([PARALLEL_READS]), so a long
  * folder neither floods the connection nor makes a cover shown on screen wait behind the whole
- * folder. The cover is kept in the app's cache folder (an empty file means "has no cover").
+ * folder. The cover is kept in the app's persistent files folder (an empty file means "has no cover").
  */
 @Singleton
-class DriveMetadataReader
+class DriveMetadataReader internal constructor(
+    private val covers: File,
+    private val legacyCovers: File,
+    private val tokens: DriveTokenProvider,
+    private val client: DriveClient,
+) {
     @Inject
     constructor(
         @ApplicationContext context: Context,
-        private val tokens: DriveTokenProvider,
-        private val client: DriveClient,
-    ) {
-        private val covers = File(context.cacheDir, "remote-art")
+        tokens: DriveTokenProvider,
+        client: DriveClient,
+    ) : this(
+        covers = File(context.filesDir, "remote-art"),
+        legacyCovers = File(context.cacheDir, "remote-art"),
+        tokens = tokens,
+        client = client,
+    )
 
-        private val reads = Semaphore(PARALLEL_READS)
+    private val reads = Semaphore(PARALLEL_READS)
 
-        /** Blocking. Null when the file could not be read (offline, unsupported, sign-in needed). */
-        fun read(
-            sourceId: Long,
-            fileId: String,
-        ): DriveTags? {
-            reads.acquireUninterruptibly()
-            return try {
-                readFile(sourceId, fileId)
-            } finally {
-                reads.release()
-            }
-        }
-
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
-        private fun readFile(
-            sourceId: Long,
-            fileId: String,
-        ): DriveTags? {
-            val retriever = MediaMetadataRetriever()
-            return try {
-                retriever.setDataSource(client.mediaUrl(fileId), mapOf("Authorization" to "Bearer ${tokens.token(sourceId)}"))
-                val tags =
-                    DriveTags(
-                        title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
-                        artist =
-                            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                                ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
-                        album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM),
-                        durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L,
-                        genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE)?.let(::readableGenre),
-                        year =
-                            (
-                                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR)
-                                    ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE)
-                            )?.let(::yearOf) ?: 0,
-                    )
-                covers.mkdirs()
-                val picture = retriever.embeddedPicture
-                coverFile(sourceId, fileId).writeBytes(picture ?: ByteArray(0))
-                // Covers already on screen as placeholders try again now, not on the next scroll.
-                if (picture != null && picture.isNotEmpty()) ArtworkLoader.notifyRemoteCoversChanged()
-                tags
-            } catch (e: Exception) {
-                null
-            } finally {
-                try {
-                    retriever.release()
-                } catch (e: Exception) {
-                    // Nothing useful to do if release fails.
-                }
-            }
-        }
-
-        /** The cached cover; an empty array when the file is known to have none; null when not read yet. */
-        fun cachedCover(
-            sourceId: Long,
-            fileId: String,
-        ): ByteArray? = coverFile(sourceId, fileId).takeIf { it.isFile }?.readBytes()
-
-        fun forget(sourceId: Long) {
-            covers.listFiles { file -> file.name.startsWith("drive-$sourceId-") }?.forEach { it.delete() }
-        }
-
-        private fun coverFile(
-            sourceId: Long,
-            fileId: String,
-        ) = File(covers, "drive-$sourceId-${md5Hex(fileId)}")
-
-        private companion object {
-            /** Each read is a few small range requests, so it waits on latency, not bandwidth. */
-            const val PARALLEL_READS = 3
+    /** Blocking. Null when the file could not be read (offline, unsupported, sign-in needed). */
+    fun read(
+        sourceId: Long,
+        fileId: String,
+    ): DriveTags? {
+        reads.acquireUninterruptibly()
+        return try {
+            readFile(sourceId, fileId)
+        } finally {
+            reads.release()
         }
     }
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun readFile(
+        sourceId: Long,
+        fileId: String,
+    ): DriveTags? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(client.mediaUrl(fileId), mapOf("Authorization" to "Bearer ${tokens.token(sourceId)}"))
+            val tags =
+                DriveTags(
+                    title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
+                    artist =
+                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                            ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST),
+                    album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM),
+                    durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L,
+                    genre = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_GENRE)?.let(::readableGenre),
+                    year =
+                        (
+                            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR)
+                                ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DATE)
+                        )?.let(::yearOf) ?: 0,
+                )
+            covers.mkdirs()
+            val picture = retriever.embeddedPicture
+            coverFile(covers, sourceId, fileId).writeBytes(picture ?: ByteArray(0))
+            // Covers already on screen as placeholders try again now, not on the next scroll.
+            if (picture != null && picture.isNotEmpty()) ArtworkLoader.notifyRemoteCoversChanged()
+            tags
+        } catch (e: Exception) {
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (e: Exception) {
+                // Nothing useful to do if release fails.
+            }
+        }
+    }
+
+    /** True once a cover (or an empty "no cover" marker) has been cached for this file. */
+    fun hasCachedCover(
+        sourceId: Long,
+        fileId: String,
+    ): Boolean = resolveCoverFile(sourceId, fileId) != null
+
+    /** The cached cover; an empty array when the file is known to have none; null when not read yet. */
+    fun cachedCover(
+        sourceId: Long,
+        fileId: String,
+    ): ByteArray? = resolveCoverFile(sourceId, fileId)?.readBytes()
+
+    fun forget(sourceId: Long) {
+        val prefix = "drive-$sourceId-"
+        covers.listFiles { file -> file.name.startsWith(prefix) }?.forEach { it.delete() }
+        legacyCovers.listFiles { file -> file.name.startsWith(prefix) }?.forEach { it.delete() }
+    }
+
+    private fun resolveCoverFile(
+        sourceId: Long,
+        fileId: String,
+    ): File? {
+        val persistent = coverFile(covers, sourceId, fileId)
+        val legacy = coverFile(legacyCovers, sourceId, fileId)
+        return when {
+            persistent.isFile -> persistent
+            !legacy.isFile -> null
+            else -> {
+                covers.mkdirs()
+                if (!legacy.renameTo(persistent)) {
+                    runCatching {
+                        legacy.copyTo(persistent, overwrite = true)
+                        legacy.delete()
+                    }
+                }
+                if (persistent.isFile) persistent else legacy
+            }
+        }
+    }
+
+    private fun coverFile(
+        root: File,
+        sourceId: Long,
+        fileId: String,
+    ) = File(root, "drive-$sourceId-${md5Hex(fileId)}")
+
+    private companion object {
+        /** Each read is a few small range requests, so it waits on latency, not bandwidth. */
+        const val PARALLEL_READS = 3
+    }
+}
 
 @Singleton
 class DriveArtworkSource

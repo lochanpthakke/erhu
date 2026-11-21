@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Result of reconciling remote tracks against `remote_tracks`. */
+data class SyncedSongs(
+    val songs: List<Song>,
+    val changed: Boolean,
+)
+
 /**
  * Connected remote libraries and the remote tracks erhu knows by id. Browsing itself is live from
  * the provider; a track is stored here only once it is turned into a [Song] (queued, played,
@@ -53,10 +59,16 @@ class RemoteLibraryRepository
         suspend fun toSongs(
             source: RemoteSource,
             tracks: List<RemoteTrack>,
-        ): List<Song> {
+        ): List<Song> = syncSongs(source, tracks).songs
+
+        /** Stores [tracks] for [source] and returns their [Song]s plus whether any track row changed. */
+        suspend fun syncSongs(
+            source: RemoteSource,
+            tracks: List<RemoteTrack>,
+        ): SyncedSongs {
             val now = timeSource.now()
-            return dao
-                .remember(
+            val remembered =
+                dao.rememberWithChanges(
                     tracks.map {
                         RemoteTrackEntity(
                             sourceId = source.id,
@@ -76,7 +88,8 @@ class RemoteLibraryRepository
                             updatedAt = now,
                         )
                     },
-                ).mapNotNull { it.toSong() }
+                )
+            return SyncedSongs(songs = remembered.tracks.mapNotNull { it.toSong() }, changed = remembered.changed)
         }
 
         suspend fun getLastLocation(sourceId: Long): String? = dao.getLastLocation(sourceId)
@@ -93,6 +106,8 @@ class RemoteLibraryRepository
             artist: String?,
             album: String?,
             durationMs: Long,
+            genre: String? = null,
+            year: Int = 0,
         ): Song {
             val updated =
                 song.copy(
@@ -101,7 +116,15 @@ class RemoteLibraryRepository
                     album = album?.takeIf { it.isNotBlank() } ?: song.album,
                     durationMs = durationMs.takeIf { it > 0 } ?: song.durationMs,
                 )
-            dao.setTags(song.id, updated.title, updated.artist, updated.album, updated.durationMs)
+            dao.setTags(
+                id = song.id,
+                title = updated.title,
+                artist = updated.artist,
+                album = updated.album,
+                durationMs = updated.durationMs,
+                genre = genre?.takeIf { it.isNotBlank() },
+                year = year.takeIf { it > 0 } ?: 0,
+            )
             return updated
         }
 
@@ -131,13 +154,17 @@ class RemoteLibraryRepository
 
         suspend fun removeLibraryFolder(id: Long) = dao.deleteLibraryFolder(id)
 
-        /** [tracks] (song id to the folder directly holding it) become the folder's whole Library content. */
+        /**
+         * [tracks] (song id to the folder directly holding it) become the folder's whole Library content.
+         * Returns whether folder membership or parent folders changed.
+         */
         suspend fun setLibraryFolderTracks(
             folderId: Long,
             tracks: Map<Long, String>,
-        ) {
-            dao.replaceLibraryFolderTracks(folderId, tracks)
+        ): Boolean {
+            val changed = dao.replaceLibraryFolderTracks(folderId, tracks)
             dao.setLibraryFolderSynced(folderId, timeSource.now())
+            return changed
         }
 
         /** The stored rows of [songIds] (what a sync has already read about them). */

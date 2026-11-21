@@ -25,6 +25,7 @@ import com.lochanpthakke.empee3.core.database.scanner.LibraryScanWorker
 import dagger.Lazy
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -244,11 +245,19 @@ class LibraryRepositoryImpl
 
         override suspend fun requestRescanAfterChange(): AppResult<Unit> =
             appResultOf {
-                workManager.get().enqueueUniqueWork(
-                    LibraryScanWorker.WORK_NAME,
-                    ExistingWorkPolicy.APPEND_OR_REPLACE,
-                    OneTimeWorkRequestBuilder<LibraryScanWorker>().build(),
-                )
+                val manager = workManager.get()
+                val alreadyQueued =
+                    manager
+                        .getWorkInfosForUniqueWorkFlow(LibraryScanWorker.WORK_NAME)
+                        .first()
+                        .any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED }
+                if (!alreadyQueued) {
+                    manager.enqueueUniqueWork(
+                        LibraryScanWorker.WORK_NAME,
+                        ExistingWorkPolicy.APPEND_OR_REPLACE,
+                        OneTimeWorkRequestBuilder<LibraryScanWorker>().build(),
+                    )
+                }
             }
 
         override suspend fun updateFilePath(
